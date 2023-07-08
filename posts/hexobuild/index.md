@@ -207,6 +207,6 @@ hexo 文章用轻量型标签语言 Markdown 编写
 
 ---
 
-> 作者: [Lruihao](https://github.com/Lruihao)  
+> 作者: [Jian YE](https://github.com/jianye0428)  
 > URL: https://lruihao.cn/posts/hexobuild/  
 

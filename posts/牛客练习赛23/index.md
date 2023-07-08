@@ -77,6 +77,6 @@ int main(){
 
 ---
 
-> 作者: [Lruihao](https://github.com/Lruihao)  
+> 作者: [Jian YE](https://github.com/jianye0428)  
 > URL: https://lruihao.cn/posts/%E7%89%9B%E5%AE%A2%E7%BB%83%E4%B9%A0%E8%B5%9B23/  
 

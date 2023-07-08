@@ -55,6 +55,6 @@ const site = new Blog('菠菜眾長', 'Lruihao', 'https://lruihao.cn');
 
 ---
 
-> 作者: [Lruihao](https://github.com/Lruihao)  
+> 作者: [Jian YE](https://github.com/jianye0428)  
 > URL: https://lruihao.cn/about/  
 

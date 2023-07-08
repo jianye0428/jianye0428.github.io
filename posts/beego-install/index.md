@@ -6,9 +6,7 @@
 <!--more-->
 
 ## 安装 Go
-jijiasdkjhfalkhdglaksjhdflgkajh
 
-jiasdf
 1. 官网下载安装包：<https://golang.google.cn/dl/>
 2. 通过二进制文件快速安装，默认安装目录：`/usr/local/go`
 3. 配置环境变量 `vim ~/.bash_profile`
@@ -64,6 +62,6 @@ bee run
 
 ---
 
-> 作者: [Lruihao](https://github.com/Lruihao)  
+> 作者: [Jian YE](https://github.com/jianye0428)  
 > URL: https://lruihao.cn/posts/beego-install/  
 
