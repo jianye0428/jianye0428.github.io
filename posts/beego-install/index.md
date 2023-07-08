@@ -7,6 +7,8 @@
 
 ## 安装 Go
 jijiasdkjhfalkhdglaksjhdflgkajh
+
+jiasdf
 1. 官网下载安装包：<https://golang.google.cn/dl/>
 2. 通过二进制文件快速安装，默认安装目录：`/usr/local/go`
 3. 配置环境变量 `vim ~/.bash_profile`
