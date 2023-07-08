@@ -1,4 +1,4 @@
-# 關於
+# 关于我
 
 
 {{< style "min-height: 230px;" >}}
@@ -15,7 +15,7 @@ class Blog {
     this.url = url;
   }
 }
-const site = new Blog('菠菜眾長', 'Lruihao', 'https://lruihao.cn');
+const site = new Blog('Jian Blog', 'Jian YE', 'https://jianye0428.github.io');
 {{< /typeit >}}
 {{< /style >}}
 
