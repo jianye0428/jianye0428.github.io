@@ -66,7 +66,7 @@ Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训�
 综上：卷积层计算量大，所需参数系数 W 少，全连接层计算量小，所需参数系数 W 多。因此对于卷积层适合使用数据并行，对于全连接层适合使用模型并行。
 
 ![model parallel and data parallel](images/Horovod_1_model_parallel_and_data_parallel.jpg)
-![](images/lib.png)
+![](2022-10-08_horovod_1/images/lib.png)
 
 ### 1.4 数据并行训练
 
