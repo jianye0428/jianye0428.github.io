@@ -67,7 +67,7 @@ Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训�
 
 ![model parallel and data parallel](images/Horovod_1_model_parallel_and_data_parallel.jpg)
 ![](images/lib.png)
-![](jianye0428.github.io/posts/hexo-theme-next/images/lib.png)
+![](https://jianye0428.github.io/posts/hexo-theme-next/images/lib.png)
 ### 1.4 数据并行训练
 
 我们本系列主要讨论数据并行训练（其中的一种架构）.
