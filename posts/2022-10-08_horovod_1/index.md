@@ -1,11 +1,5 @@
-# 2022 10 08_horovod_1
+# Horovod (一)
 
-
-{{< admonition quote "quote" false >}}
-note abstract info tip success question warning failure danger bug example quote
-{{< /admonition >}}
-
-<!--more-->
 
 ## 0 摘要
 Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训练框架，在业界得到了广泛应用。
