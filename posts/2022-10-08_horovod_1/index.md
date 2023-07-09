@@ -50,7 +50,7 @@ Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训�
     - 流水线可以看作是数据并行的一种形式，因为元素（样本）是通过网络并行处理的，但也可以看作是模型并行，因为流水线的长度是由DNN结构决定的。
 
 具体可见下图:
-    ![Parallel Mechanism](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_parallel_mechanism.png#center)
+    ![Parallel Mechanism](images/Horovod_1_parallel_mechanism.png#center)
 
 #### 1.3.2 如何使用
 
@@ -65,7 +65,7 @@ Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训�
 
 综上：卷积层计算量大，所需参数系数 W 少，全连接层计算量小，所需参数系数 W 多。因此对于卷积层适合使用数据并行，对于全连接层适合使用模型并行。
 
-![model parallel and data parallel](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_model_parallel_and_data_parallel.jpg#center)
+![model parallel and data parallel](images/Horovod_1_model_parallel_and_data_parallel.jpg#center)
 
 ### 1.4 数据并行训练
 
@@ -75,7 +75,7 @@ Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训�
 
 > 假设机器上有k个GPU。给定要训练的模型，每个GPU将独立地维护一组完整的模型参数，尽管GPU上的参数值是相同且同步的。例如，下图演示了在k=2时使用数据并行的训练。
 
-> ![data parallel](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_data_parallel.svg#center)
+> ![data parallel](images/Horovod_1_data_parallel.svg#center)
 
 
 > 一般来说，训练过程如下：
@@ -94,11 +94,11 @@ Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训�
 一般有两种通信方法：**Share memory** 和 **Message passing**。
 - **Share memory** 就是<u>所有处理器共享同一块内存</u>，这样通信很容易，<u>但是同一个节点内的处理器之间才可以共享内存，不同节点处理器之间无法共享内存</u>。
 
-![share memory](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_share_memory.png#center)
+![share memory](images/Horovod_1_share_memory.png#center)
 
 - **Message passing** 就是<u>不同节点之间用消息</u>（比如基于 TCP/IP 或者 RDMA）进行传递/通信，这样容易扩展，可以进行大规模训练。
 
-![message passing](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_message_passing.png#center)
+![message passing](images/Horovod_1_message_passing.png#center)
 
 因此我们知道，Message passing 才是解决方案，于是带来了问题：<font color=red>如何协调这些节点之间的通讯</font>。
 
@@ -128,8 +128,8 @@ Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训�
 
 具体如图所示:
 
-![synchronous data parallel](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_synchronous_data_parallel.png#center)
-![asynchronous data parallel](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_asynchronous_data_parallel.png#center)
+![synchronous data parallel](images/Horovod_1_synchronous_data_parallel.png#center)
+![asynchronous data parallel](images/Horovod_1_asynchronous_data_parallel.png#center)
 
 这两种更新方式各有优缺点：
 
@@ -217,7 +217,7 @@ Delta P |    |   Delta P|  |         Delta P|  |
 ```
 
 如图:
-![asynchronous data parallel](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_parameter_server.png#center)
+![asynchronous data parallel](images/Horovod_1_parameter_server.png#center)
 
 参数服务器既可以用在数据并行上，也可以被用到模型并行训练上。比如可以将模型切分为多个部分，存储在不同的PS Server节点上，并提供方便的访问服务，这是参数服务器的本质。
 
@@ -304,7 +304,7 @@ Ring-based AllReduce 策略包括 <font color=red>Scatter-Reduce</font> 和 <fon
 
 环形结构如下，每个 GPU 应该有一个左邻居和一个右邻居；它只会向其右侧邻居发送数据，并从其左侧邻居接收数据。
 
-![ring allreduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_ring_allreduce.png#center)
+![ring allreduce](images/Horovod_1_ring_allreduce.png#center)
 
 #### 5.2.2 scatter reduce
 
@@ -316,7 +316,7 @@ scatter-reduce：会逐步交换彼此的梯度并融合，最后每个 GPU 都�
 
 首先，GPU 将阵列划分为 N 个较小的块（其中 N 是环中的 GPU 数量）。
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_scatter_reduce.png#center)
+![scatter reduce](images/Horovod_1_scatter_reduce.png#center)
 
 
 接下来，GPU 将进行 N-1 次 scatter-reduce 迭代。
@@ -338,13 +338,13 @@ scatter-reduce：会逐步交换彼此的梯度并融合，最后每个 GPU 都�
 scatter-reduce 的第一次迭代中的数据传输如下：
 
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_scatter_reduce_iter_1.png#center)
+![scatter reduce](images/Horovod_1_scatter_reduce_iter_1.png#center)
 
 
 第一次发送和接收完成后，每个 GPU 都会有一个块，该块由两个不同 GPU 上相同块的总和组成。例如，第二个 GPU 上的第一个块将是该块中来自第二个 GPU 和第一个 GPU 的值的总和。
 
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_scatter_reduce_iter_2.png#center)
+![scatter reduce](images/Horovod_1_scatter_reduce_iter_2.png#center)
 
 
 ##### 5.2.2.2 全部迭代
@@ -355,25 +355,25 @@ scatter-reduce 的第一次迭代中的数据传输如下：
 
 iter 1：
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_scatter_reduce_iter_1.png#center)
+![scatter reduce](images/Horovod_1_scatter_reduce_iter_1.png#center)
 
 iter2：
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_scatter_reduce_iter_2.png#center)
+![scatter reduce](images/Horovod_1_scatter_reduce_iter_2.png#center)
 
 iter3：
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_scatter_reduce_iter_3.png#center)
+![scatter reduce](images/Horovod_1_scatter_reduce_iter_3.png#center)
 
 iter4：
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_scatter_reduce_iter_4.png#center)
+![scatter reduce](images/Horovod_1_scatter_reduce_iter_4.png#center)
 
 
 所有 scatter-reduce 传输后的最终状态
 
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_scatter_reduce_iter_5.png#center)
+![scatter reduce](images/Horovod_1_scatter_reduce_iter_5.png#center)
 
 
 #### 5.2.3 Allgather
@@ -396,7 +396,7 @@ ring allgather 与 scatter-reduce 进行相同的处理（发送和接收的 N-1
 
 allgather 的第一次迭代中的数据传输如下。
 
-![scatter reduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_allreduce_iter_1.png#center)
+![scatter reduce](images/Horovod_1_allreduce_iter_1.png#center)
 
 第一次迭代完成后，每个 GPU 都会有最终数组的两个块。在接下来的迭代中，该过程继续一直到最后，最终每个 GPU 将拥有整个数组的完全累加值。
 
@@ -405,29 +405,29 @@ allgather 的第一次迭代中的数据传输如下。
 下面系列图展示了所有数据传输和中间结果，从第一次迭代开始，一直持续到全部收集完成。
 
 Allgather 数据传输（迭代 1）
-![allreduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_allreduce_iter_1.png#center)
+![allreduce](images/Horovod_1_allreduce_iter_1.png#center)
 
 Allgather 数据传输（迭代 2）如下：
-![allreduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_allreduce_iter_2.png#center)
+![allreduce](images/Horovod_1_allreduce_iter_2.png#center)
 
 Allgather 数据传输（迭代 3）：
 
-![allreduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_allreduce_iter_3.png#center)
+![allreduce](images/Horovod_1_allreduce_iter_3.png#center)
 
 Allgather 数据传输（迭代 4）：
 
-![allreduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_allreduce_iter_4.png#center)
+![allreduce](images/Horovod_1_allreduce_iter_4.png#center)
 
 所有全部转移后的最终状态。
 
-![allreduce](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_allreduce_iter_5.png#center)
+![allreduce](images/Horovod_1_allreduce_iter_5.png#center)
 
 
 #### 5.2.4 Horovod 架构图
 
 工作原理也可以借助[Horovod](https://www.uber.com/blog/manifold-open-source/)的发布帖子 来看看。
 
-![horovod structure](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-08_Horovod_1/Horovod_1_horovod_structure.png#center)
+![horovod structure](images/Horovod_1_horovod_structure.png#center)
 
 #### 5.2.5 百度思路
 
