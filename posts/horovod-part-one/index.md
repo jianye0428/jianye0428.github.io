@@ -1,4 +1,4 @@
-# Horovod_part_one
+# Horovod Part One
 
 
 {{< admonition quote "quote" false >}}
@@ -7,11 +7,16 @@ note abstract info tip success question warning failure danger bug example quote
 
 <!--more-->
 
-![](images/Horovodallreduceiter.png)
 
+add image
+
+![](images/Horovodpartone.png)
+
+
+![](images/lib.png)
 
 ---
 
 > 作者: <no value>  
-> URL: https://lruihao.cn/posts/horovod_part_one/  
+> URL: https://lruihao.cn/posts/horovod-part-one/  
 
