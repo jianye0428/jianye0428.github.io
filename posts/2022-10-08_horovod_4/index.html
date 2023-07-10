@@ -1,0 +1,1204 @@
+<!doctype html><html itemscope itemtype=http://schema.org/WebPage lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=2"><meta name=robots content="noodp"><title>深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver - yejian's blog</title><meta name=author content="Jian YE"><meta name=author-link content="https://github.com/jianye0428"><meta name=description content="0 摘要 Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训练框架，在业界得到了广泛应用。 本系列将通过源码分析来带领大家了解 Horovod。本文是系列第四篇，看看如何获取 host 之间的路由等网络信息。 1 引子 在 horovod/runner/launch.py 文件中，_run_static 函数中使用 driver_service.get_common_interfaces 来获取路由信息等。 1 2 3 def _run_static(args): nics = driver_service.get_common_interfaces(settings, all_host_names, remote_host_names, fn_cache) 因为这部"><meta name=keywords content="Horovod"><meta itemprop=name content="深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver"><meta itemprop=description content="0 摘要 Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训练框架，在业界得到了广泛应用。 本系列将通过源码分析来带领大家了解 Horovod。本文是系列第四篇，看看如何获取 host 之间的路由等网络信息。 1 引子 在 horovod/runner/launch.py 文件中，_run_static 函数中使用 driver_service.get_common_interfaces 来获取路由信息等。 1 2 3 def _run_static(args): nics = driver_service.get_common_interfaces(settings, all_host_names, remote_host_names, fn_cache) 因为这部"><meta itemprop=datePublished content="2023-07-10T07:53:48+08:00"><meta itemprop=dateModified content="2023-07-10T08:33:47+08:00"><meta itemprop=wordCount content="6299"><meta itemprop=image content="https://lruihao.cn/images/favicon/jian_icon.png"><meta itemprop=keywords content="Horovod,"><meta property="og:title" content="深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver"><meta property="og:description" content="0 摘要 Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训练框架，在业界得到了广泛应用。 本系列将通过源码分析来带领大家了解 Horovod。本文是系列第四篇，看看如何获取 host 之间的路由等网络信息。 1 引子 在 horovod/runner/launch.py 文件中，_run_static 函数中使用 driver_service.get_common_interfaces 来获取路由信息等。 1 2 3 def _run_static(args): nics = driver_service.get_common_interfaces(settings, all_host_names, remote_host_names, fn_cache) 因为这部"><meta property="og:type" content="article"><meta property="og:url" content="https://lruihao.cn/posts/2022-10-08_horovod_4/"><meta property="og:image" content="https://lruihao.cn/images/favicon/jian_icon.png"><meta property="article:section" content="posts"><meta property="article:published_time" content="2023-07-10T07:53:48+08:00"><meta property="article:modified_time" content="2023-07-10T08:33:47+08:00"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://lruihao.cn/images/favicon/jian_icon.png"><meta name=twitter:title content="深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver"><meta name=twitter:description content="0 摘要 Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训练框架，在业界得到了广泛应用。 本系列将通过源码分析来带领大家了解 Horovod。本文是系列第四篇，看看如何获取 host 之间的路由等网络信息。 1 引子 在 horovod/runner/launch.py 文件中，_run_static 函数中使用 driver_service.get_common_interfaces 来获取路由信息等。 1 2 3 def _run_static(args): nics = driver_service.get_common_interfaces(settings, all_host_names, remote_host_names, fn_cache) 因为这部"><meta name=application-name content="菠菜阿九时代峰峻啊；数量可根据；"><meta name=apple-mobile-web-app-title content="菠菜阿九时代峰峻啊；数量可根据；"><meta name=theme-color data-light=#ffffff data-dark=#252627 content="#ffffff"><meta name=msapplication-TileColor content="#da532c"><link rel="shortcut icon" type=image/x-icon href=/favicon.ico><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link rel=manifest href=/site.webmanifest><link rel=canonical href=https://lruihao.cn/posts/2022-10-08_horovod_4/><link rel=prev href=https://lruihao.cn/posts/2022-10-08_horovod_3/><link rel=stylesheet href=/css/style.min.css><link rel=stylesheet href=/lib/fontawesome-free/all.min.css><link rel=stylesheet href=/lib/animate/animate.min.css><script type=application/ld+json>{"@context":"http://schema.org","@type":"BlogPosting","headline":"深度学习分布式训练框架 horovod(4) --- 网络基础 \u0026 Driver","inLanguage":"zh-CN","mainEntityOfPage":{"@type":"WebPage","@id":"https:\/\/lruihao.cn\/posts\/2022-10-08_horovod_4\/"},"image":["https:\/\/lruihao.cn\/site-meta.jpg"],"genre":"posts","keywords":"Horovod","wordcount":6299,"url":"https:\/\/lruihao.cn\/posts\/2022-10-08_horovod_4\/","datePublished":"2023-07-10T07:53:48+08:00","dateModified":"2023-07-10T08:33:47+08:00","publisher":{"@type":"Organization","name":"Lruihao","logo":"https:\/\/lruihao.cn\/images\/jian_icon.png"},"description":""}</script></head><body data-header-desktop=sticky data-header-mobile=auto><script>(window.localStorage?.getItem("theme")?localStorage.getItem("theme")==="dark":"auto"==="auto"?window.matchMedia("(prefers-color-scheme: dark)").matches:"auto"==="dark")&&document.body.setAttribute("data-theme","dark")</script><div class=wrapper data-page-style=normal><header class="desktop animate__faster" id=header-desktop><div class=header-wrapper data-github-corner=right><div class=header-title><a href=/ title="yejian's blog"><img loading=lazy src=/images/favicon/jian_icon.png srcset="/images/favicon/jian_icon.png, /images/favicon/jian_icon.png 1.5x, /images/favicon/jian_icon.png 2x" sizes=auto data-title="yejian's blog" data-alt="yejian's blog" class=logo style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span class=header-title-text>Jian's Blog</span></a><span class=header-subtitle></span></div><nav><ul class=menu><li class=menu-item><a class=menu-link href=/posts/><i class="fa-solid fa-archive fa-fw fa-sm" aria-hidden=true></i> 所有文章</a></li><li class=menu-item><a class=menu-link href=/categories/><i class="fa-solid fa-th fa-fw fa-sm" aria-hidden=true></i> 分类</a></li><li class=menu-item><a class=menu-link href=/tags/><i class="fa-solid fa-tags fa-fw fa-sm" aria-hidden=true></i> 标签</a></li><li class=menu-item><a class=menu-link href=/friends/ title=友情链接><i class="fa-solid fa-users fa-fw fa-sm" aria-hidden=true></i> 友链</a></li><li class=menu-item><a class=menu-link href=/guestbook/><i class="fa-solid fa-comments fa-fw fa-sm" aria-hidden=true></i> 留言</a></li><li class="menu-item has-children"><a class=menu-link href=/about/><i class="fa-solid fa-user-tie fa-fw fa-sm" aria-hidden=true></i> 关于</a><i class="dropdown-icon fa-solid fa-chevron-down" aria-hidden=true></i><ul class=sub-menu><li class=menu-item><a class=menu-link href=/projects/ title=项目><i class="fa-solid fa-laptop-code fa-fw fa-sm" aria-hidden=true></i> 我的项目</a></li></ul></li><li class="menu-item delimiter"></li><li class="menu-item search" id=search-desktop><input type=text placeholder=搜索文章标题或内容…… id=search-input-desktop>
+<a href=javascript:void(0); class="search-button search-toggle" id=search-toggle-desktop title=搜索><i class="fa-solid fa-search fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); class="search-button search-clear" id=search-clear-desktop title=清空><i class="fa-solid fa-times-circle fa-fw" aria-hidden=true></i></a>
+<span class="search-button search-loading" id=search-loading-desktop><i class="fa-solid fa-spinner fa-fw fa-spin" aria-hidden=true></i></span></li><li class="menu-item theme-switch" title=切换主题><i class="fa-solid fa-adjust fa-fw" aria-hidden=true></i></li></ul></nav></div></header><header class="mobile animate__faster" id=header-mobile><div class=header-container><div class=header-wrapper><div class=header-title><a href=/ title="yejian's blog"><img loading=lazy src=/images/favicon/jian_icon.png srcset="/images/favicon/jian_icon.png, /images/favicon/jian_icon.png 1.5x, /images/favicon/jian_icon.png 2x" sizes=auto data-title=/images/favicon/jian_icon.png data-alt=/images/favicon/jian_icon.png class=logo style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span class=header-title-text>Jian's Blog</span></a><span class=header-subtitle></span></div><div class=menu-toggle id=menu-toggle-mobile><span></span><span></span><span></span></div></div><nav><ul class=menu id=menu-mobile><li class=search-wrapper><div class="search mobile" id=search-mobile><input type=text placeholder=搜索文章标题或内容…… id=search-input-mobile>
+<a href=javascript:void(0); class="search-button search-toggle" id=search-toggle-mobile title=搜索><i class="fa-solid fa-search fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); class="search-button search-clear" id=search-clear-mobile title=清空><i class="fa-solid fa-times-circle fa-fw" aria-hidden=true></i></a>
+<span class="search-button search-loading" id=search-loading-mobile><i class="fa-solid fa-spinner fa-fw fa-spin" aria-hidden=true></i></span></div><a href=javascript:void(0); class=search-cancel id=search-cancel-mobile>取消</a></li><li class=menu-item><a class=menu-link href=/posts/><i class="fa-solid fa-archive fa-fw fa-sm" aria-hidden=true></i> 所有文章</a></li><li class=menu-item><a class=menu-link href=/categories/><i class="fa-solid fa-th fa-fw fa-sm" aria-hidden=true></i> 分类</a></li><li class=menu-item><a class=menu-link href=/tags/><i class="fa-solid fa-tags fa-fw fa-sm" aria-hidden=true></i> 标签</a></li><li class=menu-item><a class=menu-link href=/friends/ title=友情链接><i class="fa-solid fa-users fa-fw fa-sm" aria-hidden=true></i> 友链</a></li><li class=menu-item><a class=menu-link href=/guestbook/><i class="fa-solid fa-comments fa-fw fa-sm" aria-hidden=true></i> 留言</a></li><li class=menu-item><span class=nested-item><a class=menu-link href=/about/><i class="fa-solid fa-user-tie fa-fw fa-sm" aria-hidden=true></i> 关于</a>
+<i class="dropdown-icon fa-solid fa-chevron-right" aria-hidden=true></i></span><ul class=sub-menu><li class=menu-item><a class=menu-link href=/projects/ title=项目><i class="fa-solid fa-laptop-code fa-fw fa-sm" aria-hidden=true></i> 我的项目</a></li></ul></li><li class="menu-item text-center"><a class=menu-link href=https://github.com/jianye0428/JianBlog title=GitHub rel="noopener noreferrer" target=_blank><i class='fa-brands fa-github fa-fw' aria-hidden=true></i></a></li><li class="menu-item menu-system"><span class="menu-system-item theme-switch" title=切换主题><i class="fa-solid fa-adjust fa-fw" aria-hidden=true></i></span></li></ul></nav></div></header><div class="search-dropdown desktop"><div id=search-dropdown-desktop></div></div><div class="search-dropdown mobile"><div id=search-dropdown-mobile></div></div><main class=container><aside class=toc id=toc-auto><h2 class=toc-title>目录&nbsp;<i class="toc-icon fa-solid fa-angle-down fa-fw" aria-hidden=true></i></h2><div class=toc-content id=toc-content-auto></div></aside><aside class=aside-custom></aside><article class="page single"><div class=header><h1 class="single-title animate__animated animate__flipInX"><span>深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver</span></h1></div><div class=post-meta><div class=post-meta-line><span class=post-author><span class=author><i class="fa-solid fa-user-circle" aria-hidden=true></i></span></span>
+<span class=post-category>收录于 <a href=/categories/distributed-training/><i class="fa-regular fa-folder fa-fw" aria-hidden=true></i> Distributed Training</a></span></div><div class=post-meta-line><span title="发布于 2023-07-10 07:53:48"><i class="fa-regular fa-calendar-alt fa-fw me-1" aria-hidden=true></i><time datetime=2023-07-10>2023-07-10</time></span>&nbsp;<span title="更新于 2023-07-10 08:33:47"><i class="fa-regular fa-edit fa-fw me-1" aria-hidden=true></i><time datetime=2023-07-10>2023-07-10</time></span>&nbsp;<span><i class="fa-solid fa-pencil-alt fa-fw me-1" aria-hidden=true></i>约 6299 字</span>&nbsp;<span><i class="fa-regular fa-clock fa-fw me-1" aria-hidden=true></i>预计阅读 13 分钟</span>&nbsp;<span id=busuanzi_container_page_pv class="busuanzi_visitors comment-visitors" data-flag-title="深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver">
+<i class="fa-regular fa-eye fa-fw me-1" aria-hidden=true></i><span id=busuanzi_value_page_pv>-</span>&nbsp;次阅读
+</span>&nbsp;</div></div><div class="details toc" id=toc-static data-kept=false><div class="details-summary toc-title"><span>目录</span>
+<span><i class="details-icon fa-solid fa-angle-right" aria-hidden=true></i></span></div><div class="details-content toc-content" id=toc-content-static><nav id=TableOfContents><ul><li><a href=#0-摘要>0 摘要</a></li><li><a href=#1-引子>1 引子</a></li><li><a href=#2-总体架构>2 总体架构</a><ul><li><a href=#21-get_local_interfaces>2.1 get_local_interfaces</a></li><li><a href=#22-_driver_fn>2.2 _driver_fn</a></li><li><a href=#23-获取路由接口>2.3 获取路由接口</a><ul><li><a href=#231-probe逻辑>2.3.1 probe逻辑</a></li><li><a href=#232-等待函数>2.3.2 等待函数</a></li></ul></li></ul></li><li><a href=#3-基础网络服务>3 基础网络服务</a><ul><li><a href=#31-继承关系>3.1 继承关系</a></li><li><a href=#32-networkbasicservice>3.2 network.BasicService</a><ul><li><a href=#321-创建server>3.2.1 创建Server</a></li><li><a href=#322-server功能>3.2.2 Server功能</a></li></ul></li><li><a href=#33-networkbasicclient>3.3 network.BasicClient</a><ul><li><a href=#331-_probe>3.3.1 _probe</a></li><li><a href=#332-发送消息>3.3.2 发送消息</a></li></ul></li><li><a href=#34-总结>3.4 总结</a></li></ul></li><li><a href=#4-driver-服务>4 Driver 服务</a><ul><li><a href=#41-horovodrundriverservice>4.1 HorovodRunDriverService</a></li><li><a href=#42-basicdriverservice>4.2 BasicDriverService</a><ul><li><a href=#421-_all_task_addresses>4.2.1 _all_task_addresses</a></li><li><a href=#422-_task_addresses_for_driver>4.2.2 _task_addresses_for_driver</a></li><li><a href=#423-_task_addresses_for_tasks>4.2.3 _task_addresses_for_tasks</a></li><li><a href=#424-_task_index_host_hash>4.2.4 _task_index_host_hash</a></li><li><a href=#425-_task_host_hash_indices>4.2.5 _task_host_hash_indices</a></li></ul></li><li><a href=#43-总体逻辑>4.3 总体逻辑</a></li></ul></li><li><a href=#5-task-服务>5 Task 服务</a><ul><li><a href=#51-启动具体服务>5.1 启动具体服务</a></li><li><a href=#52-具体服务逻辑>5.2 具体服务逻辑</a></li><li><a href=#53-horovodruntaskservice>5.3 HorovodRunTaskService</a></li></ul></li><li><a href=#6-总结>6 总结</a></li></ul></nav></div></div><div class=content id=content data-end-flag=（完）><h2 id=0-摘要>0 摘要</h2><p>Horovod 是Uber于2017年发布的一个易于使用的高性能的分布式训练框架，在业界得到了广泛应用。</p><p>本系列将通过源码分析来带领大家了解 Horovod。本文是系列第四篇，看看如何获取 host 之间的路由等网络信息。</p><h2 id=1-引子>1 引子</h2><p>在 horovod/runner/launch.py 文件中，_run_static 函数中使用 <code>driver_service.get_common_interfaces</code> 来获取路由信息等。</p><div class=highlight id=id-1><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>_run_static</span><span class=p>(</span><span class=n>args</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>nics</span> <span class=o>=</span> <span class=n>driver_service</span><span class=o>.</span><span class=n>get_common_interfaces</span><span class=p>(</span><span class=n>settings</span><span class=p>,</span> <span class=n>all_host_names</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                                <span class=n>remote_host_names</span><span class=p>,</span> <span class=n>fn_cache</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><p>因为这部分比较复杂（ Driver 的概念很类似 Spark 之中 Driver 的概念），所以本文我们单独来分析。</p><p>本文的分析问题点是：</p><ul><li>为什么要知道路由信息？</li><li>当有多个host时候，horovod如何处理？</li><li>如何找到路由信息？</li><li>怎么互相交互？</li><li>（后文会详细分析）SparkDriverService，SparkTaskService，ElasticDriver, Worker 都有什么区别和联系？</li></ul><p>本文重点分析 HorovodRunDriverService 和 HorovodRunTaskService 相关。</p><p>先给出一个图例，大家可以有些概念。</p><p><img loading=lazy src=https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-16_Horovod_4/Horovod_4_concept_driver_service.png#center srcset="https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-16_Horovod_4/Horovod_4_concept_driver_service.png#center, https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-16_Horovod_4/Horovod_4_concept_driver_service.png#center 1.5x, https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-16_Horovod_4/Horovod_4_concept_driver_service.png#center 2x" sizes=auto data-title="Concept Driver Service" data-alt="Concept Driver Service" style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><h2 id=2-总体架构>2 总体架构</h2><p>从注释可知，get_common_interfaces 完成了获得路由信息（所有host之间的共有路由接口集合）的功能，主要是调用 _driver_fn 来完成相关工作。</p><div class=highlight id=id-2><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>get_common_interfaces</span><span class=p>(</span><span class=n>settings</span><span class=p>,</span> <span class=n>all_host_names</span><span class=p>,</span> <span class=n>remote_host_names</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>fn_cache</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=s1>&#39;&#39;&#39;
+</span></span></span><span class=line><span class=cl><span class=s1>    Find the set of common and routed interfaces on all the hosts.
+</span></span></span><span class=line><span class=cl><span class=s1>    &#39;&#39;&#39;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># 得到远端host地址</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=n>remote_host_names</span> <span class=ow>is</span> <span class=kc>None</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>remote_host_names</span> <span class=o>=</span> <span class=n>network</span><span class=o>.</span><span class=n>filter_local_addresses</span><span class=p>(</span><span class=n>all_host_names</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=nb>len</span><span class=p>(</span><span class=n>remote_host_names</span><span class=p>)</span> <span class=o>&gt;</span> <span class=mi>0</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>settings</span><span class=o>.</span><span class=n>nics</span><span class=p>:</span> <span class=c1># 如果参数有设定网络接口，就使用</span>
+</span></span><span class=line><span class=cl>            <span class=c1># If args.nics is provided, we will use those interfaces. All the workers</span>
+</span></span><span class=line><span class=cl>            <span class=c1># must have at least one of those interfaces available.</span>
+</span></span><span class=line><span class=cl>            <span class=n>nics</span> <span class=o>=</span> <span class=n>settings</span><span class=o>.</span><span class=n>nics</span>
+</span></span><span class=line><span class=cl>        <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=c1># Find the set of common, routed interfaces on all the hosts (remote</span>
+</span></span><span class=line><span class=cl>            <span class=c1># and local) and specify it in the args to be used by NCCL. It is</span>
+</span></span><span class=line><span class=cl>            <span class=c1># expected that the following function will find at least one interface</span>
+</span></span><span class=line><span class=cl>            <span class=c1># otherwise, it will raise an exception.</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>            <span class=n>local_host_names</span> <span class=o>=</span> <span class=nb>set</span><span class=p>(</span><span class=n>all_host_names</span><span class=p>)</span> <span class=o>-</span> <span class=nb>set</span><span class=p>(</span><span class=n>remote_host_names</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>            <span class=c1># 获取其他host的网络接口</span>
+</span></span><span class=line><span class=cl>            <span class=n>nics</span> <span class=o>=</span> <span class=n>_driver_fn</span><span class=p>(</span><span class=n>all_host_names</span><span class=p>,</span> <span class=n>local_host_names</span><span class=p>,</span> <span class=n>settings</span><span class=p>,</span> <span class=n>fn_cache</span><span class=o>=</span><span class=n>fn_cache</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>nics</span> <span class=o>=</span> <span class=n>get_local_interfaces</span><span class=p>(</span><span class=n>settings</span><span class=p>)</span> <span class=c1># 获取本地的网络接口</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>nics</span></span></span></code></pre></td></tr></table></div></div><h3 id=21-get_local_interfaces>2.1 get_local_interfaces</h3><p>此函数比较简单，目的是<strong>获取本地的网络接口</strong>。</p><div class=highlight id=id-3><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>get_local_interfaces</span><span class=p>(</span><span class=n>settings</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=c1># If all the given hosts are local, find the interfaces with address</span>
+</span></span><span class=line><span class=cl>    <span class=c1># 127.0.0.1</span>
+</span></span><span class=line><span class=cl>    <span class=n>nics</span> <span class=o>=</span> <span class=nb>set</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>iface</span><span class=p>,</span> <span class=n>addrs</span> <span class=ow>in</span> <span class=n>net_if_addrs</span><span class=p>()</span><span class=o>.</span><span class=n>items</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>settings</span><span class=o>.</span><span class=n>nics</span> <span class=ow>and</span> <span class=n>iface</span> <span class=ow>not</span> <span class=ow>in</span> <span class=n>settings</span><span class=o>.</span><span class=n>nics</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>continue</span>
+</span></span><span class=line><span class=cl>        <span class=k>for</span> <span class=n>addr</span> <span class=ow>in</span> <span class=n>addrs</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>if</span> <span class=n>addr</span><span class=o>.</span><span class=n>family</span> <span class=o>==</span> <span class=n>AF_INET</span> <span class=ow>and</span> <span class=n>addr</span><span class=o>.</span><span class=n>address</span> <span class=o>==</span> <span class=s1>&#39;127.0.0.1&#39;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=n>nics</span><span class=o>.</span><span class=n>add</span><span class=p>(</span><span class=n>iface</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>                <span class=k>break</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>nics</span></span></span></code></pre></td></tr></table></div></div><h3 id=22-_driver_fn>2.2 _driver_fn</h3><p>这是本文重点，获取其他host 的网络接口，_driver_fn 的作用是：</p><ul><li>启动 service 服务；</li><li>使用 driver.addresses() 获取 Driver 服务的地址（使用<code>self._addresses = self._get_local_addresses()</code>完成）；</li><li>使用 _launch_task_servers（利用 Driver 服务的地址）在每个 worker 之中启动 task 服务，然后 task 服务会在 service 服务中注册；</li><li>因为是一个环形，每个 worker 会探测 worker index + 1 的所有网络接口；</li><li>最后 _run_probe 返回一个所有 workers 上的所有路由接口的交集；</li></ul><p>代码如下：</p><p>这里需要注意的一点是：@cache.use_cache() 的使用：当第一次使用过之后，会把结果放入缓存。</p><div class=highlight id=id-4><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=nd>@cache.use_cache</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>_driver_fn</span><span class=p>(</span><span class=n>all_host_names</span><span class=p>,</span> <span class=n>local_host_names</span><span class=p>,</span> <span class=n>settings</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=s2>&#34;&#34;&#34;
+</span></span></span><span class=line><span class=cl><span class=s2>    launches the service service, launches the task service on each worker and
+</span></span></span><span class=line><span class=cl><span class=s2>    have them register with the service service. Each worker probes all the
+</span></span></span><span class=line><span class=cl><span class=s2>    interfaces of the worker index + 1 (in a ring manner) and only keeps the
+</span></span></span><span class=line><span class=cl><span class=s2>    routed interfaces. Function returns the intersection of the set of all the
+</span></span></span><span class=line><span class=cl><span class=s2>    routed interfaces on all the workers.
+</span></span></span><span class=line><span class=cl><span class=s2>    :param all_host_names: list of addresses. for example,
+</span></span></span><span class=line><span class=cl><span class=s2>        [&#39;worker-0&#39;,&#39;worker-1&#39;]
+</span></span></span><span class=line><span class=cl><span class=s2>        [&#39;10.11.11.11&#39;, &#39;10.11.11.12&#39;]
+</span></span></span><span class=line><span class=cl><span class=s2>    :type all_host_names: list(string)
+</span></span></span><span class=line><span class=cl><span class=s2>    :param local_host_names: host names that resolve into a local addresses.
+</span></span></span><span class=line><span class=cl><span class=s2>    :type local_host_names: set
+</span></span></span><span class=line><span class=cl><span class=s2>    :param settings: the object that contains the setting for running horovod
+</span></span></span><span class=line><span class=cl><span class=s2>    :type settings: horovod.runner.common.util.settings.Settings
+</span></span></span><span class=line><span class=cl><span class=s2>    :return: example: [&#39;eth0&#39;, &#39;eth1&#39;]
+</span></span></span><span class=line><span class=cl><span class=s2>    :rtype: list[string]
+</span></span></span><span class=line><span class=cl><span class=s2>    &#34;&#34;&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=c1># Launch a TCP server called service service on the host running horovod</span>
+</span></span><span class=line><span class=cl>    <span class=c1># 启动 service 服务</span>
+</span></span><span class=line><span class=cl>    <span class=n>num_hosts</span> <span class=o>=</span> <span class=nb>len</span><span class=p>(</span><span class=n>all_host_names</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>driver</span> <span class=o>=</span> <span class=n>HorovodRunDriverService</span><span class=p>(</span><span class=n>num_hosts</span><span class=p>,</span> <span class=n>settings</span><span class=o>.</span><span class=n>key</span><span class=p>,</span> <span class=n>settings</span><span class=o>.</span><span class=n>nics</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Have all the workers register themselves with the service service.</span>
+</span></span><span class=line><span class=cl>    <span class=c1>#（利用 Driver 服务的地址）在每个worker之中启动 task 服务，然后task服务会在 service 服务中注册</span>
+</span></span><span class=line><span class=cl>    <span class=n>_launch_task_servers</span><span class=p>(</span><span class=n>all_host_names</span><span class=p>,</span> <span class=n>local_host_names</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                         <span class=n>driver</span><span class=o>.</span><span class=n>addresses</span><span class=p>(),</span> <span class=n>settings</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=c1># 返回一个所有 workers 上的所有路由接口的交集</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=n>_run_probe</span><span class=p>(</span><span class=n>driver</span><span class=p>,</span> <span class=n>settings</span><span class=p>,</span> <span class=n>num_hosts</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>driver</span><span class=o>.</span><span class=n>shutdown</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><h3 id=23-获取路由接口>2.3 获取路由接口</h3><p>我们对 _run_probe 函数做进一步分析。</p><h4 id=231-probe逻辑>2.3.1 probe逻辑</h4><p>_run_probe 函数就是当<u>所有 task 都启动，注册，probe 环中下一个worker 邻居完成</u> 之后，得到 接口集合。</p><ul><li>利用 wait_for_initial_registration 等待所有 task 完成注册；</li><li>对于所有 task，完成 task.notify_initial_registration_complete 通知；</li><li>利用 driver.wait_for_task_to_task_address_updates 等待 每一个 worker probe 完成；</li><li>利用 nics.intersection_update 得到接口集合；</li></ul><div class=highlight id=id-5><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>_run_probe</span><span class=p>(</span><span class=n>driver</span><span class=p>,</span> <span class=n>settings</span><span class=p>,</span> <span class=n>num_hosts</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>       <span class=c1># wait for all the hosts to register with the service service.</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>driver</span><span class=o>.</span><span class=n>wait_for_initial_registration</span><span class=p>(</span><span class=n>settings</span><span class=o>.</span><span class=n>start_timeout</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>tasks</span> <span class=o>=</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>        <span class=n>task_service</span><span class=o>.</span><span class=n>HorovodRunTaskClient</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=n>index</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>driver</span><span class=o>.</span><span class=n>task_addresses_for_driver</span><span class=p>(</span><span class=n>index</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>            <span class=n>settings</span><span class=o>.</span><span class=n>key</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>settings</span><span class=o>.</span><span class=n>verbose</span><span class=p>)</span> <span class=k>for</span> <span class=n>index</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=n>num_hosts</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl>    <span class=c1># Notify all the drivers that the initial registration is complete.</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>task</span> <span class=ow>in</span> <span class=n>tasks</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>task</span><span class=o>.</span><span class=n>notify_initial_registration_complete</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Each worker should probe the interfaces of the next worker in a ring</span>
+</span></span><span class=line><span class=cl>    <span class=c1># manner and filter only the routed ones -- it should filter out</span>
+</span></span><span class=line><span class=cl>    <span class=c1># interfaces that are not really connected to any external networks</span>
+</span></span><span class=line><span class=cl>    <span class=c1># such as lo0 with address 127.0.0.1.</span>
+</span></span><span class=line><span class=cl>    <span class=n>driver</span><span class=o>.</span><span class=n>wait_for_task_to_task_address_updates</span><span class=p>(</span><span class=n>settings</span><span class=o>.</span><span class=n>start_timeout</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Determine a set of common interfaces for task-to-task communication.</span>
+</span></span><span class=line><span class=cl>    <span class=n>nics</span> <span class=o>=</span> <span class=nb>set</span><span class=p>(</span><span class=n>driver</span><span class=o>.</span><span class=n>task_addresses_for_tasks</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span><span class=o>.</span><span class=n>keys</span><span class=p>())</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>index</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=mi>1</span><span class=p>,</span> <span class=n>num_hosts</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>nics</span><span class=o>.</span><span class=n>intersection_update</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=n>driver</span><span class=o>.</span><span class=n>task_addresses_for_tasks</span><span class=p>(</span><span class=n>index</span><span class=p>)</span><span class=o>.</span><span class=n>keys</span><span class=p>())</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>nics</span></span></span></code></pre></td></tr></table></div></div><h4 id=232-等待函数>2.3.2 等待函数</h4><p>probe 利用 wait_for_initial_registration 等待所有 task 完成注册，具体等待函数如下：</p><div class=highlight id=id-6><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>wait_for_initial_registration</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>timeout</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>while</span> <span class=nb>len</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>_all_task_addresses</span><span class=p>)</span> <span class=o>&lt;</span> <span class=bp>self</span><span class=o>.</span><span class=n>_num_proc</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>wait</span><span class=p>(</span><span class=n>timeout</span><span class=o>.</span><span class=n>remaining</span><span class=p>())</span>
+</span></span><span class=line><span class=cl>            <span class=n>timeout</span><span class=o>.</span><span class=n>check_time_out_for</span><span class=p>(</span><span class=s1>&#39;tasks to start&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>wait_for_task_to_task_address_updates</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>timeout</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>while</span> <span class=nb>len</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>_task_addresses_for_tasks</span><span class=p>)</span> <span class=o>&lt;</span> <span class=bp>self</span><span class=o>.</span><span class=n>_num_proc</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>wait</span><span class=p>(</span><span class=n>timeout</span><span class=o>.</span><span class=n>remaining</span><span class=p>())</span>
+</span></span><span class=line><span class=cl>            <span class=n>timeout</span><span class=o>.</span><span class=n>check_time_out_for</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>                <span class=s1>&#39;tasks to update task-to-task addresses&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><h2 id=3-基础网络服务>3 基础网络服务</h2><p>前面提到，Horovod Driver 的概念很类似 Spark 之中 Driver 的概念。Spark应用程序运行时主要分为 Driver 和 Executor，Driver负责总体调度及UI展示，Executor负责Task运行。用户的Spark应用程序运行在Driver上（某种程度上说，用户的程序就是Spark Driver程序），经过Spark调度封装成一个个Task，再将这些Task信息发给Executor执行，Task信息包括代码逻辑以及数据信息，Executor不直接运行用户的代码。</p><p>对于 Horovod 来说：</p><ul><li>HorovodRunDriverService 就是 Driver 的实现类。</li><li>HorovodRunTaskService 提供了 Task 部分服务功能，这些 task 需要注册到 HorovodRunDriverService 之中。</li><li>这套 driver & task 机制的底层由 &ldquo;基础网络服务&rdquo; 支撑。</li></ul><p>所以我们就仔细分析下基础网络服务。</p><h3 id=31-继承关系>3.1 继承关系</h3><p>首先给出继承关系，我们下面讲解的 Driver 服务由 HorovodRunDriverService 提供，Task 服务由HorovodRunTaskService 提供。</p><p>这两个类最终都继承了 network.BasicService。</p><div class=highlight id=id-7><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl>                            <span class=n>network</span><span class=o>.</span><span class=n>BasicService</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>                                  <span class=o>^</span>    <span class=o>^</span>
+</span></span><span class=line><span class=cl>                                  <span class=o>|</span>    <span class=o>|</span>
+</span></span><span class=line><span class=cl>              <span class=o>+-------------------+</span>    <span class=o>+-------------+</span>
+</span></span><span class=line><span class=cl>              <span class=o>|</span>                                      <span class=o>|</span>
+</span></span><span class=line><span class=cl>              <span class=o>+</span>                                      <span class=o>+</span>
+</span></span><span class=line><span class=cl><span class=n>driver_service</span><span class=o>.</span><span class=n>BasicDriverService</span>       <span class=n>task_service</span><span class=o>.</span><span class=n>BasicTaskService</span>
+</span></span><span class=line><span class=cl>              <span class=o>^</span>                                      <span class=o>^</span>
+</span></span><span class=line><span class=cl>              <span class=o>|</span>                                      <span class=o>|</span>
+</span></span><span class=line><span class=cl>              <span class=o>|</span>                                      <span class=o>|</span>
+</span></span><span class=line><span class=cl>              <span class=o>|</span>                                      <span class=o>|</span>
+</span></span><span class=line><span class=cl>              <span class=o>+</span>                                      <span class=o>+</span>
+</span></span><span class=line><span class=cl>    <span class=n>HorovodRunDriverService</span>                <span class=n>HorovodRunTaskService</span></span></span></code></pre></td></tr></table></div></div><h3 id=32-networkbasicservice>3.2 network.BasicService</h3><p>BasicService 提供了一个网络服务器功能。即通过find_port函数构建了一个<code>ThreadingTCPServer</code>对外提供服务。</p><div class=highlight id=id-8><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>BasicService</span><span class=p>(</span><span class=nb>object</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>service_name</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>nics</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_service_name</span> <span class=o>=</span> <span class=n>service_name</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wire</span> <span class=o>=</span> <span class=n>Wire</span><span class=p>(</span><span class=n>key</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_nics</span> <span class=o>=</span> <span class=n>nics</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_server</span><span class=p>,</span> <span class=n>_</span> <span class=o>=</span> <span class=n>find_port</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=k>lambda</span> <span class=n>addr</span><span class=p>:</span> <span class=n>socketserver</span><span class=o>.</span><span class=n>ThreadingTCPServer</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>                <span class=n>addr</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>_make_handler</span><span class=p>()))</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_server</span><span class=o>.</span><span class=n>_block_on_close</span> <span class=o>=</span> <span class=kc>True</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_port</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_server</span><span class=o>.</span><span class=n>socket</span><span class=o>.</span><span class=n>getsockname</span><span class=p>()[</span><span class=mi>1</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_addresses</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_get_local_addresses</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_thread</span> <span class=o>=</span> <span class=n>in_thread</span><span class=p>(</span><span class=n>target</span><span class=o>=</span><span class=bp>self</span><span class=o>.</span><span class=n>_server</span><span class=o>.</span><span class=n>serve_forever</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><h4 id=321-创建server>3.2.1 创建Server</h4><p>创建服务器代码如下，这里是搜索一个随机端口，然后设置：</p><div class=highlight id=id-9><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>find_port</span><span class=p>(</span><span class=n>server_factory</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>min_port</span> <span class=o>=</span> <span class=mi>1024</span>
+</span></span><span class=line><span class=cl>    <span class=n>max_port</span> <span class=o>=</span> <span class=mi>65536</span>
+</span></span><span class=line><span class=cl>    <span class=n>num_ports</span> <span class=o>=</span> <span class=n>max_port</span> <span class=o>-</span> <span class=n>min_port</span>
+</span></span><span class=line><span class=cl>    <span class=n>start_port</span> <span class=o>=</span> <span class=n>random</span><span class=o>.</span><span class=n>randrange</span><span class=p>(</span><span class=mi>0</span><span class=p>,</span> <span class=n>num_ports</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>port_offset</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>num_ports</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>port</span> <span class=o>=</span> <span class=n>min_port</span> <span class=o>+</span> <span class=p>(</span><span class=n>start_port</span> <span class=o>+</span> <span class=n>port_offset</span><span class=p>)</span> <span class=o>%</span> <span class=n>num_ports</span>
+</span></span><span class=line><span class=cl>            <span class=n>addr</span> <span class=o>=</span> <span class=p>(</span><span class=s1>&#39;&#39;</span><span class=p>,</span> <span class=n>port</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>            <span class=n>server</span> <span class=o>=</span> <span class=n>server_factory</span><span class=p>(</span><span class=n>addr</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>            <span class=k>return</span> <span class=n>server</span><span class=p>,</span> <span class=n>port</span>
+</span></span><span class=line><span class=cl>        <span class=k>except</span> <span class=ne>Exception</span> <span class=k>as</span> <span class=n>e</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>pass</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>raise</span> <span class=ne>Exception</span><span class=p>(</span><span class=s1>&#39;Unable to find a port to bind to.&#39;</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><h4 id=322-server功能>3.2.2 Server功能</h4><p>服务器就是基本的功能，比如获取本server地址，处理 ping，网络交互等。</p><div class=highlight id=id-10><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>_make_handler</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>server</span> <span class=o>=</span> <span class=bp>self</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>class</span> <span class=nc>_Handler</span><span class=p>(</span><span class=n>socketserver</span><span class=o>.</span><span class=n>StreamRequestHandler</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=k>def</span> <span class=nf>handle</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>            <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=n>req</span> <span class=o>=</span> <span class=n>server</span><span class=o>.</span><span class=n>_wire</span><span class=o>.</span><span class=n>read</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>rfile</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>                <span class=n>resp</span> <span class=o>=</span> <span class=n>server</span><span class=o>.</span><span class=n>_handle</span><span class=p>(</span><span class=n>req</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>client_address</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>                <span class=c1># A tuple is the usual response object followed by a utf8 text stream</span>
+</span></span><span class=line><span class=cl>                <span class=k>if</span> <span class=nb>type</span><span class=p>(</span><span class=n>resp</span><span class=p>)</span> <span class=o>==</span> <span class=nb>tuple</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                    <span class=p>(</span><span class=n>resp</span><span class=p>,</span> <span class=n>stream</span><span class=p>)</span> <span class=o>=</span> <span class=n>resp</span>
+</span></span><span class=line><span class=cl>                    <span class=n>server</span><span class=o>.</span><span class=n>_wire</span><span class=o>.</span><span class=n>write</span><span class=p>(</span><span class=n>resp</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>wfile</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>                    <span class=n>server</span><span class=o>.</span><span class=n>_wire</span><span class=o>.</span><span class=n>stream</span><span class=p>(</span><span class=n>stream</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>wfile</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>                <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                    <span class=n>server</span><span class=o>.</span><span class=n>_wire</span><span class=o>.</span><span class=n>write</span><span class=p>(</span><span class=n>resp</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>wfile</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>            <span class=k>except</span> <span class=p>(</span><span class=ne>EOFError</span><span class=p>,</span> <span class=ne>BrokenPipeError</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>                <span class=c1># Happens when client is abruptly terminated, don&#39;t want to pollute the logs.</span>
+</span></span><span class=line><span class=cl>                <span class=k>pass</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>_Handler</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>_handle</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>req</span><span class=p>,</span> <span class=n>client_address</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>req</span><span class=p>,</span> <span class=n>PingRequest</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=n>PingResponse</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>_service_name</span><span class=p>,</span> <span class=n>client_address</span><span class=p>[</span><span class=mi>0</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>raise</span> <span class=ne>NotImplementedError</span><span class=p>(</span><span class=n>req</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>_get_local_addresses</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>result</span> <span class=o>=</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>intf</span><span class=p>,</span> <span class=n>intf_addresses</span> <span class=ow>in</span> <span class=n>psutil</span><span class=o>.</span><span class=n>net_if_addrs</span><span class=p>()</span><span class=o>.</span><span class=n>items</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>_nics</span> <span class=ow>and</span> <span class=n>intf</span> <span class=ow>not</span> <span class=ow>in</span> <span class=bp>self</span><span class=o>.</span><span class=n>_nics</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>continue</span>
+</span></span><span class=line><span class=cl>        <span class=k>for</span> <span class=n>addr</span> <span class=ow>in</span> <span class=n>intf_addresses</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>if</span> <span class=n>addr</span><span class=o>.</span><span class=n>family</span> <span class=o>==</span> <span class=n>socket</span><span class=o>.</span><span class=n>AF_INET</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=k>if</span> <span class=n>intf</span> <span class=ow>not</span> <span class=ow>in</span> <span class=n>result</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                    <span class=n>result</span><span class=p>[</span><span class=n>intf</span><span class=p>]</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>                <span class=n>result</span><span class=p>[</span><span class=n>intf</span><span class=p>]</span><span class=o>.</span><span class=n>append</span><span class=p>((</span><span class=n>addr</span><span class=o>.</span><span class=n>address</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>_port</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>result</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>addresses</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_addresses</span><span class=o>.</span><span class=n>copy</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>shutdown</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_server</span><span class=o>.</span><span class=n>shutdown</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_server</span><span class=o>.</span><span class=n>server_close</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_thread</span><span class=o>.</span><span class=n>join</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>get_port</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_port</span></span></span></code></pre></td></tr></table></div></div><h3 id=33-networkbasicclient>3.3 network.BasicClient</h3><p>HorovodRunDriverClient 和 HorovodRunTaskClient 这两个类都继承了network.BasicClient。</p><p>network.BasicClient 的作用就是连接 network.BasicService，与其交互。即 network.BasicClient 是一个操作接口。</p><div class=highlight id=id-11><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>                             <span class=n>network</span><span class=o>.</span><span class=n>BasicClient</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>                                <span class=o>^</span>            <span class=o>^</span>
+</span></span><span class=line><span class=cl>                                <span class=o>|</span>            <span class=o>|</span>
+</span></span><span class=line><span class=cl>             <span class=o>+------------------+</span>            <span class=o>+---------------+</span>
+</span></span><span class=line><span class=cl>             <span class=o>|</span>                                               <span class=o>|</span>
+</span></span><span class=line><span class=cl>             <span class=o>+</span>                                               <span class=o>|</span>
+</span></span><span class=line><span class=cl>                                                             <span class=o>+</span>
+</span></span><span class=line><span class=cl><span class=n>driver_service</span><span class=o>.</span><span class=n>BasicDriverClient</span>               <span class=n>task_service</span><span class=o>.</span><span class=n>BasicTaskClient</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>             <span class=o>^</span>                                               <span class=o>^</span>
+</span></span><span class=line><span class=cl>             <span class=o>|</span>                                               <span class=o>|</span>
+</span></span><span class=line><span class=cl>             <span class=o>|</span>                                               <span class=o>|</span>
+</span></span><span class=line><span class=cl>             <span class=o>+</span>                                               <span class=o>+</span>
+</span></span><span class=line><span class=cl>   <span class=n>HorovodRunDriverClient</span>                           <span class=n>HorovodRunTaskClient</span></span></span></code></pre></td></tr></table></div></div><p>两个主要 API 如下：</p><h4 id=331-_probe>3.3.1 _probe</h4><p>_probe 获取 server 的网络接口。</p><div class=highlight id=id-12><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>_probe</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>addresses</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>result_queue</span> <span class=o>=</span> <span class=n>queue</span><span class=o>.</span><span class=n>Queue</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=n>threads</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>intf</span><span class=p>,</span> <span class=n>intf_addresses</span> <span class=ow>in</span> <span class=n>addresses</span><span class=o>.</span><span class=n>items</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>        <span class=k>for</span> <span class=n>addr</span> <span class=ow>in</span> <span class=n>intf_addresses</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>thread</span> <span class=o>=</span> <span class=n>in_thread</span><span class=p>(</span><span class=n>target</span><span class=o>=</span><span class=bp>self</span><span class=o>.</span><span class=n>_probe_one</span><span class=p>,</span> <span class=n>args</span><span class=o>=</span><span class=p>(</span><span class=n>intf</span><span class=p>,</span> <span class=n>addr</span><span class=p>,</span> <span class=n>result_queue</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>            <span class=n>threads</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>thread</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>t</span> <span class=ow>in</span> <span class=n>threads</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>t</span><span class=o>.</span><span class=n>join</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>result</span> <span class=o>=</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>    <span class=k>while</span> <span class=ow>not</span> <span class=n>result_queue</span><span class=o>.</span><span class=n>empty</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>        <span class=n>intf</span><span class=p>,</span> <span class=n>addr</span> <span class=o>=</span> <span class=n>result_queue</span><span class=o>.</span><span class=n>get</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>intf</span> <span class=ow>not</span> <span class=ow>in</span> <span class=n>result</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>result</span><span class=p>[</span><span class=n>intf</span><span class=p>]</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>        <span class=n>result</span><span class=p>[</span><span class=n>intf</span><span class=p>]</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>addr</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>result</span></span></span></code></pre></td></tr></table></div></div><h4 id=332-发送消息>3.3.2 发送消息</h4><p>_send 的作用是给server发送消息。</p><div class=highlight id=id-13><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>_send</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>req</span><span class=p>,</span> <span class=n>stream</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=s2>&#34;&#34;&#34;
+</span></span></span><span class=line><span class=cl><span class=s2>    Sends the request and returns the response object.
+</span></span></span><span class=line><span class=cl><span class=s2>    Streaming data response is transferred to the optional stream parameter.
+</span></span></span><span class=line><span class=cl><span class=s2>    &#34;&#34;&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=c1># Since all the addresses were vetted, use the first one.</span>
+</span></span><span class=line><span class=cl>    <span class=n>addr</span> <span class=o>=</span> <span class=nb>list</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>_addresses</span><span class=o>.</span><span class=n>values</span><span class=p>())[</span><span class=mi>0</span><span class=p>][</span><span class=mi>0</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_send_one</span><span class=p>(</span><span class=n>addr</span><span class=p>,</span> <span class=n>req</span><span class=p>,</span> <span class=n>stream</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><h3 id=34-总结>3.4 总结</h3><p>我们可以看到，network.BasicService 会提供了一个server，这个 Service 都是通过 network.BasicClient 来访问。基于此，Horovod 的HorovodRunDriverService 和 HorovodRunTaskService 这两个类就可以互相交互，进行沟通。</p><h2 id=4-driver-服务>4 Driver 服务</h2><p>Driver 服务由 HorovodRunDriverService 提供，其功能主要是维护维护各种 task 地址以及相应关系。具体各种 task 地址 就是 Task 服务 来注册的。</p><p>需要注意的是：HorovodRunDriverService 和 HorovodRunTaskService 都最终继承了 network.BasicService，他们之间可以是异地运行交互。</p><h3 id=41-horovodrundriverservice>4.1 HorovodRunDriverService</h3><p>HorovodRunDriverService 是对 BasicDriverService 的封装。</p><p>HorovodRunDriverClient 是 其 访问接口。</p><div class=highlight id=id-14><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>class</span> <span class=nc>HorovodRunDriverService</span><span class=p>(</span><span class=n>driver_service</span><span class=o>.</span><span class=n>BasicDriverService</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>NAME</span> <span class=o>=</span> <span class=s1>&#39;horovod driver service&#39;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>num_hosts</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>nics</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=nb>super</span><span class=p>(</span><span class=n>HorovodRunDriverService</span><span class=p>,</span> <span class=bp>self</span><span class=p>)</span><span class=o>.</span><span class=fm>__init__</span><span class=p>(</span><span class=n>num_hosts</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                                      <span class=n>HorovodRunDriverService</span><span class=o>.</span><span class=n>NAME</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                                      <span class=n>key</span><span class=p>,</span> <span class=n>nics</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>HorovodRunDriverClient</span><span class=p>(</span><span class=n>driver_service</span><span class=o>.</span><span class=n>BasicDriverClient</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>driver_addresses</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>verbose</span><span class=p>,</span> <span class=n>match_intf</span><span class=o>=</span><span class=kc>False</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=nb>super</span><span class=p>(</span><span class=n>HorovodRunDriverClient</span><span class=p>,</span> <span class=bp>self</span><span class=p>)</span><span class=o>.</span><span class=fm>__init__</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=n>HorovodRunDriverService</span><span class=o>.</span><span class=n>NAME</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>driver_addresses</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>key</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>verbose</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>match_intf</span><span class=o>=</span><span class=n>match_intf</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><h3 id=42-basicdriverservice>4.2 BasicDriverService</h3><p>BasicDriverService基类 主要就是 维护各种 task 地址以及相应关系。</p><div class=highlight id=id-15><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>class</span> <span class=nc>BasicDriverService</span><span class=p>(</span><span class=n>network</span><span class=o>.</span><span class=n>BasicService</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>num_proc</span><span class=p>,</span> <span class=n>name</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>nics</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=nb>super</span><span class=p>(</span><span class=n>BasicDriverService</span><span class=p>,</span> <span class=bp>self</span><span class=p>)</span><span class=o>.</span><span class=fm>__init__</span><span class=p>(</span><span class=n>name</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>nics</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_num_proc</span> <span class=o>=</span> <span class=n>num_proc</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_all_task_addresses</span> <span class=o>=</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_task_addresses_for_driver</span> <span class=o>=</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_task_addresses_for_tasks</span> <span class=o>=</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_task_index_host_hash</span> <span class=o>=</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_task_host_hash_indices</span> <span class=o>=</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span> <span class=o>=</span> <span class=n>threading</span><span class=o>.</span><span class=n>Condition</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><p>这里的各种 task 地址就是 Task 服务 注册到 Driver 的数值。</p><p>可以看到里面有各种关于地址的变量，为了让大家理解这些变量的作用，对于每一个变量我们举例如下（这里有些变量是专门为 spark 设计，都放到基类里面有点奇怪）：</p><h4 id=421-_all_task_addresses>4.2.1 _all_task_addresses</h4><p>本变量是记录了所有 task 的地址，变量举例如下：</p><div class=highlight id=id-16><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=bp>self</span><span class=o>.</span><span class=n>_all_task_addresses</span> <span class=o>=</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=mi>1</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=s1>&#39;lo&#39;</span> <span class=p>:</span> <span class=p>[(</span><span class=s1>&#39;1.1.1.1&#39;</span><span class=p>,</span> <span class=mi>12345</span><span class=p>)],</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;eth0&#39;</span> <span class=p>:</span> <span class=p>[(</span><span class=s1>&#39;10.10.10.01&#39;</span><span class=p>,</span> <span class=mi>12345</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl>	<span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=mi>0</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=s1>&#39;lo&#39;</span> <span class=p>:</span> <span class=p>[(</span><span class=s1>&#39;2.2.2.2&#39;</span><span class=p>,</span> <span class=mi>54321</span><span class=p>)],</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;eth0&#39;</span> <span class=p>:</span> <span class=p>[(</span><span class=s1>&#39;10.10.10.02&#39;</span><span class=p>,</span> <span class=mi>54321</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl>	<span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>本变量由 task 调用 RegisterTaskRequest 来注册。</p><div class=highlight id=id-17><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>if</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>req</span><span class=p>,</span> <span class=n>RegisterTaskRequest</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>assert</span> <span class=mi>0</span> <span class=o>&lt;=</span> <span class=n>req</span><span class=o>.</span><span class=n>index</span> <span class=o>&lt;</span> <span class=bp>self</span><span class=o>.</span><span class=n>_num_proc</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_all_task_addresses</span><span class=p>[</span><span class=n>req</span><span class=o>.</span><span class=n>index</span><span class=p>]</span> <span class=o>=</span> <span class=n>req</span><span class=o>.</span><span class=n>task_addresses</span></span></span></code></pre></td></tr></table></div></div><h4 id=422-_task_addresses_for_driver>4.2.2 _task_addresses_for_driver</h4><p>本变量是记录了所有 task 的地址，但是网卡接口有多种，这里选择与 本 driver 地址匹配的地址。</p><p>变量举例如下：</p><div class=highlight id=id-18><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=bp>self</span><span class=o>.</span><span class=n>_task_addresses_for_driver</span> <span class=o>=</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=mi>1</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;eth0&#39;</span> <span class=p>:</span> <span class=p>[(</span><span class=s1>&#39;10.10.10.01&#39;</span><span class=p>,</span> <span class=mi>12345</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl>	<span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=mi>0</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;eth0&#39;</span> <span class=p>:</span> <span class=p>[(</span><span class=s1>&#39;10.10.10.02&#39;</span><span class=p>,</span> <span class=mi>54321</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl>	<span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>本变量由 task 调用 RegisterTaskRequest 来注册。</p><div class=highlight id=id-19><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=c1># Just use source address for service for fast probing.</span>
+</span></span><span class=line><span class=cl><span class=bp>self</span><span class=o>.</span><span class=n>_task_addresses_for_driver</span><span class=p>[</span><span class=n>req</span><span class=o>.</span><span class=n>index</span><span class=p>]</span> <span class=o>=</span> \
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_filter_by_ip</span><span class=p>(</span><span class=n>req</span><span class=o>.</span><span class=n>task_addresses</span><span class=p>,</span> <span class=n>client_address</span><span class=p>[</span><span class=mi>0</span><span class=p>])</span></span></span></code></pre></td></tr></table></div></div><p>具体使用举例如下：</p><div class=highlight id=id-20><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>task_addresses_for_driver</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>index</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_task_addresses_for_driver</span><span class=p>[</span><span class=n>index</span><span class=p>]</span><span class=o>.</span><span class=n>copy</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><p>driver用这个地址来生成 其内部 task 变量。</p><div class=highlight id=id-21><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=n>tasks</span> <span class=o>=</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>    <span class=n>task_service</span><span class=o>.</span><span class=n>HorovodRunTaskClient</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>        <span class=n>index</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>        <span class=n>driver</span><span class=o>.</span><span class=n>task_addresses_for_driver</span><span class=p>(</span><span class=n>index</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>        <span class=n>settings</span><span class=o>.</span><span class=n>key</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>        <span class=n>settings</span><span class=o>.</span><span class=n>verbose</span><span class=p>)</span> <span class=k>for</span> <span class=n>index</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>        <span class=n>num_hosts</span><span class=p>)]</span></span></span></code></pre></td></tr></table></div></div><h4 id=423-_task_addresses_for_tasks>4.2.3 _task_addresses_for_tasks</h4><p>该变量举例如下：</p><div class=highlight id=id-22><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=bp>self</span><span class=o>.</span><span class=n>_task_addresses_for_tasks</span> <span class=o>=</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=mi>1</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;eth0&#39;</span> <span class=p>:</span> <span class=p>[(</span><span class=s1>&#39;10.10.10.01&#39;</span><span class=p>,</span> <span class=mi>12345</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl>	<span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=mi>0</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;eth0&#39;</span> <span class=p>:</span> <span class=p>[(</span><span class=s1>&#39;10.10.10.02&#39;</span><span class=p>,</span> <span class=mi>54321</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl>	<span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>本变量由RegisterTaskToTaskAddressesRequest注册。</p><div class=highlight id=id-23><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>if</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>req</span><span class=p>,</span> <span class=n>RegisterTaskToTaskAddressesRequest</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>register_task_to_task_addresses</span><span class=p>(</span><span class=n>req</span><span class=o>.</span><span class=n>index</span><span class=p>,</span> <span class=n>req</span><span class=o>.</span><span class=n>task_addresses</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>network</span><span class=o>.</span><span class=n>AckResponse</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>register_task_to_task_addresses</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>index</span><span class=p>,</span> <span class=n>task_addresses</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>assert</span> <span class=mi>0</span> <span class=o>&lt;=</span> <span class=n>index</span> <span class=o>&lt;</span> <span class=bp>self</span><span class=o>.</span><span class=n>_num_proc</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_task_addresses_for_tasks</span><span class=p>[</span><span class=n>index</span><span class=p>]</span> <span class=o>=</span> <span class=n>task_addresses</span> <span class=c1># 这里赋值</span>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>notify_all</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><p>该变量被 task 用来获取 某个 task 的一套网络接口，比如：</p><div class=highlight id=id-24><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=c1># Determine a set of common interfaces for task-to-task communication.</span>
+</span></span><span class=line><span class=cl><span class=n>nics</span> <span class=o>=</span> <span class=nb>set</span><span class=p>(</span><span class=n>driver</span><span class=o>.</span><span class=n>task_addresses_for_tasks</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span><span class=o>.</span><span class=n>keys</span><span class=p>())</span></span></span></code></pre></td></tr></table></div></div><h4 id=424-_task_index_host_hash>4.2.4 _task_index_host_hash</h4><p>每一个 task 有一个对应的 host hash，该数值被 MPI 作为 host name 来操作。</p><div class=highlight id=id-25><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=bp>self</span><span class=o>.</span><span class=n>_task_index_host_hash</span> <span class=o>=</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=mi>1</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;ip-10-10-10-01-dfdsfdsfdsfdsf2&#39;</span>
+</span></span><span class=line><span class=cl>	<span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=mi>0</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;ip-10-10-10-02-treterwrtqwer&#39;</span>
+</span></span><span class=line><span class=cl>	<span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>具体使用如下。这个函数是 spark 相关会使用，具体是逐一通知 spark task 进入下一阶段。</p><div class=highlight id=id-26><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>task_indices</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=nb>list</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>_task_index_host_hash</span><span class=o>.</span><span class=n>keys</span><span class=p>())</span>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><p>或者使用如下，是为了获取某一个 host 对应的 <code>host hash name</code>。</p><div class=highlight id=id-27><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>task_index_host_hash</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>index</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>assert</span> <span class=mi>0</span> <span class=o>&lt;=</span> <span class=n>index</span> <span class=o>&lt;</span> <span class=bp>self</span><span class=o>.</span><span class=n>_num_proc</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_task_index_host_hash</span><span class=p>[</span><span class=n>index</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><h4 id=425-_task_host_hash_indices>4.2.5 _task_host_hash_indices</h4><p>该变量举例如下：</p><div class=highlight id=id-28><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=bp>self</span><span class=o>.</span><span class=n>_task_host_hash_indices</span> <span class=o>=</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=p>{</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;ip-10-10-10-01-dfdsfdsfdsfdsf2&#39;</span> <span class=p>:</span> <span class=p>[</span><span class=mi>1</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>	<span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=p>{</span>
+</span></span><span class=line><span class=cl>		<span class=s1>&#39;ip-10-10-10-02-treterwrtqwer&#39;</span> <span class=p>:</span> <span class=p>[</span><span class=mi>0</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>	<span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>具体是在注册 RegisterTaskRequest 时候生成。</p><div class=highlight id=id-29><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=bp>self</span><span class=o>.</span><span class=n>_task_host_hash_indices</span><span class=p>[</span><span class=n>req</span><span class=o>.</span><span class=n>host_hash</span><span class=p>]</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>req</span><span class=o>.</span><span class=n>index</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><p>使用具体代码是：</p><div class=highlight id=id-30><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>task_host_hash_indices</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_task_host_hash_indices</span><span class=o>.</span><span class=n>copy</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><p>具体是被 rsh 使用。rsh 就是在某一个 host 上，让某一个 horovod rank 启动。具体逻辑是：</p><ul><li>获取某一个 host 上所有的 task indices ；</li><li>利用 task_host_hash_indices 取出本进程 local rank 对应的 task index；</li><li>取出在 driver 中 task index 对应保持的 task address；</li><li>最后依据这个 task addresses 生成一个 SparkTaskClient，进行后续操作。</li></ul><div class=highlight id=id-31><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=n>driver_client</span> <span class=o>=</span> <span class=n>driver_service</span><span class=o>.</span><span class=n>SparkDriverClient</span><span class=p>(</span><span class=n>driver_addresses</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>verbose</span><span class=o>=</span><span class=n>verbose</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>task_indices</span> <span class=o>=</span> <span class=n>driver_client</span><span class=o>.</span><span class=n>task_host_hash_indices</span><span class=p>(</span><span class=n>host_hash</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>task_index</span> <span class=o>=</span> <span class=n>task_indices</span><span class=p>[</span><span class=n>local_rank</span><span class=p>]</span>
+</span></span><span class=line><span class=cl><span class=n>task_addresses</span> <span class=o>=</span> <span class=n>driver_client</span><span class=o>.</span><span class=n>all_task_addresses</span><span class=p>(</span><span class=n>task_index</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>task_client</span> <span class=o>=</span> <span class=n>task_service</span><span class=o>.</span><span class=n>SparkTaskClient</span><span class=p>(</span><span class=n>task_index</span><span class=p>,</span> <span class=n>task_addresses</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>verbose</span><span class=o>=</span><span class=n>verbose</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>task_client</span><span class=o>.</span><span class=n>stream_command_output</span><span class=p>(</span><span class=n>stdout</span><span class=p>,</span> <span class=n>stderr</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>task_client</span><span class=o>.</span><span class=n>run_command</span><span class=p>(</span><span class=n>command</span><span class=p>,</span> <span class=n>env</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                        <span class=n>capture_stdout</span><span class=o>=</span><span class=n>stdout</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                        <span class=n>capture_stderr</span><span class=o>=</span><span class=n>stderr</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                        <span class=n>prefix_output_with_timestamp</span><span class=o>=</span><span class=n>prefix_output_with_timestamp</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><h3 id=43-总体逻辑>4.3 总体逻辑</h3><p>总体逻辑如下：</p><div class=highlight id=id-32><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl>                               <span class=n>network</span><span class=o>.</span><span class=n>BasicService</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>                                     <span class=o>^</span>    <span class=o>^</span>
+</span></span><span class=line><span class=cl>                                     <span class=o>|</span>    <span class=o>|</span>
+</span></span><span class=line><span class=cl>                 <span class=o>+-------------------+</span>    <span class=o>+-------------+</span>
+</span></span><span class=line><span class=cl>                 <span class=o>|</span>                                      <span class=o>|</span>
+</span></span><span class=line><span class=cl>                 <span class=o>+</span>                                      <span class=o>+</span>
+</span></span><span class=line><span class=cl>   <span class=n>driver_service</span><span class=o>.</span><span class=n>BasicDriverService</span>       <span class=n>task_service</span><span class=o>.</span><span class=n>BasicTaskService</span>
+</span></span><span class=line><span class=cl>                 <span class=o>^</span>                                      <span class=o>^</span>
+</span></span><span class=line><span class=cl>                 <span class=o>|</span>                                      <span class=o>|</span>
+</span></span><span class=line><span class=cl>                 <span class=o>|</span>                                      <span class=o>|</span>
+</span></span><span class=line><span class=cl>                 <span class=o>|</span>                                      <span class=o>|</span>
+</span></span><span class=line><span class=cl>                 <span class=o>|</span>                                      <span class=o>+</span>
+</span></span><span class=line><span class=cl><span class=o>+----------------+------------------+</span>         <span class=n>HorovodRunTaskService</span>
+</span></span><span class=line><span class=cl><span class=o>|</span> <span class=n>HorovodRunDriverService</span>           <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>        <span class=n>_all_task_addresses</span>        <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>    <span class=n>_task_addresses_for_driver</span>     <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>       <span class=n>_task_addresses_for_tasks</span>   <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>       <span class=n>_task_index_host_hash</span>       <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>     <span class=n>_task_host_hash_indices</span>       <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>+-----------------------------------+</span></span></span></code></pre></td></tr></table></div></div><h2 id=5-task-服务>5 Task 服务</h2><p>HorovodRunTaskService 提供了 Task 部分服务功能。整体逻辑是由几个函数共同完成。</p><h3 id=51-启动具体服务>5.1 启动具体服务</h3><p>_launch_task_servers 用来启动具体服务，其主要作用是：多线程运行，在每一个线程中，远程运行 <code>horovod.runner.task_fn</code>。
+其中：</p><ul><li>传入参数中，all_host_names 就是程序启动时候配置的所有host，比如 [&ldquo;1.1.1.1&rdquo;, &ldquo;2.2.2.2&rdquo;]；</li><li>使用了我们之前提到的 safe_shell_exec.execute 完成了安全运行保证；</li><li>使用我们前文提到的 get_remote_command 完成了远程命令的获取，即在命令之前加上了 ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no等等配置；</li><li>最终每个启动的命令举例如下： ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no 1.1.1.1 python -m horovod.runner.task_fn xxxxxxx；</li><li>使用 execute_function_multithreaded 在每一个 host 上运行，启动 task 服务；</li></ul><p>具体代码如下：</p><div class=highlight id=id-33><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span><span class=lnt>67
+</span><span class=lnt>68
+</span><span class=lnt>69
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>_launch_task_servers</span><span class=p>(</span><span class=n>all_host_names</span><span class=p>,</span> <span class=n>local_host_names</span><span class=p>,</span> <span class=n>driver_addresses</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                         <span class=n>settings</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=s2>&#34;&#34;&#34;
+</span></span></span><span class=line><span class=cl><span class=s2>    Executes the task server and service client task for registration on the
+</span></span></span><span class=line><span class=cl><span class=s2>    hosts.
+</span></span></span><span class=line><span class=cl><span class=s2>    :param all_host_names: list of addresses. for example,
+</span></span></span><span class=line><span class=cl><span class=s2>        [&#39;worker-0&#39;,&#39;worker-1&#39;]
+</span></span></span><span class=line><span class=cl><span class=s2>        [&#39;10.11.11.11&#39;, &#39;10.11.11.12&#39;]
+</span></span></span><span class=line><span class=cl><span class=s2>    :type all_host_names: list(string)
+</span></span></span><span class=line><span class=cl><span class=s2>    :param local_host_names: names that are resolved to one of the addresses
+</span></span></span><span class=line><span class=cl><span class=s2>    of local hosts interfaces. For example,
+</span></span></span><span class=line><span class=cl><span class=s2>        set([&#39;localhost&#39;, &#39;127.0.0.1&#39;])
+</span></span></span><span class=line><span class=cl><span class=s2>    :type local_host_names: set
+</span></span></span><span class=line><span class=cl><span class=s2>    :param driver_addresses: map of interfaces and their address and port for
+</span></span></span><span class=line><span class=cl><span class=s2>    the service. For example:
+</span></span></span><span class=line><span class=cl><span class=s2>        {
+</span></span></span><span class=line><span class=cl><span class=s2>            &#39;lo&#39;: [(&#39;127.0.0.1&#39;, 34588)],
+</span></span></span><span class=line><span class=cl><span class=s2>            &#39;docker0&#39;: [(&#39;172.122.10.1&#39;, 34588)],
+</span></span></span><span class=line><span class=cl><span class=s2>            &#39;eth0&#39;: [(&#39;11.111.33.73&#39;, 34588)]
+</span></span></span><span class=line><span class=cl><span class=s2>        }
+</span></span></span><span class=line><span class=cl><span class=s2>    :type driver_addresses: map
+</span></span></span><span class=line><span class=cl><span class=s2>    :param settings: the object that contains the setting for running horovod
+</span></span></span><span class=line><span class=cl><span class=s2>    :type settings: horovod.runner.common.util.settings.Settings
+</span></span></span><span class=line><span class=cl><span class=s2>    :return:
+</span></span></span><span class=line><span class=cl><span class=s2>    :rtype:
+</span></span></span><span class=line><span class=cl><span class=s2>    &#34;&#34;&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>_exec_command</span><span class=p>(</span><span class=n>command</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>host_output</span> <span class=o>=</span> <span class=n>io</span><span class=o>.</span><span class=n>StringIO</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=c1># 完成了安全运行保证</span>
+</span></span><span class=line><span class=cl>            <span class=n>exit_code</span> <span class=o>=</span> <span class=n>safe_shell_exec</span><span class=o>.</span><span class=n>execute</span><span class=p>(</span><span class=n>command</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                                <span class=n>stdout</span><span class=o>=</span><span class=n>host_output</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                                <span class=n>stderr</span><span class=o>=</span><span class=n>host_output</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>host_output</span><span class=o>.</span><span class=n>close</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=n>exit_code</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>args_list</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>    <span class=n>num_hosts</span> <span class=o>=</span> <span class=nb>len</span><span class=p>(</span><span class=n>all_host_names</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>index</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>num_hosts</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>host_name</span> <span class=o>=</span> <span class=n>all_host_names</span><span class=p>[</span><span class=n>index</span><span class=p>]</span> <span class=c1># all_host_names 就是程序启动时候配置的所有host，比如 [&#34;1.1.1.1&#34;, &#34;2.2.2.2&#34;]</span>
+</span></span><span class=line><span class=cl>        <span class=n>command</span> <span class=o>=</span> \
+</span></span><span class=line><span class=cl>            <span class=s1>&#39;</span><span class=si>{python}</span><span class=s1> -m horovod.runner.task_fn </span><span class=si>{index}</span><span class=s1> </span><span class=si>{num_hosts}</span><span class=s1> &#39;</span> \
+</span></span><span class=line><span class=cl>            <span class=s1>&#39;</span><span class=si>{driver_addresses}</span><span class=s1> </span><span class=si>{settings}</span><span class=s1>&#39;</span> \
+</span></span><span class=line><span class=cl>            <span class=o>.</span><span class=n>format</span><span class=p>(</span><span class=n>python</span><span class=o>=</span><span class=n>sys</span><span class=o>.</span><span class=n>executable</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>index</span><span class=o>=</span><span class=n>codec</span><span class=o>.</span><span class=n>dumps_base64</span><span class=p>(</span><span class=n>index</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>                    <span class=n>num_hosts</span><span class=o>=</span><span class=n>codec</span><span class=o>.</span><span class=n>dumps_base64</span><span class=p>(</span><span class=n>num_hosts</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>                    <span class=n>driver_addresses</span><span class=o>=</span><span class=n>codec</span><span class=o>.</span><span class=n>dumps_base64</span><span class=p>(</span><span class=n>driver_addresses</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>                    <span class=n>settings</span><span class=o>=</span><span class=n>codec</span><span class=o>.</span><span class=n>dumps_base64</span><span class=p>(</span><span class=n>settings</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>host_name</span> <span class=ow>not</span> <span class=ow>in</span> <span class=n>local_host_names</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=c1># 完成了远程命令的获取，即在命令之前加上了 `ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no`等等配置</span>
+</span></span><span class=line><span class=cl>            <span class=n>command</span> <span class=o>=</span> <span class=n>get_remote_command</span><span class=p>(</span><span class=n>command</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                         <span class=n>host</span><span class=o>=</span><span class=n>host_name</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                         <span class=n>port</span><span class=o>=</span><span class=n>settings</span><span class=o>.</span><span class=n>ssh_port</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                         <span class=n>identity_file</span><span class=o>=</span><span class=n>settings</span><span class=o>.</span><span class=n>ssh_identity_file</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=n>args_list</span><span class=o>.</span><span class=n>append</span><span class=p>([</span><span class=n>command</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Each thread will use ssh command to launch the server on one task. If an</span>
+</span></span><span class=line><span class=cl>    <span class=c1># error occurs in one thread, entire process will be terminated. Otherwise,</span>
+</span></span><span class=line><span class=cl>    <span class=c1># threads will keep running and ssh session -- and the the task server --</span>
+</span></span><span class=line><span class=cl>    <span class=c1># will be bound to the thread. In case, the horovod process dies, all</span>
+</span></span><span class=line><span class=cl>    <span class=c1># the ssh sessions and all the task servers will die as well.</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># 使用 execute_function_multithreaded 在每一个 host 上运行，启动 task 服务</span>
+</span></span><span class=line><span class=cl>    <span class=n>threads</span><span class=o>.</span><span class=n>execute_function_multithreaded</span><span class=p>(</span><span class=n>_exec_command</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                           <span class=n>args_list</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                           <span class=n>block_until_all_done</span><span class=o>=</span><span class=kc>False</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><h3 id=52-具体服务逻辑>5.2 具体服务逻辑</h3><p>上段有：<code>{python} -m horovod.runner.task_fn {index} {num_hosts} {driver_addresses} {settings}</code>执行具体服务逻辑，所以我们介绍下 <code>horovod.runner.task_fn</code>。</p><p><code>_task_fn</code> 函数完成了</p><ul><li>生成了 HorovodRunTaskService 实例，赋值给 task；</li><li>使用 HorovodRunDriverClient . register_task 来向 Driver 服务注册task（自己）的地址；</li><li>使用 HorovodRunDriverClient . register_task_to_task_addresses 来向 Driver 服务注册自己在Ring上 下一个邻居的地址；</li><li>每一个 task 都做这个操作，最后就得到了在这个 ring cluster 之中的一个路由接口；</li></ul><p>具体代码如下：</p><div class=highlight id=id-34><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>_task_fn</span><span class=p>(</span><span class=n>index</span><span class=p>,</span> <span class=n>num_hosts</span><span class=p>,</span> <span class=n>driver_addresses</span><span class=p>,</span> <span class=n>settings</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>task</span> <span class=o>=</span> <span class=n>task_service</span><span class=o>.</span><span class=n>HorovodRunTaskService</span><span class=p>(</span><span class=n>index</span><span class=p>,</span> <span class=n>settings</span><span class=o>.</span><span class=n>key</span><span class=p>,</span> <span class=n>settings</span><span class=o>.</span><span class=n>nics</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>driver</span> <span class=o>=</span> <span class=n>driver_service</span><span class=o>.</span><span class=n>HorovodRunDriverClient</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=n>driver_addresses</span><span class=p>,</span> <span class=n>settings</span><span class=o>.</span><span class=n>key</span><span class=p>,</span> <span class=n>settings</span><span class=o>.</span><span class=n>verbose</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=c1># 向 Driver 服务注册task（自己）的地址</span>
+</span></span><span class=line><span class=cl>        <span class=n>driver</span><span class=o>.</span><span class=n>register_task</span><span class=p>(</span><span class=n>index</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                             <span class=n>task</span><span class=o>.</span><span class=n>addresses</span><span class=p>(),</span>
+</span></span><span class=line><span class=cl>                             <span class=n>host_hash</span><span class=o>.</span><span class=n>host_hash</span><span class=p>())</span>
+</span></span><span class=line><span class=cl>        <span class=n>task</span><span class=o>.</span><span class=n>wait_for_initial_registration</span><span class=p>(</span><span class=n>settings</span><span class=o>.</span><span class=n>start_timeout</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=c1># Tasks ping each other in a circular fashion to determine interfaces</span>
+</span></span><span class=line><span class=cl>        <span class=c1># reachable within the cluster.</span>
+</span></span><span class=line><span class=cl>        <span class=n>next_task_index</span> <span class=o>=</span> <span class=p>(</span><span class=n>index</span> <span class=o>+</span> <span class=mi>1</span><span class=p>)</span> <span class=o>%</span> <span class=n>num_hosts</span>
+</span></span><span class=line><span class=cl>        <span class=n>next_task_addresses</span> <span class=o>=</span> <span class=n>driver</span><span class=o>.</span><span class=n>all_task_addresses</span><span class=p>(</span><span class=n>next_task_index</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=c1># We request interface matching to weed out all the NAT&#39;ed interfaces.</span>
+</span></span><span class=line><span class=cl>        <span class=n>next_task</span> <span class=o>=</span> <span class=n>task_service</span><span class=o>.</span><span class=n>HorovodRunTaskClient</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=n>next_task_index</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>next_task_addresses</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>settings</span><span class=o>.</span><span class=n>key</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>settings</span><span class=o>.</span><span class=n>verbose</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>match_intf</span><span class=o>=</span><span class=kc>True</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>attempts</span><span class=o>=</span><span class=mi>10</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=c1># 向 Driver 服务注册自己在Ring上 下一个邻居的地址</span>
+</span></span><span class=line><span class=cl>        <span class=n>driver</span><span class=o>.</span><span class=n>register_task_to_task_addresses</span><span class=p>(</span><span class=n>next_task_index</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                               <span class=n>next_task</span><span class=o>.</span><span class=n>addresses</span><span class=p>())</span>
+</span></span><span class=line><span class=cl>        <span class=c1># Notify the next task that the address checks are completed.</span>
+</span></span><span class=line><span class=cl>        <span class=n>next_task</span><span class=o>.</span><span class=n>task_to_task_address_check_completed</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=c1># Wait to get a notification from previous task that its address checks</span>
+</span></span><span class=line><span class=cl>        <span class=c1># are completed as well.</span>
+</span></span><span class=line><span class=cl>        <span class=n>task</span><span class=o>.</span><span class=n>wait_for_task_to_task_address_check_finish_signal</span><span class=p>(</span><span class=n>settings</span><span class=o>.</span><span class=n>start_timeout</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>task</span><span class=o>.</span><span class=n>shutdown</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=vm>__name__</span> <span class=o>==</span> <span class=s1>&#39;__main__&#39;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>    <span class=n>index</span> <span class=o>=</span> <span class=n>codec</span><span class=o>.</span><span class=n>loads_base64</span><span class=p>(</span><span class=n>sys</span><span class=o>.</span><span class=n>argv</span><span class=p>[</span><span class=mi>1</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>    <span class=n>num_hosts</span> <span class=o>=</span> <span class=n>codec</span><span class=o>.</span><span class=n>loads_base64</span><span class=p>(</span><span class=n>sys</span><span class=o>.</span><span class=n>argv</span><span class=p>[</span><span class=mi>2</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>    <span class=n>driver_addresses</span> <span class=o>=</span> <span class=n>codec</span><span class=o>.</span><span class=n>loads_base64</span><span class=p>(</span><span class=n>sys</span><span class=o>.</span><span class=n>argv</span><span class=p>[</span><span class=mi>3</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>    <span class=n>settings</span> <span class=o>=</span> <span class=n>codec</span><span class=o>.</span><span class=n>loads_base64</span><span class=p>(</span><span class=n>sys</span><span class=o>.</span><span class=n>argv</span><span class=p>[</span><span class=mi>4</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>_task_fn</span><span class=p>(</span><span class=n>index</span><span class=p>,</span> <span class=n>num_hosts</span><span class=p>,</span> <span class=n>driver_addresses</span><span class=p>,</span> <span class=n>settings</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><h3 id=53-horovodruntaskservice>5.3 HorovodRunTaskService</h3><p>HorovodRunTaskService 主要的作用是提供了两个等待函数。因为具体路由操作是需要彼此通知，所以需要互相等待。</p><div class=highlight id=id-35><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>class</span> <span class=nc>HorovodRunTaskService</span><span class=p>(</span><span class=n>task_service</span><span class=o>.</span><span class=n>BasicTaskService</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>NAME_FORMAT</span> <span class=o>=</span> <span class=s1>&#39;horovod task service #</span><span class=si>%d</span><span class=s1>&#39;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>index</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>nics</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=nb>super</span><span class=p>(</span><span class=n>HorovodRunTaskService</span><span class=p>,</span> <span class=bp>self</span><span class=p>)</span><span class=o>.</span><span class=fm>__init__</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=n>HorovodRunTaskService</span><span class=o>.</span><span class=n>NAME_FORMAT</span> <span class=o>%</span> <span class=n>index</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>index</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>nics</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>index</span> <span class=o>=</span> <span class=n>index</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_task_to_task_address_check_completed</span> <span class=o>=</span> <span class=kc>False</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>_handle</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>req</span><span class=p>,</span> <span class=n>client_address</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>req</span><span class=p>,</span> <span class=n>TaskToTaskAddressCheckFinishedSignal</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>            <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>            <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=bp>self</span><span class=o>.</span><span class=n>_task_to_task_address_check_completed</span> <span class=o>=</span> <span class=kc>True</span>
+</span></span><span class=line><span class=cl>            <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>notify_all</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>                <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>            <span class=k>return</span> <span class=n>TaskToTaskAddressCheckFinishedSignalResponse</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>index</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=nb>super</span><span class=p>(</span><span class=n>HorovodRunTaskService</span><span class=p>,</span> <span class=bp>self</span><span class=p>)</span><span class=o>.</span><span class=n>_handle</span><span class=p>(</span><span class=n>req</span><span class=p>,</span> <span class=n>client_address</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>wait_for_task_to_task_address_check_finish_signal</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>timeout</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>acquire</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=k>try</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>while</span> <span class=ow>not</span> <span class=bp>self</span><span class=o>.</span><span class=n>_task_to_task_address_check_completed</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>wait</span><span class=p>(</span><span class=n>timeout</span><span class=o>.</span><span class=n>remaining</span><span class=p>())</span>
+</span></span><span class=line><span class=cl>                <span class=n>timeout</span><span class=o>.</span><span class=n>check_time_out_for</span><span class=p>(</span><span class=s1>&#39;Task to task address check&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=k>finally</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=bp>self</span><span class=o>.</span><span class=n>_wait_cond</span><span class=o>.</span><span class=n>release</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>HorovodRunTaskClient</span><span class=p>(</span><span class=n>task_service</span><span class=o>.</span><span class=n>BasicTaskClient</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>index</span><span class=p>,</span> <span class=n>task_addresses</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>verbose</span><span class=p>,</span> <span class=n>match_intf</span><span class=o>=</span><span class=kc>False</span><span class=p>,</span> <span class=n>attempts</span><span class=o>=</span><span class=mi>3</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=nb>super</span><span class=p>(</span><span class=n>HorovodRunTaskClient</span><span class=p>,</span> <span class=bp>self</span><span class=p>)</span><span class=o>.</span><span class=fm>__init__</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=n>HorovodRunTaskService</span><span class=o>.</span><span class=n>NAME_FORMAT</span> <span class=o>%</span> <span class=n>index</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>task_addresses</span><span class=p>,</span> <span class=n>key</span><span class=p>,</span> <span class=n>verbose</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>match_intf</span><span class=o>=</span><span class=n>match_intf</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=n>attempts</span><span class=o>=</span><span class=n>attempts</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>index</span> <span class=o>=</span> <span class=n>index</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>task_to_task_address_check_completed</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>resp</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_send</span><span class=p>(</span><span class=n>TaskToTaskAddressCheckFinishedSignal</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>index</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=n>resp</span><span class=o>.</span><span class=n>index</span></span></span></code></pre></td></tr></table></div></div><p>逻辑如下：</p><div class=highlight id=id-36><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-java data-lang=java><span class=line><span class=cl>                                                         <span class=n>_driver_fn</span>
+</span></span><span class=line><span class=cl>                                                            <span class=o>+</span>
+</span></span><span class=line><span class=cl>                                                            <span class=o>|</span>
+</span></span><span class=line><span class=cl>                                                            <span class=o>|</span>
+</span></span><span class=line><span class=cl>                    <span class=o>+---------------------------------------+-------------------------------------</span><span class=n>v</span>
+</span></span><span class=line><span class=cl>                    <span class=o>|</span>                                                                             <span class=o>|</span>
+</span></span><span class=line><span class=cl>                    <span class=o>|</span>                                                                             <span class=n>v</span>
+</span></span><span class=line><span class=cl>                    <span class=o>|</span>                                                                   <span class=n>_launch_task_servers</span>
+</span></span><span class=line><span class=cl>                    <span class=n>v</span>                                                                             <span class=o>+</span>
+</span></span><span class=line><span class=cl>     <span class=n>driver</span> <span class=o>=</span> <span class=n>HorovodRunDriverService</span>                                                             <span class=o>|</span>
+</span></span><span class=line><span class=cl>                    <span class=o>+</span>                                                              <span class=o>+--------------+-------------------+</span>
+</span></span><span class=line><span class=cl>                    <span class=o>|</span>                                                              <span class=o>|</span>                                  <span class=o>|</span>
+</span></span><span class=line><span class=cl>                    <span class=o>|</span>                                                              <span class=o>|</span>                                  <span class=o>|</span>
+</span></span><span class=line><span class=cl>                    <span class=n>v</span>                                                              <span class=n>v</span>                                  <span class=n>v</span>
+</span></span><span class=line><span class=cl><span class=o>+-------------------+---------------+</span>                                    <span class=n>horovod</span><span class=o>.</span><span class=na>runner</span><span class=o>.</span><span class=na>task_fn</span>    <span class=o>......</span>     <span class=n>horovod</span><span class=o>.</span><span class=na>runner</span><span class=o>.</span><span class=na>task_fn</span>
+</span></span><span class=line><span class=cl><span class=o>|</span> <span class=n>HorovodRunDriverService</span>           <span class=o>|</span>                                              <span class=o>+</span>                                  <span class=o>+</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>                                              <span class=o>|</span>                                  <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>                                              <span class=o>|</span>                                  <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>        <span class=n>_all_task_addresses</span>        <span class=o>|</span>                                              <span class=o>|</span>                                  <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>                                              <span class=n>v</span>                                  <span class=n>v</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>    <span class=n>_task_addresses_for_driver</span>     <span class=o>|</span>          <span class=n>register_task</span>           <span class=o>+-----------+---------------+</span>          <span class=o>+-------+--------------------+</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>                                  <span class=o>|</span> <span class=n>HorovodRunTaskService</span>     <span class=o>|</span>          <span class=o>|</span>  <span class=n>HorovodRunTaskService</span>     <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>       <span class=n>_task_addresses_for_tasks</span>   <span class=o>|</span> <span class=o>&lt;--------------------------------+</span>                           <span class=o>|</span>          <span class=o>|</span>                            <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>                                  <span class=o>|</span>                           <span class=o>|</span>   <span class=n>wait</span>   <span class=o>|</span>                            <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>       <span class=n>_task_index_host_hash</span>       <span class=o>|</span>                                  <span class=o>|</span>                           <span class=o>|</span> <span class=o>&lt;------&gt;</span> <span class=o>|</span>                            <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span> <span class=o>&lt;--------------------------------+</span>                           <span class=o>|</span>          <span class=o>|</span>                            <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>     <span class=n>_task_host_hash_indices</span>       <span class=o>|</span>  <span class=n>register_task_to_task_addresses</span> <span class=o>|</span>                           <span class=o>|</span>          <span class=o>|</span>                            <span class=o>|</span>
+</span></span><span class=line><span class=cl><span class=o>|</span>                                   <span class=o>|</span>                                  <span class=o>+---------------------------+</span>          <span class=o>+----------------------------+</span>
+</span></span><span class=line><span class=cl><span class=o>+-----------------------------------+</span>                                                  <span class=err>`</span></span></span></code></pre></td></tr></table></div></div><p>图示:</p><p><img loading=lazy src=https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-16_Horovod_4/Horovod_4_concept_driver_service.png#center srcset="https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-16_Horovod_4/Horovod_4_concept_driver_service.png#center, https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-16_Horovod_4/Horovod_4_concept_driver_service.png#center 1.5x, https://github.com/jianye0428/hello-hugo/raw/master/img/posts/notes/2022-10-16_Horovod_4/Horovod_4_concept_driver_service.png#center 2x" sizes=auto data-title="Concept Driver Service" data-alt="Concept Driver Service" style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><h2 id=6-总结>6 总结</h2><p>本文总结如下：</p><ul><li>因为 Horovod 分布式训练 涉及到多个 hosts，所以如果要彼此访问，需要知道路由信息；</li><li>当所有 task 都启动，注册，probe 环中下一个worker 邻居完成 之后，DriverService 会得到路由信息（所有host之间的共有路由接口集合），返回给 Horovod 主体部分使用；</li><li>network.BasicService 提供了网络服务功能；</li><li>XXXService 都是通过 XXXClient作为接口才能访问；</li><li>HorovodRunDriverService 和 HorovodRunTaskService 都最终继承了 network.BasicService，他们之间可以是异地运行交互。</li><li>HorovodRunTaskService 提供了 Task 部分服务功能，这些 task 需要注册到 Driver 之中（和Spark思路类似）。</li><li>HorovodRunDriverService 是对 BasicDriverService 的封装。BasicDriverService 就是 维护各种 task 地址以及相应关系，比如：<ul><li>_all_task_addresses ：记录了所有 task 的地址；</li><li>_task_addresses_for_driver ：记录了所有 task 的地址，但是因为网卡接口有多种，这里选择与 本driver 地址匹配的地址；</li><li>_task_addresses_for_tasks ：用来给某一个 task 分配一个地址，同时获取本 task 的一套网络接口；</li><li>_task_index_host_hash ：每一个 task 有一个对应的 host hash。这个函数是 spark 相关会使用，具体是逐一通知 spark task 进入下一阶段。或者是为了获取某一个 host 对应的 host hash name；</li><li>_task_host_hash_indices ：具体是被 rsh 使用，由 rank 得到 在 driver 中 task index 对应保持的 task address；</li></ul></li><li>SparkDriverService，SparkTaskService，ElasticDriver, Worker 都有什么区别和联系？<ul><li>HorovodRunDriverService 这里只是用来得到路由信息，记录各种 Task 地址；</li><li>SparkDriverService 除了记录路由和地址之外，还提交执行任务（Command），因为具体在哪一个Spark Executor启动之后，SparkDriverService 就需要知道 对应 SparkTaskService 的地址，这样才能知道提交到哪里；</li><li>SparkTaskService 负责执行命令（抛弃了Spark Executor的逻辑，自己搞了一套），就是从 SparkDriverService 那里获得训练函数，然后启动 python 进程来执行；</li><li>ElasticDriver 做得更多，因为还有弹性，需要容错；</li></ul></li></ul><p>references:
+[1]. <a href=https://www.cnblogs.com/rossiXYZ/p/14882053.html target=_blank rel="external nofollow noopener noreferrer">https://www.cnblogs.com/rossiXYZ/p/14882053.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>
+[2]. <a href=https://www.zhihu.com/column/c_1491039346714746880 target=_blank rel="external nofollow noopener noreferrer">https://www.zhihu.com/column/c_1491039346714746880<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a></p></div><div class=post-reward><div class=comment>Buy me a coffee~</div><input type=checkbox class=reward-input name=reward id=fi-reward hidden>
+<label class=reward-button for=fi-reward>赞赏</label><div class=reward-ways data-mode=fixed><div><img loading=lazy src=/images/alipay.jpg srcset="/images/alipay.jpg, /images/alipay.jpg 1.5x, /images/alipay.jpg 2x" sizes=auto data-title="<nil> 支付宝" data-alt="<nil> 支付宝" style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span data-animation>支付宝</span></div><div><img loading=lazy src=/images/wechatpay.jpg srcset="/images/wechatpay.jpg, /images/wechatpay.jpg 1.5x, /images/wechatpay.jpg 2x" sizes=auto data-title="<nil> 微信" data-alt="<nil> 微信" style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span data-animation>微信</span></div></div></div><div class=post-footer id=post-footer><div class=post-info><div class=post-info-line><div class=post-info-mod><span title="更新于 2023-07-10 08:33:47">更新于 2023-07-10&nbsp;<a class=git-hash href=https://github.com/Lruihao/hugo-blog/commit/7995b87aa88c2cf10964ad8ab19cd5a1ab90812b rel="external nofollow noopener noreferrer" target=_blank title="commit by yejian(yejian@zhito.com) 7995b87aa88c2cf10964ad8ab19cd5a1ab90812b: feat: add horovod files"><i class="fa-solid fa-hashtag fa-fw" aria-hidden=true></i>7995b87</a></span></div></div><div class=post-info-line><div class=post-info-md><span><a href=/posts/2022-10-08_horovod_4/index.md title=阅读原始文档 class=link-to-markdown>阅读原始文档</a></span><span><a href=https://github.com/Lruihao/hugo-blog/edit/docs/content/posts/horovod/2022-10-08_horovod_4/index.md title=编辑此页 target=_blank rel="external nofollow noopener noreferrer" class=link-to-edit>编辑此页</a></span></div><div class=post-info-share><span><a href=javascript:void(0); title="分享到 Twitter" data-sharer=twitter data-url=https://lruihao.cn/posts/2022-10-08_horovod_4/ data-title="深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver" data-hashtags=Horovod><i class="fa-brands fa-twitter fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 Facebook" data-sharer=facebook data-url=https://lruihao.cn/posts/2022-10-08_horovod_4/ data-hashtag=Horovod><i class="fa-brands fa-facebook-square fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 Linkedin" data-sharer=linkedin data-url=https://lruihao.cn/posts/2022-10-08_horovod_4/><i class="fa-brands fa-linkedin fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 微博" data-sharer=weibo data-url=https://lruihao.cn/posts/2022-10-08_horovod_4/ data-title="深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver" data-ralateuid=liahao><i class="fa-brands fa-weibo fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 百度" data-sharer=baidu data-url=https://lruihao.cn/posts/2022-10-08_horovod_4/ data-title="深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver"><i data-svg-src=/lib/simple-icons/icons/baidu.min.svg aria-hidden=true></i></a></span></div></div></div><div class=post-info-more><section class=post-tags><i class="fa-solid fa-tags fa-fw me-1" aria-hidden=true></i><a href=/tags/horovod/ class=post-tag>Horovod</a></section><section><span><a href=javascript:void(0); onclick=window.history.back()>返回</a></span>&nbsp;|&nbsp;<span><a href=/>主页</a></span></section></div><div class=post-nav><a href=/posts/2022-10-08_horovod_3/ class=post-nav-item rel=prev title="深度学习分布式训练框架 horovod(3) --- Horovodrun背后做了什么"><i class="fa-solid fa-angle-left fa-fw" aria-hidden=true></i>深度学习分布式训练框架 horovod(3) --- Horovodrun背后做了什么</a></div></div></article></main><footer class=footer><div class=footer-container><div class="footer-line powered">由 <a href=https://gohugo.io/ target=_blank rel="external nofollow noopener noreferrer" title="Hugo 0.115.2">Hugo</a> 强力驱动 | 主题 - <a href=https://github.com/hugo-fixit/FixIt target=_blank rel=external title="FixIt v0.2.18"><img class=fixit-icon src=/fixit.min.svg alt="FixIt logo">&nbsp;FixIt</a></div><div class="footer-line copyright" itemscope itemtype=http://schema.org/CreativeWork><i class="fa-regular fa-copyright fa-fw" aria-hidden=true></i>
+<span itemprop=copyrightYear>2018 - 2023</span><span class=author itemprop=copyrightHolder>
+<a href=https://github.com/jianye0428 target=_blank rel="external nofollow noopener noreferrer">Jian YE</a></span><span class="license footer-divider"><a rel="license external nofollow noopener noreferrer" href=https://creativecommons.org/licenses/by-nc/4.0/ target=_blank>CC BY-NC 4.0</a></span></div><div class="footer-line statistics order-first"><span class=site-time title=网站运行中……><i class="fa-solid fa-heartbeat fa-fw animate-icon" aria-hidden=true></i><span class="ms-1 d-none">博客已运行</span><span class="run-times ms-1">网站运行中……</span></span></div><div class="footer-line visitor"><span id=busuanzi_container_site_uv title=总访客数><i class="fa-regular fa-user fa-fw" aria-hidden=true></i>&nbsp;<span id=busuanzi_value_site_uv><i class="fa-solid fa-spinner fa-spin fa-fw" aria-hidden=true></i></span></span><span id=busuanzi_container_site_pv class=footer-divider title=总访问量><i class="fa-regular fa-eye fa-fw" aria-hidden=true></i>&nbsp;<span id=busuanzi_value_site_pv><i class="fa-solid fa-spinner fa-spin fa-fw" aria-hidden=true></i></span></span></div></div></footer></div><div class=widgets><div class="fixed-buttons animate__faster d-none"><div class="fixed-button back-to-top" role=button aria-label=回到顶部><i class="fa-solid fa-arrow-up fa-fw" aria-hidden=true></i><span class=variant-numeric>0%</span></div></div><a href=https://github.com/Lruihao/hugo-blog title="在 GitHub 上查看程式碼，訂閱請點 Watch" target=_blank rel="external nofollow" class="github-corner right d-none-mobile"><svg viewBox="0 0 250 250" aria-hidden="true"><path d="M0 0 115 115h15l12 27L250 250V0z"/><path d="M128.3 109C113.8 99.7 119 89.6 119 89.6 122 82.7 120.5 78.6 120.5 78.6 119.2 72 123.4 76.3 123.4 76.3 127.3 80.9 125.5 87.3 125.5 87.3 122.9 97.6 130.6 101.9 134.4 103.2" fill="currentcolor" style="transform-origin:130px 106px" class="octo-arm"/><path d="M115 115C114.9 115.1 118.7 116.5 119.8 115.4l13.9-13.8C136.9 99.2 139.9 98.4 142.2 98.6 133.8 88 127.5 74.4 143.8 58 148.5 53.4 154 51.2 159.7 51 160.3 49.4 163.2 43.6 171.4 40.1 171.4 40.1 176.1 42.5 178.8 56.2 183.1 58.6 187.2 61.8 190.9 65.4 194.5 69 197.7 73.2 200.1 77.6 213.8 80.2 216.3 84.9 216.3 84.9 212.7 93.1 206.9 96 205.4 96.6 205.1 102.4 203 107.8 198.3 112.5 181.9 128.9 168.3 122.5 157.7 114.1 157.9 116.9 156.7 120.9 152.7 124.9L141 136.5C139.8 137.7 141.6 141.9 141.8 141.8z" fill="currentcolor" class="octo-body"/></svg></a><div id=mask></div><div class=reading-progress-bar style=left:0;top:0;--bg-progress:#000;--bg-progress-dark:#fff></div><noscript><div class=noscript-warning>FixIt 主题在启用 JavaScript 的情况下效果最佳。</div></noscript></div><link rel=stylesheet href=/lib/cookieconsent/cookieconsent.min.css><link rel=stylesheet href=/lib/pace/themes/blue/pace-theme-minimal.css><script src=/lib/autocomplete/autocomplete.min.js defer></script><script src=/lib/algoliasearch/algoliasearch-lite.umd.min.js defer></script><script src=/lib/instant-page/instantpage.min.js async defer type=module></script><script src=/lib/twemoji/twemoji.min.js defer></script><script src=/lib/sharer/sharer.min.js async defer></script><script src=/lib/cookieconsent/cookieconsent.min.js defer></script><script src=/lib/pangu/pangu.min.js defer></script><script src=/lib/cell-watermark/watermark.min.js defer></script><script src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js async defer></script><script src=/lib/pace/pace.min.js async defer></script><script>window.config={autoBookmark:!0,code:{copyTitle:"复制到剪贴板",editLockTitle:"锁定可编辑代码块",editUnLockTitle:"解锁可编辑代码块",editable:!0,maxShownLines:50},comment:{enable:!1},cookieconsent:{content:{dismiss:"同意",link:"了解更多",message:"本网站使用 Cookies 来改善您的浏览体验。"},enable:!0,palette:{button:{background:"#f0f0f0"},popup:{background:"#1aa3ff"}},theme:"edgeless"},enablePWA:!0,pangu:{enable:!0,selector:"article"},search:{algoliaAppID:"MTJNHU0JVB",algoliaIndex:"index",algoliaSearchKey:"5486225134d99f43826da401ee9bad57",highlightTag:"em",maxResultLength:10,noResultsFound:"没有找到结果",snippetLength:50,type:"algolia"},siteTime:"2018-05-28T20:01:01+08:00",twemoji:!0,watermark:{appendto:".wrapper>main",colspacing:30,content:'<img style="height: 0.85rem;" src="/logo.png" alt="logo" /> 李瑞豪',enable:!0,fontfamily:"MMT_LRH,沐目体",fontsize:1.1,height:20,opacity:.0125,rotate:15,rowspacing:60,width:150}}</script><script src=/js/theme.min.js defer></script><script src=/js/custom.min.js defer></script></body></html>
