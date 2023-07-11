@@ -2,7 +2,7 @@
 
 
 {{< admonition quote "quote" false >}}
-note abstract info tip success question warning failure danger bug example quote
+c++ 八股文 第一部分
 {{< /admonition >}}
 
 <!--more-->
