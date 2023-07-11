@@ -1,4 +1,4 @@
-# 深度学习分布式训练框架 horovod(4) --- 网络基础 & Driver
+# 深度学习分布式训练框架 horovod[4] -- 网络基础 & Driver
 
 
 ## 0 摘要
@@ -987,6 +987,6 @@ references:
 
 ---
 
-> 作者: <no value>  
+> 作者: [Jian YE](https://github.com/jianye0428)  
 > URL: https://lruihao.cn/posts/2022-10-08_horovod_4/  
 
