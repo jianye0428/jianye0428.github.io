@@ -1,0 +1,971 @@
+<!doctype html><html itemscope itemtype=http://schema.org/WebPage lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=2"><meta name=robots content="noodp"><title>Horovod and Openmpi - yejian's blog</title><meta name=author content="Jian YE"><meta name=author-link content="https://github.com/jianye0428"><meta name=description content="Horovod 介绍 Horovod 是 Uber 开源的深度学习工具，它的发展吸取了Facebook &ldquo;Training ImageNet In 1 Hour&rdquo; 与百度 &ldquo;Ring Allreduce&rdquo; 的优点，在保证分布式训练性能的同时，兼顾了前端的简洁和对不同深度学习框架的支持，使用起来对开发人员比较的友好，算是分布式训练方向的标杆项目了。 集合通信库 集合通信库，这个词可能听起来会比较的陌生，不过如果我再提几个关键字"><meta name=keywords content="Horovod"><meta itemprop=name content="Horovod and Openmpi"><meta itemprop=description content="Horovod 介绍 Horovod 是 Uber 开源的深度学习工具，它的发展吸取了Facebook &ldquo;Training ImageNet In 1 Hour&rdquo; 与百度 &ldquo;Ring Allreduce&rdquo; 的优点，在保证分布式训练性能的同时，兼顾了前端的简洁和对不同深度学习框架的支持，使用起来对开发人员比较的友好，算是分布式训练方向的标杆项目了。 集合通信库 集合通信库，这个词可能听起来会比较的陌生，不过如果我再提几个关键字"><meta itemprop=datePublished content="2023-07-13T08:18:52+08:00"><meta itemprop=dateModified content="2023-07-13T08:25:03+08:00"><meta itemprop=wordCount content="7975"><meta itemprop=image content="https://lruihao.cn/images/favicon/jian_icon.png"><meta itemprop=keywords content="Horovod,"><meta property="og:title" content="Horovod and Openmpi"><meta property="og:description" content="Horovod 介绍 Horovod 是 Uber 开源的深度学习工具，它的发展吸取了Facebook &ldquo;Training ImageNet In 1 Hour&rdquo; 与百度 &ldquo;Ring Allreduce&rdquo; 的优点，在保证分布式训练性能的同时，兼顾了前端的简洁和对不同深度学习框架的支持，使用起来对开发人员比较的友好，算是分布式训练方向的标杆项目了。 集合通信库 集合通信库，这个词可能听起来会比较的陌生，不过如果我再提几个关键字"><meta property="og:type" content="article"><meta property="og:url" content="https://lruihao.cn/posts/horovod_and_openmpi/"><meta property="og:image" content="https://lruihao.cn/images/favicon/jian_icon.png"><meta property="article:section" content="posts"><meta property="article:published_time" content="2023-07-13T08:18:52+08:00"><meta property="article:modified_time" content="2023-07-13T08:25:03+08:00"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://lruihao.cn/images/favicon/jian_icon.png"><meta name=twitter:title content="Horovod and Openmpi"><meta name=twitter:description content="Horovod 介绍 Horovod 是 Uber 开源的深度学习工具，它的发展吸取了Facebook &ldquo;Training ImageNet In 1 Hour&rdquo; 与百度 &ldquo;Ring Allreduce&rdquo; 的优点，在保证分布式训练性能的同时，兼顾了前端的简洁和对不同深度学习框架的支持，使用起来对开发人员比较的友好，算是分布式训练方向的标杆项目了。 集合通信库 集合通信库，这个词可能听起来会比较的陌生，不过如果我再提几个关键字"><meta name=application-name content="菠菜阿九时代峰峻啊；数量可根据；"><meta name=apple-mobile-web-app-title content="菠菜阿九时代峰峻啊；数量可根据；"><meta name=theme-color data-light=#ffffff data-dark=#252627 content="#ffffff"><meta name=msapplication-TileColor content="#da532c"><link rel="shortcut icon" type=image/png href=/jian_icon.png><link rel=icon type=image/png sizes=32x32 href=/jian_icon.png><link rel=icon type=image/png sizes=16x16 href=/jian_icon.png><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link rel=manifest href=/site.webmanifest><link rel=canonical href=https://lruihao.cn/posts/horovod_and_openmpi/><link rel=prev href=https://lruihao.cn/posts/os_2/><link rel=stylesheet href=/css/style.min.css><link rel=stylesheet href=/lib/fontawesome-free/all.min.css><link rel=stylesheet href=/lib/animate/animate.min.css><script type=application/ld+json>{"@context":"http://schema.org","@type":"BlogPosting","headline":"Horovod and Openmpi","inLanguage":"zh-CN","mainEntityOfPage":{"@type":"WebPage","@id":"https:\/\/lruihao.cn\/posts\/horovod_and_openmpi\/"},"image":["https:\/\/lruihao.cn\/images\/favicon\/jian_icon.png"],"genre":"posts","keywords":"Horovod","wordcount":7975,"url":"https:\/\/lruihao.cn\/posts\/horovod_and_openmpi\/","datePublished":"2023-07-13T08:18:52+08:00","dateModified":"2023-07-13T08:25:03+08:00","publisher":{"@type":"Organization","name":"Jian YE","logo":"https:\/\/lruihao.cn\/images\/favicon\/jian_icon.png"},"author":{"@type":"Person","name":"Jian YE"},"description":""}</script></head><body data-header-desktop=sticky data-header-mobile=auto><script>(window.localStorage?.getItem("theme")?localStorage.getItem("theme")==="dark":"auto"==="auto"?window.matchMedia("(prefers-color-scheme: dark)").matches:"auto"==="dark")&&document.body.setAttribute("data-theme","dark")</script><div class=wrapper data-page-style=normal><header class="desktop animate__faster" id=header-desktop><div class=header-wrapper data-github-corner=right><div class=header-title><a href=/ title="yejian's blog"><img loading=lazy src=/images/favicon/jian_icon.png srcset="/images/favicon/jian_icon.png, /images/favicon/jian_icon.png 1.5x, /images/favicon/jian_icon.png 2x" sizes=auto data-title="yejian's blog" data-alt="yejian's blog" class=logo style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span class=header-title-text>Jian's Blog</span></a><span class=header-subtitle></span></div><nav><ul class=menu><li class=menu-item><a class=menu-link href=/posts/><i class="fa-solid fa-archive fa-fw fa-sm" aria-hidden=true></i> 所有文章</a></li><li class=menu-item><a class=menu-link href=/categories/><i class="fa-solid fa-th fa-fw fa-sm" aria-hidden=true></i> 分类</a></li><li class=menu-item><a class=menu-link href=/tags/><i class="fa-solid fa-tags fa-fw fa-sm" aria-hidden=true></i> 标签</a></li><li class=menu-item><a class=menu-link href=/friends/ title=友情链接><i class="fa-solid fa-users fa-fw fa-sm" aria-hidden=true></i> 友链</a></li><li class=menu-item><a class=menu-link href=/guestbook/><i class="fa-solid fa-comments fa-fw fa-sm" aria-hidden=true></i> 留言</a></li><li class="menu-item has-children"><a class=menu-link href=/about/><i class="fa-solid fa-user-tie fa-fw fa-sm" aria-hidden=true></i> 关于</a><i class="dropdown-icon fa-solid fa-chevron-down" aria-hidden=true></i><ul class=sub-menu><li class=menu-item><a class=menu-link href=/projects/ title=项目><i class="fa-solid fa-laptop-code fa-fw fa-sm" aria-hidden=true></i> 我的项目</a></li></ul></li><li class="menu-item delimiter"></li><li class="menu-item search" id=search-desktop><input type=text placeholder=搜索文章标题或内容…… id=search-input-desktop>
+<a href=javascript:void(0); class="search-button search-toggle" id=search-toggle-desktop title=搜索><i class="fa-solid fa-search fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); class="search-button search-clear" id=search-clear-desktop title=清空><i class="fa-solid fa-times-circle fa-fw" aria-hidden=true></i></a>
+<span class="search-button search-loading" id=search-loading-desktop><i class="fa-solid fa-spinner fa-fw fa-spin" aria-hidden=true></i></span></li><li class="menu-item theme-switch" title=切换主题><i class="fa-solid fa-adjust fa-fw" aria-hidden=true></i></li></ul></nav></div></header><header class="mobile animate__faster" id=header-mobile><div class=header-container><div class=header-wrapper><div class=header-title><a href=/ title="yejian's blog"><img loading=lazy src=/images/favicon/jian_icon.png srcset="/images/favicon/jian_icon.png, /images/favicon/jian_icon.png 1.5x, /images/favicon/jian_icon.png 2x" sizes=auto data-title=/images/favicon/jian_icon.png data-alt=/images/favicon/jian_icon.png class=logo style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span class=header-title-text>Jian's Blog</span></a><span class=header-subtitle></span></div><div class=menu-toggle id=menu-toggle-mobile><span></span><span></span><span></span></div></div><nav><ul class=menu id=menu-mobile><li class=search-wrapper><div class="search mobile" id=search-mobile><input type=text placeholder=搜索文章标题或内容…… id=search-input-mobile>
+<a href=javascript:void(0); class="search-button search-toggle" id=search-toggle-mobile title=搜索><i class="fa-solid fa-search fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); class="search-button search-clear" id=search-clear-mobile title=清空><i class="fa-solid fa-times-circle fa-fw" aria-hidden=true></i></a>
+<span class="search-button search-loading" id=search-loading-mobile><i class="fa-solid fa-spinner fa-fw fa-spin" aria-hidden=true></i></span></div><a href=javascript:void(0); class=search-cancel id=search-cancel-mobile>取消</a></li><li class=menu-item><a class=menu-link href=/posts/><i class="fa-solid fa-archive fa-fw fa-sm" aria-hidden=true></i> 所有文章</a></li><li class=menu-item><a class=menu-link href=/categories/><i class="fa-solid fa-th fa-fw fa-sm" aria-hidden=true></i> 分类</a></li><li class=menu-item><a class=menu-link href=/tags/><i class="fa-solid fa-tags fa-fw fa-sm" aria-hidden=true></i> 标签</a></li><li class=menu-item><a class=menu-link href=/friends/ title=友情链接><i class="fa-solid fa-users fa-fw fa-sm" aria-hidden=true></i> 友链</a></li><li class=menu-item><a class=menu-link href=/guestbook/><i class="fa-solid fa-comments fa-fw fa-sm" aria-hidden=true></i> 留言</a></li><li class=menu-item><span class=nested-item><a class=menu-link href=/about/><i class="fa-solid fa-user-tie fa-fw fa-sm" aria-hidden=true></i> 关于</a>
+<i class="dropdown-icon fa-solid fa-chevron-right" aria-hidden=true></i></span><ul class=sub-menu><li class=menu-item><a class=menu-link href=/projects/ title=项目><i class="fa-solid fa-laptop-code fa-fw fa-sm" aria-hidden=true></i> 我的项目</a></li></ul></li><li class="menu-item text-center"><a class=menu-link href=https://github.com/jianye0428/ title=GitHub rel="noopener noreferrer" target=_blank><i class='fa-brands fa-github fa-fw' aria-hidden=true></i></a></li><li class="menu-item menu-system"><span class="menu-system-item theme-switch" title=切换主题><i class="fa-solid fa-adjust fa-fw" aria-hidden=true></i></span></li></ul></nav></div></header><div class="search-dropdown desktop"><div id=search-dropdown-desktop></div></div><div class="search-dropdown mobile"><div id=search-dropdown-mobile></div></div><main class="container container-reverse"><aside class=toc id=toc-auto><h2 class=toc-title>目录&nbsp;<i class="toc-icon fa-solid fa-angle-down fa-fw" aria-hidden=true></i></h2><div class=toc-content id=toc-content-auto></div></aside><aside class=aside-custom></aside><article class="page single"><div class=header><h1 class="single-title animate__animated animate__flipInX"><span>Horovod and Openmpi</span></h1></div><div class=post-meta><div class=post-meta-line><span class=post-author><a href=https://github.com/jianye0428 title=作者 target=_blank rel="external nofollow noopener noreferrer author" class=author><img loading=lazy src="https://gravatar.loli.net/avatar/75a41975a5281767bf6bdba838de4238?s=32&amp;d=mp" srcset="https://gravatar.loli.net/avatar/75a41975a5281767bf6bdba838de4238?s=32&amp;d=mp, https://gravatar.loli.net/avatar/75a41975a5281767bf6bdba838de4238?s=32&amp;d=mp 1.5x, https://gravatar.loli.net/avatar/75a41975a5281767bf6bdba838de4238?s=32&amp;d=mp 2x" sizes=auto data-title="Jian YE" data-alt="Jian YE" class=avatar style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'>&nbsp;Jian YE</a></span>
+<span class=post-category>收录于 <a href=/categories/distributed-training/><i class="fa-regular fa-folder fa-fw" aria-hidden=true></i> Distributed Training</a></span></div><div class=post-meta-line><span title="发布于 2023-07-13 08:18:52"><i class="fa-regular fa-calendar-alt fa-fw me-1" aria-hidden=true></i><time datetime=2023-07-13>2023-07-13</time></span>&nbsp;<span title="更新于 2023-07-13 08:25:03"><i class="fa-regular fa-edit fa-fw me-1" aria-hidden=true></i><time datetime=2023-07-13>2023-07-13</time></span>&nbsp;<span><i class="fa-solid fa-pencil-alt fa-fw me-1" aria-hidden=true></i>约 7975 字</span>&nbsp;<span><i class="fa-regular fa-clock fa-fw me-1" aria-hidden=true></i>预计阅读 16 分钟</span>&nbsp;<span id=busuanzi_container_page_pv class="busuanzi_visitors comment-visitors" data-flag-title="Horovod and Openmpi">
+<i class="fa-regular fa-eye fa-fw me-1" aria-hidden=true></i><span id=busuanzi_value_page_pv>-</span>&nbsp;次阅读
+</span>&nbsp;</div></div><div class="details toc" id=toc-static data-kept=false><div class="details-summary toc-title"><span>目录</span>
+<span><i class="details-icon fa-solid fa-angle-right" aria-hidden=true></i></span></div><div class="details-content toc-content" id=toc-content-static><nav id=TableOfContents><ul><li><a href=#horovod-介绍>Horovod 介绍</a></li><li><a href=#集合通信库>集合通信库</a><ul><li><a href=#点对点通信-point-to-point-communication>点对点通信: Point-to-Point Communication</a></li><li><a href=#集合通信>集合通信</a></li><li><a href=#实践>实践:</a><ul><li><a href=#pytorchdistributed>pytorch.distributed</a></li></ul></li><li><a href=#mpi>MPI</a></li></ul></li><li><a href=#horovod流程分析>Horovod流程分析</a><ul><li><a href=#pytorch-demo>pytorch demo</a></li><li><a href=#流程分析>流程分析</a></li><li><a href=#其他关键模块>其他关键模块</a></li><li><a href=#mpicontext>MPIContext</a></li><li><a href=#tensorflow2>Tensorflow2</a></li></ul></li><li><a href=#总结>总结</a></li></ul></nav></div></div><div class=content id=content data-end-flag=（完）><h2 id=horovod-介绍>Horovod 介绍</h2><p>Horovod 是 Uber 开源的深度学习工具，它的发展吸取了Facebook &ldquo;Training ImageNet In 1 Hour&rdquo; 与百度 &ldquo;Ring Allreduce&rdquo; 的优点，在保证分布式训练性能的同时，兼顾了前端的简洁和对不同深度学习框架的支持，使用起来对开发人员比较的友好，算是分布式训练方向的标杆项目了。</p><h2 id=集合通信库>集合通信库</h2><p>集合通信库，这个词可能听起来会比较的陌生，不过如果我再提几个关键字，可能大家多少都会有所耳闻。资历比较老的是 MPI (<a href="https://link.zhihu.com/?target=https%3A//en.wikipedia.org/wiki/Message_Passing_Interface" target=_blank rel="external nofollow noopener noreferrer">Message Passing Interface<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a> 及其实现 <a href="https://link.zhihu.com/?target=https%3A//www.open-mpi.org/" target=_blank rel="external nofollow noopener noreferrer">OpenMPI<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a> 和 <a href="https://link.zhihu.com/?target=https%3A//www.mpich.org/" target=_blank rel="external nofollow noopener noreferrer">MPICH<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>，年轻一点的会是 Nvidia 针对其显卡开源的 NCCL，或者是 facebook 开源的 gloo，或者是像华为针对其高性能硬件提供的HCCL，大体上都可以归入到<strong>集合通信库</strong>的类别。他们相同的地方是大体上会遵照 MPI 提供的接口规定，实现了包括<font color=red><em>点对点通信</em></font>（SEND,RECV等），<font color=red><em>集合通信</em></font>（ REDUCE，BROADCAST，ALLREDUCE等）等相关接口，然后根据自己硬件或者是系统的需要，在底层实现上进行了相应的改动，保证接口的稳定和性能。</p><h3 id=点对点通信-point-to-point-communication>点对点通信: Point-to-Point Communication</h3><p><strong>Send/Recv:</strong></p><p><img loading=lazy src=images/Horovod_and_Openmpi_send_and_recv.jpg srcset="/posts/horovod_and_openmpi/images/Horovod_and_Openmpi_send_and_recv.jpg, images/Horovod_and_Openmpi_send_and_recv.jpg 1.5x, /posts/horovod_and_openmpi/images/Horovod_and_Openmpi_send_and_recv.jpg 2x" sizes=auto data-title=Send_and_recv data-alt=Send_and_recv width=1752 height=582 style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><h3 id=集合通信>集合通信</h3><p><strong>Scatter/Gather</strong></p><p><img loading=lazy src=images/Horovod_and_Openmpi_scatter_and_gather.jpg srcset="/posts/horovod_and_openmpi/images/Horovod_and_Openmpi_scatter_and_gather.jpg, images/Horovod_and_Openmpi_scatter_and_gather.jpg 1.5x, /posts/horovod_and_openmpi/images/Horovod_and_Openmpi_scatter_and_gather.jpg 2x" sizes=auto data-title=Scatter_and_gather data-alt=Scatter_and_gather width=720 height=249 style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><p><strong>reduce/allreduce</strong></p><p><img loading=lazy src=images/Horovod_and_Openmpi_reduce_and_allreduce.jpg srcset="/posts/horovod_and_openmpi/images/Horovod_and_Openmpi_reduce_and_allreduce.jpg, images/Horovod_and_Openmpi_reduce_and_allreduce.jpg 1.5x, /posts/horovod_and_openmpi/images/Horovod_and_Openmpi_reduce_and_allreduce.jpg 2x" sizes=auto data-title=reduce_and_allreduce data-alt=reduce_and_allreduce width=720 height=220 style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><p><strong>boradcast/all-gather</strong></p><p><img loading=lazy src=images/Horovod_and_Openmpi_broadcast_and_all_gather.jpg srcset="/posts/horovod_and_openmpi/images/Horovod_and_Openmpi_broadcast_and_all_gather.jpg, images/Horovod_and_Openmpi_broadcast_and_all_gather.jpg 1.5x, /posts/horovod_and_openmpi/images/Horovod_and_Openmpi_broadcast_and_all_gather.jpg 2x" sizes=auto data-title=broadcast_and_all_gather data-alt=broadcast_and_all_gather width=720 height=258 style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><p>这里在机器学习训练中使用比较多的是 <strong>all-reduce</strong>，场景类似在不同的 node 上跑不同 batch 的数据，然后更新梯度需要从各个汇总之后平均再回传到各自的 node 中。而这部分，有很多种实现的方式，比较直观和简单的是把所有的梯度都汇总到的某一个 node 上（如下图 node d 所示），然后再把汇总的信息重新分发到不同的 node 上 ，这样可以计算通信量，如下：对于 P 个节点，每个节点消息大小为 M，node d 节点的通信量为 2*(P-1)M，这里假设节点之间互联互通，带宽为B。</p><p><img loading=lazy src=images/Horovod_and_Openmpi_Allreduce.jpg srcset="/posts/horovod_and_openmpi/images/Horovod_and_Openmpi_Allreduce.jpg, images/Horovod_and_Openmpi_Allreduce.jpg 1.5x, /posts/horovod_and_openmpi/images/Horovod_and_Openmpi_Allreduce.jpg 2x" sizes=auto data-title=broadcast_and_all_gather data-alt=broadcast_and_all_gather width=720 height=720 style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><p>不过这种情况下，很容易导致 <strong>node d</strong> 会成为性能瓶颈，因为 <strong>node d</strong> 需要跟其他所有 <strong>node</strong> 通信所以它的通信量是其他节点的 <strong>P</strong> 倍。假设节点间的带宽还是一样，<strong>node d</strong> 完成所有通信所需要的时间是 <em><em>2</em>(P-1)M/B</em>*。所以现在很多的集合通信框架不会使用这种方式，更多的是<strong>通过树状或者是环状(ring) 去实现 all-reduce</strong>。</p><p>如果只是做成树状的可以做成如下图所示，虽然传递的步数增多了，不过消除了node d 的通信瓶颈，完成所有的通信的时间大概是 <em><em>2log_2N</em>(M/B)</em>*，随着节点数目 P 的增加，树形结构的效果会越来越明显。</p><p><img loading=lazy src=images/Horovod_and_Openmpi_Tree_Allreduce.jpg srcset="/posts/horovod_and_openmpi/images/Horovod_and_Openmpi_Tree_Allreduce.jpg, images/Horovod_and_Openmpi_Tree_Allreduce.jpg 1.5x, /posts/horovod_and_openmpi/images/Horovod_and_Openmpi_Tree_Allreduce.jpg 2x" sizes=auto data-title=broadcast_and_all_gather data-alt=broadcast_and_all_gather width=720 height=679 style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><p>业界用得最多一种优化的方式是，每次只传一部分，这部分是百度提出的 ring-allreduce 的方案，具体的介绍可以参考这篇博客<a href="https://link.zhihu.com/?target=https%3A//andrew.gibiansky.com/blog/machine-learning/baidu-allreduce/" target=_blank rel="external nofollow noopener noreferrer">Bringing HPC Techniques to Deep Learning<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>，这边就不赘述了。整体上就是每次不会像上面这样整份数据传递，而是一部分一部分传，优化后，所有节点需要传输的数据量的传输 <strong>2(N−1)M/N</strong> 比较平均，所需要的时间可以大概是 <strong>2(N−1)M/(NB)</strong>，horovod 也是基于这种 all-reduce 的形式实现的。</p><h3 id=实践>实践:</h3><h4 id=pytorchdistributed>pytorch.distributed</h4><p>尝试使用 pytorch 自带的分布式工具包 <a href="https://link.zhihu.com/?target=https%3A//pytorch.org/docs/stable/distributed.html" target=_blank rel="external nofollow noopener noreferrer">torch.distributed<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>，进行一些概念性的尝试。</p><p>为了方便尝试，我这里提供了一个简单的 demo，大家如果安装了 gpu 版本的 pytorch >= 1.3，应该都可以尝试下面的例子尝试使用多进程模拟分布式（单机上可以跑）。</p><div class=highlight id=id-1><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>  1
+</span><span class=lnt>  2
+</span><span class=lnt>  3
+</span><span class=lnt>  4
+</span><span class=lnt>  5
+</span><span class=lnt>  6
+</span><span class=lnt>  7
+</span><span class=lnt>  8
+</span><span class=lnt>  9
+</span><span class=lnt> 10
+</span><span class=lnt> 11
+</span><span class=lnt> 12
+</span><span class=lnt> 13
+</span><span class=lnt> 14
+</span><span class=lnt> 15
+</span><span class=lnt> 16
+</span><span class=lnt> 17
+</span><span class=lnt> 18
+</span><span class=lnt> 19
+</span><span class=lnt> 20
+</span><span class=lnt> 21
+</span><span class=lnt> 22
+</span><span class=lnt> 23
+</span><span class=lnt> 24
+</span><span class=lnt> 25
+</span><span class=lnt> 26
+</span><span class=lnt> 27
+</span><span class=lnt> 28
+</span><span class=lnt> 29
+</span><span class=lnt> 30
+</span><span class=lnt> 31
+</span><span class=lnt> 32
+</span><span class=lnt> 33
+</span><span class=lnt> 34
+</span><span class=lnt> 35
+</span><span class=lnt> 36
+</span><span class=lnt> 37
+</span><span class=lnt> 38
+</span><span class=lnt> 39
+</span><span class=lnt> 40
+</span><span class=lnt> 41
+</span><span class=lnt> 42
+</span><span class=lnt> 43
+</span><span class=lnt> 44
+</span><span class=lnt> 45
+</span><span class=lnt> 46
+</span><span class=lnt> 47
+</span><span class=lnt> 48
+</span><span class=lnt> 49
+</span><span class=lnt> 50
+</span><span class=lnt> 51
+</span><span class=lnt> 52
+</span><span class=lnt> 53
+</span><span class=lnt> 54
+</span><span class=lnt> 55
+</span><span class=lnt> 56
+</span><span class=lnt> 57
+</span><span class=lnt> 58
+</span><span class=lnt> 59
+</span><span class=lnt> 60
+</span><span class=lnt> 61
+</span><span class=lnt> 62
+</span><span class=lnt> 63
+</span><span class=lnt> 64
+</span><span class=lnt> 65
+</span><span class=lnt> 66
+</span><span class=lnt> 67
+</span><span class=lnt> 68
+</span><span class=lnt> 69
+</span><span class=lnt> 70
+</span><span class=lnt> 71
+</span><span class=lnt> 72
+</span><span class=lnt> 73
+</span><span class=lnt> 74
+</span><span class=lnt> 75
+</span><span class=lnt> 76
+</span><span class=lnt> 77
+</span><span class=lnt> 78
+</span><span class=lnt> 79
+</span><span class=lnt> 80
+</span><span class=lnt> 81
+</span><span class=lnt> 82
+</span><span class=lnt> 83
+</span><span class=lnt> 84
+</span><span class=lnt> 85
+</span><span class=lnt> 86
+</span><span class=lnt> 87
+</span><span class=lnt> 88
+</span><span class=lnt> 89
+</span><span class=lnt> 90
+</span><span class=lnt> 91
+</span><span class=lnt> 92
+</span><span class=lnt> 93
+</span><span class=lnt> 94
+</span><span class=lnt> 95
+</span><span class=lnt> 96
+</span><span class=lnt> 97
+</span><span class=lnt> 98
+</span><span class=lnt> 99
+</span><span class=lnt>100
+</span><span class=lnt>101
+</span><span class=lnt>102
+</span><span class=lnt>103
+</span><span class=lnt>104
+</span><span class=lnt>105
+</span><span class=lnt>106
+</span><span class=lnt>107
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=kn>import</span> <span class=nn>os</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>torch</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>torch.distributed</span> <span class=k>as</span> <span class=nn>dist</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>time</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>argparse</span>
+</span></span><span class=line><span class=cl><span class=kn>from</span> <span class=nn>torch.multiprocessing</span> <span class=kn>import</span> <span class=n>Process</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>parser</span> <span class=o>=</span> <span class=n>argparse</span><span class=o>.</span><span class=n>ArgumentParser</span><span class=p>(</span><span class=n>description</span><span class=o>=</span><span class=s1>&#39;PyTorch MNIST Example&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>parser</span><span class=o>.</span><span class=n>add_argument</span><span class=p>(</span><span class=s1>&#39;-m&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=s1>&#39;--mode&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=nb>type</span><span class=o>=</span><span class=nb>str</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>default</span><span class=o>=</span><span class=s1>&#39;one_device&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>metavar</span><span class=o>=</span><span class=s1>&#39;N&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>help</span><span class=o>=</span><span class=s1>&#39;distribute mode, distributed/one_device&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>parser</span><span class=o>.</span><span class=n>add_argument</span><span class=p>(</span><span class=s1>&#39;-f&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=s1>&#39;--function&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=nb>type</span><span class=o>=</span><span class=nb>str</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>default</span><span class=o>=</span><span class=s1>&#39;p2p&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>metavar</span><span class=o>=</span><span class=s1>&#39;N&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>help</span><span class=o>=</span><span class=s1>&#39;function to run (p2p/all_reduce/gpu_all_reduce)&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>parser</span><span class=o>.</span><span class=n>add_argument</span><span class=p>(</span><span class=s1>&#39;-b&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=s1>&#39;--backend&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=nb>type</span><span class=o>=</span><span class=nb>str</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>default</span><span class=o>=</span><span class=s2>&#34;nccl&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>metavar</span><span class=o>=</span><span class=s1>&#39;N&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                    <span class=n>help</span><span class=o>=</span><span class=s1>&#39;distribute backend (gloo/nccl)&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>init_process</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>,</span> <span class=n>fn</span><span class=p>,</span> <span class=n>backend</span><span class=o>=</span><span class=s1>&#39;nccl&#39;</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=s2>&#34;&#34;&#34; Initialize the distributed environment. &#34;&#34;&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=n>os</span><span class=o>.</span><span class=n>environ</span><span class=p>[</span><span class=s1>&#39;MASTER_ADDR&#39;</span><span class=p>]</span> <span class=o>=</span> <span class=s1>&#39;127.0.0.1&#39;</span>
+</span></span><span class=line><span class=cl>    <span class=n>os</span><span class=o>.</span><span class=n>environ</span><span class=p>[</span><span class=s1>&#39;MASTER_PORT&#39;</span><span class=p>]</span> <span class=o>=</span> <span class=s1>&#39;29500&#39;</span>
+</span></span><span class=line><span class=cl>    <span class=n>dist</span><span class=o>.</span><span class=n>init_process_group</span><span class=p>(</span><span class=n>backend</span><span class=p>,</span> <span class=n>rank</span><span class=o>=</span><span class=n>rank</span><span class=p>,</span> <span class=n>world_size</span><span class=o>=</span><span class=n>size</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>fn</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>run</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>tensor</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>zeros</span><span class=p>(</span><span class=mi>1</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=s1>&#39;Rank &#39;</span><span class=p>,</span> <span class=n>rank</span><span class=p>,</span> <span class=s1>&#39; has data before send/recv&#39;</span><span class=p>,</span> <span class=n>tensor</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=n>rank</span> <span class=o>==</span> <span class=mi>0</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>tensor</span> <span class=o>+=</span> <span class=mi>1</span>
+</span></span><span class=line><span class=cl>        <span class=c1># Send the tensor to process 1</span>
+</span></span><span class=line><span class=cl>        <span class=n>dist</span><span class=o>.</span><span class=n>send</span><span class=p>(</span><span class=n>tensor</span><span class=o>=</span><span class=n>tensor</span><span class=p>,</span> <span class=n>dst</span><span class=o>=</span><span class=mi>1</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=c1># Receive tensor from process 0</span>
+</span></span><span class=line><span class=cl>        <span class=n>dist</span><span class=o>.</span><span class=n>recv</span><span class=p>(</span><span class=n>tensor</span><span class=o>=</span><span class=n>tensor</span><span class=p>,</span> <span class=n>src</span><span class=o>=</span><span class=mi>0</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=s1>&#39;Rank &#39;</span><span class=p>,</span> <span class=n>rank</span><span class=p>,</span> <span class=s1>&#39; has data after send/recv&#39;</span><span class=p>,</span> <span class=n>tensor</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>run_allreduce</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=s2>&#34;&#34;&#34; Simple reduce communication. &#34;&#34;&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=n>group</span> <span class=o>=</span> <span class=n>dist</span><span class=o>.</span><span class=n>new_group</span><span class=p>([</span><span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>    <span class=n>device</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>device</span><span class=p>(</span><span class=s1>&#39;cuda:</span><span class=si>%d</span><span class=s1>&#39;</span> <span class=o>%</span> <span class=n>rank</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>tensor</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>ones</span><span class=p>(</span><span class=mi>1</span><span class=p>)</span><span class=o>.</span><span class=n>to</span><span class=p>(</span><span class=n>device</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>dist</span><span class=o>.</span><span class=n>all_reduce</span><span class=p>(</span><span class=n>tensor</span><span class=p>,</span> <span class=n>op</span><span class=o>=</span><span class=n>dist</span><span class=o>.</span><span class=n>ReduceOp</span><span class=o>.</span><span class=n>SUM</span><span class=p>,</span> <span class=n>group</span><span class=o>=</span><span class=n>group</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=s1>&#39;Rank &#39;</span><span class=p>,</span> <span class=n>rank</span><span class=p>,</span> <span class=s1>&#39; has data &#39;</span><span class=p>,</span> <span class=n>tensor</span><span class=p>[</span><span class=mi>0</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>run_multigpu_allreduce</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>group</span> <span class=o>=</span> <span class=n>dist</span><span class=o>.</span><span class=n>new_group</span><span class=p>([</span><span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>    <span class=n>tensor_list</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>dev_idx</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=mi>2</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>device</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>device</span><span class=p>(</span><span class=s1>&#39;cuda:</span><span class=si>%d</span><span class=s1>&#39;</span> <span class=o>%</span> <span class=p>(</span><span class=mi>2</span> <span class=o>*</span> <span class=n>rank</span> <span class=o>+</span> <span class=n>dev_idx</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>        <span class=n>tensor</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>ones</span><span class=p>(</span><span class=mi>1</span><span class=p>)</span><span class=o>.</span><span class=n>to</span><span class=p>(</span><span class=n>device</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>tensor_list</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>tensor</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>dist</span><span class=o>.</span><span class=n>all_reduce_multigpu</span><span class=p>(</span><span class=n>tensor_list</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=s1>&#39;all_reduce_multigpu&#39;</span><span class=p>,</span> <span class=n>tensor_list</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>dist</span><span class=o>.</span><span class=n>all_reduce</span><span class=p>(</span><span class=n>tensor_list</span><span class=p>[</span><span class=mi>0</span><span class=p>],</span> <span class=n>op</span><span class=o>=</span><span class=n>dist</span><span class=o>.</span><span class=n>ReduceOp</span><span class=o>.</span><span class=n>SUM</span><span class=p>,</span> <span class=n>group</span><span class=o>=</span><span class=n>group</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=s1>&#39;Rank &#39;</span><span class=p>,</span> <span class=n>rank</span><span class=p>,</span> <span class=s1>&#39; has data tensor[0]:&#39;</span><span class=p>,</span> <span class=n>tensor_list</span><span class=p>[</span><span class=mi>0</span><span class=p>],</span>
+</span></span><span class=line><span class=cl>          <span class=s2>&#34;, tensor[1]:&#34;</span><span class=p>,</span> <span class=n>tensor_list</span><span class=p>[</span><span class=mi>1</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=vm>__name__</span> <span class=o>==</span> <span class=s2>&#34;__main__&#34;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>    <span class=n>args</span> <span class=o>=</span> <span class=n>parser</span><span class=o>.</span><span class=n>parse_args</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=n>backend</span> <span class=o>=</span> <span class=n>args</span><span class=o>.</span><span class=n>backend</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=n>args</span><span class=o>.</span><span class=n>mode</span> <span class=o>==</span> <span class=s2>&#34;distributed&#34;</span> <span class=ow>or</span> <span class=n>os</span><span class=o>.</span><span class=n>environ</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s1>&#39;RANK&#39;</span><span class=p>,</span><span class=kc>None</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=nb>print</span><span class=p>(</span><span class=s2>&#34;in distribute mode&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>args</span><span class=o>.</span><span class=n>function</span> <span class=o>==</span> <span class=s2>&#34;all_reduce&#34;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>function</span><span class=p>,</span> <span class=n>size</span> <span class=o>=</span> <span class=n>run_allreduce</span><span class=p>,</span> <span class=mi>2</span>
+</span></span><span class=line><span class=cl>        <span class=k>elif</span> <span class=n>args</span><span class=o>.</span><span class=n>function</span> <span class=o>==</span> <span class=s2>&#34;gpu_all_reduce&#34;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>function</span><span class=p>,</span> <span class=n>size</span> <span class=o>=</span> <span class=n>run_multigpu_allreduce</span><span class=p>,</span> <span class=mi>2</span>
+</span></span><span class=line><span class=cl>        <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>function</span><span class=p>,</span> <span class=n>size</span><span class=p>,</span> <span class=n>backend</span> <span class=o>=</span> <span class=n>run</span><span class=p>,</span> <span class=mi>2</span><span class=p>,</span> <span class=s2>&#34;gloo&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=n>rank</span> <span class=o>=</span> <span class=nb>int</span><span class=p>(</span><span class=n>os</span><span class=o>.</span><span class=n>environ</span><span class=p>[</span><span class=s1>&#39;RANK&#39;</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>        <span class=n>p</span> <span class=o>=</span> <span class=n>Process</span><span class=p>(</span><span class=n>target</span><span class=o>=</span><span class=n>init_process</span><span class=p>,</span> <span class=n>args</span><span class=o>=</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>,</span> <span class=n>function</span><span class=p>,</span> <span class=n>backend</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>        <span class=n>p</span><span class=o>.</span><span class=n>start</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=n>p</span><span class=o>.</span><span class=n>join</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=nb>print</span><span class=p>(</span><span class=s2>&#34;in one device mode&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>args</span><span class=o>.</span><span class=n>function</span> <span class=o>==</span> <span class=s2>&#34;all_reduce&#34;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>function</span><span class=p>,</span> <span class=n>size</span> <span class=o>=</span> <span class=n>run_allreduce</span><span class=p>,</span> <span class=mi>2</span>
+</span></span><span class=line><span class=cl>        <span class=k>elif</span> <span class=n>args</span><span class=o>.</span><span class=n>function</span> <span class=o>==</span> <span class=s2>&#34;gpu_all_reduce&#34;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>function</span><span class=p>,</span> <span class=n>size</span> <span class=o>=</span> <span class=n>run_multigpu_allreduce</span><span class=p>,</span> <span class=mi>2</span>
+</span></span><span class=line><span class=cl>        <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>function</span><span class=p>,</span> <span class=n>size</span><span class=p>,</span> <span class=n>backend</span> <span class=o>=</span> <span class=n>run</span><span class=p>,</span> <span class=mi>2</span><span class=p>,</span> <span class=s2>&#34;gloo&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=n>processes</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>        <span class=k>for</span> <span class=n>rank</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>size</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>            <span class=n>p</span> <span class=o>=</span> <span class=n>Process</span><span class=p>(</span><span class=n>target</span><span class=o>=</span><span class=n>init_process</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                        <span class=n>args</span><span class=o>=</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>,</span> <span class=n>function</span><span class=p>,</span> <span class=n>backend</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>            <span class=n>p</span><span class=o>.</span><span class=n>start</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>            <span class=n>processes</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>p</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>for</span> <span class=n>p</span> <span class=ow>in</span> <span class=n>processes</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>p</span><span class=o>.</span><span class=n>join</span><span class=p>()</span></span></span></code></pre></td></tr></table></div></div><p>可以简单地运行上面的例子：</p><p><strong>send/recv:</strong></p><div class=highlight id=id-2><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=err>$</span> <span class=n>python3</span> <span class=n>distribute_test</span><span class=o>.</span><span class=n>py</span>
+</span></span><span class=line><span class=cl><span class=c1># 输出如下：</span>
+</span></span><span class=line><span class=cl><span class=ow>in</span> <span class=n>one</span> <span class=n>device</span> <span class=n>mode</span>
+</span></span><span class=line><span class=cl><span class=n>Rank</span>  <span class=mi>0</span>  <span class=n>has</span> <span class=n>data</span> <span class=n>before</span> <span class=n>send</span><span class=o>/</span><span class=n>recv</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>0.</span><span class=p>])</span>
+</span></span><span class=line><span class=cl><span class=n>Rank</span>  <span class=mi>1</span>  <span class=n>has</span> <span class=n>data</span> <span class=n>before</span> <span class=n>send</span><span class=o>/</span><span class=n>recv</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>0.</span><span class=p>])</span>
+</span></span><span class=line><span class=cl><span class=n>Rank</span>  <span class=mi>0</span>  <span class=n>has</span> <span class=n>data</span> <span class=n>after</span> <span class=n>send</span><span class=o>/</span><span class=n>recv</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>1.</span><span class=p>])</span>
+</span></span><span class=line><span class=cl><span class=n>Rank</span>  <span class=mi>1</span>  <span class=n>has</span> <span class=n>data</span> <span class=n>after</span> <span class=n>send</span><span class=o>/</span><span class=n>recv</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>1.</span><span class=p>])</span></span></span></code></pre></td></tr></table></div></div><p>上面是演示的是通过 pytorch 的 multiprocessing 包，模拟一次分布式的 send/recv 过程，这里是 rank0 的进程往 rank1 的进程发送一个 tensor，可以看到 rank 1 tensor 初始化为 0，是接收到 rank 0 的tensor 后变为 1 的。（注意：这里特别设置了 backend 为 gloo 是因为 nccl 不支持 point2point 的传输，具体不同 backend 支持什么形式的原语，参考文档backend部分 ）</p><p><strong>all_reduce</strong></p><div class=highlight id=id-3><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=err>$</span> <span class=n>python3</span> <span class=n>distribute_test</span><span class=o>.</span><span class=n>py</span> <span class=o>-</span><span class=n>f</span> <span class=n>all_reduce</span>
+</span></span><span class=line><span class=cl><span class=c1># 输出如下：</span>
+</span></span><span class=line><span class=cl><span class=ow>in</span> <span class=n>one</span> <span class=n>device</span> <span class=n>mode</span>
+</span></span><span class=line><span class=cl><span class=n>Rank</span>  <span class=mi>0</span>  <span class=n>has</span> <span class=n>data</span>  <span class=n>tensor</span><span class=p>(</span><span class=mf>2.</span><span class=p>,</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:0&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>Rank</span>  <span class=mi>1</span>  <span class=n>has</span> <span class=n>data</span>  <span class=n>tensor</span><span class=p>(</span><span class=mf>2.</span><span class=p>,</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:1&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=c1># 对应函数</span>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>run_allreduce</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=s2>&#34;&#34;&#34; Simple reduce communication. &#34;&#34;&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=n>group</span> <span class=o>=</span> <span class=n>dist</span><span class=o>.</span><span class=n>new_group</span><span class=p>([</span><span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>])</span> <span class=c1># use rank 0 and rank 1</span>
+</span></span><span class=line><span class=cl>    <span class=n>device</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>device</span><span class=p>(</span><span class=s1>&#39;cuda:</span><span class=si>%d</span><span class=s1>&#39;</span> <span class=o>%</span> <span class=n>rank</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>tensor</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>ones</span><span class=p>(</span><span class=mi>1</span><span class=p>)</span><span class=o>.</span><span class=n>to</span><span class=p>(</span><span class=n>device</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>dist</span><span class=o>.</span><span class=n>all_reduce</span><span class=p>(</span><span class=n>tensor</span><span class=p>,</span> <span class=n>op</span><span class=o>=</span><span class=n>dist</span><span class=o>.</span><span class=n>ReduceOp</span><span class=o>.</span><span class=n>SUM</span><span class=p>,</span> <span class=n>group</span><span class=o>=</span><span class=n>group</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=s1>&#39;Rank &#39;</span><span class=p>,</span> <span class=n>rank</span><span class=p>,</span> <span class=s1>&#39; has data &#39;</span><span class=p>,</span> <span class=n>tensor</span><span class=p>[</span><span class=mi>0</span><span class=p>])</span></span></span></code></pre></td></tr></table></div></div><p>这里也很浅白，主要就是对两个进程上的 tensor 进行一次 allreduce，可以看到两个 rank 上的结果都为 2了。</p><p><strong>gpu_all_reduce</strong></p><div class=highlight id=id-4><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=err>$</span> <span class=n>python3</span> <span class=n>distribute_test</span><span class=o>.</span><span class=n>py</span> <span class=o>-</span><span class=n>f</span> <span class=n>gpu_all_reduce</span>
+</span></span><span class=line><span class=cl><span class=c1># 输出如下：</span>
+</span></span><span class=line><span class=cl><span class=c1>#in one device mode</span>
+</span></span><span class=line><span class=cl><span class=c1># [tensor([1.], device=&#39;cuda:0&#39;)]</span>
+</span></span><span class=line><span class=cl><span class=c1># [tensor([1.], device=&#39;cuda:2&#39;)]</span>
+</span></span><span class=line><span class=cl><span class=c1># [tensor([1.], device=&#39;cuda:2&#39;), tensor([1.], device=&#39;cuda:3&#39;)]</span>
+</span></span><span class=line><span class=cl><span class=c1># [tensor([1.], device=&#39;cuda:0&#39;), tensor([1.], device=&#39;cuda:1&#39;)]</span>
+</span></span><span class=line><span class=cl><span class=c1>#all_reduce_multigpu [tensor([4.], device=&#39;cuda:2&#39;), tensor([4.], device=&#39;cuda:3&#39;)]</span>
+</span></span><span class=line><span class=cl><span class=c1>#all_reduce_multigpu [tensor([4.], device=&#39;cuda:0&#39;), tensor([4.], device=&#39;cuda:1&#39;)]</span>
+</span></span><span class=line><span class=cl><span class=c1>#Rank  0  has data tensor[0]: tensor([8.], device=&#39;cuda:0&#39;) , tensor[1]: tensor([4.], device=&#39;cuda:1&#39;)</span>
+</span></span><span class=line><span class=cl><span class=c1>#Rank  1  has data tensor[0]: tensor([8.], device=&#39;cuda:2&#39;) , tensor[1]: tensor([4.], device=&#39;cuda:3&#39;)</span>
+</span></span><span class=line><span class=cl><span class=c1># 对应函数</span>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>run_multigpu_allreduce</span><span class=p>(</span><span class=n>rank</span><span class=p>,</span> <span class=n>size</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>group</span> <span class=o>=</span> <span class=n>dist</span><span class=o>.</span><span class=n>new_group</span><span class=p>([</span><span class=mi>0</span><span class=p>,</span> <span class=mi>1</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>    <span class=n>tensor_list</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>dev_idx</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=mi>2</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>device</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>device</span><span class=p>(</span><span class=s1>&#39;cuda:</span><span class=si>%d</span><span class=s1>&#39;</span> <span class=o>%</span> <span class=p>(</span><span class=mi>2</span> <span class=o>*</span> <span class=n>rank</span> <span class=o>+</span> <span class=n>dev_idx</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>        <span class=n>tensor</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>ones</span><span class=p>(</span><span class=mi>1</span><span class=p>)</span><span class=o>.</span><span class=n>to</span><span class=p>(</span><span class=n>device</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>tensor_list</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>tensor</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=nb>print</span><span class=p>(</span><span class=n>tensor_list</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>dist</span><span class=o>.</span><span class=n>all_reduce_multigpu</span><span class=p>(</span><span class=n>tensor_list</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=s1>&#39;all_reduce_multigpu&#39;</span><span class=p>,</span> <span class=n>tensor_list</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>dist</span><span class=o>.</span><span class=n>all_reduce</span><span class=p>(</span><span class=n>tensor_list</span><span class=p>[</span><span class=mi>0</span><span class=p>],</span> <span class=n>op</span><span class=o>=</span><span class=n>dist</span><span class=o>.</span><span class=n>ReduceOp</span><span class=o>.</span><span class=n>SUM</span><span class=p>,</span> <span class=n>group</span><span class=o>=</span><span class=n>group</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=s1>&#39;Rank &#39;</span><span class=p>,</span> <span class=n>rank</span><span class=p>,</span> <span class=s1>&#39; has data tensor[0]:&#39;</span><span class=p>,</span> <span class=n>tensor_list</span><span class=p>[</span><span class=mi>0</span><span class=p>],</span>
+</span></span><span class=line><span class=cl>          <span class=s2>&#34;, tensor[1]:&#34;</span><span class=p>,</span> <span class=n>tensor_list</span><span class=p>[</span><span class=mi>1</span><span class=p>])</span></span></span></code></pre></td></tr></table></div></div><blockquote><blockquote><p>all_reduce_multigpu: 相当于将多个gpu内的多进程的值进行相加;
+all_reduce: 相当于单个gpu内的多进程的值相加</p></blockquote></blockquote><p>这里演示的是尝试对不同进程下多个 gpu (这里是 4 个) 进行 reduce，具体逻辑就是：</p><pre><code>- 对不同的进程分别把 tensor 初始化在不同的 gpu 上，rank0 初始化在 0，1 gpu 上，rank 1 在 2，3上。
+- 进行一次 all_reduce_multigpu （这个函数跟 all_reduce 不同，是把不同的 node 上不同的gpu 上的tensor 都放到一个 list 中，进行reduce），这时所有 gpu 上的值都是4，作为对比，我们对 tensor_list[0] 的tensor 做一次all_reduce，得到的结果在 gpu 0,2 上的 tensor 进行了all_reduce 结果是 8，在 gpu 1,3 的 tensor 没有任何变化。
+</code></pre><p><strong>多terminal尝试</strong></p><p>在验证分布式逻辑的时候，其实我们不一定需要多台机子才可以，对一些不涉及网络性能的验证，可以尝试在一台机子上开多个 terminal 进行验证。可以使用上面的例子，在多个 terminal 下跑以下命令。</p><p><em>terminal0:</em></p><div class=highlight id=id-5><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=n>RANK</span><span class=o>=</span><span class=mi>0</span> <span class=n>python3</span> <span class=n>distribute_test</span><span class=o>.</span><span class=n>py</span> <span class=o>-</span><span class=n>f</span> <span class=n>gpu_all_reduce</span>
+</span></span><span class=line><span class=cl><span class=c1># 输出如下</span>
+</span></span><span class=line><span class=cl><span class=ow>in</span> <span class=n>distribute</span> <span class=n>mode</span>
+</span></span><span class=line><span class=cl><span class=n>all_reduce_multigpu</span> <span class=p>[</span><span class=n>tensor</span><span class=p>([</span><span class=mf>4.</span><span class=p>],</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:0&#39;</span><span class=p>),</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>4.</span><span class=p>],</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:1&#39;</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl><span class=n>Rank</span>  <span class=mi>0</span>  <span class=n>has</span> <span class=n>data</span> <span class=n>tensor</span><span class=p>[</span><span class=mi>0</span><span class=p>]:</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>8.</span><span class=p>],</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:0&#39;</span><span class=p>)</span> <span class=p>,</span> <span class=n>tensor</span><span class=p>[</span><span class=mi>1</span><span class=p>]:</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>4.</span><span class=p>],</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:1&#39;</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><p><em>terminal1:</em></p><div class=highlight id=id-6><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=n>RANK</span><span class=o>=</span><span class=mi>1</span> <span class=n>python3</span> <span class=n>distribute_test</span><span class=o>.</span><span class=n>py</span> <span class=o>-</span><span class=n>f</span> <span class=n>gpu_all_reduce</span>
+</span></span><span class=line><span class=cl><span class=c1># 输出如下</span>
+</span></span><span class=line><span class=cl><span class=ow>in</span> <span class=n>distribute</span> <span class=n>mode</span>
+</span></span><span class=line><span class=cl><span class=n>all_reduce_multigpu</span> <span class=p>[</span><span class=n>tensor</span><span class=p>([</span><span class=mf>4.</span><span class=p>],</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:2&#39;</span><span class=p>),</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>4.</span><span class=p>],</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:3&#39;</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl><span class=n>Rank</span>  <span class=mi>1</span>  <span class=n>has</span> <span class=n>data</span> <span class=n>tensor</span><span class=p>[</span><span class=mi>0</span><span class=p>]:</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>8.</span><span class=p>],</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:2&#39;</span><span class=p>)</span> <span class=p>,</span> <span class=n>tensor</span><span class=p>[</span><span class=mi>1</span><span class=p>]:</span> <span class=n>tensor</span><span class=p>([</span><span class=mf>4.</span><span class=p>],</span> <span class=n>device</span><span class=o>=</span><span class=s1>&#39;cuda:3&#39;</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><p>这里是通过本地机子上的回送地址进行模拟，结果是分别在不同的 terminal 呈现，当然可以用上面的demo，在多台机子上跑，不过需要修改一下 init_process 函数中的 os.environ[&lsquo;MASTER_ADDR&rsquo;] = &lsquo;127.0.0.1&rsquo; 为 rank 0 机子的 IP，这里就不演示了。具体 pytorch distributed 工具相关的内容可以参考<a href="https://link.zhihu.com/?target=https%3A//pytorch.org/tutorials/intermediate/dist_tuto.html" target=_blank rel="external nofollow noopener noreferrer">官方博客<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a></p><p>练习： 如果大概理解了上面的一些集合通信的原语，可以尝试着用上面 pytorch 提供的 send/recv 尝试去实现一下上面的树状 allreduce。</p><h3 id=mpi>MPI</h3><p>更深入的尝试，可以尝试了解一下 mpi 的知识，这个<a href="https://link.zhihu.com/?target=https%3A//mpitutorial.com/tutorials/" target=_blank rel="external nofollow noopener noreferrer">mpi<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>教程 算是写得比较系统的，大家可以参考一下来练习，特别是对底层不是很了解的同学，可以多看看 <a href="https://link.zhihu.com/?target=https%3A//mpitutorial.com/tutorials/running-an-mpi-cluster-within-a-lan/" target=_blank rel="external nofollow noopener noreferrer">Running an MPI cluster within a LAN<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a> 的部分，实操一下通过 ssh 跑起一个分布式的 demo。集合通信库的基础大概先到这里，如果要深入的可以再去看看 <a href="https://link.zhihu.com/?target=https%3A//github.com/open-mpi/ompi/blob/98afc838aa53da88cba339f6dcbab256806a5745/ompi/mca/coll/tuned/coll_tuned_allreduce_decision.c" target=_blank rel="external nofollow noopener noreferrer">openMPI<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>，和 <a href=https://github.com/NVIDIA/nccl target=_blank rel="external nofollow noopener noreferrer">nccl<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a> 的实现。</p><h2 id=horovod流程分析>Horovod流程分析</h2><p>下面我会以一个简单的 pytorch horovod 的 demo 尝试去理解一下 horovod 的工作机理，demo 如下（省略了一些不关键的代码段）。为了准确起见，我们是根据 horovod v0.20.3 的版本进行阅读的，如果是其他版本，可能会跟这里的内容有一些出入。</p><h3 id=pytorch-demo>pytorch demo</h3><p>一般的 horovod 训练程序都会包含以下几个关键步骤：</p><pre><code>1. hvd.init: 对 horovod
+2. 初始化。初始化模型，数据集，优化器，初始化不同 node 的模型权重。
+3. 使用 hvd.DistributedOptimizer 包装优化器。
+4. 进入训练流程，进行优化迭代。
+</code></pre><p>我们会着重介绍第 1 和 4 步，因为主要也是1，4步会跟 c++ 后端进行信息交换。</p><div class=highlight id=id-7><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=kn>import</span> <span class=nn>torch.backends.cudnn</span> <span class=k>as</span> <span class=nn>cudnn</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>torch.nn.functional</span> <span class=k>as</span> <span class=nn>F</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>torch.optim</span> <span class=k>as</span> <span class=nn>optim</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>torch.utils.data.distributed</span>
+</span></span><span class=line><span class=cl><span class=kn>from</span> <span class=nn>torchvision</span> <span class=kn>import</span> <span class=n>models</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>horovod.torch</span> <span class=k>as</span> <span class=nn>hvd</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>timeit</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>numpy</span> <span class=k>as</span> <span class=nn>np</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=o>...</span> <span class=c1># some argparse</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>hvd</span><span class=o>.</span><span class=n>init</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Set up standard model.</span>
+</span></span><span class=line><span class=cl><span class=n>model</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>models</span><span class=p>,</span> <span class=n>args</span><span class=o>.</span><span class=n>model</span><span class=p>)()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>optimizer</span> <span class=o>=</span> <span class=n>optim</span><span class=o>.</span><span class=n>SGD</span><span class=p>(</span><span class=n>model</span><span class=o>.</span><span class=n>parameters</span><span class=p>(),</span> <span class=n>lr</span><span class=o>=</span><span class=mf>0.01</span> <span class=o>*</span> <span class=n>lr_scaler</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Horovod: (optional) compression algorithm.</span>
+</span></span><span class=line><span class=cl><span class=n>compression</span> <span class=o>=</span> <span class=n>hvd</span><span class=o>.</span><span class=n>Compression</span><span class=o>.</span><span class=n>fp16</span> <span class=k>if</span> <span class=n>args</span><span class=o>.</span><span class=n>fp16_allreduce</span> <span class=k>else</span> <span class=n>hvd</span><span class=o>.</span><span class=n>Compression</span><span class=o>.</span><span class=n>none</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Horovod: wrap optimizer with DistributedOptimizer.</span>
+</span></span><span class=line><span class=cl><span class=n>optimizer</span> <span class=o>=</span> <span class=n>hvd</span><span class=o>.</span><span class=n>DistributedOptimizer</span><span class=p>(</span><span class=n>optimizer</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                     <span class=n>named_parameters</span><span class=o>=</span><span class=n>model</span><span class=o>.</span><span class=n>named_parameters</span><span class=p>(),</span>
+</span></span><span class=line><span class=cl>                                     <span class=n>compression</span><span class=o>=</span><span class=n>compression</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                     <span class=n>op</span><span class=o>=</span><span class=n>hvd</span><span class=o>.</span><span class=n>Adasum</span> <span class=k>if</span> <span class=n>args</span><span class=o>.</span><span class=n>use_adasum</span> <span class=k>else</span> <span class=n>hvd</span><span class=o>.</span><span class=n>Average</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Horovod: broadcast parameters &amp; optimizer state.</span>
+</span></span><span class=line><span class=cl><span class=n>hvd</span><span class=o>.</span><span class=n>broadcast_parameters</span><span class=p>(</span><span class=n>model</span><span class=o>.</span><span class=n>state_dict</span><span class=p>(),</span> <span class=n>root_rank</span><span class=o>=</span><span class=mi>0</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>hvd</span><span class=o>.</span><span class=n>broadcast_optimizer_state</span><span class=p>(</span><span class=n>optimizer</span><span class=p>,</span> <span class=n>root_rank</span><span class=o>=</span><span class=mi>0</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Set up fixed fake data</span>
+</span></span><span class=line><span class=cl><span class=n>data</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>randn</span><span class=p>(</span><span class=n>args</span><span class=o>.</span><span class=n>batch_size</span><span class=p>,</span> <span class=mi>3</span><span class=p>,</span> <span class=mi>224</span><span class=p>,</span> <span class=mi>224</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>target</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>LongTensor</span><span class=p>(</span><span class=n>args</span><span class=o>.</span><span class=n>batch_size</span><span class=p>)</span><span class=o>.</span><span class=n>random_</span><span class=p>()</span> <span class=o>%</span> <span class=mi>1000</span>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=n>args</span><span class=o>.</span><span class=n>cuda</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>    <span class=n>data</span><span class=p>,</span> <span class=n>target</span> <span class=o>=</span> <span class=n>data</span><span class=o>.</span><span class=n>cuda</span><span class=p>(),</span> <span class=n>target</span><span class=o>.</span><span class=n>cuda</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>benchmark_step</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>    <span class=n>optimizer</span><span class=o>.</span><span class=n>zero_grad</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=n>output</span> <span class=o>=</span> <span class=n>model</span><span class=p>(</span><span class=n>data</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>loss</span> <span class=o>=</span> <span class=n>F</span><span class=o>.</span><span class=n>cross_entropy</span><span class=p>(</span><span class=n>output</span><span class=p>,</span> <span class=n>target</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>loss</span><span class=o>.</span><span class=n>backward</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=n>optimizer</span><span class=o>.</span><span class=n>step</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=c1>#... some log configuration</span>
+</span></span><span class=line><span class=cl><span class=n>img_secs</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl><span class=k>for</span> <span class=n>x</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>args</span><span class=o>.</span><span class=n>num_iters</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>time</span> <span class=o>=</span> <span class=n>timeit</span><span class=o>.</span><span class=n>timeit</span><span class=p>(</span><span class=n>benchmark_step</span><span class=p>,</span> <span class=n>number</span><span class=o>=</span><span class=n>args</span><span class=o>.</span><span class=n>num_batches_per_iter</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>img_sec</span> <span class=o>=</span> <span class=n>args</span><span class=o>.</span><span class=n>batch_size</span> <span class=o>*</span> <span class=n>args</span><span class=o>.</span><span class=n>num_batches_per_iter</span> <span class=o>/</span> <span class=n>time</span>
+</span></span><span class=line><span class=cl>    <span class=n>img_secs</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>img_sec</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Results</span>
+</span></span><span class=line><span class=cl><span class=o>...</span></span></span></code></pre></td></tr></table></div></div><p>然后下图是我对 horovod 整体流程的梳理，把一些不是很关键的部分隐藏了，可能有一些细节的地方和实现有出入，不过我待会会有详细的说明。这里先解释一下，下面几个大的部分:</p><ul><li>main.py： 表示训练脚本，一般是 使用 horovod 提供的函数跟特定的训练框架相互合作完成分布式训练（下文称前端）</li><li>C++ interface：是指 horovod python 函数调用 C++ 的接口</li><li>GlobalState：在 horovod 中是一个全局变量，其中的元素可以供不同的线程访问，在加载 C++ 的代码时候就已经创建了，同时创建的还有各种 context（mpi_context, nccl_context, gpu_context）后面会提到，主要会在下图 backgroundThreadLoop 中完成 globalstate 不同元素初始化，比较重要的有 controller 管理总体通信控制流，tensor_queue 会处理从前端过来的通信需求（allreduce，broadcast 等）。</li><li>BackgroundThreadLoop：是训练过程中的后台线程，主要负责跟其他节点的通信，和处理前端过来的通信需求（request），会轮询调用 RunLoopOnce，不断查看 tensor_queue 中有没有需要通信的tensor，如果有跟其他节点同步更新，然后执行通信操作。</li></ul><p><img loading=lazy src=images/Horovod_and_Openmpi_Horovod_process.jpg srcset="/posts/horovod_and_openmpi/images/Horovod_and_Openmpi_Horovod_process.jpg, images/Horovod_and_Openmpi_Horovod_process.jpg 1.5x, /posts/horovod_and_openmpi/images/Horovod_and_Openmpi_Horovod_process.jpg 2x" sizes=auto data-title="Horovod Process" data-alt="Horovod Process" width=720 height=494 style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'></p><h3 id=流程分析>流程分析</h3><p>下面使用 mpi_controller 进行 allreduce 操作进行分析。</p><p><strong>1.hvd.init()->InitializeHorovodOnce</strong></p><p>首先，hvd.init() 会通过一系列的调用和配置最终调用 horovod/common/http://operations.cc 下的 InitializeHorovodOnce 函数，这个函数会根据加载的<strong>集合通讯库</strong>（<em>mpi</em> 或者 <em>gloo</em>）为 globalstate 创建对应的 controller，然后使用 BackgroundThreadLoop 启动一个后台线程。</p><p>horovod/common/http://operations.cc #628</p><div class=highlight id=id-8><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=kt>void</span> <span class=nf>InitializeHorovodOnce</span><span class=p>(</span><span class=k>const</span> <span class=kt>int</span><span class=o>*</span> <span class=n>ranks</span><span class=p>,</span> <span class=kt>int</span> <span class=n>nranks</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=c1>// ... some envParse
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=cp>#if HAVE_MPI
+</span></span></span><span class=line><span class=cl><span class=cp></span>    <span class=c1>// Enable mpi is it&#39;s used either i[n cpu data transfer or controller
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>horovod_global</span><span class=p>.</span><span class=n>cpu_operation</span> <span class=o>==</span> <span class=n>LibType</span><span class=o>::</span><span class=n>MPI</span> <span class=o>||</span>
+</span></span><span class=line><span class=cl>        <span class=n>horovod_global</span><span class=p>.</span><span class=n>control_operation</span> <span class=o>==</span> <span class=n>LibType</span><span class=o>::</span><span class=n>MPI</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>mpi_context</span><span class=p>.</span><span class=n>Enable</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// 创建一个 MPIController 对象
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>horovod_global</span><span class=p>.</span><span class=n>control_operation</span> <span class=o>==</span> <span class=n>LibType</span><span class=o>::</span><span class=n>MPI</span><span class=p>){</span>
+</span></span><span class=line><span class=cl>      <span class=n>horovod_global</span><span class=p>.</span><span class=n>controller</span><span class=p>.</span><span class=n>reset</span><span class=p>(</span><span class=k>new</span> <span class=n>MPIController</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>          <span class=n>horovod_global</span><span class=p>.</span><span class=n>response_cache</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>          <span class=n>horovod_global</span><span class=p>.</span><span class=n>tensor_queue</span><span class=p>,</span> <span class=n>horovod_global</span><span class=p>.</span><span class=n>timeline</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>          <span class=n>horovod_global</span><span class=p>.</span><span class=n>parameter_manager</span><span class=p>,</span> <span class=n>mpi_context</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>      <span class=n>horovod_global</span><span class=p>.</span><span class=n>controller</span><span class=o>-&gt;</span><span class=n>SetRanks</span><span class=p>(</span><span class=n>ranks</span><span class=p>,</span> <span class=n>nranks</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=cp>#endif
+</span></span></span><span class=line><span class=cl><span class=cp>#if HAVE_GLOO
+</span></span></span><span class=line><span class=cl><span class=cp></span>  <span class=c1>//...
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=cp>#endif
+</span></span></span><span class=line><span class=cl><span class=cp></span>    <span class=c1>// Reset initialization flag
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>horovod_global</span><span class=p>.</span><span class=n>initialization_done</span> <span class=o>=</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// 启动后台线程
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>horovod_global</span><span class=p>.</span><span class=n>background_thread</span> <span class=o>=</span> <span class=n>std</span><span class=o>::</span><span class=kr>thread</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>        <span class=n>BackgroundThreadLoop</span><span class=p>,</span> <span class=n>std</span><span class=o>::</span><span class=n>ref</span><span class=p>(</span><span class=n>horovod_global</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=o>!</span><span class=n>horovod_global</span><span class=p>.</span><span class=n>initialization_done</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>std</span><span class=o>::</span><span class=n>this_thread</span><span class=o>::</span><span class=n>sleep_for</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>chrono</span><span class=o>::</span><span class=n>milliseconds</span><span class=p>(</span><span class=mi>1</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><strong>2.BackgroundThreadLoop</strong></p><p>BackgroundThreadLoop 会为 GlobalState 初始化一系列包括初始化 mpi_context， controller的元素，然后轮询调用 RunLoopOnce，还有一些对 RunLoopOnce 结束后的后处理。</p><div class=highlight id=id-9><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=kt>void</span> <span class=nf>BackgroundThreadLoop</span><span class=p>(</span><span class=n>HorovodGlobalState</span><span class=o>&amp;</span> <span class=n>state</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=cp>#if HAVE_MPI
+</span></span></span><span class=line><span class=cl><span class=cp></span>  <span class=c1>// Initialize mpi context
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=k>auto</span> <span class=n>mpi_ctx_manager</span> <span class=o>=</span> <span class=n>MPIContextManager</span><span class=p>();</span>
+</span></span><span class=line><span class=cl><span class=cp>#endif
+</span></span></span><span class=line><span class=cl><span class=cp></span>  <span class=c1>// mpi_context 会根据前端和环境变量传过来的信息，创建 mpi 线程，和一些 mpiOps
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>mpi_context</span><span class=p>.</span><span class=n>Initialize</span><span class=p>(</span><span class=n>state</span><span class=p>.</span><span class=n>controller</span><span class=o>-&gt;</span><span class=n>GetRanks</span><span class=p>(),</span> <span class=n>mpi_ctx_manager</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=cp>#endif
+</span></span></span><span class=line><span class=cl><span class=cp></span>  <span class=c1>// Initialize controller
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=c1>// 会同步不同 node 的 global_size, local_size, rank, is_coordinator 等信息
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>state</span><span class=p>.</span><span class=n>controller</span><span class=o>-&gt;</span><span class=n>Initialize</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// Set background thread affinity
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>parse_and_set_affinity</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>getenv</span><span class=p>(</span><span class=n>HOROVOD_THREAD_AFFINITY</span><span class=p>),</span> <span class=n>local_size</span><span class=p>,</span> <span class=n>local_rank</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cp>#if HAVE_GPU
+</span></span></span><span class=line><span class=cl><span class=cp></span>  <span class=p>...</span> <span class=c1>// 设置 gpu_context 的 stream 数目等初始化动作
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=cp>#endif
+</span></span></span><span class=line><span class=cl><span class=cp></span>  <span class=c1>// 下面是设置 parameter_manager 这里为了节省篇幅直接给出，设置的语句，
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=c1>// 原来这里会读取对应的环境变量的，去设置 parameter_manager。
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=c1>// 后面也会有篇幅介绍 parameter_manager，这里先不展开。
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>state</span><span class=p>.</span><span class=n>parameter_manager</span><span class=p>.</span><span class=n>SetTensorFusionThresholdBytes</span><span class=p>(</span><span class=mi>64</span> <span class=o>*</span> <span class=mi>1024</span> <span class=o>*</span> <span class=mi>1024</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=n>state</span><span class=p>.</span><span class=n>parameter_manager</span><span class=p>.</span><span class=n>SetCycleTimeMs</span><span class=p>(</span><span class=mi>5</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=n>state</span><span class=p>.</span><span class=n>parameter_manager</span><span class=p>.</span><span class=n>SetCacheEnabled</span><span class=p>(</span><span class=nb>true</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=n>state</span><span class=p>.</span><span class=n>response_cache</span><span class=p>.</span><span class=n>set_capacity</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>      <span class=p>(</span><span class=kt>int</span><span class=p>)</span><span class=n>state</span><span class=p>.</span><span class=n>parameter_manager</span><span class=p>.</span><span class=n>CacheEnabled</span><span class=p>()</span> <span class=o>*</span> <span class=n>state</span><span class=p>.</span><span class=n>cache_capacity</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=n>state</span><span class=p>.</span><span class=n>parameter_manager</span><span class=p>.</span><span class=n>SetHierarchicalAllgather</span><span class=p>(</span><span class=n>value</span><span class=p>,</span> <span class=nb>true</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=n>state</span><span class=p>.</span><span class=n>parameter_manager</span><span class=p>.</span><span class=n>SetAutoTuning</span><span class=p>(</span><span class=nb>true</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>...</span> <span class=c1>// 其他一些初始化设置
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=c1>// 设置op_manager，这里主要是注册不同的集合通信库的 ops
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=c1>//（ 如：NCCLAllreduce, MPI_GPUAllgather 等）
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>op_manager</span><span class=p>.</span><span class=n>reset</span><span class=p>(</span><span class=n>CreateOperationManager</span><span class=p>(</span><span class=n>state</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// 初始化完成
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>state</span><span class=p>.</span><span class=n>initialization_done</span> <span class=o>=</span> <span class=nb>true</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// Iterate until shutdown.
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=k>try</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>while</span> <span class=p>(</span><span class=n>RunLoopOnce</span><span class=p>(</span><span class=n>state</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span> <span class=k>catch</span> <span class=p>(</span><span class=k>const</span> <span class=n>std</span><span class=o>::</span><span class=n>exception</span><span class=o>&amp;</span> <span class=n>ex</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>LOG</span><span class=p>(</span><span class=n>ERROR</span><span class=p>)</span> <span class=o>&lt;&lt;</span> <span class=s>&#34;Horovod background loop uncaught exception: &#34;</span> <span class=o>&lt;&lt;</span> <span class=n>ex</span><span class=p>.</span><span class=n>what</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>...</span> <span class=c1>// 其他一些后处理函数
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><strong>3.Optimizer.step()->DoAllReduce</strong>
+这里我们先不急着看 RunLoopOnce 函数，先回到 InitializeHorovodOnce ，因为上面的 initialization_done = True，所以 InitializeHorovodOnce 可以退出了，就是前端的 hvd.init() 可以进行下一步了。这里 main.py 走完前向 loss = model(data,target)，后向逻辑 loss.backward()，调用 optimizer.step() 进行梯度同步。optimizer.step() 会通过一系列的调用和处理（如：compression 等操作）最终会调用 C++ interface 的 DoAllReduce 函数。</p><p><em><strong>DoAllReduce</strong></em> 函数会调用 EnqueueTensorAllreduce 函数会把需要 reduce 的 tensor 组装成一个Request 往 GlobalState 的 tensor_queue 里面塞。这里注意每个 tensor 会创建对应 TensorTableEntry，用于保存tensor 的权重，message 主要是一些 元信息 metadata。然后就等后台线程去读取这些allreduce 的请求了。</p><div class=highlight id=id-10><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=n>Status</span> <span class=nf>EnqueueTensorAllreduce</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>shared_ptr</span><span class=o>&lt;</span><span class=n>OpContext</span><span class=o>&gt;</span> <span class=n>context</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                              <span class=n>std</span><span class=o>::</span><span class=n>shared_ptr</span><span class=o>&lt;</span><span class=n>Tensor</span><span class=o>&gt;</span> <span class=n>tensor</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                              <span class=n>std</span><span class=o>::</span><span class=n>shared_ptr</span><span class=o>&lt;</span><span class=n>Tensor</span><span class=o>&gt;</span> <span class=n>output</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                              <span class=n>std</span><span class=o>::</span><span class=n>shared_ptr</span><span class=o>&lt;</span><span class=n>ReadyEvent</span><span class=o>&gt;</span> <span class=n>ready_event</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                              <span class=k>const</span> <span class=n>std</span><span class=o>::</span><span class=n>string</span> <span class=n>name</span><span class=p>,</span> <span class=k>const</span> <span class=kt>int</span> <span class=n>device</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                              <span class=n>StatusCallback</span> <span class=n>callback</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                              <span class=n>ReduceOp</span> <span class=n>reduce_op</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                              <span class=kt>double</span> <span class=n>prescale_factor</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                              <span class=kt>double</span> <span class=n>postscale_factor</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>Status</span> <span class=n>status</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>...</span> <span class=c1>// some config
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>Request</span> <span class=n>message</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>message</span><span class=p>.</span><span class=n>set_request_rank</span><span class=p>(</span><span class=n>horovod_global</span><span class=p>.</span><span class=n>controller</span><span class=o>-&gt;</span><span class=n>GetRank</span><span class=p>());</span>
+</span></span><span class=line><span class=cl>  <span class=n>message</span><span class=p>.</span><span class=n>set_tensor_name</span><span class=p>(</span><span class=n>name</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=n>message</span><span class=p>.</span><span class=n>set_tensor_type</span><span class=p>(</span><span class=n>tensor</span><span class=o>-&gt;</span><span class=n>dtype</span><span class=p>());</span>
+</span></span><span class=line><span class=cl>  <span class=n>message</span><span class=p>.</span><span class=n>set_device</span><span class=p>(</span><span class=n>device</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=n>message</span><span class=p>.</span><span class=n>set_prescale_factor</span><span class=p>(</span><span class=n>prescale_factor</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=n>message</span><span class=p>.</span><span class=n>set_postscale_factor</span><span class=p>(</span><span class=n>postscale_factor</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=n>reduce_op</span> <span class=o>==</span> <span class=n>ReduceOp</span><span class=o>::</span><span class=n>ADASUM</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>message</span><span class=p>.</span><span class=n>set_request_type</span><span class=p>(</span><span class=n>Request</span><span class=o>::</span><span class=n>ADASUM</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>message</span><span class=p>.</span><span class=n>set_request_type</span><span class=p>(</span><span class=n>Request</span><span class=o>::</span><span class=n>ALLREDUCE</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=k>for</span> <span class=p>(</span><span class=kt>int</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>tensor</span><span class=o>-&gt;</span><span class=n>shape</span><span class=p>().</span><span class=n>dims</span><span class=p>();</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>message</span><span class=p>.</span><span class=n>add_tensor_shape</span><span class=p>((</span><span class=kt>int64_t</span><span class=p>)</span><span class=n>tensor</span><span class=o>-&gt;</span><span class=n>shape</span><span class=p>().</span><span class=n>dim_size</span><span class=p>(</span><span class=n>i</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=n>TensorTableEntry</span> <span class=n>e</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>e</span><span class=p>.</span><span class=n>tensor_name</span> <span class=o>=</span> <span class=n>name</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>e</span><span class=p>.</span><span class=n>context</span> <span class=o>=</span> <span class=n>context</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>e</span><span class=p>.</span><span class=n>tensor</span> <span class=o>=</span> <span class=n>tensor</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>e</span><span class=p>.</span><span class=n>output</span> <span class=o>=</span> <span class=n>output</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>e</span><span class=p>.</span><span class=n>ready_event</span> <span class=o>=</span> <span class=n>ready_event</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>e</span><span class=p>.</span><span class=n>device</span> <span class=o>=</span> <span class=n>device</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>e</span><span class=p>.</span><span class=n>callback</span> <span class=o>=</span> <span class=n>callback</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=n>horovod_global</span><span class=p>.</span><span class=n>shut_down</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>SHUT_DOWN_ERROR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=n>status</span> <span class=o>=</span> <span class=n>horovod_global</span><span class=p>.</span><span class=n>tensor_queue</span><span class=p>.</span><span class=n>AddToTensorQueue</span><span class=p>(</span><span class=n>e</span><span class=p>,</span> <span class=n>message</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=n>status</span><span class=p>.</span><span class=n>ok</span><span class=p>())</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>LOG</span><span class=p>(</span><span class=n>TRACE</span><span class=p>,</span> <span class=n>horovod_global</span><span class=p>.</span><span class=n>controller</span><span class=o>-&gt;</span><span class=n>GetRank</span><span class=p>())</span> <span class=o>&lt;&lt;</span> <span class=s>&#34;Enqueued &#34;</span> <span class=o>&lt;&lt;</span> <span class=n>name</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=n>status</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><strong>4.RunLoopOnce</strong></p><p>回到后台线程 BackgroundThreadLoop，后面会轮询调用 RunLoopOnce。 RunLoopOnce会首先调用 ComputeResponseList 函数，其主要工作是同步不同 worker 之间的需要 allreduce 的 tensors，为后面 allreduce 的执行做好准备。</p><p>？？？为什么会在执行 tensor 的 allreduce 之前执行这样一步工作呢？而不是直接执行 allreduce 呢？我自己的猜测是，因为分布式训练是运行在不同的机子上的，因为 <u>horovod 没有引入类似参数服务器（parameter server）的节点，而是采取 master-worker</u> 的形式 进行 allreduce的。所以 allreduce 的时候必须确保所有的节点都是走到了同一句 allreduce 上，然后传输的 tensors 也要求是一致的，否则传输的 tensors 有可能没有匹配起来就执行allreduce，导致一些不可预知的错误。另外这部分引入了一些提高性能的 tricks，如对之前 reduce 过的 tensor 通过一个 bitmap 进行缓存，每次调用看一下是不是都是之前的 tensor，如果不是再 update 一下，不需要每次都全量更新。？？？（不是很确定）</p><p><strong>ComputeResponseList</strong>具体的流程是(可以对照上面流程图看):</p><ul><li>从自己进程的 GlobalState 读取 tensor_queue 的信息，如果有新的元素，会通过图中 popMessagesFromQueue pop 出来，然后经过一系列处理缓存到 message_queue_tmp 中。</li><li>当 worker 到达了前端 all_reduce 这句的时候，会用 message_queue_tmp 整理成一个 message_list通过流程图中的 SendReadyTensors 函数往主节点( coordinator ) 发送一个请求表明我打算reduce，然后会把准备 reduce 的 tensor 信息通过 message_list 迭代地送过去，最后有一个 Done 的请求</li><li>coordinator 会接收通过图中 RecvReadyTensors 这些 requests，然后保存在 ready_to_reduce 中，coordinator 会持续接收这些信息，直到获取的 Done 的数目等于 global_size。</li><li>coordinator 会找到所有准备好 reduce 的 tensors，通过 SendFinalTensors 返回一个 response 给所有的 worker，如果信息有误会返回一个 error，发送完成也会发送一个 Done。</li><li>worker 会通过 RecvFinalTensors 监听 response 的信息，整理出需要 reduce 的 tensor，当收到 Done，会尝试调用 performation 去进行 reduce 。</li><li>coordinator 和 worker 都会把同步的信息整理成一个 responses 的数组给到后面的 PerformOperation 操作。</li></ul><p>这里说一下mpi是怎么实现的，就是<u>对应的 coordinator 和 worker 会阻塞地到同一条指令</u>：</p><p>SendReadyTensors 和 RecvReadyTensors 阻塞到 MPI_Gather，SendFinalTensors 和 RecvFinalTensors 到 MPI_Bcast ，可以这样分辨：<font color=red><em>如果是 coordinator 发送的就是 MPI_Bcast，如果是worker 发送的是 MPI_Gather</font></em>。通信都是先同步需要通信message的大小 length，再同步message，代码如下：</p><p>horovod/common/mpi/http://mpi_controller.cc</p><div class=highlight id=id-11><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=kt>void</span> <span class=n>MPIController</span><span class=o>::</span><span class=n>SendReadyTensors</span><span class=p>(</span><span class=n>RequestList</span><span class=o>&amp;</span> <span class=n>message_list</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>std</span><span class=o>::</span><span class=n>string</span> <span class=n>encoded_message</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>RequestList</span><span class=o>::</span><span class=n>SerializeToString</span><span class=p>(</span><span class=n>message_list</span><span class=p>,</span> <span class=n>encoded_message</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=kt>int</span> <span class=n>encoded_message_length</span> <span class=o>=</span> <span class=p>(</span><span class=kt>int</span><span class=p>)</span><span class=n>encoded_message</span><span class=p>.</span><span class=n>length</span><span class=p>()</span> <span class=o>+</span> <span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// 先 gather 这个 message 的大小
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=kt>int</span> <span class=n>ret_code</span> <span class=o>=</span> <span class=n>MPI_Gather</span><span class=p>(</span><span class=o>&amp;</span><span class=n>encoded_message_length</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=n>MPI_INT</span><span class=p>,</span> <span class=k>nullptr</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                            <span class=n>MPI_INT</span><span class=p>,</span> <span class=n>RANK_ZERO</span><span class=p>,</span> <span class=n>mpi_ctx_</span><span class=p>.</span><span class=n>mpi_comm</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=n>ret_code</span> <span class=o>!=</span> <span class=n>MPI_SUCCESS</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>throw</span> <span class=n>std</span><span class=o>::</span><span class=n>runtime_error</span><span class=p>(</span><span class=s>&#34;MPI_Gather failed, see MPI output for details.&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// 再 gather 这个 message
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>ret_code</span> <span class=o>=</span> <span class=n>MPI_Gatherv</span><span class=p>((</span><span class=kt>void</span><span class=o>*</span><span class=p>)</span><span class=n>encoded_message</span><span class=p>.</span><span class=n>c_str</span><span class=p>(),</span> <span class=n>encoded_message_length</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                         <span class=n>MPI_BYTE</span><span class=p>,</span> <span class=k>nullptr</span><span class=p>,</span> <span class=k>nullptr</span><span class=p>,</span> <span class=k>nullptr</span><span class=p>,</span> <span class=n>MPI_BYTE</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                         <span class=n>RANK_ZERO</span><span class=p>,</span> <span class=n>mpi_ctx_</span><span class=p>.</span><span class=n>mpi_comm</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>...</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>MPIController</span><span class=o>::</span><span class=n>RecvReadyTensors</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>vector</span><span class=o>&lt;</span><span class=n>std</span><span class=o>::</span><span class=n>string</span><span class=o>&gt;&amp;</span> <span class=n>ready_to_reduce</span><span class=p>,</span><span class=n>std</span><span class=o>::</span><span class=n>vector</span><span class=o>&lt;</span><span class=n>RequestList</span><span class=o>&gt;&amp;</span> <span class=n>ready_list</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>MPI_Gather</span><span class=p>(</span><span class=n>MPI_IN_PLACE</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=n>MPI_INT</span><span class=p>,</span> <span class=n>recvcounts</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=n>MPI_INT</span><span class=p>,</span> <span class=n>RANK_ZERO</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>             <span class=n>mpi_ctx_</span><span class=p>.</span><span class=n>mpi_comm</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>...</span>
+</span></span><span class=line><span class=cl>  <span class=n>MPI_Gatherv</span><span class=p>(</span><span class=k>nullptr</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=n>MPI_BYTE</span><span class=p>,</span> <span class=n>buffer</span><span class=p>,</span> <span class=n>recvcounts</span><span class=p>,</span> <span class=n>displcmnts</span><span class=p>,</span> <span class=n>MPI_BYTE</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>              <span class=n>RANK_ZERO</span><span class=p>,</span> <span class=n>mpi_ctx_</span><span class=p>.</span><span class=n>mpi_comm</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>...</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=n>MPIController</span><span class=o>::</span><span class=n>RecvFinalTensors</span><span class=p>(</span><span class=n>ResponseList</span><span class=o>&amp;</span> <span class=n>response_list</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kt>int</span> <span class=n>msg_length</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=kt>int</span> <span class=n>ret_code</span> <span class=o>=</span>
+</span></span><span class=line><span class=cl>      <span class=n>MPI_Bcast</span><span class=p>(</span><span class=o>&amp;</span><span class=n>msg_length</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=n>MPI_INT</span><span class=p>,</span> <span class=n>RANK_ZERO</span><span class=p>,</span> <span class=n>mpi_ctx_</span><span class=p>.</span><span class=n>mpi_comm</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=n>ret_code</span> <span class=o>!=</span> <span class=n>MPI_SUCCESS</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>throw</span> <span class=n>std</span><span class=o>::</span><span class=n>runtime_error</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>        <span class=s>&#34;MPI_Broadcast failed, see MPI output for details.&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=k>auto</span> <span class=n>buffer</span> <span class=o>=</span> <span class=k>new</span> <span class=kt>uint8_t</span><span class=p>[</span><span class=n>msg_length</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>  <span class=n>ret_code</span> <span class=o>=</span>
+</span></span><span class=line><span class=cl>      <span class=n>MPI_Bcast</span><span class=p>(</span><span class=n>buffer</span><span class=p>,</span> <span class=n>msg_length</span><span class=p>,</span> <span class=n>MPI_BYTE</span><span class=p>,</span> <span class=n>RANK_ZERO</span><span class=p>,</span> <span class=n>mpi_ctx_</span><span class=p>.</span><span class=n>mpi_comm</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>...</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><strong>5.PerformOperation</strong></p><p>从 ComputeResponseList 继续跑 RunLoopOnce， 不同 node 下面会根据前面 ComputeResponseList 返回的 response_list 对每个 response 轮询调用 PerformOperation 完成对应的 reduce 工作。</p><p>PerformOperation 流程：</p><p><code>horovod/common/http://operations.cc</code></p><div class=highlight id=id-12><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=kt>void</span> <span class=nf>PerformOperation</span><span class=p>(</span><span class=n>Response</span> <span class=n>response</span><span class=p>,</span> <span class=n>HorovodGlobalState</span><span class=o>&amp;</span> <span class=n>state</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>std</span><span class=o>::</span><span class=n>vector</span><span class=o>&lt;</span><span class=n>TensorTableEntry</span><span class=o>&gt;</span> <span class=n>entries</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=k>auto</span><span class=o>&amp;</span> <span class=n>timeline</span> <span class=o>=</span> <span class=n>horovod_global</span><span class=p>.</span><span class=n>timeline</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=n>response</span><span class=p>.</span><span class=n>response_type</span><span class=p>()</span> <span class=o>!=</span> <span class=n>Response</span><span class=o>::</span><span class=n>JOIN</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>horovod_global</span><span class=p>.</span><span class=n>tensor_queue</span><span class=p>.</span><span class=n>GetTensorEntriesFromResponse</span><span class=p>(</span><span class=n>response</span><span class=p>,</span> <span class=n>entries</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                                                             <span class=n>state</span><span class=p>.</span><span class=n>joined</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>...</span> <span class=c1>// 对数据预处理和 buffer 初始化
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>Status</span> <span class=n>status</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// 执行 all_reduce 等操作
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=k>try</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>status</span> <span class=o>=</span> <span class=n>op_manager</span><span class=o>-&gt;</span><span class=n>ExecuteOperation</span><span class=p>(</span><span class=n>entries</span><span class=p>,</span> <span class=n>response</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span> <span class=k>catch</span> <span class=p>(</span><span class=k>const</span> <span class=n>std</span><span class=o>::</span><span class=n>exception</span><span class=o>&amp;</span> <span class=n>ex</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>status</span> <span class=o>=</span> <span class=n>Status</span><span class=o>::</span><span class=n>UnknownError</span><span class=p>(</span><span class=n>ex</span><span class=p>.</span><span class=n>what</span><span class=p>());</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>...</span> <span class=c1>// 调用 callback 函数
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><ul><li>PerformOperation 会从 horovod_global.tensor_queue 通过函数 <code>GetTensorEntriesFromResponse</code> 取出对应的 TensorEntry</li><li>如果还没初始化buffer，调用 horovod_global.fusion_buffer.InitializeBuffer 初始化</li><li>然后 status = op_manager->ExecuteOperation(entries, response) 会调用不同的 op->Execute(entries, response) 执行reduce 运算</li></ul><p>下面以 <strong>MPIAllreduce::Execute</strong> 为例：
+<code>horovod/common/ops/http://mpi_operations.cc</code></p><div class=highlight id=id-13><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=n>Status</span> <span class=n>MPIAllreduce</span><span class=o>::</span><span class=n>Execute</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>vector</span><span class=o>&lt;</span><span class=n>TensorTableEntry</span><span class=o>&gt;&amp;</span> <span class=n>entries</span><span class=p>,</span> <span class=k>const</span> <span class=n>Response</span><span class=o>&amp;</span> <span class=n>response</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=p>...</span> <span class=c1>// 一些变量声明
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=c1>// 把 tensor copy 到 buffer 中
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=k>if</span> <span class=p>(</span><span class=n>entries</span><span class=p>.</span><span class=n>size</span><span class=p>()</span> <span class=o>&gt;</span> <span class=mi>1</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>timeline</span><span class=p>.</span><span class=n>ActivityStartAll</span><span class=p>(</span><span class=n>entries</span><span class=p>,</span> <span class=n>MEMCPY_IN_FUSION_BUFFER</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>MemcpyInFusionBuffer</span><span class=p>(</span><span class=n>entries</span><span class=p>,</span> <span class=n>fused_input_data</span><span class=p>,</span> <span class=n>buffer_data</span><span class=p>,</span> <span class=n>buffer_len</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>timeline</span><span class=p>.</span><span class=n>ActivityEndAll</span><span class=p>(</span><span class=n>entries</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>fused_input_data</span> <span class=o>=</span> <span class=n>first_entry</span><span class=p>.</span><span class=n>tensor</span><span class=o>-&gt;</span><span class=n>data</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=n>buffer_data</span> <span class=o>=</span> <span class=p>(</span><span class=kt>void</span><span class=o>*</span><span class=p>)</span> <span class=n>first_entry</span><span class=p>.</span><span class=n>output</span><span class=o>-&gt;</span><span class=n>data</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=n>buffer_len</span> <span class=o>=</span> <span class=p>(</span><span class=n>size_t</span><span class=p>)</span> <span class=n>first_entry</span><span class=p>.</span><span class=n>output</span><span class=o>-&gt;</span><span class=n>size</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// Do allreduce
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=k>const</span> <span class=kt>void</span><span class=o>*</span> <span class=n>sendbuf</span> <span class=o>=</span> <span class=n>entries</span><span class=p>.</span><span class=n>size</span><span class=p>()</span> <span class=o>&gt;</span> <span class=mi>1</span> <span class=o>||</span> <span class=n>fused_input_data</span> <span class=o>==</span> <span class=n>buffer_data</span>
+</span></span><span class=line><span class=cl>                        <span class=o>?</span> <span class=nl>MPI_IN_PLACE</span> <span class=p>:</span> <span class=n>fused_input_data</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=kt>int</span> <span class=n>op</span> <span class=o>=</span> <span class=n>MPI_Allreduce</span><span class=p>(</span><span class=n>sendbuf</span><span class=p>,</span> <span class=n>buffer_data</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                         <span class=p>(</span><span class=kt>int</span><span class=p>)</span> <span class=n>num_elements</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                         <span class=n>mpi_context_</span><span class=o>-&gt;</span><span class=n>GetMPIDataType</span><span class=p>(</span><span class=n>first_entry</span><span class=p>.</span><span class=n>tensor</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>                         <span class=n>mpi_context_</span><span class=o>-&gt;</span><span class=n>GetMPISumOp</span><span class=p>(</span><span class=n>first_entry</span><span class=p>.</span><span class=n>tensor</span><span class=o>-&gt;</span><span class=n>dtype</span><span class=p>()),</span>
+</span></span><span class=line><span class=cl>                         <span class=n>mpi_context_</span><span class=o>-&gt;</span><span class=n>GetMPICommunicator</span><span class=p>(</span><span class=n>Communicator</span><span class=o>::</span><span class=n>GLOBAL</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=n>op</span> <span class=o>!=</span> <span class=n>MPI_SUCCESS</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>throw</span> <span class=n>std</span><span class=o>::</span><span class=n>runtime_error</span><span class=p>(</span><span class=s>&#34;MPI_Allreduce failed, see MPI output for details.&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// Copy memory out of the fusion buffer.
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=c1>// 把 allreduce 后的 tensor copy 会 entries
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=k>if</span> <span class=p>(</span><span class=n>entries</span><span class=p>.</span><span class=n>size</span><span class=p>()</span> <span class=o>&gt;</span> <span class=mi>1</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>timeline</span><span class=p>.</span><span class=n>ActivityStartAll</span><span class=p>(</span><span class=n>entries</span><span class=p>,</span> <span class=n>MEMCPY_OUT_FUSION_BUFFER</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>MemcpyOutFusionBuffer</span><span class=p>(</span><span class=n>buffer_data</span><span class=p>,</span> <span class=n>entries</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>timeline</span><span class=p>.</span><span class=n>ActivityEndAll</span><span class=p>(</span><span class=n>entries</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=n>Status</span><span class=o>::</span><span class=n>OK</span><span class=p>();</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><ul><li>然后调用不同 entries 的 callback，这里 callback 一般是给前端作相应的。</li></ul><p><strong>6.parameter_manager.update</strong></p><p>完成上述步骤之后，如果设置了 state.parameter_manager.IsAutoTuning()，RunLoopOnce 还会调用相关的逻辑，调整传输的参数，然后返回 BackgroundThreadLoop 重新调用。_重新调用时会睡一定时间再继续_上述第 3 - 5 步的工作。</p><h3 id=其他关键模块>其他关键模块</h3><p>上面只是介绍了 horovod 主流程工作原理，不过 horovod 还有其他一些模块协同主流程工作的，下面会对其中的一些我认为可以值得一说的模块说一下。</p><p><strong>Parameter_manager:</strong> Parameter_manager 主要是 GlobalState 的一个用于管理一些调节 horovod 性能的参数的管理器，在 BackgroundThreadLoop 中跟其他的 GlobalState 的元素一同初始化，然后会读取下面这些对应的环境变量，然后进行设置。</p><p><strong>HOROVOD_FUSION_THRESHOLD</strong>：指传输数据切片的大小，默认是64M，如果切片太大，传输的时候就不能很好地 pipeline 传输，如果太小，一个 tensor 需要传输多次，增加 IO 的 overhead。</p><p><strong>HOROVOD_CYCLE_TIME</strong>：指 <u>RunLoopOnce 的睡眠时长</u>，默认是 <strong>5ms</strong>，我自己的猜测（还没进行验证）比较理想的睡眠时间应该是 RunLoopOnce 其余逻辑处理的时间 + HOROVOD_CYCLE_TIME 刚好等于一次前向传播和后向传播所用的时间，因为睡太久前端会在等 RunLoopOnce 睡醒；如果睡太短，不断地跑一次 RunLoopOnce，tensor_queue 也不会有新的元素，只是白跑。</p><p><strong>HOROVOD_CACHE_CAPACITY</strong>：指 cache 的大小，这个可能跟 model 层数参数量相关了。</p><p><strong>HOROVOD_HIERARCHICAL_ALLGATHER</strong>：是否使用分层的allgather的方式等</p><p>Parameter_manager也提供了对这些参数自动调节的功能。通过Parameter_manager.SetAutoTuning进行设置，设置后会在初始的几个batch尝试不同的参数组合进行通信，后面会收敛到一组最优的参数值。</p><h3 id=mpicontext>MPIContext</h3><p>mpi_context 是在加载 C++ 的代码时候就已经创建了，同时创建的还有其他 context（ nccl_context, gpu_context），主要是维护一些节点上 mpi 通信的必要环境信息和设置，如：</p><ul><li>3 个 MPI communicator，mpi_comm，local_comm，cross_comm 分别负责 horovod mpi 传输，节点内传输，和节点间分层传输（主要用于 hierarchical allreduce）。</li><li>mpi_float16_t: horovod 主要以 float16 传输。</li><li>mpi_float16_sum: float16 对应的sum 操作。</li></ul><p>在 horovod 使用 mpi 的时候，都会使用上面的 communicator 进行数据传输。</p><h3 id=tensorflow2>Tensorflow2</h3><p>TensorFlow2 前端对 horovod 的调用跟 pytorch 类似，只是因为 tensorflow 2 是通过 tape 等级制记录梯度的, 所以会有一些不同。</p><div class=highlight id=id-14><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=n>hvd</span><span class=o>.</span><span class=n>init</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=c1># Set up standard model.</span>
+</span></span><span class=line><span class=cl><span class=n>model</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>applications</span><span class=p>,</span> <span class=n>args</span><span class=o>.</span><span class=n>model</span><span class=p>)(</span><span class=n>weights</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>opt</span> <span class=o>=</span> <span class=n>tf</span><span class=o>.</span><span class=n>optimizers</span><span class=o>.</span><span class=n>SGD</span><span class=p>(</span><span class=mf>0.01</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>data</span> <span class=o>=</span> <span class=n>tf</span><span class=o>.</span><span class=n>random</span><span class=o>.</span><span class=n>uniform</span><span class=p>([</span><span class=n>args</span><span class=o>.</span><span class=n>batch_size</span><span class=p>,</span> <span class=mi>224</span><span class=p>,</span> <span class=mi>224</span><span class=p>,</span> <span class=mi>3</span><span class=p>])</span>
+</span></span><span class=line><span class=cl><span class=n>target</span> <span class=o>=</span> <span class=n>tf</span><span class=o>.</span><span class=n>random</span><span class=o>.</span><span class=n>uniform</span><span class=p>([</span><span class=n>args</span><span class=o>.</span><span class=n>batch_size</span><span class=p>,</span> <span class=mi>1</span><span class=p>],</span> <span class=n>minval</span><span class=o>=</span><span class=mi>0</span><span class=p>,</span> <span class=n>maxval</span><span class=o>=</span><span class=mi>999</span><span class=p>,</span> <span class=n>dtype</span><span class=o>=</span><span class=n>tf</span><span class=o>.</span><span class=n>int64</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nd>@tf.function</span>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>benchmark_step</span><span class=p>(</span><span class=n>first_batch</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=c1># Horovod: (optional) compression algorithm.</span>
+</span></span><span class=line><span class=cl>    <span class=n>compression</span> <span class=o>=</span> <span class=n>hvd</span><span class=o>.</span><span class=n>Compression</span><span class=o>.</span><span class=n>fp16</span> <span class=k>if</span> <span class=n>args</span><span class=o>.</span><span class=n>fp16_allreduce</span> <span class=k>else</span> <span class=n>hvd</span><span class=o>.</span><span class=n>Compression</span><span class=o>.</span><span class=n>none</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Horovod: use DistributedGradientTape</span>
+</span></span><span class=line><span class=cl>    <span class=k>with</span> <span class=n>tf</span><span class=o>.</span><span class=n>GradientTape</span><span class=p>()</span> <span class=k>as</span> <span class=n>tape</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>probs</span> <span class=o>=</span> <span class=n>model</span><span class=p>(</span><span class=n>data</span><span class=p>,</span> <span class=n>training</span><span class=o>=</span><span class=kc>True</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>loss</span> <span class=o>=</span> <span class=n>tf</span><span class=o>.</span><span class=n>losses</span><span class=o>.</span><span class=n>sparse_categorical_crossentropy</span><span class=p>(</span><span class=n>target</span><span class=p>,</span> <span class=n>probs</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Horovod: add Horovod Distributed GradientTape.</span>
+</span></span><span class=line><span class=cl>    <span class=n>tape</span> <span class=o>=</span> <span class=n>hvd</span><span class=o>.</span><span class=n>DistributedGradientTape</span><span class=p>(</span><span class=n>tape</span><span class=p>,</span> <span class=n>compression</span><span class=o>=</span><span class=n>compression</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>gradients</span> <span class=o>=</span> <span class=n>tape</span><span class=o>.</span><span class=n>gradient</span><span class=p>(</span><span class=n>loss</span><span class=p>,</span> <span class=n>model</span><span class=o>.</span><span class=n>trainable_variables</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>opt</span><span class=o>.</span><span class=n>apply_gradients</span><span class=p>(</span><span class=nb>zip</span><span class=p>(</span><span class=n>gradients</span><span class=p>,</span> <span class=n>model</span><span class=o>.</span><span class=n>trainable_variables</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=n>first_batch</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>hvd</span><span class=o>.</span><span class=n>broadcast_variables</span><span class=p>(</span><span class=n>model</span><span class=o>.</span><span class=n>variables</span><span class=p>,</span> <span class=n>root_rank</span><span class=o>=</span><span class=mi>0</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>hvd</span><span class=o>.</span><span class=n>broadcast_variables</span><span class=p>(</span><span class=n>opt</span><span class=o>.</span><span class=n>variables</span><span class=p>(),</span> <span class=n>root_rank</span><span class=o>=</span><span class=mi>0</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=k>for</span> <span class=n>x</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>args</span><span class=o>.</span><span class=n>num_iters</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>  <span class=n>benchmark_step</span><span class=p>(</span><span class=n>first_batch</span><span class=o>=</span><span class=kc>False</span><span class=p>)</span></span></span></code></pre></td></tr></table></div></div><ul><li><code>with tf.GradientTape() as tape</code>这一句会调用 <code>horovod/tensorflow/__init__.py</code> 中<code>_DistributedGradientTape</code> 下 <strong>init</strong> 函数注册 allreduce 的句柄（handle）</li><li>然后调用 <code>gradients = tape.gradient(loss, model.trainable_variables)</code> 会调用一系列的跳转最后会调用 <code>tensorflow/mpi_ops.py</code> 下的 _allreduce ，进而调用 `MPI_LIB.horovod_allreduce</li><li><code>MPI_LIB.horovod_allreduce</code> 在 <code>horovod/tensorflow/http://mpi_ops.cc</code> 中被 <code>HorovodAllreduceOp</code> 所注册，根据 TensorFlow 的 ops流程，会调用 <code>ops.ComputeAsync</code>，到这里会跟 pytorch 类似会调用 <code>EnqueueTensorAllreduce</code> 把对应的 tensor 和 ops 送到 GlobalState 的 tensor_queue 中。</li></ul><div class=highlight id=id-15><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>class</span> <span class=nc>HorovodAllreduceOp</span> <span class=p>:</span> <span class=n>public</span> <span class=n>AsyncOpKernel</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=n>public</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>  <span class=n>explicit</span> <span class=n>HorovodAllreduceOp</span><span class=p>(</span><span class=n>OpKernelConstruction</span><span class=o>*</span> <span class=n>context</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=p>:</span> <span class=n>AsyncOpKernel</span><span class=p>(</span><span class=n>context</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>OP_REQUIRES_OK</span><span class=p>(</span><span class=n>context</span><span class=p>,</span> <span class=n>context</span><span class=o>-&gt;</span><span class=n>GetAttr</span><span class=p>(</span><span class=s2>&#34;reduce_op&#34;</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>reduce_op_</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=n>OP_REQUIRES_OK</span><span class=p>(</span><span class=n>context</span><span class=p>,</span> <span class=n>context</span><span class=o>-&gt;</span><span class=n>GetAttr</span><span class=p>(</span><span class=s2>&#34;prescale_factor&#34;</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>prescale_factor_</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=n>OP_REQUIRES_OK</span><span class=p>(</span><span class=n>context</span><span class=p>,</span> <span class=n>context</span><span class=o>-&gt;</span><span class=n>GetAttr</span><span class=p>(</span><span class=s2>&#34;postscale_factor&#34;</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>postscale_factor_</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=n>OP_REQUIRES_OK</span><span class=p>(</span><span class=n>context</span><span class=p>,</span> <span class=n>context</span><span class=o>-&gt;</span><span class=n>GetAttr</span><span class=p>(</span><span class=s2>&#34;ignore_name_scope&#34;</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>ignore_name_scope_</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>void</span> <span class=n>ComputeAsync</span><span class=p>(</span><span class=n>OpKernelContext</span><span class=o>*</span> <span class=n>context</span><span class=p>,</span> <span class=n>DoneCallback</span> <span class=n>done</span><span class=p>)</span> <span class=n>override</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>OP_REQUIRES_OK_ASYNC</span><span class=p>(</span><span class=n>context</span><span class=p>,</span> <span class=n>ConvertStatus</span><span class=p>(</span><span class=n>common</span><span class=p>::</span><span class=n>CheckInitialized</span><span class=p>()),</span>
+</span></span><span class=line><span class=cl>                         <span class=n>done</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=o>...</span> <span class=o>//</span> <span class=n>一些变量验证</span><span class=err>，</span><span class=n>初始化</span>
+</span></span><span class=line><span class=cl>    <span class=n>auto</span> <span class=n>enqueue_result</span> <span class=o>=</span> <span class=n>EnqueueTensorAllreduce</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>        <span class=n>hvd_context</span><span class=p>,</span> <span class=n>hvd_tensor</span><span class=p>,</span> <span class=n>hvd_output</span><span class=p>,</span> <span class=n>ready_event</span><span class=p>,</span> <span class=n>node_name</span><span class=p>,</span> <span class=n>device</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>        <span class=p>[</span><span class=n>context</span><span class=p>,</span> <span class=n>done</span><span class=p>](</span><span class=n>const</span> <span class=n>common</span><span class=p>::</span><span class=n>Status</span><span class=o>&amp;</span> <span class=n>status</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>          <span class=n>context</span><span class=o>-&gt;</span><span class=n>SetStatus</span><span class=p>(</span><span class=n>ConvertStatus</span><span class=p>(</span><span class=n>status</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>          <span class=n>done</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>        <span class=p>},</span> <span class=n>reduce_op</span><span class=p>,</span> <span class=p>(</span><span class=n>double</span><span class=p>)</span> <span class=n>prescale_factor_</span><span class=p>,</span> <span class=p>(</span><span class=n>double</span><span class=p>)</span> <span class=n>postscale_factor_</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>OP_REQUIRES_OK_ASYNC</span><span class=p>(</span><span class=n>context</span><span class=p>,</span> <span class=n>ConvertStatus</span><span class=p>(</span><span class=n>enqueue_result</span><span class=p>),</span> <span class=n>done</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>private</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>  <span class=nb>int</span> <span class=n>reduce_op_</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=o>//</span> <span class=n>Using</span> <span class=nb>float</span> <span class=n>since</span> <span class=n>TF</span> <span class=n>does</span> <span class=ow>not</span> <span class=n>support</span> <span class=n>double</span> <span class=n>OP</span> <span class=n>attributes</span>
+</span></span><span class=line><span class=cl>  <span class=nb>float</span> <span class=n>prescale_factor_</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=nb>float</span> <span class=n>postscale_factor_</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=nb>bool</span> <span class=n>ignore_name_scope_</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>};</span></span></span></code></pre></td></tr></table></div></div><h2 id=总结>总结</h2><p>horovod 的流程分析大概就是这样，没有特别复杂，代码的阅读体验也是比较好的，在主流程的关键函数都有比较清晰的注释。对于第三方开发者来说，horovod 本身已经用了很多提高性能的 tricks，可以 custom 优化的地方不多，一些可以动的参数，也已经提供了autotuning，直接使用就可以得到很好的性能。如果尝试优化，可能要从传输上着手，如 BytePS 会尝试使用不同的网络拓扑引入一些 PS 节点提高带宽等，如果有时间我也会聊一下这个。另外上面的分析也有很多是我自己阅读代码时候的一些思考可能不一定准确，如果有不准确或者模糊的地方，也希望大家可以多多斧正。</p><p>References:
+[1]. <a href=https://zhuanlan.zhihu.com/p/332825987 target=_blank rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/332825987<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>
+[2]. <a href=https://zhuanlan.zhihu.com/p/158584571 target=_blank rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/158584571<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>
+[3]. <a href=https://zhuanlan.zhihu.com/p/79030485 target=_blank rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/79030485<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>
+[4]. <a href=https://github.com/zjykzj/pytorch-distributed target=_blank rel="external nofollow noopener noreferrer">https://github.com/zjykzj/pytorch-distributed<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>
+[5]. <a href=https://mpitutorial.com/tutorials/mpi-introduction/zh_cn/ target=_blank rel="external nofollow noopener noreferrer">MPI教程<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a>
+<a href=https://blog.csdn.net/qq_47058489/article/details/125980505 target=_blank rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_47058489/article/details/125980505<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a></p><p><a href="https://blog.csdn.net/weixin_45385568/article/details/121208161?spm=1001.2101.3001.6650.1&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1-121208161-blog-87971642.pc_relevant_multi_platform_featuressortv2removedup&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1-121208161-blog-87971642.pc_relevant_multi_platform_featuressortv2removedup&amp;utm_relevant_index=1" target=_blank rel="external nofollow noopener noreferrer">https://blog.csdn.net/weixin_45385568/article/details/121208161?spm=1001.2101.3001.6650.1&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1-121208161-blog-87971642.pc_relevant_multi_platform_featuressortv2removedup&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1-121208161-blog-87971642.pc_relevant_multi_platform_featuressortv2removedup&utm_relevant_index=1<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a></p><p>[5.] <a href="https://blog.csdn.net/weixin_45385568/article/details/121208161?spm=1001.2101.3001.6650.1&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1-121208161-blog-87971642.pc_relevant_multi_platform_featuressortv2removedup&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1-121208161-blog-87971642.pc_relevant_multi_platform_featuressortv2removedup&amp;utm_relevant_index=1" target=_blank rel="external nofollow noopener noreferrer">ubuntu20.04 + docker + horovod<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden=true></i></a></p><h1 id=horovod-and-distributed-training>Horovod and Distributed Training</h1></div><div class=post-reward><div class=comment>Buy me a coffee~</div><input type=checkbox class=reward-input name=reward id=fi-reward hidden>
+<label class=reward-button for=fi-reward>赞赏</label><div class=reward-ways data-mode=fixed><div><img loading=lazy src=/images/alipay.jpg srcset="/images/alipay.jpg, /images/alipay.jpg 1.5x, /images/alipay.jpg 2x" sizes=auto data-title="Jian YE 支付宝" data-alt="Jian YE 支付宝" style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span data-animation>支付宝</span></div><div><img loading=lazy src=/images/wechatpay.jpg srcset="/images/wechatpay.jpg, /images/wechatpay.jpg 1.5x, /images/wechatpay.jpg 2x" sizes=auto data-title="Jian YE 微信" data-alt="Jian YE 微信" style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span data-animation>微信</span></div></div></div><div class=post-footer id=post-footer><div class=post-info><div class=post-info-line><div class=post-info-mod><span title="更新于 2023-07-13 08:25:03">更新于 2023-07-13&nbsp;<a class=git-hash href=https://github.com/jianye0428/JianBlog/commit/d38f2a398aed129a9a7e7cabe150977adfd8ddf2 rel="external nofollow noopener noreferrer" target=_blank title="commit by yejian(yejian@zhito.com) d38f2a398aed129a9a7e7cabe150977adfd8ddf2: feat: add horovod openmpi and operating system related"><i class="fa-solid fa-hashtag fa-fw" aria-hidden=true></i>d38f2a3</a></span></div></div><div class=post-info-line><div class=post-info-md><span><a href=/posts/horovod_and_openmpi/index.md title=阅读原始文档 class=link-to-markdown>阅读原始文档</a></span><span><a href=https://github.com/jianye0428/JianBlog/edit/docs/content/posts/horovod/Horovod_and_Openmpi/index.md title=编辑此页 target=_blank rel="external nofollow noopener noreferrer" class=link-to-edit>编辑此页</a></span></div><div class=post-info-share><span><a href=javascript:void(0); title="分享到 Twitter" data-sharer=twitter data-url=https://lruihao.cn/posts/horovod_and_openmpi/ data-title="Horovod and Openmpi" data-hashtags=Horovod><i class="fa-brands fa-twitter fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 Facebook" data-sharer=facebook data-url=https://lruihao.cn/posts/horovod_and_openmpi/ data-hashtag=Horovod><i class="fa-brands fa-facebook-square fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 Linkedin" data-sharer=linkedin data-url=https://lruihao.cn/posts/horovod_and_openmpi/><i class="fa-brands fa-linkedin fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 微博" data-sharer=weibo data-url=https://lruihao.cn/posts/horovod_and_openmpi/ data-title="Horovod and Openmpi"><i class="fa-brands fa-weibo fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 百度" data-sharer=baidu data-url=https://lruihao.cn/posts/horovod_and_openmpi/ data-title="Horovod and Openmpi"><i data-svg-src=/lib/simple-icons/icons/baidu.min.svg aria-hidden=true></i></a></span></div></div></div><div class=post-info-more><section class=post-tags><i class="fa-solid fa-tags fa-fw me-1" aria-hidden=true></i><a href=/tags/horovod/ class=post-tag>Horovod</a></section><section><span><a href=javascript:void(0); onclick=window.history.back()>返回</a></span>&nbsp;|&nbsp;<span><a href=/>主页</a></span></section></div><div class=post-nav><a href=/posts/os_2/ class=post-nav-item rel=prev title="Process and Coroutine"><i class="fa-solid fa-angle-left fa-fw" aria-hidden=true></i>Process and Coroutine</a></div></div></article></main><footer class=footer><div class=footer-container><div class="footer-line powered">由 <a href=https://gohugo.io/ target=_blank rel="external nofollow noopener noreferrer" title="Hugo 0.115.2">Hugo</a> 强力驱动 | 主题 - <a href=https://github.com/hugo-fixit/FixIt target=_blank rel=external title="FixIt v0.2.18"><img class=fixit-icon src=/fixit.min.svg alt="FixIt logo">&nbsp;FixIt</a></div><div class="footer-line copyright" itemscope itemtype=http://schema.org/CreativeWork><i class="fa-regular fa-copyright fa-fw" aria-hidden=true></i>
+<span itemprop=copyrightYear>2018 - 2023</span><span class=author itemprop=copyrightHolder>
+<a href=https://github.com/jianye0428 target=_blank rel="external nofollow noopener noreferrer">Jian YE</a></span><span class="license footer-divider"><a rel="license external nofollow noopener noreferrer" href=https://creativecommons.org/licenses/by-nc/4.0/ target=_blank>CC BY-NC 4.0</a></span></div><div class="footer-line statistics order-first"><span class=site-time title=网站运行中……><i class="fa-solid fa-heartbeat fa-fw animate-icon" aria-hidden=true></i><span class="ms-1 d-none">博客已运行</span><span class="run-times ms-1">网站运行中……</span></span></div><div class="footer-line visitor"><span id=busuanzi_container_site_uv title=总访客数><i class="fa-regular fa-user fa-fw" aria-hidden=true></i>&nbsp;<span id=busuanzi_value_site_uv><i class="fa-solid fa-spinner fa-spin fa-fw" aria-hidden=true></i></span></span><span id=busuanzi_container_site_pv class=footer-divider title=总访问量><i class="fa-regular fa-eye fa-fw" aria-hidden=true></i>&nbsp;<span id=busuanzi_value_site_pv><i class="fa-solid fa-spinner fa-spin fa-fw" aria-hidden=true></i></span></span></div></div></footer></div><div class=widgets><div class="fixed-buttons animate__faster d-none"><div class="fixed-button back-to-top" role=button aria-label=回到顶部><i class="fa-solid fa-arrow-up fa-fw" aria-hidden=true></i><span class=variant-numeric>0%</span></div></div><a href=https://github.com/jianye0428/JianBlog title="在 GitHub 上查看程式碼，訂閱請點 Watch" target=_blank rel="external nofollow" class="github-corner right d-none-mobile"><svg viewBox="0 0 250 250" aria-hidden="true"><path d="M0 0 115 115h15l12 27L250 250V0z"/><path d="M128.3 109C113.8 99.7 119 89.6 119 89.6 122 82.7 120.5 78.6 120.5 78.6 119.2 72 123.4 76.3 123.4 76.3 127.3 80.9 125.5 87.3 125.5 87.3 122.9 97.6 130.6 101.9 134.4 103.2" fill="currentcolor" style="transform-origin:130px 106px" class="octo-arm"/><path d="M115 115C114.9 115.1 118.7 116.5 119.8 115.4l13.9-13.8C136.9 99.2 139.9 98.4 142.2 98.6 133.8 88 127.5 74.4 143.8 58 148.5 53.4 154 51.2 159.7 51 160.3 49.4 163.2 43.6 171.4 40.1 171.4 40.1 176.1 42.5 178.8 56.2 183.1 58.6 187.2 61.8 190.9 65.4 194.5 69 197.7 73.2 200.1 77.6 213.8 80.2 216.3 84.9 216.3 84.9 212.7 93.1 206.9 96 205.4 96.6 205.1 102.4 203 107.8 198.3 112.5 181.9 128.9 168.3 122.5 157.7 114.1 157.9 116.9 156.7 120.9 152.7 124.9L141 136.5C139.8 137.7 141.6 141.9 141.8 141.8z" fill="currentcolor" class="octo-body"/></svg></a><div id=mask></div><div class=reading-progress-bar style=left:0;top:0;--bg-progress:#000;--bg-progress-dark:#fff></div><noscript><div class=noscript-warning>FixIt 主题在启用 JavaScript 的情况下效果最佳。</div></noscript></div><link rel=stylesheet href=/lib/cookieconsent/cookieconsent.min.css><link rel=stylesheet href=/lib/pace/themes/blue/pace-theme-minimal.css><script src=/lib/autocomplete/autocomplete.min.js defer></script><script src=/lib/algoliasearch/algoliasearch-lite.umd.min.js defer></script><script src=/lib/instant-page/instantpage.min.js async defer type=module></script><script src=/lib/twemoji/twemoji.min.js defer></script><script src=/lib/sharer/sharer.min.js async defer></script><script src=/lib/cookieconsent/cookieconsent.min.js defer></script><script src=/lib/pangu/pangu.min.js defer></script><script src=/lib/cell-watermark/watermark.min.js defer></script><script src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js async defer></script><script src=/lib/pace/pace.min.js async defer></script><script>window.config={autoBookmark:!0,code:{copyTitle:"复制到剪贴板",editLockTitle:"锁定可编辑代码块",editUnLockTitle:"解锁可编辑代码块",editable:!0,maxShownLines:50},comment:{enable:!1},cookieconsent:{content:{dismiss:"同意",link:"了解更多",message:"本网站使用 Cookies 来改善您的浏览体验。"},enable:!0,palette:{button:{background:"#f0f0f0"},popup:{background:"#1aa3ff"}},theme:"edgeless"},enablePWA:!0,pangu:{enable:!0,selector:"article"},search:{algoliaAppID:"MTJNHU0JVB",algoliaIndex:"index",algoliaSearchKey:"5486225134d99f43826da401ee9bad57",highlightTag:"em",maxResultLength:10,noResultsFound:"没有找到结果",snippetLength:50,type:"algolia"},siteTime:"2018-05-28T20:01:01+08:00",twemoji:!0,watermark:{appendto:".wrapper>main",colspacing:30,content:'<img style="height: 0.85rem;" src="/images/favicon/jian_icon.png" alt="logo" /> 李瑞豪',enable:!0,fontfamily:"MMT_LRH,沐目体",fontsize:1.1,height:20,opacity:.0125,rotate:15,rowspacing:60,width:150}}</script><script src=/js/theme.min.js defer></script><script src=/js/custom.min.js defer></script></body></html>
