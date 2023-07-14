@@ -1,0 +1,141 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>RL - 分类 - yejian's blog</title><link>https://lruihao.cn/categories/rl/</link><description>RL - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 14 Jul 2023 08:43:42 +0800</lastBuildDate><atom:link href="https://lruihao.cn/categories/rl/" rel="self" type="application/rss+xml"/><item><title>DQN</title><link>https://lruihao.cn/posts/dqn/</link><pubDate>Fri, 14 Jul 2023 08:43:42 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/dqn/</guid><description><![CDATA[<p><code>[DQN]paper link:</code> <a href="https://arxiv.org/pdf/1312.5602v1.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/pdf/1312.5602v1.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="dqn-playing-atari-with-deep-reinforcement-learning">DQN: Playing Atari with Deep Reinforcement Learning</h2>
+<h3 id="general-architecture">General Architecture</h3>
+<p>Here is Network listed:</p>
+<ul>
+<li>play Atari games using RL and perform better than human</li>
+<li>CNN + Q Learning: CNN for frame-skiped images features extraction; and Q Learning for policy generation</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Network</th>
+<th style="text-align:center">Channel</th>
+<th style="text-align:center">Kernel Size</th>
+<th style="text-align:center">Stride</th>
+<th style="text-align:center">Activation</th>
+<th style="text-align:center">Output Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">Input</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">$84\times84\times4$</td>
+</tr>
+<tr>
+<td style="text-align:center">First Conv</td>
+<td style="text-align:center">16</td>
+<td style="text-align:center">8x8</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">Relu</td>
+<td style="text-align:center">$20 \times 20 \times 6$</td>
+</tr>
+<tr>
+<td style="text-align:center">Second Conv</td>
+<td style="text-align:center">32</td>
+<td style="text-align:center">4x4</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">Relu</td>
+<td style="text-align:center">$9 \times 9 \times 32$</td>
+</tr>
+<tr>
+<td style="text-align:center">Hidden</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">Relu</td>
+<td style="text-align:center">256</td>
+</tr>
+<tr>
+<td style="text-align:center">Output</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">NA</td>
+<td style="text-align:center">None</td>
+<td style="text-align:center">4 to 18</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>在当时，普遍的做法是为每一个action学习一个函数，而不是一个网络结构直接输出所有q的value.</strong></p>
+</blockquote>
+<h3 id="key-1-input-info-process">Key 1: Input Info Process</h3>
+<blockquote>
+<p>图像处理部分</p>
+</blockquote>
+<ul>
+<li>Grayscale, Downsampling and Cropping
+<ul>
+<li>RGB channels to gray scale channel (将RGB取均值为灰度图):
+216 x 163 x 3 =&gt;(grayscale) 216 x 163 x 1 =&gt;(downsampling) 110 x 84 x 1 =&gt;(cropping) 84 x 84 x 1</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>游戏部分</p>
+</blockquote>
+<ul>
+<li><strong>Key Frame and Action Repeat</strong>
+<ul>
+<li>select skipped frames (每个4帧选取关键帧)，假设智能体看不见中间过程; 而且agent在每k帧选择一个action，可以加速训练</li>
+<li><strong>作用</strong>:
+<ul>
+<li>加速游戏进行: 计算Q-Value是最耗时的步骤;</li>
+<li>减少噪声: 过分紧密的frame重复信息过多，之前的action容易被否决;</li>
+<li>缩短reward signal到具体aciton之间的时间间隔。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>History as Input</strong>
+<ul>
+<li>continuous history key frames as input (连续四个关键帧作为输入)</li>
+<li><strong>作用</strong>:
+<ul>
+<li>可以帮助智能体获得更多有效信息进行训练</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Reward Clipping</strong>
+<ul>
+<li>将多有的reward简化为+1, -1和0</li>
+<li><strong>缺点</strong>: 有可能对训练效果有影响</li>
+<li><strong>作用</strong>: 损失了部分信息，但是可以保证不同游戏的reward scale相同，可以用相同的参数进行训练(因为在论文中，作者在多个游戏上对DQN进行了验证)。</li>
+</ul>
+</li>
+</ul>
+<h3 id="key-2-replay-buffer">Key 2: Replay Buffer</h3>
+<ul>
+<li>
+<p><strong>原理</strong>:</p>
+<ol>
+<li>DQN中对神经网络的训练本质依然是SGD，SGD要求多次利用样本，并且样本独立，但相邻的transition都是高度相关的，所以要记住过去的transition一起抽样;</li>
+<li>Replay Buffer通过记忆一段时间内的trainsition，可以让训练数据分布更平稳;</li>
+<li>Replay Buffer通过忘记很久之前的trainsition，可以保证记住的分布大致模拟当前policy的分布，从而进行policy update;</li>
+<li>可以多次重复采样，提升data efficiency.</li>
+</ol>
+</li>
+<li>
+<p>Replay Buffer生效的一个<strong>重要条件</strong>: 存储transition数量合适</p>
+<ul>
+<li><strong>太多</strong>: 可能使reward signal太过稀疏，影响训练</li>
+<li><strong>太少</strong>: 可能会导致训练数据的分布迅速变化</li>
+</ul>
+</li>
+</ul>
+<h3 id="key-3-semi-gradient-method">Key 3: Semi-Gradient Method</h3>
+<p>在Eauation3中，</p>
+<p>$$y_i = r + \gamma \max_{a&rsquo;}Q(s&rsquo;, a&rsquo;; \theta_{t-1})$$</p>
+<p>不和之后的Q函数共享参数;</p>
+<p>但是在实际的训练过程中，采用
+$$ y_i = r + \gamma \max_{a&rsquo;}Q(s&rsquo;, a&rsquo;; \theta_{t})$$</p>
+<p>和之后的Q函数共享参数，但是实际上不参与导数计算，这种方法称为<strong>Semi-Gradient Method</strong>。</p>
+<ul>
+<li>作用: 使训练更新更稳定。</li>
+</ul>
+]]></description></item></channel></rss>
