@@ -70,7 +70,7 @@ Lattice规划器的轨迹采样，主要分为横向采样、纵向采样以及�
 
 轨迹评价函数主要为了使得目标轨迹尽量靠近静态参考线轨迹运行，同时，速度尽量不发生大突变，满足舒适性要求，且尽量远离障碍物。因此最后轨迹评价函数可以通过如下伪代码描述：
 
-$$traj_cost = k_lat * cost_lat + k_lon * cost_lon + k_obs * obs_cost;$$
+$$traj_{cost} = k_{lat} * cost_{lat} + k_{lon} * cost_{lon} + k_{obs} * obs_{cost};$$
 
     上式中，
       - k_lat : 表示纵向误差代价权重

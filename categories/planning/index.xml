@@ -39,7 +39,7 @@ cartesian坐标系到frenet坐标系的变换公式：</p>
 <p>轨迹的生成成就是将frenet坐标系下的轨迹转换到cartesian坐标系中，前面我们知道了位姿点在frenet坐标系和cartesian坐标系的相互转换关系，因此现在我们需要做的就是对横纵向轨迹函数 $s(t)$ 和 $l(s(t))$ 进行轨迹的时间细分形成规划函数的横纵向轨迹规划点 $s(t_i)$ 和 $l(s(t_i))$，该规划点是在frenet坐标系中，因此需要进行frenet坐标系到cartesian坐标系的坐标转换，从而形成控制器可用的采样轨迹。</p>
 <p>获得采用轨迹之后，接着需要进行目标轨迹的<font color=red>曲率检查</font>和<font color=red>碰撞检测</font>，目的是为了使目标采样轨迹满足车辆的运动学控制要求和无碰撞要求，这样就形成了安全可靠的轨迹簇。这些轨迹簇都可以满足车辆的控制要求，但并不是最优的，因此需要从轨迹簇中选出一组最优的运行轨迹。这时就需要引入轨迹评价函数，用来对候选轨迹进行打分。</p>
 <p>轨迹评价函数主要为了使得目标轨迹尽量靠近静态参考线轨迹运行，同时，速度尽量不发生大突变，满足舒适性要求，且尽量远离障碍物。因此最后轨迹评价函数可以通过如下伪代码描述：</p>
-<p>$$traj_cost = k_lat * cost_lat + k_lon * cost_lon + k_obs * obs_cost;$$</p>
+<p>$$traj_{cost} = k_{lat} * cost_{lat} + k_{lon} * cost_{lon} + k_{obs} * obs_{cost};$$</p>
 <pre><code>上式中，
   - k_lat : 表示纵向误差代价权重
   - cost_lat： 表示纵向误差，综合考虑纵向速度误差，时间误差及加加速度的影响。
@@ -50,10 +50,10 @@ cartesian坐标系到frenet坐标系的变换公式：</p>
 </code></pre>
 <p>最后选择出代价值最好的一条轨迹输入到控制器，用于控制器的跟踪控制。</p>
 ]]></description></item><item><title>EM Planner</title><link>https://lruihao.cn/posts/emplanner/</link><pubDate>Sat, 15 Jul 2023 11:17:30 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/emplanner/</guid><description><![CDATA[<p>ref: </br>
-[1]. <a href="https://blog.csdn.net/qq_41667348/category_11789612.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41667348/category_11789612.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2]. <a href="https://zhuanlan.zhihu.com/p/492988036"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/492988036<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[3]. <a href="https://www.zhihu.com/column/c_1020971709242818560"target="_blank" rel="external nofollow noopener noreferrer">https://www.zhihu.com/column/c_1020971709242818560<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[4]. <a href="https://blog.csdn.net/qq_35503971/article/details/106337900"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_35503971/article/details/106337900<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+[1]. <a href="https://blog.csdn.net/qq_41667348/category_11789612.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41667348/category_11789612.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://zhuanlan.zhihu.com/p/492988036"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/492988036<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3]. <a href="https://www.zhihu.com/column/c_1020971709242818560"target="_blank" rel="external nofollow noopener noreferrer">https://www.zhihu.com/column/c_1020971709242818560<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[4]. <a href="https://blog.csdn.net/qq_35503971/article/details/106337900"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_35503971/article/details/106337900<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
 <h1 id="简介">简介</h1>
 <p>EM Planner是Apollo面向L4的实时运动规划算法，该算法首先通过顶层多车道策略，选择出一条参考路径，再根据这条参考线，在Frenet坐标系下，进行车道级的路径和速度规划，规划主要通过Dynamic Programming和基于样条的Quadratic Programming实现。EM Planner充分考虑了无人车安全性、舒适性、可扩展性的需求，通过考虑交通规则、障碍物决策、轨迹光滑性等要求，可适应高速公路、低速城区场景的规划需求。通过Apollo仿真和在环测试，EM Planner算法体现了高度的可靠性，和低耗时性。</p>
 <h2 id="多车道em-planner框架">多车道EM Planner框架</h2>

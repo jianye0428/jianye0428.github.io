@@ -1,4 +1,591 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://lruihao.cn/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 15 Jul 2023 16:16:22 +0800</lastBuildDate><atom:link href="https://lruihao.cn/index.xml" rel="self" type="application/rss+xml"/><item><title>Docker安装及学习</title><link>https://lruihao.cn/posts/dockerintroduction/</link><pubDate>Sat, 15 Jul 2023 16:16:22 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/dockerintroduction/</guid><description><![CDATA[<h2 id="docker-入门教程">docker 入门教程</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://lruihao.cn/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 15 Jul 2023 17:47:13 +0800</lastBuildDate><atom:link href="https://lruihao.cn/index.xml" rel="self" type="application/rss+xml"/><item><title>Classification and Regression Metrics</title><link>https://lruihao.cn/posts/metrics/</link><pubDate>Sat, 15 Jul 2023 17:47:13 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/metrics/</guid><description><![CDATA[<p>ref:</br>
+[1] <a href="https://www.cnblogs.com/rushup0930/p/13359513.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/rushup0930/p/13359513.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2] <a href="https://blog.csdn.net/u013250861/article/details/123029585#t12"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/u013250861/article/details/123029585#t12<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3] <a href="https://blog.csdn.net/wf592523813/article/details/95202448"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/wf592523813/article/details/95202448<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[4] <a href="https://zhuanlan.zhihu.com/p/69101372"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/69101372<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
+<h1 id="classification-分类">classification 分类</h1>
+<p>主要涉及的知识点：</p>
+<ul>
+<li>混淆矩阵、Precision(精准率)、Recall(召回率)、Accuracy(准确率)、F1-score    （包括二分类和多分类问题）</li>
+<li>ROC、AUC</li>
+</ul>
+<blockquote>
+<p>最常见的指标Accuracy到底有哪些不足？
+解: Accuracy是分类问题中最常用的指标，它计算了分类正确的预测数与总预测数的比值。但是，<font color=red>对于不平衡数据集而言，Accuracy并不是一个好指标</font>。
+假设我们有100张图片，其中91张图片是「狗」，5张是「猫」，4张是「猪」，我们希望训练一个三分类器，能正确识别图片里动物的类别。其中，狗这个类别就是大多数类 (majority class)。当大多数类中样本（狗）的数量远超过其他类别（猫、猪）时，如果采用Accuracy来评估分类器的好坏，那么即便模型性能很差 (如无论输入什么图片，都预测为「狗」)，也可以得到较高的Accuracy Score (如91%)。此时，虽然Accuracy Score很高，但是意义不大。当数据异常不平衡时，Accuracy评估方法的缺陷尤为显著。</p>
+</blockquote>
+<h2 id="二分类模型的常见指标">二分类模型的常见指标</h2>
+<p>在二分类问题中，假设该样本一共有两种类别：Positive和Negative。当分类器预测结束，我们可以绘制出混淆矩阵（confusion matrix）。其中分类结果分为如下几种：</p>
+<p></p>
+<ul>
+<li>True Positive (TP): 把正样本成功预测为正。</li>
+<li>True Negative (TN)：把负样本成功预测为负。</li>
+<li>False Positive (FP)：把负样本错误地预测为正。</li>
+<li>False Negative (FN)：把正样本错误的预测为负。</li>
+</ul>
+<blockquote>
+<p>一个小技巧， <font color=red>第一个字母表示划分正确与否</font>， T 表示判定正确（判定正确）， F表示判定错误(False)； <font color=red>第二个字母表示分类器判定结果</font>， P表示判定为正例， N表示判定为负例。</p>
+</blockquote>
+<p>在二分类模型中，Accuracy，Precision，Recall和F1 score的定义如下：</p>
+<p>$$\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}$$</p>
+<blockquote>
+<blockquote>
+<p>Accuracy 能够清晰的判断我们模型的表现，但有一个严重的缺陷： 在正负样本不均衡的情况下，占比大的类别往往会成为影响 Accuracy 的最主要因素，此时的 Accuracy 并不能很好的反映模型的整体情况。</p>
+</blockquote>
+</blockquote>
+<p>$$\text{Precision} = \frac{TP}{TP + FP}$$</p>
+<blockquote>
+<blockquote>
+<p>Precision着重评估在预测为Positive的所有数据中，真实Positve的数据到底占多少？</p>
+</blockquote>
+</blockquote>
+<p>精确率高，意味着分类器要尽量在 “更有把握” 的情况下才将样本预测为正样本， 这意味着精确率能够很好的体现模型对于负样本的区分能力，精确率越高，则模型对负样本区分能力越强。</p>
+<p>$$\text{Recall} = \frac{TP}{TP + FN}$$</p>
+<blockquote>
+<blockquote>
+<p>Recall着重评估：在所有的Positive数据中，到底有多少数据被成功预测为Positive</p>
+</blockquote>
+</blockquote>
+<p>召回率高，意味着分类器尽可能将有可能为正样本的样本预测为正样本，这意味着<font color=red>召回率能够很好的体现模型对于正样本的区分能力，召回率越高，则模型对正样本的区分能力越强</font>。</p>
+<p><strong>举例</strong>:</p>
+<p>一个医院新开发了一套癌症AI诊断系统，想评估其性能好坏。我们把病人得了癌症定义为Positive，没得癌症定义为Negative。那么， 到底该用什么指标进行评估呢？</p>
+<ul>
+<li>如用Precision对系统进行评估，那么其回答的问题就是：
+<blockquote>
+<p>在诊断为癌症的一堆人中，到底有多少人真得了癌症？</p>
+</blockquote>
+</li>
+<li>如用Recall对系统进行评估，那么其回答的问题就是：
+<blockquote>
+<p>在一堆得了癌症的病人中，到底有多少人能被成功检测出癌症？</p>
+</blockquote>
+</li>
+<li>如用Accuracy对系统进行评估，那么其回答的问题就是：
+<blockquote>
+<p>在一堆癌症病人和正常人中，有多少人被系统给出了正确诊断结果（患癌或没患癌）？</p>
+</blockquote>
+</li>
+</ul>
+<p><font color=red>那啥时候应该更注重Recall而不是Precision呢？</font></p>
+<blockquote>
+<p>当False Negative (FN)的成本代价很高 (后果很严重)，希望尽量避免产生FN时，应该着重考虑提高Recall指标。</p>
+</blockquote>
+<p><font color=red>那啥时候应该更注重Precision而不是Recall呢？</font></p>
+<blockquote>
+<p>当False Positive (FP)的成本代价很高 (后果很严重)时，即期望尽量避免产生FP时，应该着重考虑提高Precision指标。</p>
+</blockquote>
+<p>$$\text{F1-score} = \frac{2 \times Precision \times Recall}{Precision + Recall}$$</p>
+<p>而F1-score是Precision和Recall两者的综合。</p>
+<p>举个更有意思的例子（我拍脑袋想出来的，绝对原创哈），假设检察机关想将罪犯捉拿归案，需要对所有人群进行分析，以判断某人犯了罪（Positive），还是没犯罪（Negative）。显然，检察机关希望不漏掉一个罪人（提高recall），也不错怪一个好人（提高precision），所以就需要同时权衡recall和precision两个指标。</p>
+<p>尤其在上个世纪，中国司法体制会更偏向Recall，即「天网恢恢，疏而不漏，任何罪犯都插翅难飞」。而西方司法系统会更偏向Precision，即「绝不冤枉一个好人，但是难免有罪犯成为漏网之鱼，逍遥法外」。到底是哪种更好呢？显然，极端并不可取。Precision和Recall都应该越高越好，也就是F1应该越高越好。</p>
+<p><strong><font color=green>如何通俗的解释召回率与精确率？</font></strong></p>
+<blockquote>
+<p>例：公园里有50只皮卡丘和10只臭臭泥。有正常审美的人都会想要用精灵球把尽可能多的皮卡丘抓回来，同时尽可能少地抓住臭臭泥。 最终我们的精灵球成功抓回来了45只皮卡丘和10只臭臭泥。
+我们就可以说50只皮卡丘中有45只被召唤 (call) 回来 (re) 了，所以 recall = 45 / 50。
+但同时，这台机器还误把5只臭臭泥识别为皮卡丘，在它抓回来的所有55只神奇宝贝中，精灵球对皮卡丘判断的精准性 (precision)  = 45 / 55。
+在上面的例子中，精灵球=预测模型，皮卡丘=正样本，臭臭泥=负样本。
+总结这两个概念的用处：描述模型对正样本的预测性能
+1、recall描述模型“把正样本叫 (call) 回来(re)”的能力。
+2、precision描述模型“叫回来的正样本”有多少是精确的。</p>
+</blockquote>
+<h2 id="aoc--auc">AOC / AUC</h2>
+<p>混淆矩阵中有着Positive、Negative、True、False的概念，其意义如下：</p>
+<ul>
+<li>称预测类别为1的为Positive（阳性），预测类别为0的为Negative（阴性）。</li>
+<li>预测正确的为True（真），预测错误的为False（伪）。</li>
+</ul>
+<p>对上述概念进行组合，就产生了如下的混淆矩阵:</p>
+<p></p>
+<p>然后，由此引出True Positive Rate（真阳率）、False Positive（伪阳率）两个概念：</p>
+<p>$$TP Rate = \frac{TP}{TP + FN}$$
+$$FP Rate = \frac{FP}{FP + TN}$$</p>
+<p>仔细看这两个公式，发现其实TPRate就是TP除以TP所在的列，FPRate就是FP除以FP所在的列，二者意义如下：</p>
+<ul>
+<li>TPRate的意义是所有真实类别为1的样本中，预测类别为1的比例。</li>
+<li>FPRate的意义是所有真实类别为0的样本中，预测类别为1的比例。</li>
+</ul>
+<p>如果上述概念都弄懂了，那么ROC曲线和AUC就so easy了：</p>
+<p>按照定义，AUC即ROC曲线下的面积，而ROC曲线的横轴是FPRate，纵轴是TPRate，当二者相等时，即y=x，如下图:</p>
+<p></p>
+<p>表示的意义是：对于不论真实类别是1还是0的样本，分类器预测为1的概率是相等的。</p>
+<p>换句话说，分类器对于正例和负例毫无区分能力，和抛硬币没什么区别，一个抛硬币的分类器是我们能想象的最差的情况，因此一般来说我们认为AUC的最小值为0.5（当然也存在预测相反这种极端的情况，AUC小于0.5，这种情况相当于分类器总是把对的说成错的，错的认为是对的，那么只要把预测类别取反，便得到了一个AUC大于0.5的分类器）。</p>
+<p>而我们希望分类器达到的效果是：对于真实类别为1的样本，分类器预测为1的概率（即TPRate），要大于真实类别为0而预测类别为1的概率（即FPRate），即y＞x，因此大部分的ROC曲线长成下面这个样子：</p>
+<p></p>
+<p>说了这么多还是不够直观，不妨举个简单的例子。</p>
+<p>首先对于硬分类器（例如SVM，NB），预测类别为离散标签，对于8个样本的预测情况如下：</p>
+<p></p>
+<p>得到混淆矩阵如下：</p>
+<p></p>
+<p>进而算得TPRate=3/4，FPRate=2/4，得到ROC曲线：</p>
+<p></p>
+<p>最终得到AUC为0.625。</p>
+<p>对于LR等预测类别为概率的分类器，依然用上述例子，假设预测结果如下：</p>
+<p></p>
+<p>这时，需要设置阈值来得到混淆矩阵，不同的阈值会影响得到的TPRate，FPRate，如果阈值取0.5，小于0.5的为0，否则为1，那么我们就得到了与之前一样的混淆矩阵。其他的阈值就不再啰嗦了。依次使用所有预测值作为阈值，得到一系列TPRate，FPRate，描点，求面积，即可得到AUC。</p>
+<p>最后说说AUC的优势，AUC的计算方法同时考虑了分类器对于正例和负例的分类能力，在样本不平衡的情况下，依然能够对分类器作出合理的评价。</p>
+<p>例如在反欺诈场景，设欺诈类样本为正例，正例占比很少（假设0.1%），如果使用准确率评估，把所有的样本预测为负例，便可以获得99.9%的准确率。</p>
+<p>但是如果使用AUC，把所有样本预测为负例，TPRate和FPRate同时为0（没有Positive），与(0,0) (1,1)连接，得出AUC仅为0.5，成功规避了样本不均匀带来的问题。</p>
+<h2 id="多分类模型的常见指标详细解析">多分类模型的常见指标详细解析</h2>
+<p>在多分类（大于两个类）问题中，假设我们要开发一个动物识别系统，来区分输入图片是猫，狗还是猪。给定分类器一堆动物图片，产生了如下结果混淆矩阵。</p>
+<p></p>
+<p>在混淆矩阵中，正确的分类样本（Actual label = Predicted label）分布在左上到右下的对角线上。其中，Accuracy的定义为分类正确（对角线上）的样本数与总样本数的比值。<strong>Accuracy度量的是全局样本预测情况。而对于Precision和Recall而言，每个类都需要单独计算其Precision和Recall。</strong>
+classify_multiclass_prediction
+</p>
+<p>比如，对类别「猪」而言，其Precision和Recall分别为:</p>
+<p>$$\text{Precision} = \frac{TP}{TP + FP} = \frac{20}{20 + 50} = \frac{2}{7}$$</p>
+<p>$$\text{Recall} = \frac{TP}{TP + FN} = \frac{20}{10} = \frac{2}{3}$$</p>
+<p>也就是:
+$$P_{cat} = \frac{8}{15}, P_{dog} = \frac{17}{23}, P_{pig} = \frac{2}{7}, (P代表Precision) $$
+$$R_{cat} = \frac{4}{7}, R_{dog} = \frac{17}{32}, R_{pig} = \frac{2}{3}, (R代表Recall) $$</p>
+<p>如果想评估该识别系统的总体功能，必须考虑猫、狗、猪三个类别的综合预测性能。那么，到底要怎么综合这三个类别的Precision呢？是简单加起来做平均吗？通常来说， 我们有如下几种解决方案（<a href="https://link.zhihu.com/?target=https%3A//scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_score.html"target="_blank" rel="external nofollow noopener noreferrer">也可参考scikit-learn官网<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>）：</p>
+<p><strong>1. Macro-average方法</strong>
+该方法最简单，直接将不同类别的评估指标（Precision/ Recall/ F1-score）加起来求平均，给所有类别相同的权重。该方法能够平等看待每个类别，但是它的值会受<strong>稀有类别</strong>影响。</p>
+<p>$$\text{Macro-Precision} = \frac{P_{cat} + P_{dog} + P_{pig}}{3} = 0.5194$$
+$$\text{Macro-Recall} = \frac{R_{cat} + R_{dog} + R_{pig}}{3} = 0.5898$$</p>
+<p><strong>2. Weighted-average方法</strong></p>
+<p>该方法给不同类别不同权重（权重根据该类别的真实分布比例确定），每个类别乘权重后再进行相加。该方法考虑了类别不平衡情况，它的值更容易受到常见类（majority class）的影响。</p>
+<p>$$W_{cat} : W_{dog} : W_{pig} = N_{cat} : N_{dog} : N_{pig} = \frac{7}{26} : \frac{16}{26} : \frac{3}{26} (W代表权重，N代表样本在该类别下的真实数目)$$
+$$\text{Weighted-Precision} = P_{cat} \times W_{cat} + P_{dog} \times W_{dog} + P_{pig} \times W_{pig} = 0.6314$$
+$$\text{Weighted-Recall} = {R_{cat} \times W_{cat} + R_{dog} \times W_{dog} + R_{pig} \times W_{pig}}= 0.5577$$</p>
+<p><strong>3. Micro-average方法</strong></p>
+<p>该方法把每个类别的TP, FP, FN先相加之后，在根据二分类的公式进行计算。</p>
+<p>$$\text{Micro-Precision} = \frac{TP_{cat} + TP_{dog} + TP_{pig}}{TP_{cat} + TP_{dog} + TP_{pig} + FP_{cat} + FP_{dog} + FP_{pig}} = 0.5577$$
+$$\text{Micro-Recall} = \frac{TP_{cat} + TP_{dog} + TP_{pig}}{TP_{cat} + TP_{dog} + TP_{pig} + FN_{cat} + FN_{dog} + FN_{pig}} = 0.5577$$</p>
+<p>其中，特别有意思的是，<u>Micro-precision 和 Micro-recall竟然始终相同！</u>这是为啥呢？</p>
+<p>这是因为在某一类中的False Positive样本，一定是其他某类别的False Negative样本。听起来有点抽象？举个例子，比如说系统错把「狗」预测成「猫」，那么对于狗而言，其错误类型就是False Negative，对于猫而言，其错误类型就是False Positive。于此同时，Micro-precision和Micro-recall的数值都等于Accuracy，因为它们计算了对角线样本数和总样本数的比值，总结就是</p>
+<p>$$\text{Micro-Precision} = \text{Micro-Recall} = \text{Micro-F1 score} = \text{Accuracy}$$</p>
+<p>demo示例:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">confusion_matrix</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">accuracy_score</span><span class="p">,</span> <span class="n">average_precision_score</span><span class="p">,</span><span class="n">precision_score</span><span class="p">,</span><span class="n">f1_score</span><span class="p">,</span><span class="n">recall_score</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># create confusion matrix</span>
+</span></span><span class="line"><span class="cl"><span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">70</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">160</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">30</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">y_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">40</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span> <span class="o">+</span>
+</span></span><span class="line"><span class="cl">                  <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">30</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">80</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">30</span> <span class="o">+</span>
+</span></span><span class="line"><span class="cl">                  <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">5</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">15</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">cm</span> <span class="o">=</span> <span class="n">confusion_matrix</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">conf_matrix</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">cm</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Cat&#39;</span><span class="p">,</span><span class="s1">&#39;Dog&#39;</span><span class="p">,</span><span class="s1">&#39;Pig&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Cat&#39;</span><span class="p">,</span><span class="s1">&#39;Dog&#39;</span><span class="p">,</span><span class="s1">&#39;Pig&#39;</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># plot size setting</span>
+</span></span><span class="line"><span class="cl"><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4.5</span><span class="p">,</span><span class="mf">3.5</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">conf_matrix</span><span class="p">,</span> <span class="n">annot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">annot_kws</span><span class="o">=</span><span class="p">{</span><span class="s2">&#34;size&#34;</span><span class="p">:</span> <span class="mi">19</span><span class="p">},</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&#34;Blues&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;True label&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Predicted label&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;confusion.pdf&#39;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------Weighted------&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Weighted precision&#39;</span><span class="p">,</span> <span class="n">precision_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;weighted&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Weighted recall&#39;</span><span class="p">,</span> <span class="n">recall_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;weighted&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Weighted f1-score&#39;</span><span class="p">,</span> <span class="n">f1_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;weighted&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------Macro------&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Macro precision&#39;</span><span class="p">,</span> <span class="n">precision_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;macro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Macro recall&#39;</span><span class="p">,</span> <span class="n">recall_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;macro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Macro f1-score&#39;</span><span class="p">,</span> <span class="n">f1_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;macro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------Micro------&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Micro precision&#39;</span><span class="p">,</span> <span class="n">precision_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;micro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Micro recall&#39;</span><span class="p">,</span> <span class="n">recall_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;micro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Micro f1-score&#39;</span><span class="p">,</span> <span class="n">f1_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;micro&#39;</span><span class="p">))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="regression-回归">Regression 回归</h1>
+<p>回归算法的评价指标就是MSE，RMSE，MAE、R-Squared。</p>
+<p>　　MSE和MAE适用于误差相对明显的时候，大的误差也有比较高的权重，RMSE则是针对误差不是很明显的时候；MAE是一个线性的指标，所有个体差异在平均值上均等加权，所以它更加凸显出异常值，相比MSE；</p>
+<p>　　RMSLE: 主要针对数据集中有一个特别大的异常值，这种情况下，data会被skew，RMSE会被明显拉大，这时候就需要先对数据log下，再求RMSE，这个过程就是RMSLE。对低估值（under-predicted）的判罚明显多于估值过高(over-predicted)的情况（RMSE则相反）</p>
+]]></description></item><item><title>Maching Learning Notes 1</title><link>https://lruihao.cn/posts/notes_1/</link><pubDate>Sat, 15 Jul 2023 16:27:34 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/notes_1/</guid><description><![CDATA[<h2 id="用pickle保存和加载模型">用pickle保存和加载模型</h2>
+<ul>
+<li>保存模型
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pickle</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">sklearn.svm</span> <span class="kn">import</span> <span class="n">SVC</span>
+</span></span><span class="line"><span class="cl"><span class="n">model_dir</span> <span class="o">=</span> <span class="s1">&#39;./model.pkl&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="n">model</span> <span class="o">=</span> <span class="n">SVC</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> <span class="c1"># 注意:保存完模型之后要关闭文件</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>加载模型
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pickle</span>
+</span></span><span class="line"><span class="cl"><span class="n">model_dir</span> <span class="o">=</span> <span class="s1">&#39;./model.pkl&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">model</span> <span class="o">=</span> <span class="n">pickel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">mode</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x</span><span class="p">))</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h2 id="逻辑回归-logistic-regression">逻辑回归 Logistic Regression</h2>
+<ul>
+<li>LR Implementation code snippets
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">accuracy_score</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">pickle</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">data_path</span> <span class="o">=</span> <span class="s1">&#39;./data/merged_data/data.npy&#39;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">model_l1_path</span><span class="o">=</span><span class="s1">&#39;./model/logistic_reg_l1.pickle&#39;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">model_l2_path</span><span class="o">=</span><span class="s1">&#39;./model/logictic_reg_l2.pickle&#39;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">X</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">35</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">X_train</span><span class="p">,</span> <span class="n">x_test</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># lr_l1 = LogisticRegression(penalty=&#34;l1&#34;, C=0.5, solver=&#39;sag&#39;, multi_class=&#34;auto&#34;)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># lr_l2 = LogisticRegression(penalty=&#34;l2&#34;, C=0.5, solver=&#39;sag&#39;, multi_class=&#34;auto&#34;)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># # train model</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># lr_l1.fit(X_train, Y_train)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># lr_l2.fit(X_train, Y_train)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># model performence on train set</span>
+</span></span><span class="line"><span class="cl">  <span class="n">l1_train_predict</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">l2_train_predict</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># model performence on test set</span>
+</span></span><span class="line"><span class="cl">  <span class="n">l1_test_predict</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">l2_test_predict</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">50</span><span class="p">)):</span>
+</span></span><span class="line"><span class="cl">      <span class="c1"># lr_l1 = LogisticRegression(penalty=&#34;l1&#34;, C=c, solver=&#39;liblinear&#39;, max_iter=1000)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1"># lr_l2 = LogisticRegression(penalty=&#39;l2&#39;, C=c, solver=&#39;liblinear&#39;, max_iter=1000)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="n">lr_l1</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">penalty</span><span class="o">=</span><span class="s2">&#34;l1&#34;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;liblinear&#39;</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">multi_class</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">lr_l2</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l2&#39;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;liblinear&#39;</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">multi_class</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1"># 训练模型，记录L1正则化模型在训练集测试集上的表现</span>
+</span></span><span class="line"><span class="cl">      <span class="n">lr_l1</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">l1_train_predict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">lr_l1</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span> <span class="n">Y_train</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">      <span class="n">l1_test_predict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">lr_l1</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">),</span> <span class="n">y_test</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1"># 记录L2正则化模型的表现</span>
+</span></span><span class="line"><span class="cl">      <span class="n">lr_l2</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">l2_train_predict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">lr_l2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span> <span class="n">Y_train</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">      <span class="n">l2_test_predict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">lr_l2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">),</span> <span class="n">y_test</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">          <span class="n">pred_y_test</span> <span class="o">=</span> <span class="n">lr_l2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">          <span class="n">mask</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pred_y_test</span><span class="o">-</span><span class="n">y_test</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">5</span>
+</span></span><span class="line"><span class="cl">          <span class="n">neg_test</span> <span class="o">=</span> <span class="n">pred_y_test</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">          <span class="n">res</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">neg_test</span><span class="p">)</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">pred_y_test</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">          <span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_l1_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f1</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">              <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">lr_l1</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_l2_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f2</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">              <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">lr_l2</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">l1_train_predict</span><span class="p">,</span> <span class="n">l2_train_predict</span><span class="p">,</span> <span class="n">l1_test_predict</span><span class="p">,</span> <span class="n">l2_test_predict</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">label</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;l1_train&#39;</span><span class="p">,</span> <span class="s1">&#39;l2_train&#39;</span><span class="p">,</span> <span class="s1">&#39;l1_test&#39;</span><span class="p">,</span> <span class="s2">&#34;l2_test&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">color</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="s1">&#39;orange&#39;</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&#34;best&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h2 id="支持向量机-support-vector-machine">支持向量机 Support Vector Machine</h2>
+<ul>
+<li>Using GridSearch to find the best parameters [code snippets]
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">Perceptron</span><span class="p">,</span> <span class="n">LogisticRegression</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.svm</span> <span class="kn">import</span> <span class="n">SVC</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">StandardScaler</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">datasets</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">metrics</span>
+</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">pickle</span>
+</span></span><span class="line"><span class="cl">  <span class="n">merged_data_dir</span> <span class="o">=</span> <span class="s1">&#39;../data/merged_data/merged_data.npy&#39;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">model_dir</span><span class="o">=</span><span class="s1">&#39;./svm.pkl&#39;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">merged_data_dir</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">#labeling</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">ele</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">20</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">          <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">      <span class="k">elif</span> <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span><span class="mi">20</span> <span class="ow">and</span> <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">40</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">          <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">      <span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">          <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">X</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">34</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">print</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># Create training and test split</span>
+</span></span><span class="line"><span class="cl">  <span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">stratify</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># feature scaling</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># sc = StandardScaler()</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># sc.fit(X_train)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># X_train_std = sc.transform(X_train)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># X_test_std = sc.transform(X_test)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">##################################</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># # Instantiate the Support Vector Classifier (SVC)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># svc = SVC(C=10, random_state=1, kernel=&#39;rbf&#39;, gamma=0.3)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># # Fit the model</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># svc.fit(X_train, y_train)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># # Make the predictions</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># y_predict = svc.predict(X_test)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># # Measure the performance</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># print(&#34;Accuracy score %.3f&#34; %metrics.accuracy_score(y_test, y_predict))</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">#############################################</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="nf">svm_cross_validation</span><span class="p">(</span><span class="n">train_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">GridSearchCV</span>
+</span></span><span class="line"><span class="cl">      <span class="kn">from</span> <span class="nn">sklearn.svm</span> <span class="kn">import</span> <span class="n">SVC</span>
+</span></span><span class="line"><span class="cl">      <span class="n">model</span> <span class="o">=</span> <span class="n">SVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">probability</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">param_grid</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">,</span> <span class="mf">1e-1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">],</span> <span class="s1">&#39;gamma&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.0001</span><span class="p">]}</span>
+</span></span><span class="line"><span class="cl">      <span class="n">grid_search</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">param_grid</span><span class="p">,</span> <span class="n">n_jobs</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="s1">&#39;accuracy&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">grid_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">best_parameters</span> <span class="o">=</span> <span class="n">grid_search</span><span class="o">.</span><span class="n">best_estimator_</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="n">para</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">best_parameters</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+</span></span><span class="line"><span class="cl">          <span class="nb">print</span><span class="p">(</span><span class="n">para</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">model</span> <span class="o">=</span> <span class="n">SVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">best_parameters</span><span class="p">[</span><span class="s1">&#39;C&#39;</span><span class="p">],</span> <span class="n">gamma</span><span class="o">=</span><span class="n">best_parameters</span><span class="p">[</span><span class="s1">&#39;gamma&#39;</span><span class="p">],</span> <span class="n">probability</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">model</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">svm_model</span> <span class="o">=</span> <span class="n">svm_cross_validation</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f1</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">svm_model</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">f1</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">print</span><span class="p">(</span><span class="n">svm_model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y_predict</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">print</span><span class="p">(</span><span class="n">y_predict</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+]]></description></item><item><title>Docker安装及学习</title><link>https://lruihao.cn/posts/dockerintroduction/</link><pubDate>Sat, 15 Jul 2023 16:16:22 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/dockerintroduction/</guid><description><![CDATA[<h2 id="docker-入门教程">docker 入门教程</h2>
 <p><code>Ref Link:</code></br>
 [1] <a href="https://ruanyifeng.com/blog/2018/02/docker-tutorial.html"target="_blank" rel="external nofollow noopener noreferrer">https://ruanyifeng.com/blog/2018/02/docker-tutorial.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [2] <a href="https://cloud.tencent.com/developer/article/1885678"target="_blank" rel="external nofollow noopener noreferrer">https://cloud.tencent.com/developer/article/1885678<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
@@ -2739,7 +3326,7 @@ cartesian坐标系到frenet坐标系的变换公式：</p>
 <p>轨迹的生成成就是将frenet坐标系下的轨迹转换到cartesian坐标系中，前面我们知道了位姿点在frenet坐标系和cartesian坐标系的相互转换关系，因此现在我们需要做的就是对横纵向轨迹函数 $s(t)$ 和 $l(s(t))$ 进行轨迹的时间细分形成规划函数的横纵向轨迹规划点 $s(t_i)$ 和 $l(s(t_i))$，该规划点是在frenet坐标系中，因此需要进行frenet坐标系到cartesian坐标系的坐标转换，从而形成控制器可用的采样轨迹。</p>
 <p>获得采用轨迹之后，接着需要进行目标轨迹的<font color=red>曲率检查</font>和<font color=red>碰撞检测</font>，目的是为了使目标采样轨迹满足车辆的运动学控制要求和无碰撞要求，这样就形成了安全可靠的轨迹簇。这些轨迹簇都可以满足车辆的控制要求，但并不是最优的，因此需要从轨迹簇中选出一组最优的运行轨迹。这时就需要引入轨迹评价函数，用来对候选轨迹进行打分。</p>
 <p>轨迹评价函数主要为了使得目标轨迹尽量靠近静态参考线轨迹运行，同时，速度尽量不发生大突变，满足舒适性要求，且尽量远离障碍物。因此最后轨迹评价函数可以通过如下伪代码描述：</p>
-<p>$$traj_cost = k_lat * cost_lat + k_lon * cost_lon + k_obs * obs_cost;$$</p>
+<p>$$traj_{cost} = k_{lat} * cost_{lat} + k_{lon} * cost_{lon} + k_{obs} * obs_{cost};$$</p>
 <pre><code>上式中，
   - k_lat : 表示纵向误差代价权重
   - cost_lat： 表示纵向误差，综合考虑纵向速度误差，时间误差及加加速度的影响。
@@ -2750,10 +3337,10 @@ cartesian坐标系到frenet坐标系的变换公式：</p>
 </code></pre>
 <p>最后选择出代价值最好的一条轨迹输入到控制器，用于控制器的跟踪控制。</p>
 ]]></description></item><item><title>EM Planner</title><link>https://lruihao.cn/posts/emplanner/</link><pubDate>Sat, 15 Jul 2023 11:17:30 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/emplanner/</guid><description><![CDATA[<p>ref: </br>
-[1]. <a href="https://blog.csdn.net/qq_41667348/category_11789612.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41667348/category_11789612.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2]. <a href="https://zhuanlan.zhihu.com/p/492988036"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/492988036<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[3]. <a href="https://www.zhihu.com/column/c_1020971709242818560"target="_blank" rel="external nofollow noopener noreferrer">https://www.zhihu.com/column/c_1020971709242818560<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[4]. <a href="https://blog.csdn.net/qq_35503971/article/details/106337900"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_35503971/article/details/106337900<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+[1]. <a href="https://blog.csdn.net/qq_41667348/category_11789612.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41667348/category_11789612.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://zhuanlan.zhihu.com/p/492988036"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/492988036<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3]. <a href="https://www.zhihu.com/column/c_1020971709242818560"target="_blank" rel="external nofollow noopener noreferrer">https://www.zhihu.com/column/c_1020971709242818560<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[4]. <a href="https://blog.csdn.net/qq_35503971/article/details/106337900"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_35503971/article/details/106337900<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
 <h1 id="简介">简介</h1>
 <p>EM Planner是Apollo面向L4的实时运动规划算法，该算法首先通过顶层多车道策略，选择出一条参考路径，再根据这条参考线，在Frenet坐标系下，进行车道级的路径和速度规划，规划主要通过Dynamic Programming和基于样条的Quadratic Programming实现。EM Planner充分考虑了无人车安全性、舒适性、可扩展性的需求，通过考虑交通规则、障碍物决策、轨迹光滑性等要求，可适应高速公路、低速城区场景的规划需求。通过Apollo仿真和在环测试，EM Planner算法体现了高度的可靠性，和低耗时性。</p>
 <h2 id="多车道em-planner框架">多车道EM Planner框架</h2>
@@ -5021,519 +5608,4 @@ all_reduce: 相当于单个gpu内的多进程的值相加</p>
 <p>最重要的是，协程不是被操作系统内核所管理，而完全是由程序所控制(也就是在用户态执行)。</p>
 <p>这样带来的好处就是性能得到了很大的提升，不会像线程切换那样消耗资源。</p>
 <p>python可以通过 yield/send 的方式实现协程。<strong>在python 3.5以后，async/await 成为了更好的替代方案</strong>。</p>
-]]></description></item><item><title>计算机操作系统</title><link>https://lruihao.cn/posts/os_1/</link><pubDate>Thu, 13 Jul 2023 08:05:24 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/os_1/</guid><description><![CDATA[<h2 id="操作系统一">操作系统(一)</h2>
-<h3 id="11-进程和线程的区别">1.1 进程和线程的区别？</h3>
-<p>进程和线程都是操作系统中进行任务调度的基本单位，二者之间的主要区别如下：</p>
-<ul>
-<li>资源占用：进程是操作系统资源分配的基本单位，一个进程可以拥有多个线程，而线程是进程中的执行单元，是CPU调度的基本单位。每个线程共享所属进程的资源，如代码段、数据段、打开的文件等。而进程之间互相独立，互不干扰，每个进程有自己独立的资源空间，不同进程之间需要通过IPC（进程间通信）来进行通信和数据共享。</li>
-<li>调度和切换：操作系统在调度和分配CPU时，将进程作为基本的调度和分配单位，即进程拥有自己的调度队列。而线程是依附于进程而存在的，一个进程中的多个线程共享进程的时间片和资源，因此在调度和切换时，线程切换比进程切换更快，也更加轻量级。</li>
-<li>创建和销毁：进程的创建和销毁比线程更加复杂，创建一个进程需要为其分配资源、建立PCB（进程控制块）、建立内核对象等，而销毁进程需要回收资源、关闭打开的文件等。而线程的创建和销毁相对简单，只需要为其分配线程栈、建立TCB（线程控制块）等即可。</li>
-<li>通信和同步：进程之间通过IPC（管道、套接字、消息队列等）进行通信和数据共享，而线程之间可以直接访问同一进程的共享数据区，也可以通过锁机制实现同步。</li>
-</ul>
-<p>综上所述，进程和线程在资源占用、调度和切换、创建和销毁、通信和同步等方面有着不同的特点，开发者在实际编程时需要根据具体的情况选择使用进程还是线程来完成任务。</p>
-<h3 id="12-协程与线程的区别">1.2 协程与线程的区别？</h3>
-<p>协程和线程都是用于实现多任务的技术，但是它们的实现方式有所不同，具体区别如下：</p>
-<ul>
-<li>调度方式不同：线程由操作系统内核进行调度，而协程则是在用户空间中进行调度，不需要切换到内核态。</li>
-<li>并发性不同：线程是操作系统调度的最小单位，多个线程可以并行执行；协程则是在单线程内部通过协作式调度实现并发。</li>
-<li>内存使用不同：线程是由操作系统内核创建的，需要占用一定的系统资源，而协程则是由用户程序创建，不需要占用额外的系统资源。</li>
-<li>上下文切换开销不同：线程在切换时需要保存和恢复所有的寄存器状态和内核堆栈，而协程只需要保存和恢复少量的寄存器状态，开销较小。</li>
-<li>编程难度不同：线程的编程难度相对较大，因为多线程之间需要共享资源并进行同步，而协程则是在单线程内部调度，因此编程难度相对较小。</li>
-</ul>
-<p>总之，线程是操作系统内核的调度对象，具有独立的系统资源，可以并行执行多个任务；而协程是用户程序的调度对象，不需要占用额外的系统资源，通过协作式调度实现任务之间的切换。</p>
-<h3 id="13并发和并行的区别">1.3、并发和并行的区别？</h3>
-<p>并发和并行都是指同时处理多个任务的方式，但是它们有不同的含义。</p>
-<p>并发是指一个处理器同时处理多个任务，这些任务通常是通过在不同的时间间隔内交替进行的，这样在同一时刻可以看到有多个任务在运行。这些任务可以是在同一个程序内的不同线程，也可以是在不同程序之间的交互，例如客户端与服务器之间的通信。</p>
-<p>并行是指使用多个处理器同时处理多个任务，这些任务在同一时刻可以看到有多个任务在同时运行。与并发不同的是，并行需要多个处理器或多个计算核心，而并发则可以在单个处理器上执行多个任务。</p>
-<p>简单来说，并发是在一个处理器上同时执行多个任务，而并行是在多个处理器或计算核心上同时执行多个任务。</p>
-<h3 id="14-进程与线程的切换流程">1.4 进程与线程的切换流程？</h3>
-<p>进程与线程的切换流程如下：</p>
-<ol>
-<li>当前进程或线程执行到阻塞状态（如等待I/O完成）时，触发切换操作。</li>
-<li>操作系统内核保存当前进程或线程的上下文（即当前的寄存器值和程序计数器等信息），并将处理器分配给另一个进程或线程。</li>
-<li>内核从调度队列中选择另一个进程或线程，并恢复其保存的上下文信息。</li>
-<li>处理器开始执行新的进程或线程，从之前保存的状态恢复执行。</li>
-</ol>
-<p>在进程切换时，需要将整个进程的上下文信息保存下来，包括进程的虚拟内存、全局变量等，切换时还需要进行内存映射，开销比较大。</p>
-<p>在线程切换时，只需要保存当前线程的上下文信息即可，线程共享进程的虚拟内存，切换时不需要进行内存映射，开销较小。</p>
-<h3 id="15-为什么虚拟地址空间切换比较耗时">1.5 为什么虚拟地址空间切换比较耗时？</h3>
-<p>虚拟地址空间切换的耗时是因为它涉及到了硬件和操作系统的复杂操作。当进程或线程切换时，需要保存当前的程序状态（寄存器值、堆栈指针等）和上下文信息（当前指令位置、程序计数器等）。然后，内核必须选择另一个进程或线程，并将它的状态和上下文信息装入内存，这样才能保证程序能够继续运行。这个过程涉及到多个操作系统的内核和硬件机制，例如上下文切换、内存管理和硬件中断等。</p>
-<p>在这个过程中，为了切换到另一个进程或线程，需要保存和恢复大量的状态信息，包括内核上下文和硬件寄存器等。这些操作需要耗费大量的CPU时间和内存带宽，因此切换过程通常是相对比较耗时的。</p>
-<p>ref:</br>
-[1].https://zhuanlan.zhihu.com/p/616080301</p>
-]]></description></item><item><title>CUDA Introduction</title><link>https://lruihao.cn/posts/cuda/</link><pubDate>Wed, 12 Jul 2023 10:48:05 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/cuda/</guid><description><![CDATA[<p>[1] <a href="https://blog.csdn.net/Augusdi/article/details/12187291"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/Augusdi/article/details/12187291<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="cuda编程">CUDA编程</h2>
-<h3 id="1什么是cuda">1.什么是CUDA</h3>
-<p>CUDA(Compute Unified Device Architecture)，统一计算架构，是NVidia推出的并行计算平台。NVidia官方对其的解释是：一个并行计算平台和简单（简洁）地使用图像处理单元（GPU）进行通用计算的编程模型。利用GPU的能力在计算性能上有惊人的提升。</p>
-<p>简单地说CUDA是便于程序员利用NVidia GPU进行通用计算的开发环境及工具，目前支持C/C++语言，将来还会支持Fortran语言。</p>
-<h3 id="2为什么要用到cuda">2.为什么要用到CUDA</h3>
-<p>CPU主频要比GPU高2-3倍左右，但是通常情况下GPU核心的数量要比CPU多2-3个数量级以上。因此GPU的计算能力要远大于CPU，充分发挥GPU的计算能力，可以有成倍的性能提升。</p>
-<p>早期利用GPU的计算能力是使用着色器和着色语言（GLSL等）。目前广泛使用的是CUDA和OpenCL。CUDA是针对NVidia GPU硬件设备设计的，而 OpenCL是针对跨平台设计的。因此CUDA可充分发挥NVidia GPU的计算性能。</p>
-<p>CUDA可以直接使用C/C++语言来开发GPU程序，省去了程序员重新学一种新语言的麻烦。</p>
-<h3 id="3cuda环境搭建">3.CUDA环境搭建</h3>
-<p>CUDA环境主要分为四点：硬件（GPU设备）、操作系统、C/C++编译器和CUDA工具包。</p>
-<p>硬件（GPU设备），必须是支持CUDA的GPU。可到NVidia官网查询支持CUDA的GPU设备，具体地址为：http://www.nvidia.com/object/cuda_home_new.html 。</p>
-<p>操作系统，支持Microsoft Windows、Mac OS X和Linux。</p>
-<p>C/C++编译器，对不同的操作系统有不同的要求。</p>
-<p>CUDA工具包，NVidia提供了不同操作系统对应的CUDA Toolkit，可从https://developer.nvidia.com/cuda-downloads 下载对应的版本。</p>
-<p>本文只以Microsoft Windows为例介绍如何搭建CUDA环境。</p>
-<p>准备材料：</p>
-<p>·一台装有支持CUDA GPU的电脑。</p>
-<p>·Microsoft Windows操作系统（Microsoft Windows XP,Vista,7,or 8 or Windows Server 2003 or 2008）。</p>
-<p>·CUDA工具包（相应操作系统）。下载地址：https://developer.nvidia.com/cuda-downloads</p>
-<p>·C/C++编译器：Microsoft Visual Studio 2008 或 2010，或者对应版本的Microsoft Visual C++ Express产品。</p>
-<p>安装步骤：</p>
-<p>·在装有支持CUDA GPU的电脑上安装Microsoft Windows操作系统（一般情况下都已经完成这步骤）。</p>
-<p>·安装C/C++编译器，可只安装其中的C++编译器部分。</p>
-<p>·安装CUDA工具包。（CUDA工具包中有NVidia GPU的驱动程序，尚未安装的请选择安装。）</p>
-<p>安装验证：</p>
-<p>Windows XP系统：进入 C:\Documents and Settings\All Users\Application Data\NVIDIA Corporation\CUDA Samples\v5.0\bin\win32\Release 目录运行deviceQuery.exe文件。</p>
-<p>Windows Vista, Windows 7, Windows 8, Windows Server 2003, and Windows Server 2008系统：进入 C:\ProgramData\NVIDIA Corporation\CUDA Samples\v5.0\bin\win32\Release 目录运行deviceQuery.exe文件。</p>
-<p>如果安装正确，执行deviceQuery.exe文件会得到GPU设备的相应信息。如果没有安装支持CUDA的GPU也会得出GPU的信息，其中CUDA Capability Major/Minor version number信息为9999.9999。</p>
-<p>Microsoft Windows上更详细的安装信息请查看：http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-microsoft-windows/index.html 。</p>
-<p>Mac OS X的安装：http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-mac-os-x/index.html 。
-Linux的安装：http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-linux/index.html 。</p>
-<h3 id="4第一个cuda程序">4.第一个CUDA程序</h3>
-<p>在Microsoft Windows系统上，如果成功搭建了CUDA环境，则在Microsoft Visual Studio中已经集成了CUDA的开发组件。</p>
-<p>以下以Windows 7 + Microsoft Visual Studio 2008为例，创建第一个CUDA程序。</p>
-<p>打开Microsoft Visual Studio 2008，依次：File-&gt;New-&gt;Project-&gt;NVIDIA-&gt;CUDA-&gt;CUDA 5.0 Runtime，输入相应的项目名称确定即可。</p>
-<p>默认会生成一个kernel.cu文件，内容如下：</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span><span class="lnt">62
-</span><span class="lnt">63
-</span><span class="lnt">64
-</span><span class="lnt">65
-</span><span class="lnt">66
-</span><span class="lnt">67
-</span><span class="lnt">68
-</span><span class="lnt">69
-</span><span class="lnt">70
-</span><span class="lnt">71
-</span><span class="lnt">72
-</span><span class="lnt">73
-</span><span class="lnt">74
-</span><span class="lnt">75
-</span><span class="lnt">76
-</span><span class="lnt">77
-</span><span class="lnt">78
-</span><span class="lnt">79
-</span><span class="lnt">80
-</span><span class="lnt">81
-</span><span class="lnt">82
-</span><span class="lnt">83
-</span><span class="lnt">84
-</span><span class="lnt">85
-</span><span class="lnt">86
-</span><span class="lnt">87
-</span><span class="lnt">88
-</span><span class="lnt">89
-</span><span class="lnt">90
-</span><span class="lnt">91
-</span><span class="lnt">92
-</span><span class="lnt">93
-</span><span class="lnt">94
-</span><span class="lnt">95
-</span><span class="lnt">96
-</span><span class="lnt">97
-</span><span class="lnt">98
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;cuda_runtime.h&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;device_launch_parameters.h&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">addWithCuda</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">addKernel</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="kt">int</span> <span class="n">arraySize</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="kt">int</span> <span class="n">a</span><span class="p">[</span><span class="n">arraySize</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span> <span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="kt">int</span> <span class="n">b</span><span class="p">[</span><span class="n">arraySize</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">50</span> <span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">c</span><span class="p">[</span><span class="n">arraySize</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// Add vectors in parallel.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="nf">addWithCuda</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">arraySize</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nf">printf</span><span class="p">(</span><span class="s">&#34;{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">        <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">4</span><span class="p">]);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// cudaThreadExit must be called before exiting in order for profiling and
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// tracing tools such as Nsight and Visual Profiler to show complete traces.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaThreadExit</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// Helper function for using CUDA to add vectors in parallel.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">addWithCuda</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="o">*</span><span class="n">dev_a</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="o">*</span><span class="n">dev_b</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="o">*</span><span class="n">dev_c</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// Choose which GPU to run on, change this on a multi-GPU system.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaSetDevice</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// Allocate GPU buffers for three vectors (two input, one output)    .
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaMalloc</span><span class="p">((</span><span class="kt">void</span><span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">dev_c</span><span class="p">,</span> <span class="n">size</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaMalloc</span><span class="p">((</span><span class="kt">void</span><span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">dev_a</span><span class="p">,</span> <span class="n">size</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaMalloc</span><span class="p">((</span><span class="kt">void</span><span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">dev_b</span><span class="p">,</span> <span class="n">size</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// Copy input vectors from host memory to GPU buffers.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaMemcpy</span><span class="p">(</span><span class="n">dev_a</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">size</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">),</span> <span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaMemcpy</span><span class="p">(</span><span class="n">dev_b</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">size</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">),</span> <span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// Launch a kernel on the GPU with one thread for each element.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="n">addKernel</span><span class="o">&lt;&lt;&lt;</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">dev_c</span><span class="p">,</span> <span class="n">dev_a</span><span class="p">,</span> <span class="n">dev_b</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// cudaThreadSynchronize waits for the kernel to finish, and returns
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// any errors encountered during the launch.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaThreadSynchronize</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// Copy output vector from GPU buffer to host memory.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaMemcpy</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">dev_c</span><span class="p">,</span> <span class="n">size</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">),</span> <span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaFree</span><span class="p">(</span><span class="n">dev_c</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaFree</span><span class="p">(</span><span class="n">dev_a</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nf">cudaFree</span><span class="p">(</span><span class="n">dev_b</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>代码1</p>
-<p>这是一个将两个一维数组相加的例子。</p>
-<p>其中addKernel是内核函数，它的计算过程是在GPU上实现的，用函数类型限定符__global__限制，且函数类型为void型。</p>
-<p>cuda_runtime.h头文件包括了运行时API和其参数的定义。（如果使用驱动API则使用cuda.h头文件）。</p>
-<p>device_launch_parameters.h头文件包含了内核函数的5个变量threadIdx、blockDim、blockIdx、gridDim和wrapSize。</p>
-<p>对其中CUDA运行时API函数的解释：</p>
-<ul>
-<li>
-<p>cudaSetDevice()：选择设备（GPU）。（可以不使用，不使用的情况下，默认选择设备0）</p>
-</li>
-<li>
-<p>cudaMalloc()：动态分配显存。</p>
-</li>
-<li>
-<p>cudaMemcpy()：设备与主机之内的数据拷贝。</p>
-</li>
-<li>
-<p>cudaThreadSynchronize()：同步所有设备上的线程，等待所有线程结束。</p>
-</li>
-<li>
-<p>cudaFree():释放由cudaMalloc分配的显存。</p>
-</li>
-<li>
-<p>cudaThreadExit():结束CUDA上下文环境，释放其中的资源。</p>
-</li>
-</ul>
-<p>这些函数的具体介绍在 <a href="http://docs.nvidia.com/cuda/cuda-runtime-api/index.html"target="_blank" rel="external nofollow noopener noreferrer">http://docs.nvidia.com/cuda/cuda-runtime-api/index.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中。</p>
-<h3 id="5-cuda编程">5. CUDA编程</h3>
-<h4 id="51-基本概念">5.1. 基本概念</h4>
-<p>CUDA编程中需要注意一些基本概念，分别为：主机(host)、设备(device)、运行时API、驱动API、warp、bank、函数类型限定符、变量类型限定符、thread、block、grid、计算能力、SIMT、内置变量、纹理、CUDA数组等。</p>
-<p>主机(host)：可理解为CPU与内存的组合。</p>
-<p>设备(device)：可理解为GPU与显存的组合。</p>
-<p>运行时API：是指CUDA运行时API是在驱动API的基础上封装而成的，简化了CUDA的开发。</p>
-<p>驱动API：是指CUDA驱动API，相比运行时API更接近于设备，可灵活运用设备的特性开发CUDA，可实现运行时API无法实现的功能。</p>
-<p>warp：多处理器激活、管理、调度和执行并行任务的单位。计算能力2.x的设备warp为32个线程。未来的设备可能不同，可以通过内置变量warpSize查询。</p>
-<p>bank：为了获得较高的存储器带宽，共享存储器被划分为多个大小相等的存储器模块，称为存储体，这些存储体就叫bank，可同步访问。</p>
-<p>函数类型限定符：是CUDA C中特有的，用来修饰是主机函数，设备调用的设备函数，还是主机调用的设备函数。有__device__、<strong>global</strong>、<strong>host</strong>。</p>
-<p>变量类型限定符：是用来修饰设备变量的。有__device__、<strong>constant</strong>、<strong>shared</strong>。</p>
-<p>thread：设备中的线程，与主机中的线程是同一个概念。</p>
-<p>block：线程块，由一组线程组成。一个线程块中的所以线程会在同一个多处理器上执行，一个多处理器上可同时执行多个线程块。</p>
-<p>grid：有所有线程块组成的网格。</p>
-<p>计算能力：是NVidia GPU不同架构的计算能力。</p>
-<p>SIMT：单指令多线程，与单指令多数据（SIMD）类似。一条指令多个线程一同执行，实现程序的并行化。</p>
-<p>内置变量：有threadIdx、blockDim、blockIdx、gridDim、warpSize。其中threadIdx指此线程在线程块中的位置；blockDim指线程块维度；blockIdx指该线程块在网格中的位置；gridDim指线程块网格维度；warpSize指一个warp多少个线程。</p>
-<p>纹理：本文主要涉及到的是纹理参考、纹理绑定、纹理获取。</p>
-<p>CUDA数组：区别于线性存储器，对数据进行了对齐等的处理，包括一维、二维和三维。其中的数据为：一元、二元或四元组。</p>
-<p><strong>CUDA编程模型基础</strong></p>
-<p>在给出CUDA的编程实例之前，这里先对CUDA编程模型中的一些概念及基础知识做个简单介绍。CUDA编程模型是一个异构模型，需要CPU和GPU协同工作。在CUDA中，host和device是两个重要的概念，我们用host指代CPU及其内存，而用device指代GPU及其内存。CUDA程序中既包含host程序，又包含device程序，它们分别在CPU和GPU上运行。同时，host与device之间可以进行通信，这样它们之间可以进行数据拷贝。典型的CUDA程序的执行流程如下：</p>
-<pre><code>分配host内存，并进行数据初始化；分配device内存，并从host将数据拷贝到device上；调用CUDA的核函数在device上完成指定的运算；将device上的运算结果拷贝到host上；释放device和host上分配的内存。
-</code></pre>
-<p>上面流程中最重要的一个过程是调用CUDA的核函数来执行并行计算，kernel是CUDA中一个重要的概念，kernel是在device上线程中并行执行的函数，核函数用__global__符号声明，在调用时需要用&laquo;&lt;grid, block&raquo;&gt;来指定kernel要执行的线程数量，在CUDA中，每一个线程都要执行核函数，并且每个线程会分配一个唯一的线程号thread ID，这个ID值可以通过核函数的内置变量threadIdx来获得。</p>
-<p>由于GPU实际上是异构模型，所以需要区分host和device上的代码，在CUDA中是通过函数类型限定词开区别host和device上的函数，主要的三个函数类型限定词如下：</p>
-<pre><code>__global__：在device上执行，从host中调用（一些特定的GPU也可以从device上调用），返回类型必须是void，不支持可变参数参数，不能成为类成员函数。注意用__global__定义的kernel是异步的，这意味着host不会等待kernel执行完就执行下一步。__device__：在device上执行，单仅可以从device中调用，不可以和__global__同时用。__host__：在host上执行，仅可以从host上调用，一般省略不写，不可以和__global__同时用，但可和__device__，此时函数会在device和host都编译。
-</code></pre>
-<p>要深刻理解kernel，必须要对kernel的线程层次结构有一个清晰的认识。首先GPU上很多并行化的轻量级线程。kernel在device上执行时实际上是启动很多线程，一个kernel所启动的所有线程称为一个网格（grid），同一个网格上的线程共享相同的全局内存空间，grid是线程结构的第一层次，而网格又可以分为很多线程块（block），一个线程块里面包含很多线程，这是第二个层次。线程两层组织结构如下图所示，这是一个gird和block均为2-dim的线程组织。grid和block都是定义为dim3类型的变量，dim3可以看成是包含三个无符号整数（x，y，z）成员的结构体变量，在定义时，缺省值初始化为1。因此grid和block可以灵活地定义为1-dim，2-dim以及3-dim结构，对于图中结构（主要水平方向为x轴），定义的grid和block如下所示，kernel在调用时也必须通过执行配置&laquo;&lt;grid, block&raquo;&gt;来指定kernel所使用的线程数及结构。</p>
-<p>所以，一个线程需要两个内置的坐标变量（blockIdx，threadIdx）来唯一标识，它们都是dim3类型变量，其中blockIdx指明线程所在grid中的位置，而threaIdx指明线程所在block中的位置，如图中的Thread (1,1)满足：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="mi">1</span>
-</span></span><span class="line"><span class="cl"><span class="n">threadIdx</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="mi">1</span>
-</span></span><span class="line"><span class="cl"><span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="mi">1</span>
-</span></span><span class="line"><span class="cl"><span class="n">blockIdx</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="mi">1</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>一个线程块上的线程是放在同一个流式多处理器（SM)上的，但是单个SM的资源有限，这导致线程块中的线程数是有限制的，现代GPUs的线程块可支持的线程数可达1024个。有时候，我们要知道一个线程在blcok中的全局ID，此时就必须还要知道block的组织结构，这是通过线程的内置变量blockDim来获得。它获取线程块各个维度的大小。对于一个2-dim的block ，线程 的ID值为 ，如果是3-dim的block ，线程 的ID值为</p>
-<p>。另外线程还有内置变量gridDim，用于获得网格块各个维度的大小。</p>
-<p>kernel的这种线程组织结构天然适合vector,matrix等运算，如我们将利用上图2-dim结构实现两个矩阵的加法，每个线程负责处理每个位置的两个元素相加，代码如下所示。线程块大小为(16, 16)，然后将N*N大小的矩阵均分为不同的线程块来执行加法运算。</p>
-<p>此外这里简单介绍一下CUDA的内存模型，如下图所示。可以看到，每个线程有自己的私有本地内存（Local Memory），而每个线程块有包含共享内存（Shared Memory）,可以被线程块中所有线程共享，其生命周期与线程块一致。此外，所有的线程都可以访问全局内存（Global Memory）。还可以访问一些只读内存块：常量内存（Constant Memory）和纹理内存（Texture Memory）。内存结构涉及到程序优化，这里不深入探讨它们。</p>
-<p>还有重要一点，你需要对GPU的硬件实现有一个基本的认识。上面说到了kernel的线程组织层次，那么一个kernel实际上会启动很多线程，这些线程是逻辑上并行的，但是在物理层却并不一定。这其实和CPU的多线程有类似之处，多线程如果没有多核支持，在物理层也是无法实现并行的。但是好在GPU存在很多CUDA核心，充分利用CUDA核心可以充分发挥GPU的并行计算能力。GPU硬件的一个核心组件是SM，前面已经说过，SM是英文名是 Streaming Multiprocessor，翻译过来就是流式多处理器。SM的核心组件包括CUDA核心，共享内存，寄存器等，SM可以并发地执行数百个线程，并发能力就取决于SM所拥有的资源数。当一个kernel被执行时，它的gird中的线程块被分配到SM上，一个线程块只能在一个SM上被调度。SM一般可以调度多个线程块，这要看SM本身的能力。那么有可能一个kernel的各个线程块被分配多个SM，所以grid只是逻辑层，而SM才是执行的物理层。SM采用的是SIMT (Single-Instruction, Multiple-Thread，单指令多线程)架构，基本的执行单元是线程束（warps)，线程束包含32个线程，这些线程同时执行相同的指令，但是每个线程都包含自己的指令地址计数器和寄存器状态，也有自己独立的执行路径。所以尽管线程束中的线程同时从同一程序地址执行，但是可能具有不同的行为，比如遇到了分支结构，一些线程可能进入这个分支，但是另外一些有可能不执行，它们只能死等，因为GPU规定线程束中所有线程在同一周期执行相同的指令，线程束分化会导致性能下降。当线程块被划分到某个SM上时，它将进一步划分为多个线程束，因为这才是SM的基本执行单元，但是一个SM同时并发的线程束数是有限的。这是因为资源限制，SM要为每个线程块分配共享内存，而也要为每个线程束中的线程分配独立的寄存器。所以SM的配置会影响其所支持的线程块和线程束并发数量。总之，就是网格和线程块只是逻辑划分，一个kernel的所有线程其实在物理层是不一定同时并发的。所以kernel的grid和block的配置不同，性能会出现差异，这点是要特别注意的。还有，由于SM的基本执行单元是包含32个线程的线程束，所以block大小一般要设置为32的倍数。</p>
-<h4 id="52-线程层次结构">5.2. 线程层次结构</h4>
-<p>CUDA线程的层次结构，由小到大依次为线程(thread)、线程块(block)、线程块网格(grid)。一维、二维或三维的线程组组成一个线程块，一维、二维或三维的线程块组组成一个线程块网格。</p>
-<p>下图是由二维的线程块组组成的线程块网络，其中线程块是由二维的线程组组成。</p>
-<p>图1 NVidia GPU的硬件结构是，一组流处理器组成一个多处理器，一个或多个多处理器组成一个GPU。其中流处理器，可以理解为处理计算的核心单元。多处理器类似于多核CPU。NVidia GPU从DX10（DirectX10）开始出现了Tesla、Fermi、Kepler架构，不同的架构多处理器中流处理器数量都有差别。</p>
-<p>在进行CUDA编程前，可以先检查一下自己的GPU的硬件配置，这样才可以有的放矢，可以通过下面的程序获得GPU的配置属性：</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">dev</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">cudaDeviceProp</span> <span class="n">devProp</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="nf">CHECK</span><span class="p">(</span><span class="nf">cudaGetDeviceProperties</span><span class="p">(</span><span class="o">&amp;</span><span class="n">devProp</span><span class="p">,</span> <span class="n">dev</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;使用GPU device &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">dev</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">devProp</span><span class="p">.</span><span class="n">name</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;SM的数量：&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">devProp</span><span class="p">.</span><span class="n">multiProcessorCount</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;每个线程块的共享内存大小：&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">devProp</span><span class="p">.</span><span class="n">sharedMemPerBlock</span> <span class="o">/</span> <span class="mf">1024.0</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; KB&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;每个线程块的最大线程数：&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">devProp</span><span class="p">.</span><span class="n">maxThreadsPerBlock</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;每个EM的最大线程数：&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">devProp</span><span class="p">.</span><span class="n">maxThreadsPerMultiProcessor</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;每个SM的最大线程束数：&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">devProp</span><span class="p">.</span><span class="n">maxThreadsPerMultiProcessor</span> <span class="o">/</span> <span class="mi">32</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// 输出如下
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="err">使用</span><span class="n">GPU</span> <span class="n">device</span> <span class="mi">0</span><span class="o">:</span> <span class="n">GeForce</span> <span class="n">GT</span> <span class="mi">730</span>
-</span></span><span class="line"><span class="cl">    <span class="n">SM</span><span class="err">的数量：</span><span class="mi">2</span>
-</span></span><span class="line"><span class="cl">    <span class="err">每个线程块的共享内存大小：</span><span class="mi">48</span> <span class="n">KB</span>
-</span></span><span class="line"><span class="cl">    <span class="err">每个线程块的最大线程数：</span><span class="mi">1024</span>
-</span></span><span class="line"><span class="cl">    <span class="err">每个</span><span class="n">EM</span><span class="err">的最大线程数：</span><span class="mi">2048</span>
-</span></span><span class="line"><span class="cl">    <span class="err">每个</span><span class="n">EM</span><span class="err">的最大线程束数：</span><span class="mi">64</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>ref: <a href="https://zhuanlan.zhihu.com/p/34587739"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/34587739<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h3 id="53-存储器层次结构">5.3. 存储器层次结构</h3>
-<p>CUDA存储器有：寄存器(register)、共享存储器(shared memory)、常量存储器(constant memory)、本地存储器(local memory)、全局存储器(global memory)、纹理存储器等。其中寄存器和本地存储器是线程(thread)私有的，共享存储器是对线程块(block)中的所有线程可见，常量存储器、全局存储器和纹理存储器是对网格(grid)中所有线程可见。</p>
-<p>下图解释了存储器的层次结构：</p>
-<h4 id="54-运行时api">5.4. 运行时API</h4>
-<p>运用运行时API开发CUDA程序需要了解：初始化、设备管理、存储器管理、流管理、事件管理、纹理参考管理、OpenGL互操作和Direct3D互操作。</p>
-<p>运行时API文档地址为：http://docs.nvidia.com/cuda/cuda-runtime-api/index.html 。</p>
-<h5 id="541-初始化">5.4.1. 初始化</h5>
-<p>运行时API不存在显示初始化函数，初始化会在首次调用运行时函数时完成。虽然不需要调用初始化函数进行初始化，但是退出时需要调用退出函数cudaThreadExit()释放资源。</p>
-<h5 id="542-设备管理">5.4.2. 设备管理</h5>
-<p>有些电脑上可能有多块设备，因此对于不同的要求选择合适的设备。设备管理主要是获取设备信息和选择执行设备。</p>
-<p>主要有三个函数：</p>
-<p>·cudaGetDeviceCount()：得到电脑上设备的个数。</p>
-<p>·cudaGetDeviceProperties()：获得对应设备的信息。</p>
-<p>·cudaSetDevice()：设置CUDA上下文对应的设备。</p>
-<p>运行__global__函数前需要提前选择设备，如果不调用cudaSetDevice()函数，则默认使用0号设备。</p>
-<p>上面三个函数的具体用法请查看CUDA运行时API文档。</p>
-<h5 id="543-存储器管理">5.4.3. 存储器管理</h5>
-<p>共享存储器、常量存储器、线性存储器和CUDA数组的使用是存储器管理的主要部分。</p>
-<h6 id="5431-共享存储器">5.4.3.1 共享存储器</h6>
-<p>共享存储器，使用__shared__变量限定符修饰，可静态或动态分配共享存储器。</p>
-<p>代码一：</p>
-<ul>
-<li>静态分配共享存储器，是在设备代码中直接分配共享存储器的大小，如下代码：</li>
-</ul>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="cp">#define SHARED_MEM 16
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">kernel</span><span class="p">(</span><span class="err">…</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">       <span class="n">__shared__</span> <span class="kt">int</span> <span class="n">shared</span><span class="p">[</span><span class="n">SHARED_MEM</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">main</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">       <span class="n">kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">nBlock</span><span class="p">,</span> <span class="n">nThread</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="err">…</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>代码2</p>
-<ul>
-<li>动态分配共享存储器，是在主机代码中使用内核函数的第三个特定参数传入分配共享存储器的大小，如下代码：
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="cp">#define SHARED_MEM 16
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">kernel</span><span class="p">(</span><span class="err">…</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">extern</span> <span class="n">__shared__</span> <span class="kt">int</span> <span class="n">shared</span><span class="p">[];</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">main</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">nSharedMem</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">SHARED_MEM</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">kernel</span><span class="o">&lt;&lt;&lt;</span><span class="n">nBlock</span><span class="p">,</span> <span class="n">nThread</span><span class="p">,</span> <span class="n">nSharedMem</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="err">…</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h6 id="5432-常量存储器">5.4.3.2. 常量存储器</h6>
-<p>常量存储器，使用__constant__变量限定符修饰。使用常量存储器，是由于其在设备上有片上缓存，比全局存储器读取效率高很多。</p>
-<p>使用常量存储器时会涉及的运行时API函数主要有：</p>
-<p>·cudaMemcpyToSymbol()</p>
-<p>·cudaMemcpyFromSymbol()</p>
-<p>·cudaGetSymbolAddress()</p>
-<p>·cudaGetSymbolSize()</p>
-<p>主机代码中使用cudaGetSymbolAddress()获取__constant__或__device__定义的变量地址。设备代码中可通过提取__device__、__shared__或__constant__变量的指针获取变量地址。</p>
-<h6 id="5433-线性存储器">5.4.3.3. 线性存储器</h6>
-<p>线性存储器是使用cudaMalloc()、cudaMallocPitch()或cudaMalloc3D()分配的，使用cudaFree()释放。二维的时候建议使用cudaMallocPitch()分配，cudaMallocPitch()函数对对齐进行了调整。这三个分配函数对应cudaMemset()、cudaMemset2D()、cudaMemset3D()三个memset函数和cudaMemcpy()、cudaMemcpy2D()、cudaMemcpy3D()三个memcpy函数。</p>
-<h6 id="5434-cuda数组">5.4.3.4. CUDA数组</h6>
-<p>CUDA数组是使用cudaMallocArray()、cudaMalloc3DArray()分配的，使用cudaFreeArray()释放。</p>
-<p>相关memcpy函数请查阅CUDA运行时API文档。</p>
-<p>具体使用可查阅CUDA编程指南：http://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html 。</p>
-<h5 id="544-流管理">5.4.4. 流管理</h5>
-<p>主机设备之间的内存拷贝与内核在设备上执行是异步的。在不使用流的情况下，是这样执行的：设备先从主机上拷贝内存，拷贝完成之后，再在设备上执行内核代码计算，最后当内核执行完毕，再把设备上的内存拷贝到主机上。当使用两个流的情况下，0号流执行内核代码的同时1号流拷贝主机内存到设备，1号流执行的同时0号流拷贝设备内存到主机（具体的实现并不一定如此，这里是为了说明流的作用简单做了假设）。两个流的情况下，部分内存拷贝和内置执行是同时进行的（异步的），比同步的内存拷贝和内核执行节省了时间。</p>
-<p>与流有关的函数有：</p>
-<pre><code>·cudaStreamCreate()：流的创建；
-
-·cudaStreamDestroy()：流的销毁；
-
-·cudaStreamSynchronize()：流同步；
-
-·*Async：与流相关的其他函数。
-
-内核&lt;&lt;&lt;…&gt;&gt;&gt;的第四个参数为哪个流。
-
-CUDA编程指南中有对流具体实现的讲解。
-
-https://blog.csdn.net/a925907195/article/details/39500915
-</code></pre>
 ]]></description></item></channel></rss>
