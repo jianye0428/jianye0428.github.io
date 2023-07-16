@@ -1,4 +1,1060 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://lruihao.cn/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 16 Jul 2023 10:13:29 +0800</lastBuildDate><atom:link href="https://lruihao.cn/index.xml" rel="self" type="application/rss+xml"/><item><title>Git 常用指令汇总</title><link>https://lruihao.cn/posts/introduction/</link><pubDate>Sun, 16 Jul 2023 10:13:29 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/introduction/</guid><description><![CDATA[<ul>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://lruihao.cn/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 16 Jul 2023 13:28:44 +0800</lastBuildDate><atom:link href="https://lruihao.cn/index.xml" rel="self" type="application/rss+xml"/><item><title>详解最大似然估计(MLE)、最大后验概率估计(MAP)，以及贝叶斯公式的理解</title><link>https://lruihao.cn/posts/mleandmap/</link><pubDate>Sun, 16 Jul 2023 13:28:44 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/mleandmap/</guid><description><![CDATA[<p>最大似然估计（Maximum likelihood estimation, 简称MLE）和最大后验概率估计（Maximum a posteriori estimation, 简称MAP）是很常用的两种参数估计方法，如果不理解这两种方法的思路，很容易弄混它们。下文将详细说明MLE和MAP的思路与区别。</p>
+<p>但别急，我们先从概率和统计的区别讲起。</p>
+<h1 id="概率和统计是一个东西吗">概率和统计是一个东西吗？</h1>
+<p>概率(probabilty)和统计(statistics)看似两个相近的概念，其实研究的问题刚好相反。</p>
+<p>概率研究的问题是，已知一个模型和参数，怎么去预测这个模型产生的结果的特性(例如均值，方差，协方差等等)。 举个例子，我想研究怎么养猪(模型是猪)，我选好了想养的品种、喂养方式、猪棚的设计等等(选择参数)，我想知道我养出来的猪大概能有多肥，肉质怎么样(预测结果)。</p>
+<p>统计研究的问题则相反。统计是，有一堆数据，要利用这堆数据去预测模型和参数。仍以猪为例。现在我买到了一堆肉，通过观察和判断，我确定这是猪肉(这就确定了模型。在实际研究中，也是通过观察数据推测模型是／像高斯分布的、指数分布的、拉普拉斯分布的等等)，然后，可以进一步研究，判定这猪的品种、这是圈养猪还是跑山猪还是网易猪，等等(推测模型参数)。</p>
+<p>一句话总结：<strong>概率是已知模型和参数，推数据。统计是已知数据，推模型和参数。</strong></p>
+<p>显然，本文解释的MLE和MAP都是统计领域的问题。它们都是用来推测参数的方法。为什么会存在着两种不同方法呢？ 这需要理解贝叶斯思想。我们来看看贝叶斯公式。</p>
+<h1 id="贝叶斯公式到底在说什么">贝叶斯公式到底在说什么？</h1>
+<p>学习机器学习和模式识别的人一定都听过贝叶斯公式(Bayes’ Theorem)：
+式[1]
+$P(A|B)=\frac{P(B|A)P(A)}{P(B)}$</p>
+<p>贝叶斯公式看起来很简单，无非是倒了倒条件概率和联合概率的公式。</p>
+<p>把B展开，可以写成:
+式[2]
+$P(A|B)=\frac{P(B|A)P(A)}{P(B|A)P(A) + P(B|\sim A)P(\sim A)}$</p>
+<p>这个式子就很有意思了。</p>
+<p>想想这个情况。一辆汽车(或者电瓶车)的警报响了，你通常是什么反应？有小偷？撞车了？ 不。。 你通常什么反应都没有。因为汽车警报响一响实在是太正常了！每天都要发生好多次。本来，汽车警报设置的功能是，出现了异常情况，需要人关注。然而，由于虚警实在是太多，人们渐渐不相信警报的功能了。</p>
+<p><strong>贝叶斯公式就是在描述，你有多大把握能相信一件证据？（how much you can trust the evidence）</strong></p>
+<p>我们假设响警报的目的就是想说汽车被砸了。把$A$计作“汽车被砸了”，$B$计作“警报响了”，带进贝叶斯公式里看。我们想求等式左边发生$A∣B$的概率，这是在说警报响了，汽车也确实被砸了。汽车被砸**引起(trigger)**警报响，即B∣A。但是，也有可能是汽车被小孩子皮球踢了一下、被行人碰了一下等其他原因(统统计作$\sim A$)，其他原因引起汽车警报响了，即 $B|\sim A$。那么，现在突然听见警报响了，这时汽车已经被砸了的概率是多少呢(这即是说，警报响这个证据有了，多大把握能相信它确实是在报警说汽车被砸了)想一想，应当这样来计算。用警报响起、汽车也被砸了这事件的数量，除以响警报事件的数量(这即[式1])。进一步展开，即警报响起、汽车也被砸了的事件的数量，除以警报响起、汽车被砸了的事件数量加上警报响起、汽车没被砸的事件数量(这即[式2])。</p>
+<p>再思考[式2]。想让$P(A∣B)=1$，即警报响了，汽车一定被砸了，该怎么做呢？让$P(B|\sim A)P(\sim A) = 0$即 可 。很容易想清楚，假若让$P(\sim A)=0$,即杜绝了汽车被球踢、被行人碰到等等其他所有情况，那自然，警报响了，只剩下一种可能——汽车被砸了。这即是提高了响警报这个证据的说服力。</p>
+<p>**从这个角度总结贝叶斯公式：做判断的时候，要考虑所有的因素。**老板骂你，不一定是你把什么工作搞砸了，可能只是他今天出门前和太太吵了一架。</p>
+<p>再思考[式2]。观察【式2】右边的分子，$P(B∣A)$为汽车被砸后响警报的概率。姑且认为这是1吧。但是，若$P(A)$很小，即汽车被砸的概率本身就很小，则$P(B∣A)P(A)$仍然很小，即【式2】右边分子仍然很小，$P(A|B)$还是大不起来。 这里，$​P(A)$ 即是常说的先验概率，如果A的先验概率很小，就算$P(B∣A)$较大，可能A的后验概率$P(A∣B)$还是不会大(假设$P(B∣\sim A)P(\sim A)$不变的情况下)。</p>
+<p><strong>从这个角度思考贝叶斯公式：一个本来就难以发生的事情，就算出现某个证据和他强烈相关，也要谨慎。证据很可能来自别的虽然不是很相关，但发生概率较高的事情。</strong></p>
+<h1 id="似然函数">似然函数</h1>
+<p>似然(likelihood)这个词其实和概率(probability)是差不多的意思，Colins字典这么解释:The likelihood of something happening is how likely it is to happen. 你把likelihood换成probability，这解释也读得通。但是在统计里面，似然函数和概率函数却是两个不同的概念(其实也很相近就是了)。</p>
+<p>对于这个函数:</p>
+<p>$$P(x|\theta)$$</p>
+<p>输入有两个: $x$表示某一个具体的数据；$\theta$表示模型的参数。</p>
+<p>如果$\theta$是已知确定的，$x$是变量，这个函数叫做<font color=red>概率函数(probability function)</font>，它描述对于不同的样本点x，其出现概率是多少。</p>
+<p>如果$x$是已知确定的，$\theta$是变量，这个函数叫做<font color=red>似然函数(likelihood function)</font>, 它描述对于不同的模型参数，出现$x$这个样本点的概率是多少。</p>
+<h1 id="最大似然估计mle">最大似然估计(MLE)</h1>
+<p>假设有一个造币厂生产某种硬币，现在我们拿到了一枚这种硬币，想试试这硬币是不是均匀的。即想知道抛这枚硬币，正反面出现的概率（记为$\theta$）各是多少？</p>
+<p>这是一个统计问题，回想一下，解决统计问题需要什么？ 数据！</p>
+<p>于是我们拿这枚硬币抛了10次，得到的数据($x_0$)是：反正正正正反正正正反。我们想求的正面概率$\theta$是模型参数，而抛硬币模型我们可以假设是二项分布。</p>
+<p>那么，出现实验结果$x_0$(即反正正正正反正正正反)的似然函数是多少呢？</p>
+<p>$$f(x_0 ,\theta) = (1-\theta)\times\theta\times\theta\times\theta\times\theta\times(1-\theta)\times\theta\times\theta\times\theta\times(1-\theta) = \theta ^ 7(1 - \theta)^3 = f(\theta)$$
+​
+注意，这是个只关于$\theta$的函数。而最大似然估计，顾名思义，就是要最大化这个函数。我们可以画出$f(\theta)$的图像：</p>
+<p></p>
+<p>可以看出，在$\theta = 0.7$时，似然函数取得最大值。</p>
+<p>这样，我们已经完成了对$\theta$的最大似然估计。即，抛10次硬币，发现7次硬币正面向上，最大似然估计认为正面向上的概率是0.7。（ummm…这非常直观合理，对吧？）</p>
+<p>且慢，一些人可能会说，硬币一般都是均匀的啊！ 就算你做实验发现结果是“反正正正正反正正正反”，我也不信$\theta = 0.7$。</p>
+<p>这里就包含了贝叶斯学派的思想了——要考虑先验概率。 为此，引入了最大后验概率估计。</p>
+<h1 id="最大后验概率估计map">最大后验概率估计(MAP)</h1>
+<p>最大似然估计是求参数$\theta$, 使似然函数$P(x_0 | \theta)$最 大 。 最大后验概率估计则是想求$\theta$使$P(x_0|\theta)$ 最大。求得的$\theta$不单单让似然函数大，不单单让似然函数大，$\theta$自己出现的先验概率也得大。(这有点像正则化里加惩罚项的思想，不过正则化里是利用加法，而MAP里是利用乘法).</p>
+<p>MAP其实是在最大化$P(\theta|x_0) = \frac{P(x_0|\theta)P(\theta)}{P(x_0)}$，不过因为$x_0$是确定的(即投出的“反正正正正反正正正反”)，$P(x_0)$是一个已知值，所以去掉了分母$P(x_0)$(假设“投10次硬币”是一次实验，实验做了1000次，“反正正正正反正正正反”出现了n次，则$P(x_0) = n/1000$)。总之，这是一个可以由数据集得到的值）。最大化$P(\theta | x_0)$的意义也很明确，$x_0$已经出现了，要求$\theta$取什么值使$P(\theta | x_0)$最大。顺带一提，$P(\theta | x_0)$, ​即后验概率，这就是“最大后验概率估计”名字的由来。</p>
+<p>对于投硬币的例子来看，我们认为（”先验地知道“$\theta$取0.5的概率很大，取其他值的概率小一些。我们用一个高斯分布来具体描述我们掌握的这个先验知识，例如假设$P(\theta)$为均值0.5，方差0.1的高斯函数，如下图：</p>
+<p></p>
+<p>则$P(x_0 | \theta)$的函数图像为：</p>
+<p></p>
+<p>注意，此时函数取最大值时，θ \thetaθ取值已向左偏移，不再是0.7。实际上，在$\theta = 0.558$时函数取得了最大值。即，用最大后验概率估计，得到$\theta = 0.558$</p>
+<p>最后，那要怎样才能说服一个贝叶斯派相信$\theta = 0.7$呢？你得多做点实验。。</p>
+<p>如果做了1000次实验，其中700次都是正面向上，这时似然函数为:</p>
+<p></p>
+<p>如果仍然假设$P(\theta)$为均值0.5，方差0.1的高斯函数，$P(x_0 | \theta) P(\theta)$的函数图像为:</p>
+<p></p>
+<p>在$\theta = 0.696$处，$P(x_0 | \theta) P(\theta)$取得最大值。</p>
+<p>这样，就算一个考虑了先验概率的贝叶斯派，也不得不承认得把θ \thetaθ估计在0.7附近了。</p>
+<p>PS. 要是遇上了顽固的贝叶斯派，认为$P(\theta = 0.5) = 1$，那就没得玩了。。 无论怎么做实验，使用MAP估计出来都是$\theta = 0.5$。这也说明，一个合理的先验概率假设是很重要的。（通常，先验概率能从数据中直接分析得到）</p>
+<h1 id="最大似然估计和最大后验概率估计的区别">最大似然估计和最大后验概率估计的区别</h1>
+<p>相信读完上文，MLE和MAP的区别应该是很清楚的了。MAP就是多个作为因子的先验概率$P(\theta)$。或者，也可以反过来，认为MLE是把先验概率$P(\theta)$认为等于1，即认为$\theta$是均匀分布。</p>
+<p>ref：https://blog.csdn.net/u011508640/article/details/72815981</p>
+]]></description></item><item><title>Linux Filysystem</title><link>https://lruihao.cn/posts/filesystem/</link><pubDate>Sun, 16 Jul 2023 10:53:54 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/filesystem/</guid><description><![CDATA[<h1 id="linux系统各系统文件夹下的区别">Linux系统各系统文件夹下的区别</h1>
+<p>首先，usr 指 Unix System Resource，而不是User。
+通常，</p>
+<ul>
+<li>
+<p><strong>/usr/bin</strong>下面的都是系统预装的可执行程序，会随着系统升级而改变。</p>
+</li>
+<li>
+<p><strong>/usr/local/bin</strong>目录是给用户放置自己的可执行程序的地方，推荐放在这里，不会被系统升级而覆盖同名文件。</p>
+</li>
+</ul>
+<p>如果两个目录下有相同的可执行程序，谁优先执行受到PATH环境变量的影响，比如我的一台服务器的PATH变量为。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$PATH</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p></p>
+<p>这里<u>/usr/local/bin</u>优先于<u>/usr/bin</u>, 一般都是如此。</p>
+<p><strong>/lib</strong>是内核级的, <strong>/usr/lib</strong>是系统级的, <strong>/usr/local/lib</strong>是用户级的.</p>
+<ul>
+<li>
+<p><strong>/</strong> - 对你的电脑来说, 有且只有一个根目录。所有的东西都是从这里开始。举个例子: 当你在终端里输入&quot;/home&quot;，你其实是在告诉电脑，先从/(根目录)开始，再进入到home目录。</p>
+</li>
+<li>
+<p><strong>/lib/</strong> — 包含许多被/bin/和/sbin/中的程序使用的库文件。目录/usr/lib/中含有更多用于用户程序的库文件。/lib目录下放置的是/bin和/sbin目录下程序所需的库文件。/lib目录下的文件的名称遵循下面的格式：</p>
+<blockquote>
+<ul>
+<li>libc.so.*</li>
+<li>ld*</li>
+<li>仅仅被/usr目录下的程序所使用的共享库不必放到/lib目录下。只有/bin和/sbin下的程序所需要的库有必要放到/lib目录下。实际上，libm.so.*类型的库文件如果被是/bin和/sbin所需要的，也可以放到/usr/lib下。</li>
+</ul>
+</blockquote>
+</li>
+<li>
+<p><strong>/bin/</strong> — 用来贮存用户命令。目录 /usr/bin 也被用来贮存用户命令。</p>
+</li>
+<li>
+<p><strong>/sbin/</strong> — 许多系统命令(例如 shutdown)的贮存位置。目录/usr/sbin中也包括了许多系统命令。</p>
+</li>
+<li>
+<p><strong>/root/</strong> — 根用户(超级用户)的主目录。</p>
+</li>
+<li>
+<p><strong>/mnt/</strong> — 该目录中通常包括系统引导后被挂载的文件系统的挂载点。譬如，默认的光盘挂载点是/mnt/cdrom/.</p>
+</li>
+<li>
+<p><strong>/boot/</strong> — 包括内核和其它系统启动期间使用的文件。</p>
+</li>
+<li>
+<p><strong>/lost+found/</strong> — 被fsck用来放置零散文件(没有名称的文件)。</p>
+</li>
+<li>
+<p><strong>/lib/</strong> — 包含许多被/bin/和/sbin/中的程序使用的库文件。目录/usr/lib/中含有更多用于用户程序的库文件。</p>
+</li>
+<li>
+<p><strong>/dev/</strong> — 贮存设备文件。</p>
+</li>
+<li>
+<p><strong>/etc/</strong> — 包含许多配置文件和目录。<strong>系统主要的设定档几乎都放置在这个目录内</strong>，例如人员的帐号密码档、各种服务的启始档等等。 一般来说，这个目录下的各档案属性是可以让一般使用者查阅的，但是只有root有权力修改。</p>
+</li>
+<li>
+<p><strong>/var/</strong> — 用于贮存variable(或不断改变的)文件，例如日志文件和打印机假脱机文件。</p>
+</li>
+<li>
+<p><strong>/usr/</strong> — 包括与系统用户直接有关的文件和目录，例如应用程序及支持它们的库文件。在这个目录下，你可以找到那些不适合放在/bin或/etc目录下的额外的工具。比如像游戏阿，一些打印工具拉等等。/usr目录包含了许多子目录： <strong>/usr/bin</strong>目录用于存放程序; <strong>/usr/share</strong>用于存放一些共享的数据，比如音乐文件或者图标等等;/usr/lib目录用于存放那些不能直接运行的，但却是许多程序运行所必需的一些函数库文件。</p>
+</li>
+<li>
+<p><strong>/proc/</strong> — 一个虚拟的文件系统(不是实际贮存在磁盘上的)，它包括被某些程序使用的系统信息。</p>
+</li>
+<li>
+<p><strong>/initrd/</strong> — 用来在计算机启动时挂载 initrd.img 映像文件的目录以及载入所需设备模块的目录。</p>
+<ul>
+<li><strong>警告</strong>:
+<blockquote>
+<p>不要删除/initrd/目录。如果你删除了该目录后再重新引导Red Hat Linux时，你将无法引导你的计算机。</p>
+</blockquote>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>/tmp/</strong> — 用户和程序的临时目录。/tmp给予所有系统用户读写权。**这是让一般使用者或者是正在执行的程序暂时放置档案的地方。**这个目录是任何人都能够存取的，所以你需要定期的清理一下。当然，重要资料不可放置在此目录啊。 因为FHS甚至建议在开机时，应该要将/tmp下的资料都删除。</p>
+</li>
+<li>
+<p><strong>/home/</strong> — 用户主目录的默认位置。</p>
+</li>
+<li>
+<p><strong>/opt/</strong> — 可选文件和程序的贮存目录。该目录主要被第三方开发者用来简易地安装和卸装他们的软件包。这里主要存放那些可选的程序。你想尝试最新的firefox测试版吗?那就装到/opt目录下吧，这样，当你尝试完，想删掉firefox的时候，你就可 以直接删除它，而不影响系统其他任何设置。安装到/opt目录下的程序，它所有的数据、库文件等等都是放在同个目录下面。</p>
+</li>
+<li>
+<p><strong>/usr/local/</strong> - 这里主要存放那些手动安装的软件，即apt或者apt-get安装的软件。它和/usr目录具有相类似的目录结构。让软件包管理器来管理/usr目录，而把自定义的脚本(scripts)放到/usr/local目录下面，我想这应该是个不错的主意。</p>
+</li>
+<li>
+<p><strong>/media/</strong> - 有些linux的发行版使用这个目录来挂载那些usb接口的移动硬盘(包括U盘)、CD/DVD驱动器等等。</p>
+</li>
+</ul>
+<p></p>
+<h2 id="usrlocal-和-usrshare-区别">/usr/local/ 和 /usr/share/ 区别</h2>
+<ul>
+<li>
+<p><strong>/usr/local</strong> - 这个目录一般是用来存放用户自编译安装软件的存放目录; 一般是通过源码包安装的软件，如果没有特别指定安装目录的话，一般是安装在这个目录中。这个目录下面有子目录。</p>
+</li>
+<li>
+<p><strong>/usr/share</strong> - 系统共用的东西存放地，比如/usr/share/fonts是字体目录，/usr/share/doc和/usr/share/man帮助文件。</p>
+</li>
+<li>
+<p><strong>/var/log</strong> - 系统日志存放，分析日志要看这个目录的东西;</p>
+</li>
+<li>
+<p><strong>/var/spool</strong> -  打印机、邮件、代理服务器等脱机目录。</p>
+</li>
+</ul>
+<h1 id="linux-command-notes">Linux Command Notes</h1>
+<h2 id="查找文件的命令findlocatewhereiswhichtypegrep">查找文件的命令:<code>find</code>/<code>locate</code>/<code>whereis</code>/<code>which</code>/<code>type</code>/<code>grep</code></h2>
+<h3 id="find">find</h3>
+<p><code>find</code>命令准确，但速度非常慢，它可以查找任何类型的文件</p>
+<ul>
+<li>
+<p>使用格式</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">find <span class="o">[</span>指定目录<span class="o">]</span> <span class="o">[</span>指定条件<span class="o">]</span> <span class="o">[</span>指定动作<span class="o">]</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>参数说明:</p>
+<ul>
+<li>[指定目录]： 所要搜索的目录及其所有子目录。默认为当前目录</li>
+<li>[指定条件]： 所要搜索的文件的特征
+<ul>
+<li>-name：按文件名来查找文件</li>
+<li>-user：按照文件的属主来查找文件</li>
+<li>-group：按照文件所属的组来查找文件</li>
+<li>-perm：按照文件权限来查找文件</li>
+<li>-prune：不在当前指定目录中查找</li>
+</ul>
+</li>
+<li>[指定动作]： 对搜索结果进行特定的处理
+<ul>
+<li>-print：将匹配的文件输出到标准输出</li>
+<li>-exec：对匹配的文件执行该参数所给出的shell命令</li>
+<li>-ok：和-exec的作用相同，在执行每一个命令之前，让用户来确定是否执行</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p><code>find</code>命令不加任何参数时，表示搜索路径为当前目录及其子目录，默认的动作为-print，即不过滤任何结果，也就是说输出所有的文件</p>
+</blockquote>
+<p>使用示例:
+- 递归搜索当前目录中，所有以<code>file</code>开头的文件
+<code>shell find . -name 'file*' </code>
+- 递归搜索当前目录中，所有以<code>file</code>开头的文件，并显示它们的详细信息
+<code>shell find . -name 'file*' -ls </code></p>
+</li>
+</ul>
+<h3 id="locate">locate</h3>
+<p><code>locate</code>命令可以说是<code>find -name</code>的另一种写法，但是要比后者快得多，原因在于它不搜索具体目录，而是搜索一个数据库/var/lib/locatedb，这个数据库中含有本地所有文件信息.</p>
+<p>Linux自动创建这个数据库，并且每天自动更新一次，所以使用locate命令查不到最新变动过的文件。为了避免这种情况，可以在使用<code>locate</code>之前，先使用<code>updatedb</code>命令，手动更新数据库.</p>
+<ul>
+<li>
+<p>使用格式:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">locate <span class="o">[</span>参数<span class="o">]</span> &lt;文件名&gt;</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>使用示例:</p>
+<ul>
+<li>搜索<code>etc</code>目录下所有以<code>file</code>开头的文件
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">locate /etc/file</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>搜索用户主目录下，所有以f开头的文件，并且忽略大小写
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">locate -i ~/f</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+</ul>
+<h3 id="whereis">whereis</h3>
+<p><code>whereis</code>命令只能搜索特定格式的文件</p>
+<ul>
+<li>使用格式
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">whereis <span class="o">[</span>参数<span class="o">]</span> &lt;文件名&gt;</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>可搜索文集类型
+<ul>
+<li>二进制文件(-b)</li>
+<li>源代码文件(-s)</li>
+<li>说明文件(-m)</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>如果省略参数，则返回所有信息</p>
+</blockquote>
+</li>
+<li>使用示例:
+<ul>
+<li>找出名为<code>find</code>的文件位置
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">whereis find</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+</ul>
+<h3 id="which">which</h3>
+<p><code>which</code>命令的作用是，在<code>PATH</code>变量指定的路径中，搜索某个系统命令的位置，并且返回第一个搜索结果, 也就是说，使用which命令，就可以看到某个系统命令是否存在，以及执行的到底是哪一个位置的命令。</p>
+<ul>
+<li>使用格式
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">which &lt;命令&gt;</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>使用实例:
+<ul>
+<li>查找find命令的位置
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">which find</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+</ul>
+<h3 id="type">type</h3>
+<p><code>type</code>命令其实不能算查找命令，它是用来区分某个命令到底是由shell自带的，还是由shell外部的独立二进制文件提供的; 如果一个命令是外部命令，那么使用<code>-p</code>参数，会显示该命令的路径，相当于which命令。</p>
+<ul>
+<li>使用格式
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">type</span> &lt;命令&gt;</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>使用实例:
+<ul>
+<li>查看cd命令是否为shell自带的命令
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">type</span> cd</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>查看grep是否为外部命令
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">type</span> grep</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+</ul>
+<h3 id="grep">grep</h3>
+<p><code>grep</code>命令用于查找拥有特殊字段的文件。</p>
+<ul>
+<li>
+<p>语法</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">grep <span class="o">[</span>-abcEFGhHilLnqrsvVwxy<span class="o">][</span>-A&lt;显示行数&gt;<span class="o">][</span>-B&lt;显示列数&gt;<span class="o">][</span>-C&lt;显示列数&gt;<span class="o">][</span>-d&lt;进行动作&gt;<span class="o">][</span>-e&lt;范本样式&gt;<span class="o">][</span>-f&lt;范本文件&gt;<span class="o">][</span>--help<span class="o">][</span>范本样式<span class="o">][</span>文件或目录...<span class="o">]</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>参数:</p>
+<ul>
+<li>-a 或 &ndash;text : 不要忽略二进制的数据。</li>
+<li>-A&lt;显示行数&gt; 或 &ndash;after-context=&lt;显示行数&gt; : 除了显示符合范本样式的那一列之外，并显示该行之后的内容。</li>
+<li>-b 或 &ndash;byte-offset : 在显示符合样式的那一行之前，标示出该行第一个字符的编号。</li>
+<li>-B&lt;显示行数&gt; 或 &ndash;before-context=&lt;显示行数&gt; : 除了显示符合样式的那一行之外，并显示该行之前的内容。</li>
+<li>-c 或 &ndash;count : 计算符合样式的列数。</li>
+<li>-C&lt;显示行数&gt; 或 &ndash;context=&lt;显示行数&gt;或-&lt;显示行数&gt; : 除了显示符合样式的那一行之外，并显示该行之前后的内容。</li>
+<li>-d &lt;动作&gt; 或 &ndash;directories=&lt;动作&gt; : 当指定要查找的是目录而非文件时，必须使用这项参数，否则grep指令将回报信息并停止动作。</li>
+<li>-e&lt;范本样式&gt; 或 &ndash;regexp=&lt;范本样式&gt; : 指定字符串做为查找文件内容的样式。</li>
+<li>-E 或 &ndash;extended-regexp : 将样式为延伸的正则表达式来使用。</li>
+<li>-f&lt;规则文件&gt; 或 &ndash;file=&lt;规则文件&gt; : 指定规则文件，其内容含有一个或多个规则样式，让grep查找符合规则条件的文件内容，格式为每行一个规则样式。</li>
+<li>-F 或 &ndash;fixed-regexp : 将样式视为固定字符串的列表。</li>
+<li>-G 或 &ndash;basic-regexp : 将样式视为普通的表示法来使用。</li>
+<li>-h 或 &ndash;no-filename : 在显示符合样式的那一行之前，不标示该行所属的文件名称。</li>
+<li>-H 或 &ndash;with-filename : 在显示符合样式的那一行之前，表示该行所属的文件名称。</li>
+<li>-i 或 &ndash;ignore-case : 忽略字符大小写的差别。</li>
+<li>-l 或 &ndash;file-with-matches : 列出文件内容符合指定的样式的文件名称。</li>
+<li>-L 或 &ndash;files-without-match : 列出文件内容不符合指定的样式的文件名称。</li>
+<li>-n 或 &ndash;line-number : 在显示符合样式的那一行之前，标示出该行的列数编号。</li>
+<li>-o 或 &ndash;only-matching : 只显示匹配PATTERN 部分。</li>
+<li>-q 或 &ndash;quiet或&ndash;silent : 不显示任何信息。</li>
+<li>-r 或 &ndash;recursive : 此参数的效果和指定&quot;-d recurse&quot;参数相同。</li>
+<li>-s 或 &ndash;no-messages : 不显示错误信息。</li>
+<li>-v 或 &ndash;invert-match : 显示不包含匹配文本的所有行。</li>
+<li>-V 或 &ndash;version : 显示版本信息。</li>
+<li>-w 或 &ndash;word-regexp : 只显示全字符合的列。</li>
+<li>-x &ndash;line-regexp : 只显示全列符合的列。</li>
+<li>-y : 此参数的效果和指定&quot;-i&quot;参数相同。</li>
+</ul>
+</li>
+<li>
+<p>示例:</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 查找指定目录/etc/acpi 及其子目录（如果存在子目录的话）下所有文件中包含字符串&#34;update&#34;的文件，并打印出该字符串所在行的内容</span>
+</span></span><span class="line"><span class="cl">grep -r update /etc/acpi</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 查看符合条件的日志条目。</span>
+</span></span><span class="line"><span class="cl">grep -n <span class="s1">&#39;2019-10-24 00:01:11&#39;</span> *.log</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 只匹配文本文件，不匹配二进制文件的命令</span>
+</span></span><span class="line"><span class="cl">grep -srn <span class="s2">&#34;parameter&#34;</span> .  --binary-files<span class="o">=</span>without-match</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+]]></description></item><item><title>Vim Installation</title><link>https://lruihao.cn/posts/installation/</link><pubDate>Sun, 16 Jul 2023 10:53:38 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/installation/</guid><description><![CDATA[<h1 id="vim-82-安装">VIM 8.2 安装</h1>
+<h2 id="1-install-python39-from-source">1. Install Python3.9 from source</h2>
+<ul>
+<li>
+<p><strong>Update the packages list and install the packages necessary to build Python</strong></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo apt update <span class="o">&amp;&amp;</span> sudo apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p><strong>Download the latest release’s source code from the Python download page using wget</strong></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">wegt https://www.python.org/ftp/python/3.9.0/Python-3.9.1.tgz</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p><strong>Switch to the Python source directory and execute the configure script which performs a number of checks to make sure all of the dependencies on your system are present</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">cd</span> Python-3.9.1
+</span></span><span class="line"><span class="cl">./configure --enable-optimizations --with-lto --enable-shared --prefix<span class="o">=</span>/usr/local/python39
+</span></span><span class="line"><span class="cl">make -j8</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p><strong>When the build process is complete, install the Python binaries by typing</strong></p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo make altinstall</span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p>Do not use the standard make install as it will overwrite the default system python3 binary.</p>
+</blockquote>
+</li>
+<li>
+<p><strong>copy the dynamic library to usr/lib/x86_64-linux-gnu/libpython3.9.so.1.0</strong></p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo cp /usr/local/python39/lib/libpython3.9.so.1.0 /usr/lib/x86_64-linux-gnu/</span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p>the command can slove the error: error while loading shared libraries: libpython3.9.so.1.0: cannot open shared object file: No such file or directory</p>
+</blockquote>
+</li>
+<li>
+<p><strong>make the soft link to set python39 as default python3</strong></p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"> sudo ln -sf /usr/local/python39/bin/python3.9 /usr/bin/python3
+</span></span><span class="line"><span class="cl"> sudo ln -s /usr/local/python39/bin/python3.9 /usr/bin/python3.9</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p><strong>using update-alternatives to switch different python version</strong></p>
+<ul>
+<li>
+<p>list all the python versions</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo update-alternatives --list python3</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>display python3</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo update-alternatives --display python3</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>set different number for different version</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+</span></span><span class="line"><span class="cl">sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 2</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>show different mode and select number to switch another mode</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo update-alternatives --config python3</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+</ul>
+<h2 id="2-源码安装cmake">2. 源码安装cmake</h2>
+<h3 id="21-download-the-cmake-source-code">2.1 download the cmake source code</h3>
+<ul>
+<li>download source code
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">wget  https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1.tar.gz</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="22-extract-the-source-code-directory-and-run-the-command-to-install">2.2 extract the source code directory and run the command to install</h3>
+<ul>
+<li>extraction and configuration
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">cd</span> cmake-2.23.0
+</span></span><span class="line"><span class="cl">./bootstrap     //需要的话也可以指定安装目录，例如--prefix<span class="o">=</span>/usr/local/cmake
+</span></span><span class="line"><span class="cl">make <span class="o">&amp;&amp;</span> sudo make install</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="23-create-soft-link-and-set-cmake-as-default">2.3 create soft link and set cmake as default</h3>
+<ul>
+<li>set cmake as default
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo ln -s /usr/local/bin/cmake /usr/bin/cmake</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h2 id="3-首先从github下载源码vim-82">3. 首先从github下载源码vim 8.2</h2>
+<h3 id="31-源码安装vim82">3.1 源码安装vim8.2</h3>
+<ul>
+<li>
+<p>run the following command to downlaod source code of VIM from github</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git clone git clone https://github.com/vim/vim.git
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> vim
+</span></span><span class="line"><span class="cl">git pull
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> src/
+</span></span><span class="line"><span class="cl">sudo make distclean <span class="c1"># 如果您以前构建国vim</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>cofigure the installation file</p>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">  ./configure --with-features<span class="o">=</span>huge --enable-multibyte --enable-python3interp<span class="o">=</span>dynamic --with-python3-config-dir<span class="o">=</span>/usr/lib/python3.10/config-3.10-x86_64-linux-gnu/ --enable-cscope --enable-gui<span class="o">=</span>auto --enable-gtk2-check --enable-fontset --enable-largefile --disable-netbeans --with-compiledby<span class="o">=</span><span class="s2">&#34;18817571704@163.com&#34;</span> --enable-fail-if-missing --prefix<span class="o">=</span>/usr/local/vim82
+</span></span><span class="line"><span class="cl">  sudo make
+</span></span><span class="line"><span class="cl">  sudo make install</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>enable clipboard</p>
+<ul>
+<li>then you can copy the content from system clipboard to vim
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo apt-get install vim-gtk3</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+<li>
+<p>卸载vim</p>
+<ul>
+<li>
+<p>使用以下命令重置编译操作</p>
+<div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo make distclean</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>使用以下命令，可以卸载命令</p>
+<div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo make uninstall</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+</ul>
+<h3 id="32-安装vim-plug以及插件">3.2 安装vim-plug以及插件</h3>
+<ul>
+<li>
+<p>安装vim-plug:</p>
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">curl -fLo ~/.vim/autoload/plug.vim --create-dirs <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>安装主题gruvbox</p>
+<p><strong>to fix error: Cannot find color scheme &lsquo;gruvbox&rsquo;</strong></p>
+<div class="highlight" id="id-20"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir ~/.vim/colors/
+</span></span><span class="line"><span class="cl">cp ~/.vim/plugged/gruvbox/gruvbox.vim ~/.vim/colors/</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>安装YCM(YouCompleteMe)
+根据~/.vimrc按装YCM</p>
+<div class="highlight" id="id-21"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">cd</span> ~/.vim/plugged/YouCompleteMe/
+</span></span><span class="line"><span class="cl">./install.py --clang-completer</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>安装ctags</p>
+<div class="highlight" id="id-22"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo apt-get install exuberant-ctags</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>其他主题直接编辑:PlugInstall进行安装</p>
+</li>
+</ul>
+<h3 id="32-reference">3.2 reference</h3>
+<ul>
+<li>参考链接:
+[1] <a href="https://github.com/ycm-core/YouCompleteMe/wiki/Building-Vim-from-source"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/ycm-core/YouCompleteMe/wiki/Building-Vim-from-source<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[2] <a href="https://wizardforcel.gitbooks.io/use-vim-as-ide/content/0.html"target="_blank" rel="external nofollow noopener noreferrer">https://wizardforcel.gitbooks.io/use-vim-as-ide/content/0.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+</ul>
+]]></description></item><item><title>Zsh Installation</title><link>https://lruihao.cn/posts/installation/</link><pubDate>Sun, 16 Jul 2023 10:53:31 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/installation/</guid><description><![CDATA[<h2 id="zsh说明">zsh说明</h2>
+<ul>
+<li>
+<p>zsh是一个Linux下强大的shell, 由于大多数Linux产品安装以及默认使用bash shell, 但是丝毫不影响极客们对zsh的热衷, 几乎每一款Linux产品都包含有zsh，通常可以用apt-get、urpmi或yum等包管理器进行安装.</p>
+</li>
+<li>
+<p>zsh是bash的增强版，其实zsh和bash是两个不同的概念，zsh更加强大。</p>
+</li>
+<li>
+<p>通常zsh配置起来非常麻烦，且相当的复杂，所以oh-my-zsh是为了简化zsh的配置而开发的，因此oh-my-zsh算是zsh的配置.</p>
+</li>
+</ul>
+<h2 id="准备">准备</h2>
+<ul>
+<li>
+<p>查看当前系统用shell版本</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$SHELL</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>查看系统自带哪些shell</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cat /etc/shells</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h2 id="安装zsh">安装zsh</h2>
+<ul>
+<li>通过命令行安装zsh
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo apt install zsh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h2 id="zsh配置">zsh配置</h2>
+<ul>
+<li>
+<p>将zsh设置为默认的shell</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">chsh -s /bin/zsh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>然后重启电脑</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">reboot</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h2 id="安装oh-my-zsh及其个性化配置">安装oh-my-zsh及其个性化配置</h2>
+<h3 id="安装oh-my-zsh">安装oh-my-zsh</h3>
+<ul>
+<li>执行以下命令安装oh-my-zsh
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sh -c <span class="s2">&#34;</span><span class="k">$(</span>wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -<span class="k">)</span><span class="s2">&#34;</span></span></span></code></pre></td></tr></table>
+</div>
+</div>或者
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sh -c <span class="s2">&#34;</span><span class="k">$(</span>curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh<span class="k">)</span><span class="s2">&#34;</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="主题配置">主题配置</h3>
+<ul>
+<li>
+<p>打开配置文件~/.zshrc
+输入:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">ZSH_THEME=&#34;xxf&#34;</span></span></code></pre></td></tr></table>
+</div>
+</div><p>xxf.zsh-theme文件下载地址: <a href="https://github.com/xfanwu/oh-my-zsh-custom-xxf/blob/master/themes/xxf.zsh-theme"target="_blank" rel="external nofollow noopener noreferrer">xxf.zsh-theme文件下载<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>下载之后将文件拷贝到以下路径: <code>/home/username/.oh-my-zsh/themes/</code></p>
+</li>
+</ul>
+<h3 id="插件">插件</h3>
+<h4 id="安装自动补全插件incr">安装自动补全插件incr</h4>
+<ul>
+<li>首先，下载incr插件到本地
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">cd</span> ~/.oh-my-zsh/plugins/
+</span></span><span class="line"><span class="cl">mkdir incr <span class="o">&amp;&amp;</span> <span class="nb">cd</span> incr
+</span></span><span class="line"><span class="cl">wget http://mimosa-pudica.net/src/incr-0.2.zsh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>编辑~/.zshrc文件，添加以下内容:
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">source ~/.oh-my-zsh/plugins/incr/incr*.zsh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>然后，source一下:
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">source</span> ~/.zshrc</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h4 id="直接使用默认插件">直接使用默认插件</h4>
+<ul>
+<li>
+<p>在~/.zshrc文件中添加插件:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">plugins=(git extract z)</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h4 id="安装autojump插件">安装autojump插件</h4>
+<ul>
+<li>通过命令行安装autojump
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo apt install autojump</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>在~/.zshrc文件中编辑:
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">. /usr/share/autojump/autojump.sh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>然后，source一下:
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">source</span> ~/.zshrc</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h4 id="安装zsh-syntax-highlighting语法高亮插件">安装zsh-syntax-highlighting语法高亮插件</h4>
+<ul>
+<li>
+<p>从gihub下载源码并放在~/.oh-my-zsh/plugins/文件夹下:</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">cd</span> ~/.oh-my-zsh/plugins/
+</span></span><span class="line"><span class="cl">git clone https://github.com/zsh-users/zsh-syntax-highlighting.git</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>在~/.zshrc文件中编辑:</p>
+<div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">source ~/.oh-my-zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>然后，source一下:</p>
+<div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">source</span> ~/.zshrc</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h4 id="安装zsh-autosuggestions语法历史记录插件">安装zsh-autosuggestions语法历史记录插件</h4>
+<ul>
+<li>
+<p>从gihub下载源码并放在~/.oh-my-zsh/plugins/文件夹下:</p>
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">cd</span> ~/.oh-my-zsh/plugins/
+</span></span><span class="line"><span class="cl">git clone git@github.com:zsh-users/zsh-autosuggestions.git</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>在~/.zshrc文件中编辑:</p>
+<div class="highlight" id="id-20"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">source ~/.oh-my-zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>然后，source一下:</p>
+<div class="highlight" id="id-21"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">source</span> ~/.zshrc</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="其他">其他</h3>
+<ul>
+<li>设置更新日期
+在~/.zshrc文件中编：
+<div class="highlight" id="id-22"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">exprot UPDATE_ZSH_DAYS=13</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>禁止自动更新
+<div class="highlight" id="id-23"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">DISABLE_AUTO_UPDATE=&#34;true&#34;</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>手动更新oh-my-zsh
+<div class="highlight" id="id-24"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">upgrade_oh_my_zsh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>卸载oh-my-zsh
+<div class="highlight" id="id-25"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">uninstall_on_my_zsh zsh</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="从bash到zsh的切换">从bash到zsh的切换</h3>
+<ul>
+<li>直接执行zsh和oh-my-zsh的安装以及配置，并且在~/.zshrc文件中添加:
+<div class="highlight" id="id-26"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">source ~/.bashrc</span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h2 id="zsh-快捷键">zsh 快捷键</h2>
+<ul>
+<li>快捷键
+<code>⌃ + u:</code> 清空当前行
+<code>⌃ + a:</code> 移动到行首
+<code>⌃ + e:</code> 移动到行尾
+<code>⌃ + f:</code> 向前移动
+<code>⌃ + b:</code> 向后移动
+<code>⌃ + p:</code> 上一条命令
+<code>⌃ + n:</code> 下一条命令
+<code>⌃ + r:</code> 搜索历史命令
+<code>⌃ + y:</code> 召回最近用命令删除的文字
+<code>⌃ + h:</code> 删除光标之前的字符
+<code>⌃ + d:</code> 删除光标所指的字符
+<code>⌃ + w:</code> 删除光标之前的单词
+<code>⌃ + k:</code> 删除从光标到行尾的内容
+<code>⌃ + t:</code> 交换光标和之前的字符</li>
+</ul>
+]]></description></item><item><title>Git 常用指令汇总</title><link>https://lruihao.cn/posts/introduction/</link><pubDate>Sun, 16 Jul 2023 10:13:29 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/introduction/</guid><description><![CDATA[<ul>
 <li><strong>工作区</strong>：就是你在电脑里能看到的目录。</li>
 <li><strong>暂存区</strong>：英文叫 stage, 或 index。一般存放在 &ldquo;.git 目录下&rdquo; 下的 index 文件（.git/index）中，所以我们把暂存区有时也叫作索引（index）。</li>
 <li><strong>版本库</strong>：工作区有一个隐藏目录。git，这个不算工作区，而是 Git 的版本库。</li>
@@ -6864,505 +7920,4 @@ PRM和RRT都是一个概率完备但非最优的路径规划算法，也就是�
 <p>2.查看与起点 A 相邻的方格 ( 忽略其中墙壁所占领的方格，河流所占领的方格及其他非法地形占领的方格 ) ，把其中可走的 (walkable) 或可到达的 (reachable) 方格也加入到 open list 中。把起点 A 设置为这些方格的父亲 (parent node 或 parent square) 。当我们在追踪路径时，这些父节点的内容是很重要的。稍后解释。</p>
 <p>3.把 A 从 open list 中移除，加入到 close list( 封闭列表 ) 中， close list 中的每个方格都是现在不需要再关注的。</p>
 <p>如下图所示，深绿色的方格为起点，它的外框是亮蓝色，表示该方格被加入到了 close list 。与它相邻的黑色方格是需要被检查的，他们的外框是亮绿色。每个黑方格都有一个灰色的指针指向他们的父节点，这里是起点 A 。</p>
-]]></description></item><item><title>TensorRT Introduction</title><link>https://lruihao.cn/posts/tensorrt_introduction/</link><pubDate>Fri, 14 Jul 2023 09:23:07 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/tensorrt_introduction/</guid><description><![CDATA[<h3 id="tensorrt-介绍">TensorRT 介绍</h3>
-<p>TensorRT是一个高性能的深度学习推理（Inference）优化器，可以为深度学习应用提供低延迟、高吞吐率的部署推理。TensorRT可用于对超大规模数据中心、嵌入式平台或自动驾驶平台进行推理加速。TensorRT现已能支持TensorFlow、Caffe、Mxnet、Pytorch等几乎所有的深度学习框架，将TensorRT和NVIDIA的GPU结合起来，能在几乎所有的框架中进行快速和高效的部署推理。</p>
-<p>TensorRT 是一个C++库，从 TensorRT 3 开始提供C++ API和Python API，主要用来针对 NVIDIA GPU进行 高性能推理（Inference）加速。</p>
-<p></p>
-<p>由以上图可以很清楚的看出，训练(training)和 推理(inference)的区别：</p>
-<ul>
-<li>**训练(training)**包含了前向传播和后向传播两个阶段，针对的是训练集。训练时通过误差反向传播来不断修改网络权值(weights)。</li>
-<li>**推理(inference)**只包含前向传播一个阶段，针对的是除了训练集之外的新数据。可以是测试集，但不完全是，更多的是整个数据集之外的数据。其实就是针对新数据进行预测，预测时，速度是一个很重要的因素。</li>
-</ul>
-<p>一般的深度学习项目，训练时为了加快速度，会使用多GPU分布式训练。但在部署推理时，为了降低成本，往往使用单个GPU机器甚至嵌入式平台（比如 NVIDIA Jetson）进行部署，部署端也要有与训练时相同的深度学习环境，如caffe，TensorFlow等。</p>
-<p>由于训练的网络模型可能会很大（比如，inception，resnet等），参数很多，而且部署端的机器性能存在差异，就会导致推理速度慢，延迟高。这对于那些高实时性的应用场合是致命的，比如自动驾驶要求实时目标检测，目标追踪等。所以为了提高部署推理的速度，出现了很多轻量级神经网络，比如squeezenet，mobilenet，shufflenet等。基本做法都是基于现有的经典模型提出一种新的模型结构，然后用这些改造过的模型重新训练，再重新部署。</p>
-<p>而tensorRT 则是对训练好的模型进行优化。 tensorRT就只是 推理优化器。当你的网络训练完之后，可以将训练模型文件直接丢进tensorRT中，而不再需要依赖深度学习框架（Caffe，TensorFlow等），如下:</p>
-<p></p>
-<p>可以认为tensorRT是一个只有前向传播的深度学习框架，这个框架可以将 Caffe，TensorFlow的网络模型解析，然后与tensorRT中对应的层进行一一映射，把其他框架的模型统一全部 转换到tensorRT中，然后在tensorRT中可以针对NVIDIA自家GPU实施优化策略，并进行部署加速。</p>
-<p>目前TensorRT8.0 几乎可以支持所有常用的深度学习框架，对于caffe和TensorFlow来说，tensorRT可以直接解析他们的网络模型；对于caffe2，pytorch，mxnet，chainer，CNTK等框架则是首先要将模型转为 ONNX 的通用深度学习模型，然后对ONNX模型做解析。而tensorflow和MATLAB已经将TensorRT集成到框架中去了。</p>
-<p>**ONNX(Open Neural Network Exchange)**是微软和Facebook携手开发的开放式神经网络交换工具，也就是说不管用什么框架训练，只要转换为ONNX模型，就可以放在其他框架上面去inference。这是一种统一的神经网络模型定义和保存方式，上面提到的除了tensorflow之外的其他框架官方应该都对onnx做了支持，而ONNX自己开发了对tensorflow的支持。从深度学习框架方面来说，这是各大厂商对抗谷歌tensorflow垄断地位的一种有效方式；从研究人员和开发者方面来说，这可以使开发者轻易地在不同机器学习工具之间进行转换，并为项目选择最好的组合方式，加快从研究到生产的速度。</p>
-<p>ONNX / TensorFlow / Custom deep-learning frame模型的工作方式：
-</p>
-<p>tensorRT中有一个 Plugin 层，这个层提供了 API 可以由用户自己定义tensorRT不支持的层。
-TensorRT-plugin
-</p>
-<p>目前TensorRT支持的层有:https://github.com/onnx/onnx-tensorrt/blob/main/docs/operators.md
-目前ONNX支持的算子:https://github.com/onnx/onnx/blob/main/docs/Operators.md</p>
-<h3 id="tensorrt-优化方式">TensorRT 优化方式</h3>
-<p></p>
-<p>TensorRT优化方法主要有以下几种方式，最主要的是前面两种。</p>
-<ul>
-<li>
-<p><strong>层间融合或张量融合(Layer &amp; Tensor Fusion)</strong></p>
-<p>如下图左侧是GoogLeNetInception模块的计算图。这个结构中有很多层，在部署模型推理时，这每一层的运算操作都是由GPU完成的，但实际上是GPU通过启动不同的CUDA（Compute unified device architecture）核心来完成计算的，CUDA核心计算张量的速度是很快的，但是往往大量的时间是浪费在CUDA核心的启动和对每一层输入/输出张量的读写操作上面，这造成了内存带宽的瓶颈和GPU资源的浪费。TensorRT通过对层间的横向或纵向合并（合并后的结构称为CBR，意指 convolution, bias, and ReLU layers are fused to form a single layer），使得层的数量大大减少。横向合并可以把卷积、偏置和激活层合并成一个CBR结构，只占用一个CUDA核心。纵向合并可以把结构相同，但是权值不同的层合并成一个更宽的层，也只占用一个CUDA核心。合并之后的计算图（图4右侧）的层次更少了，占用的CUDA核心数也少了，因此整个模型结构会更小，更快，更高效。</p>
-<p></p>
-</li>
-<li>
-<p><strong>数据精度校准(Weight &amp;Activation Precision Calibration)</strong></p>
-<p>大部分深度学习框架在训练神经网络时网络中的张量（Tensor）都是32位浮点数的精度（Full 32-bit precision，FP32），一旦网络训练完成，在部署推理的过程中由于不需要反向传播，完全可以适当降低数据精度，比如降为FP16或INT8的精度。更低的数据精度将会使得内存占用和延迟更低，模型体积更小。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">Precision</th>
-<th style="text-align:center">Dynamic Range</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">FP32</td>
-<td style="text-align:center">−3.4×1038 +3.4×1038</td>
-</tr>
-<tr>
-<td style="text-align:center">FP16</td>
-<td style="text-align:center">−65504 +65504</td>
-</tr>
-<tr>
-<td style="text-align:center">INT8</td>
-<td style="text-align:center">−128 +127</td>
-</tr>
-</tbody>
-</table>
-<p>INT8只有256个不同的数值，使用INT8来表示 FP32精度的数值，肯定会丢失信息，造成性能下降。不过TensorRT会提供完全自动化的校准（Calibration ）过程，会以最好的匹配性能将FP32精度的数据降低为INT8精度，最小化性能损失。</p>
-</li>
-<li>
-<p><strong>Kernel Auto-Tuning</strong>
-网络模型在推理计算时，是调用GPU的CUDA核进行计算的。TensorRT可以针对不同的算法，不同的网络模型，不同的GPU平台，进行 CUDA核的调整（怎么调整的还不清楚），以保证当前模型在特定平台上以最优性能计算。</p>
-<p>TensorRT will pick the implementation from a library of kernels that delivers the best performance for the target GPU, input data size, filter size, tensor layout, batch size and other parameters.</p>
-</li>
-<li>
-<p><strong>Dynamic Tensor Memory</strong>
-在每个tensor的使用期间，TensorRT会为其指定显存，避免显存重复申请，减少内存占用和提高重复使用效率。</p>
-</li>
-<li>
-<p><strong>Multi-Stream Execution</strong>
-Scalable design to process multiple input streams in parallel，这个应该就是GPU底层的优化了。</p>
-</li>
-</ul>
-<h3 id="tensorrt-安装">TensorRT 安装</h3>
-<p><strong><a href="https://zhuanlan.zhihu.com/p/72298520"target="_blank" rel="external nofollow noopener noreferrer">CUDA的安装<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></strong></p>
-<ol>
-<li>
-<p>安装显卡驱动</p>
-</li>
-<li>
-<p>安装cuda
-2.1 进入<a href="https://developer.nvidia.com/cuda-toolkit-archive"target="_blank" rel="external nofollow noopener noreferrer">nvidia开发者网站的CUDA下载页面<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>选择runfile格式的文件下载。</p>
-<p>2.2 下载完成后，解压，并运行上图中的命令，会有条款，接受即可，注意安装CUDA的时候不要安装驱动
-
-2.3 路径设置</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ <span class="nb">export</span> <span class="nv">PATH</span><span class="o">=</span>/usr/local/cuda-10.2/bin:/usr/local/cuda-10.2/nsight-compute-2019.5.0<span class="si">${</span><span class="nv">PATH</span><span class="p">:+:</span><span class="si">${</span><span class="nv">PATH</span><span class="si">}}</span>
-</span></span><span class="line"><span class="cl">$ <span class="nb">export</span> <span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/local/cuda-10.2/lib64/<span class="si">${</span><span class="nv">LD_LIBRARY_PATH</span><span class="p">:+:</span><span class="si">${</span><span class="nv">LD_LIBRARY_PATH</span><span class="si">}}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>并使设置生效:</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">source</span> ~/.bashrc</span></span></code></pre></td></tr></table>
-</div>
-</div><p>2.4 验证安装是否成功
-进入/usr/local/cuda-10.1/samples/1_Utilities/目录，</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">cd</span> deviceQuery
-</span></span><span class="line"><span class="cl">sudo make
-</span></span><span class="line"><span class="cl">./deviceQuery</span></span></code></pre></td></tr></table>
-</div>
-</div><p>出现如下输出，则CUDA安装成功。
-</p>
-</li>
-<li>
-<p>安装cuDNN
-3.1进入<a href="https://developer.nvidia.com/cudnn"target="_blank" rel="external nofollow noopener noreferrer">cudnn下载<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>页面，下载版本合适的版
-3.2 解压，并进入到相应目录，运行以下命令：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo cp cuda/include/cudnn*.h /usr/local/cuda-10.2/include
-</span></span><span class="line"><span class="cl">sudo cp cuda/lib64/libcudnn* /usr/local/cuda-10.2/lib64
-</span></span><span class="line"><span class="cl">sudo chmod a+r /usr/local/cuda-10.2/include/cudnn*.h
-</span></span><span class="line"><span class="cl">sudo chmod a+r /usr/local/cuda-10.2/lib64/libcudnn*</span></span></code></pre></td></tr></table>
-</div>
-</div><p>3.3 查看cudnn版本</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cat /usr/local/cuda-10.2/include/cudnn.h <span class="p">|</span> grep CUDNN_MAJOR -A <span class="m">2</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>新版本:</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cat /usr/local/cuda-10.2/include/cudnn_version.h <span class="p">|</span> grep CUDNN_MAJOR -A <span class="m">2</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>ref: <a href="https://blog.csdn.net/weixin_43592742/article/details/115689886?utm_medium=distribute.pc_relevant.none-task-blog-baidujs_title-0&amp;spm=1001.2101.3001.4242"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/weixin_43592742/article/details/115689886?utm_medium=distribute.pc_relevant.none-task-blog-baidujs_title-0&spm=1001.2101.3001.4242<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</li>
-</ol>
-<p><strong><a href="https://github.com/nvidia/TensorRT"target="_blank" rel="external nofollow noopener noreferrer">TensorRT的安装<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></strong></p>
-<p><a href="https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html"target="_blank" rel="external nofollow noopener noreferrer">英伟达提供的安装指导<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<blockquote>
-<p>tensorRT 要匹配cuda和cudnn版本。在安装之前请匹配。</p>
-</blockquote>
-<p>OSS 和 GA 两个版本:</p>
-<ol>
-<li>
-<p>TensorRT OSS:</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git clone -b master https://github.com/nvidia/TensorRT TensorRT
-</span></span><span class="line"><span class="cl"><span class="nb">cd</span> TensorRT
-</span></span><span class="line"><span class="cl">git submodule update --init --recursive</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p>GA 版本(<a href="https://developer.nvidia.com/nvidia-tensorrt-download"target="_blank" rel="external nofollow noopener noreferrer">下载地址<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</p>
-</li>
-<li>
-<p>对GA版本和OSS版本在<code>~/.bashrc</code>文件中声明路径:
-(GA: General Availability Stable Version)
-(OSS: OPEN SOURCE)</p>
-<ol>
-<li>[oss版本路径]export TRT_SOURCE=/home/yejian/TensorRT/TensorRT_7.2.1</li>
-<li>[GA Release 版本路径]export TRT_RELEASE=/home/yejian/TensorRT/TensorRT_7.2.1/TensorRT-7.2.1.6/TensorRT-7.2.1.6</li>
-</ol>
-</li>
-<li>
-<p>Build TensorRT RSS (这一步需要在编写自定义算子的时候编译通过，参能调用自定义算子)</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="n">cd</span><span class="w"> </span><span class="err">$</span><span class="n">TRT_OSSPATH</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">mkdir</span><span class="w"> </span><span class="o">-</span><span class="n">p</span><span class="w"> </span><span class="n">build</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">cd</span><span class="w"> </span><span class="n">build</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">cmake</span><span class="w"> </span><span class="p">..</span><span class="w"> </span><span class="o">-</span><span class="n">DTRT_LIB_DIR</span><span class="o">=</span><span class="err">$</span><span class="n">TRT_LIBPATH</span><span class="w"> </span><span class="o">-</span><span class="n">DTRT_OUT_DIR</span><span class="o">=`</span><span class="n">pwd</span><span class="o">`/</span><span class="k">out</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">make</span><span class="w"> </span><span class="o">-</span><span class="n">j</span><span class="err">$</span><span class="p">(</span><span class="n">nproc</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ol>
-<h2 id="自定义算子开发----scatterelements">自定义算子开发 &ndash; ScatterElements</h2>
-<p>在自定义算子开发过程中，需要撰写一下4个文件，并且把文件放在scatterElementsPlugin文件夹中:</p>
-<ul>
-<li><code>CmakeLists.txt</code></li>
-<li><code>scatterElements.cu</code></li>
-<li><code>scatterElementsPlugin.cpp</code></li>
-<li><code>scatterElementsPlugin.h</code></li>
-</ul>
-<p>如图所示:</p>
-<p></p>
-<p><strong>自定义算子的生成与注册</strong></p>
-<ul>
-<li>将以上四个文件报括文件夹复制到TensorRT(OOS)下的plugin文件夹下;</li>
-<li>然后修改注册信息文件:(这些文件也在plugin文件夹下)
-<ul>
-<li><code>${TRT_SOURCE}/plugin: CMakeLists.txt</code></li>
-<li><code>${TRT_SOURCE}/InferPlugin.cpp</code></li>
-<li><code>${TRT_SOURCE}/common/kernels/kernel.h</code></li>
-<li><code>${TRT_SOURCE}/parsers/onnx/builtin_op_importers.cpp</code></li>
-</ul>
-</li>
-</ul>
-<p>执行完以上步骤以后，重新编译OOS版本，然后就可以调用自定义算子:</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">cd</span> <span class="nv">$TRT_OSSPATH</span>
-</span></span><span class="line"><span class="cl">mkdir -p build <span class="o">&amp;&amp;</span> <span class="nb">cd</span> build
-</span></span><span class="line"><span class="cl">cmake .. -DTRT_LIB_DIR<span class="o">=</span><span class="nv">$TRT_LIBPATH</span> -DTRT_OUT_DIR<span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>/out
-</span></span><span class="line"><span class="cl">make -j<span class="k">$(</span>nproc<span class="k">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item><item><title>DPG</title><link>https://lruihao.cn/posts/dpg/</link><pubDate>Fri, 14 Jul 2023 08:43:57 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/dpg/</guid><description><![CDATA[<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div>
-<p><a href="https://zhuanlan.zhihu.com/p/337976595"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/337976595<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p><a href="https://blog.csdn.net/weixin_43145941/article/details/110994304"target="_blank" rel="external nofollow noopener noreferrer">DRL:DQN, PG, AC, DDPG, SAC概述<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>DQN</title><link>https://lruihao.cn/posts/dqn/</link><pubDate>Fri, 14 Jul 2023 08:43:42 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/dqn/</guid><description><![CDATA[<p><code>[DQN]paper link:</code> <a href="https://arxiv.org/pdf/1312.5602v1.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/pdf/1312.5602v1.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="dqn-playing-atari-with-deep-reinforcement-learning">DQN: Playing Atari with Deep Reinforcement Learning</h2>
-<h3 id="general-architecture">General Architecture</h3>
-<p>Here is Network listed:</p>
-<ul>
-<li>play Atari games using RL and perform better than human</li>
-<li>CNN + Q Learning: CNN for frame-skiped images features extraction; and Q Learning for policy generation</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">Network</th>
-<th style="text-align:center">Channel</th>
-<th style="text-align:center">Kernel Size</th>
-<th style="text-align:center">Stride</th>
-<th style="text-align:center">Activation</th>
-<th style="text-align:center">Output Size</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">Input</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">$84\times84\times4$</td>
-</tr>
-<tr>
-<td style="text-align:center">First Conv</td>
-<td style="text-align:center">16</td>
-<td style="text-align:center">8x8</td>
-<td style="text-align:center">4</td>
-<td style="text-align:center">Relu</td>
-<td style="text-align:center">$20 \times 20 \times 6$</td>
-</tr>
-<tr>
-<td style="text-align:center">Second Conv</td>
-<td style="text-align:center">32</td>
-<td style="text-align:center">4x4</td>
-<td style="text-align:center">2</td>
-<td style="text-align:center">Relu</td>
-<td style="text-align:center">$9 \times 9 \times 32$</td>
-</tr>
-<tr>
-<td style="text-align:center">Hidden</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">Relu</td>
-<td style="text-align:center">256</td>
-</tr>
-<tr>
-<td style="text-align:center">Output</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">NA</td>
-<td style="text-align:center">None</td>
-<td style="text-align:center">4 to 18</td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p><strong>在当时，普遍的做法是为每一个action学习一个函数，而不是一个网络结构直接输出所有q的value.</strong></p>
-</blockquote>
-<h3 id="key-1-input-info-process">Key 1: Input Info Process</h3>
-<blockquote>
-<p>图像处理部分</p>
-</blockquote>
-<ul>
-<li>Grayscale, Downsampling and Cropping
-<ul>
-<li>RGB channels to gray scale channel (将RGB取均值为灰度图):
-216 x 163 x 3 =&gt;(grayscale) 216 x 163 x 1 =&gt;(downsampling) 110 x 84 x 1 =&gt;(cropping) 84 x 84 x 1</li>
-</ul>
-</li>
-</ul>
-<blockquote>
-<p>游戏部分</p>
-</blockquote>
-<ul>
-<li><strong>Key Frame and Action Repeat</strong>
-<ul>
-<li>select skipped frames (每个4帧选取关键帧)，假设智能体看不见中间过程; 而且agent在每k帧选择一个action，可以加速训练</li>
-<li><strong>作用</strong>:
-<ul>
-<li>加速游戏进行: 计算Q-Value是最耗时的步骤;</li>
-<li>减少噪声: 过分紧密的frame重复信息过多，之前的action容易被否决;</li>
-<li>缩短reward signal到具体aciton之间的时间间隔。</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>History as Input</strong>
-<ul>
-<li>continuous history key frames as input (连续四个关键帧作为输入)</li>
-<li><strong>作用</strong>:
-<ul>
-<li>可以帮助智能体获得更多有效信息进行训练</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>Reward Clipping</strong>
-<ul>
-<li>将多有的reward简化为+1, -1和0</li>
-<li><strong>缺点</strong>: 有可能对训练效果有影响</li>
-<li><strong>作用</strong>: 损失了部分信息，但是可以保证不同游戏的reward scale相同，可以用相同的参数进行训练(因为在论文中，作者在多个游戏上对DQN进行了验证)。</li>
-</ul>
-</li>
-</ul>
-<h3 id="key-2-replay-buffer">Key 2: Replay Buffer</h3>
-<ul>
-<li>
-<p><strong>原理</strong>:</p>
-<ol>
-<li>DQN中对神经网络的训练本质依然是SGD，SGD要求多次利用样本，并且样本独立，但相邻的transition都是高度相关的，所以要记住过去的transition一起抽样;</li>
-<li>Replay Buffer通过记忆一段时间内的trainsition，可以让训练数据分布更平稳;</li>
-<li>Replay Buffer通过忘记很久之前的trainsition，可以保证记住的分布大致模拟当前policy的分布，从而进行policy update;</li>
-<li>可以多次重复采样，提升data efficiency.</li>
-</ol>
-</li>
-<li>
-<p>Replay Buffer生效的一个<strong>重要条件</strong>: 存储transition数量合适</p>
-<ul>
-<li><strong>太多</strong>: 可能使reward signal太过稀疏，影响训练</li>
-<li><strong>太少</strong>: 可能会导致训练数据的分布迅速变化</li>
-</ul>
-</li>
-</ul>
-<h3 id="key-3-semi-gradient-method">Key 3: Semi-Gradient Method</h3>
-<p>在Eauation3中，</p>
-<p>$$y_i = r + \gamma \max_{a&rsquo;}Q(s&rsquo;, a&rsquo;; \theta_{t-1})$$</p>
-<p>不和之后的Q函数共享参数;</p>
-<p>但是在实际的训练过程中，采用
-$$ y_i = r + \gamma \max_{a&rsquo;}Q(s&rsquo;, a&rsquo;; \theta_{t})$$</p>
-<p>和之后的Q函数共享参数，但是实际上不参与导数计算，这种方法称为<strong>Semi-Gradient Method</strong>。</p>
-<ul>
-<li>作用: 使训练更新更稳定。</li>
-</ul>
-]]></description></item><item><title>分布式训练 - 第5篇 - 分布式训练服务框架基本原理与架构解析</title><link>https://lruihao.cn/posts/distributedtraining_5/</link><pubDate>Thu, 13 Jul 2023 08:35:54 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/distributedtraining_5/</guid><description><![CDATA[<h2 id="1-概述">1. 概述</h2>
-<p>分布式训练服务框架与集合通信库的组合构成了分布式训练的整体服务软件栈，在第3篇、第4篇文章里已经剖析完集合通信的相关内容，而本文会以Horovod为例介绍数据并行下分布式训练服务框架的基本原理以及进行架构解析。当前，在分布式训练里分布式训练服务框架需要解决以下几个核心问题 ：</p>
-<ul>
-<li>计算与通信同步耦合问题：如果反向传播一产生一份梯度，就马上对其调用全局AllReduce，计算与通信同步耦合，容易造成死锁同时性能也会很不如意；</li>
-<li>计算时间与通信时间串行问题：神经网络是分层的，梯度计算的过程是数据加载，然后前向传播算出损失值，再反向传播算出梯度，而反向计算时梯度是从输出层往输入层方向一层一层产生的，在有些模型里，如果需要等所有的梯度都计算完毕才能触发全局AllReduce，那么对性能的影响也会很大；</li>
-<li>梯度生成的落后者问题：集群内每个计算节点的同一份梯度的产生不一定都是同一时刻的，如果梯度没有全部生成就发起对这个梯度的全局规约，否则容易造成训练出来的模型精度不达标或者不收敛的问题；</li>
-<li>梯度融合问题：如果每一份梯度都触发一次全局AllReduce，在梯度Tensor较多的神经网络训练里，整体的训练系统性能会变得极低；</li>
-<li>易用性问题：从TensorFlow，PyTorch迁移过来需要改的代码需要极少，从单卡训练迁移到多卡训练需要改动的代码也需要极少；</li>
-<li>可移植问题：支持多种多样的深度学习训练框架，比如 TensorFlow、PyTorch、MxNet等，也能支持多种多样的通信库，比如openMPI、NCCL、Gloo、CCL、RCCL等；</li>
-<li>可靠性问题：在集群训练的过程中网络时不可靠的、计算卡是会出故障的、服务器是会出故障的、系统软件也是会出Bug的，这些因素造成了分布式训练过程中还存在可靠性问题，如何解决这个问题也是一个难题。</li>
-</ul>
-<p>软件是由人实现的，解析一个软件系统最难的地方在于从庞杂的代码里倒推出背后实现它的人的设计意图，为了更好的理解Horovod，本文会基于以上这几个分布式训练的核心问题，以Horovod为例介绍分布式训练服务框架的基本原理以及进行架构解析。</p>
-<h2 id="2-基础知识">2. 基础知识</h2>
-<h3 id="21-单卡训练">2.1 单卡训练</h3>
-<p>神经网络的训练，本质上就是Y=F(x)的迭代，通过反复输入X、输出Y，使得神经网络的参数变化与输入输出间的复杂关系拟合。在神经网络训练的过程中，通过输入数据利用梯度下降的方法进行迭代从而优化神经网络参数，并最终输出神经网络模型。而神经网络可以看作一种运算模型，其由大量的神经元（节点）相互联接构成，其由输入层、隐藏层以及输出层组合而成（如下图左侧所示）。神经元(neuron)是神经网络的基本计算单元，也被称作节点(node)，它可以接受来自其他神经元或外部数据的输入，然后计算出一个输出（如下图右上角所示）。</p>
-<p></p>
-<p>如上图右下角所示，在单卡训练迭代中，基于并行梯度下降法，会有以下操作：</p>
-<p>第一步，读取部分数据，并且将数据加载进训练卡的存储空间；</p>
-<p>第二步，对模型进行前向传播计算，从输入层往输出层一层一层的进行计算，得到损失差LOSS；</p>
-<p>第三步，对模型进行反向传播计算，从输出层往输入层一层一层的进行计算，得到梯度值，注意这一步会把每一层都计算出一个梯度张量（Gradient Tensor）出来；</p>
-<p>第四步，将新的到的梯度与部分数据 作为新的输入，重新开始以上步骤的迭代。</p>
-<p>在这一步里有一个很重要的与性能优化相关的信息是反向传播是每一层输出一个梯度张量，以及反向传播是从输出层往输入层一层一层的进行计算的，这一点信息可以用通信隐藏性能优化与梯度融合优化。</p>
-<h3 id="22-多卡训练">2.2 多卡训练</h3>
-<p>以数据并行随机梯度下降法( SGD )为例，多卡神经网络的训练过程如下图，与单卡训练相比，多卡训练多了梯度全局规约的过程：</p>
-<p></p>
-<p>第一步，通过Broadcast操作将第一个节点参数同步到集群内的所有的训练卡上，保证每个计算节点的初始参数是一致的，同时训练脚本在多个计算节点上运行，每个计算节点包含了整体的模型参数；</p>
-<p>第二步，将数据样本切片分发到整个集群内的个计算节点（训练卡）上并且通过数据流水技术将数据样本加载进训练卡的高速内存空间内，作为输入X;</p>
-<p>第三步，每个训练卡在其数据样本上运行前向传播，计算出损失差LOSSi；</p>
-<p>第四步，对计算出的LOSSi进行反向传播，得到梯度GRADi，这一步也需要注意得是每一层都会计算出一个梯度，同时梯度是以输出的Tensor来表示的；</p>
-<p>第五步，所有的训练卡计算出来的部分梯度，在主机内及主机之间通过集合通信进行全局归约(AllReduce)得到全局梯度；</p>
-<p>第六步，最后再将这个全局梯度作为参数进行更新，再进行以上2-5步骤的迭代从而获得新的梯度。</p>
-<p>以上2-6步骤就是多卡并行梯度下降的基本思想，即多个计算节点通过分片的数据样本进行梯度计算，得到分区梯度后，再通过全局梯度规约以及将这个聚合好的梯度作为新的参数进行更新，从而实现并行梯度下降。</p>
-<h2 id="3-几个核心问题">3. 几个核心问题</h2>
-<p>在本章节里会解读本文概述里提到的分布式服务框架需要解决的几个与性能、易用性等相关的几个核心问题，并且以Horovod为例讲述Horovod是如何解决这个几个难题的。</p>
-<h3 id="31-计算与通信解耦">3.1 计算与通信解耦</h3>
-<p>在神经网络的训练过程中，每一神经网络层都会计算出一个梯度，同时梯度是以输出Tensor来表示的，如果反向传播一计算出一个梯度就马上调用通信去做梯度规约，将计算与通信同步耦合，那么整体的性能的表现就会很差。比如一个ResNet-50 v3的梯度张量个数是153个，如果一计算出一个梯度就马上进行通信，假设计算梯度花了1ms，通信这个梯度花了 500ms，那么这个过程就是 501ms，总体上就需要501x153 = 76653ms，即近76.6s才能完成一次梯度迭代。而将计算与通信解耦，计算的归计算，通信的归通信，通过性能优化策略减少通信的次数，既能提升整体训练性能也能避免某些死锁问题，比如计算梯度grad i的时候花了很长时间，而通信线程一直在等待这个梯度，表现出来就是死锁现象。</p>
-<p>Horovod采用计算与通信分离的设计思想，解耦了计算过程与通信过程，从而提升了整体训练的性能与可靠性。如下图的Horovod逻辑架构图所示，从图中可以看出Horovod解耦了计算与通信，其将框架层计算出来的梯度request信息push 到一个消息队列message_queue里，同时将梯度信息push到一个Tensor_table里，再通过控制层在后台起一个loop线程，周期性的从消息队列里读取梯度消息，在控制层集群的节点之间协商达成一致后，再进行消息分发触发训练行为。</p>
-<p></p>
-<p>如上图可看出，Horovod从下到上分为7层：物理层、链路层、数据传输层、控制层、消息层、框架层以及用户层。框架层，控制层以及数据传输层体现了Horovod的核心设计理念，即：框架层，用户可以自定义Op，以插件的形式hack进框架；在控制层，worker节点与master节点之间协商达成触发训练行为的约定；在数据传输层，服务器内以及服务器之间采用集合通信库传输数据。</p>
-<p>本质上Horovod的整体设计理念之一遵循的是生产者消费者模式，如下图所示：</p>
-<p></p>
-<p>在Horovod里每个计算节点都会有有两个核心线程：Execution thread 和 Background thread ：</p>
-<ul>
-<li>生产者Execution Thread 是用来做梯度计算的，在TensorFlow、PyTorch之类的之类的训练框架计算出梯度Tensor后，将Tensor 信息push进tenor_table队列，同时将Tensor的request信息push进message_queue队列;</li>
-<li>消费者Background thread 是做集合通讯以及全局Allreduce的，后台线程会每隔一段时间轮询消息队列，拿到一批Tensor信息之后，会进行相应的操作。</li>
-</ul>
-<h3 id="32-通信隐藏">3.2 通信隐藏</h3>
-<p>神经网络是分层的，在训练的过程中，先是数据加载，然后前向传播算出LOSS，再反向传播算出梯度，而反向计算时梯度是从输出层往输入层方向一层一层产生的，如果需要等所有的梯度都计算完毕才能触发全局AllReduce，对性能不是很友好。如下图所示，计算时间与通信时间是串行的，如果能将全局梯度规约的通信时间与计算时间想办法并行起来，将通信时间隐藏在计算时间之内，那么就能节约梯度的训练时间从而提升分布式训练系统整体的训练性能。</p>
-<p></p>
-<p>如下图所示，将计算出来的梯度进行分桶触发异步Allreduce，一边反向传播计算梯度，一边做部分梯度的全局规约通信，从而达到将通信时间隐藏在计算时间内的效果。而Horovod为达成这一效果，Background thread 会每隔一段时间轮询梯度消息队列里的梯度信息，获取了可以过全局规约的梯度后，就进行全局规约操作，而这个时间其他的梯度还在计算过程中，通过调整轮询的时间间隔从而达到调整梯度分桶的效果。</p>
-<p></p>
-<h3 id="33-梯度协商">3.3 梯度协商</h3>
-<p>神经网络的每一层对应一个梯度Tensor，在分布式训练集群里每张训练卡对同一份梯度计算产生的时间是有差异的，当集群内每个计算节点的同一神经网络层的同一梯度都产生时，才能发起对这个梯度的全局AllReduce规约，否则容易造成丢梯度，训练出来模型精度不达标或者模型不收敛。比如在一个128卡的训练集群里，同一份梯度是对应同一个神经网络模型里的同一层神经网络的，只有每张训练卡上都计算出了同一层神经网络的梯度 才能对这一层神经网络的梯度进行全局规约，如下图所示：</p>
-<p></p>
-<p>Horovod设计了一种梯度状态协商机制，它将 计算节点Rank0 作为coordinator（master），其余的rank1-N节点进程为worker，由coordinator来协商确定同一份梯度是否在每个计算节点上都已经计算出来，只有在每个计算节点上都计算出来的同一梯度才可以进行全局规约操作。在Horovod里每个计算节点上都有一个message_queue以及tensor_table，而在coordinator节点上除此之外，还有一个message_table用于保存可以进行全局Allreduce的梯度请求次数信息。Horovod 控制面的ComputeResponseList 函数里实现了这一梯度的协商过程，在从message_queue获取了本节点生成的梯度信息后，coordinator会与其他节点协商这个梯度是否都计算出来，这一过程是阻塞进行的，这个协商过程如下图：</p>
-<p></p>
-<p>一个梯度是否能满足全局规约AllReduce的协商过程如下：</p>
-<p>首先，集群内的每个计算节点进程都会往coordinator Rank0发送一个 tensor的请求request，表示说本节点这一层神经网络的梯度已经生成，比如tensor1，每个rank都会往rank0 发送一个本梯度tensor1已经计算出来的请求信息；</p>
-<p>第二步，coordinator接收到节点的梯度协商请求后（包括本节点），会把收到的tensor请求次数进行累加，并将这个信息记录在message_table里，当这个梯度的请求信息达到集群内节点的个数时，比如在N个节点的集群，一个神经网络层的梯度tensor的通信请求出现了N次，那就表示在本集群里所有的计算节点都已经发出了对该梯度tensor的通信request，这就表明这个梯度tensor是符合全局规约要求的，就能进行集合通信全局规约，不符合要求的梯度tensor将继续留在message_table中，直到条件符合为止；</p>
-<p>第三步，再接着coordinator会将满足全局allreduce规约条件的梯度Tensor通过response返回给其他节点，告诉其他节点这个梯度可以启动全局规约AllReduce。</p>
-<p>经过这几步的协商达成梯度全局状态一致的目的，从而避免梯度丢失造成的模型精度不达标、不收敛或者进程死锁问题。</p>
-<h3 id="34-梯度融合">3.4 梯度融合</h3>
-<p>神经网络的每一层都能对应一个梯度，假设每生成一个梯度就进行一次全局规约时，100个梯度就需要进行100次全局通信100次全局规约，而通信对训练的性能有巨大的影响，这种情况表现出来的效果就是分布式训练集群的整体性能极差。通过梯度融合计算将多个梯度合成一个，从而减少全局规约的次数能大幅提高分布式训练的训练性能，如下图所示，将N个小梯度Tensor合成两个，能将全局通信的次数减少到2次，从而大幅提升训练性能，在Horovod里这个功能对TensorFusion特性。但这个特性也会与3.2通信隐藏特性相冲突，需要根据具体情况进行合理的调试优化。</p>
-<p></p>
-<h3 id="35-易用性">3.5 易用性</h3>
-<p>从TensorFlow，PyTorch等框架迁移到Horovod需要改的的代码极少，horovod接入方式比较简单，与原生训练框架对比，主要的区别在于：</p>
-<ul>
-<li>
-<p>1，初始化 Horovod，包括机器资源的分配：
-<code>horovod.init()</code></p>
-</li>
-<li>
-<p>2，向每个进程分配XPU资源， 典型的设置是 1 个 XPU 一个进程，即设置 local rank：
-<code>config.gpu_options.visible_device_list = str(hvd.local_rank())</code></p>
-</li>
-<li>
-<p>3，对原优化器进行包装，分布式优化器将梯度计算委托给原始优化器，使用allreduce或allgather对梯度求平均，然后应用这些平均梯度：
-<code>opt=hvd.DistributedOptimizer(opt)</code></p>
-</li>
-<li>
-<p>4， 将初始化参数从rank 0广播给其他进程(rank表示进程序号)，实现参数的初始化，确保所有节点的初始化参数保持一致：
-<code>hvd.BroadcastGlobalVariablesHook(0)：</code></p>
-</li>
-</ul>
-<h3 id="36-可移植">3.6 可移植</h3>
-<p>可移植问题，Horovod通过 OP和OpKernels的插件化机制支持多种多样的深度学习训练框架，比如 TensorFlow、PyTorch、MxNet等。基于的opKernels的可定制化机制，Horovod自定义了Op然后hack了数据链路层的通信协议，从而达到在多个深度学习框架之间可移植。</p>
-<h3 id="37-可靠性问题">3.7 可靠性问题</h3>
-<p>在集群训练的过程中网络时不可靠的、计算卡是会出故障的、服务器是会出故障的的，这些因素造成了分布式训练过程中需要考虑训练集群的可靠性，Horovod结合集合通信库Gloo对外提供了弹性训练的特性，但可靠性不只是弹性训练就能完全解决的，它还有更多的系统级的问题需要解决，因此可靠性问题留着一个后续研究问题，不在本文阐述。</p>
-<h2 id="4-优点缺点改进点">4. 优点缺点、改进点</h2>
-<ul>
-<li>简单易用、可移植，并且支持弹性训练提升了可靠性；</li>
-<li>不依赖于某个框架，其通过MPI机制独立建立了一套分布式训练服务系统；</li>
-<li>将计算与通信分离，完成了allreduce、allgather等集合通信工作，实现了规模可扩展；</li>
-<li>巧妙的通过间隔轮询的机制支持通信时间隐藏，并且完成了梯度协商从而保证训练出来的模型是可收敛、精度达标的；</li>
-<li>支持梯度融合，支持将小的tensor合并成一个大的tensor再进行通信传递，从而减小通信操作的额外开销；</li>
-<li>自带压缩算法，可以减少集合通信的数据量；</li>
-</ul>
-<h2 id="5-思考题">5. 思考题</h2>
-<ul>
-<li>问题1，将通信时间隐藏在计算时间内能有助于提升训练系统的整体性能，但这一特性是针对SIMT芯片的架构的进行性能优化的，如果DSA芯片不能支持这一特性，那应该如何优化Horovod从而大幅提升整体的训练性能？（可以确定这一定是能做到的）</li>
-<li>问题2，梯度协商的过程中，每个梯度都需要协商一次，在梯度较多，网络规模较大的集群里，这一特性也会影响性能，如何进行优化才能有效提升Horovod性能？\</li>
-<li>问题3，不同的模型对梯度融合有不同的要求，那么梯度融合需要融合到什么程度才能有效提升性能？</li>
-</ul>
-<p>可以说明的是，这三个问题解决后还能继续提升Horovod在DSA架构芯片上的整体的分布式训练系统级性能。</p>
-<h2 id="6-小结">6. 小结</h2>
-<p>本文介绍了分布式训练的基础知识以及剖析了分布式训练服务框架所面临的几个核心问题，以Horovod为例从计算与通信解耦、通信隐藏、梯度协商、梯度融合、易用性以及可移植这几个角度倒推了分布式训练服务框架背后的设计意图，从而帮助大家能更好的理解分布式训练服务框架。</p>
-<p>ref:
-[1] <a href="https://www.changping.me"target="_blank" rel="external nofollow noopener noreferrer">https://www.changping.me<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2] <a href="https://horovod.ai"target="_blank" rel="external nofollow noopener noreferrer">https://horovod.ai<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[3] <a href="https://www.cnblogs.com/rossiXYZ/p/14910959.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/rossiXYZ/p/14910959.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[4] <a href="https://zhuanlan.zhihu.com/p/374575049"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/374575049<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item></channel></rss>
