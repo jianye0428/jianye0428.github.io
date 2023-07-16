@@ -1,157 +1,192 @@
-# Vim Installation
+# Zsh Installation
 
 
-# VIM 8.2 安装
-## 1. Install Python3.9 from source
 
-- **Update the packages list and install the packages necessary to build Python**
+## zsh说明
+
+- zsh是一个Linux下强大的shell, 由于大多数Linux产品安装以及默认使用bash shell, 但是丝毫不影响极客们对zsh的热衷, 几乎每一款Linux产品都包含有zsh，通常可以用apt-get、urpmi或yum等包管理器进行安装.
+
+- zsh是bash的增强版，其实zsh和bash是两个不同的概念，zsh更加强大。
+
+- 通常zsh配置起来非常麻烦，且相当的复杂，所以oh-my-zsh是为了简化zsh的配置而开发的，因此oh-my-zsh算是zsh的配置.
+
+## 准备
+ - 查看当前系统用shell版本
+    ```shell
+    echo $SHELL
+    ```
+
+- 查看系统自带哪些shell
+    ```shell
+    cat /etc/shells
+    ```
+
+## 安装zsh
+- 通过命令行安装zsh
+    ```shell
+    sudo apt install zsh
+    ```
+
+## zsh配置
+
+- 将zsh设置为默认的shell
 
     ```shell
-    sudo apt update && sudo apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
+    chsh -s /bin/zsh
     ```
-- **Download the latest release’s source code from the Python download page using wget**
 
+- 然后重启电脑
     ```shell
-    wegt https://www.python.org/ftp/python/3.9.0/Python-3.9.1.tgz
+    reboot
     ```
-- **Switch to the Python source directory and execute the configure script which performs a number of checks to make sure all of the dependencies on your system are present**
 
+## 安装oh-my-zsh及其个性化配置
+
+### 安装oh-my-zsh
+- 执行以下命令安装oh-my-zsh
     ```shell
-    cd Python-3.9.1
-    ./configure --enable-optimizations --with-lto --enable-shared --prefix=/usr/local/python39
-    make -j8
+    sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
     ```
-- **When the build process is complete, install the Python binaries by typing**
-
+    或者
     ```shell
-    sudo make altinstall
+    sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
     ```
 
-    > Do not use the standard make install as it will overwrite the default system python3 binary.
+### 主题配置
 
-- **copy the dynamic library to usr/lib/x86_64-linux-gnu/libpython3.9.so.1.0**
-   ```shell
-   sudo cp /usr/local/python39/lib/libpython3.9.so.1.0 /usr/lib/x86_64-linux-gnu/
-   ```
-   > the command can slove the error: error while loading shared libraries: libpython3.9.so.1.0: cannot open shared object file: No such file or directory
+- 打开配置文件~/.zshrc
+    输入:
 
-- **make the soft link to set python39 as default python3**
-   ```shell
-    sudo ln -sf /usr/local/python39/bin/python3.9 /usr/bin/python3
-    sudo ln -s /usr/local/python39/bin/python3.9 /usr/bin/python3.9
-   ```
-- **using update-alternatives to switch different python version**
+    ```txt
+    ZSH_THEME="xxf"
+    ```
 
-  - list all the python versions
+  xxf.zsh-theme文件下载地址: [xxf.zsh-theme文件下载](https://github.com/xfanwu/oh-my-zsh-custom-xxf/blob/master/themes/xxf.zsh-theme)
+
+  下载之后将文件拷贝到以下路径: ```/home/username/.oh-my-zsh/themes/```
+
+### 插件
+
+#### 安装自动补全插件incr
+- 首先，下载incr插件到本地
     ```shell
-    sudo update-alternatives --list python3
+    cd ~/.oh-my-zsh/plugins/
+    mkdir incr && cd incr
+    wget http://mimosa-pudica.net/src/incr-0.2.zsh
     ```
-  - display python3
-
+- 编辑~/.zshrc文件，添加以下内容:
+    ```
+    source ~/.oh-my-zsh/plugins/incr/incr*.zsh
+    ```
+- 然后，source一下:
     ```shell
-    sudo update-alternatives --display python3
+    source ~/.zshrc
     ```
-  - set different number for different version
 
-    ```
-    sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
-    sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 2
-    ```
-  - show different mode and select number to switch another mode
+#### 直接使用默认插件
 
+- 在~/.zshrc文件中添加插件:
+
+    ```txt
+    plugins=(git extract z)
+    ```
+
+#### 安装autojump插件
+
+- 通过命令行安装autojump
     ```shell
-    sudo update-alternatives --config python3
+    sudo apt install autojump
     ```
-
-## 2. 源码安装cmake
-### 2.1 download the cmake source code
-- download source code
+- 在~/.zshrc文件中编辑:
+    ```
+    . /usr/share/autojump/autojump.sh
+    ```
+- 然后，source一下:
     ```shell
-    wget  https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1.tar.gz
+    source ~/.zshrc
     ```
 
-### 2.2 extract the source code directory and run the command to install
-- extraction and configuration
+#### 安装zsh-syntax-highlighting语法高亮插件
+
+- 从gihub下载源码并放在~/.oh-my-zsh/plugins/文件夹下:
     ```shell
-    cd cmake-2.23.0
-    ./bootstrap     //需要的话也可以指定安装目录，例如--prefix=/usr/local/cmake
-    make && sudo make install
+    cd ~/.oh-my-zsh/plugins/
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
     ```
 
-### 2.3 create soft link and set cmake as default
-- set cmake as default
+- 在~/.zshrc文件中编辑:
+    ```
+    source ~/.oh-my-zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+    ```
+- 然后，source一下:
     ```shell
-    sudo ln -s /usr/local/bin/cmake /usr/bin/cmake
+    source ~/.zshrc
     ```
 
-## 3. 首先从github下载源码vim 8.2
+#### 安装zsh-autosuggestions语法历史记录插件
 
-### 3.1 源码安装vim8.2
-- run the following command to downlaod source code of VIM from github
-
+- 从gihub下载源码并放在~/.oh-my-zsh/plugins/文件夹下:
     ```shell
-    git clone git clone https://github.com/vim/vim.git
-    cd vim
-    git pull
-    cd src/
-    sudo make distclean # 如果您以前构建国vim
-
+    cd ~/.oh-my-zsh/plugins/
+    git clone git@github.com:zsh-users/zsh-autosuggestions.git
     ```
 
-- cofigure the installation file
-  ```shell
-    ./configure --with-features=huge --enable-multibyte --enable-python3interp=dynamic --with-python3-config-dir=/usr/lib/python3.10/config-3.10-x86_64-linux-gnu/ --enable-cscope --enable-gui=auto --enable-gtk2-check --enable-fontset --enable-largefile --disable-netbeans --with-compiledby="18817571704@163.com" --enable-fail-if-missing --prefix=/usr/local/vim82
-    sudo make
-    sudo make install
+- 在~/.zshrc文件中编辑:
     ```
-- enable clipboard
-    - then you can copy the content from system clipboard to vim
-        ```shell
-        sudo apt-get install vim-gtk3
-        ```
-- 卸载vim
-    - 使用以下命令重置编译操作
-        ```shell
-        sudo make distclean
-        ```
-
-    - 使用以下命令，可以卸载命令
-        ```shell
-        sudo make uninstall
-        ```
-
-### 3.2 安装vim-plug以及插件
-
-- 安装vim-plug:
-
+    source ~/.oh-my-zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+    ```
+- 然后，source一下:
     ```shell
-    curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
-    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    source ~/.zshrc
     ```
-- 安装主题gruvbox
 
-   **to fix error: Cannot find color scheme 'gruvbox'**
-    ```shell
-    mkdir ~/.vim/colors/
-    cp ~/.vim/plugged/gruvbox/gruvbox.vim ~/.vim/colors/
-    ```
-- 安装YCM(YouCompleteMe)
-    根据~/.vimrc按装YCM
+### 其他
 
-    ```shell
-    cd ~/.vim/plugged/YouCompleteMe/
-    ./install.py --clang-completer
+- 设置更新日期
+    在~/.zshrc文件中编：
     ```
-- 安装ctags
-    ```shell
-    sudo apt-get install exuberant-ctags
+    exprot UPDATE_ZSH_DAYS=13
     ```
-- 其他主题直接编辑:PlugInstall进行安装
+- 禁止自动更新
+    ```
+    DISABLE_AUTO_UPDATE="true"
+    ```
+- 手动更新oh-my-zsh
+    ```shell
+    upgrade_oh_my_zsh
+    ```
+- 卸载oh-my-zsh
+    ```shell
+    uninstall_on_my_zsh zsh
+    ```
 
-### 3.2 reference
-- 参考链接:
-    [1] https://github.com/ycm-core/YouCompleteMe/wiki/Building-Vim-from-source
-    [2] https://wizardforcel.gitbooks.io/use-vim-as-ide/content/0.html
+### 从bash到zsh的切换
+
+- 直接执行zsh和oh-my-zsh的安装以及配置，并且在~/.zshrc文件中添加:
+    ```
+    source ~/.bashrc
+    ```
+
+
+## zsh 快捷键
+- 快捷键
+    `⌃ + u:` 清空当前行
+    `⌃ + a:` 移动到行首
+    `⌃ + e:` 移动到行尾
+    `⌃ + f:` 向前移动
+    `⌃ + b:` 向后移动
+    `⌃ + p:` 上一条命令
+    `⌃ + n:` 下一条命令
+    `⌃ + r:` 搜索历史命令
+    `⌃ + y:` 召回最近用命令删除的文字
+    `⌃ + h:` 删除光标之前的字符
+    `⌃ + d:` 删除光标所指的字符
+    `⌃ + w:` 删除光标之前的单词
+    `⌃ + k:` 删除从光标到行尾的内容
+    `⌃ + t:` 交换光标和之前的字符
+
+
+
 
 
 ---

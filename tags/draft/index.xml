@@ -1,4 +1,724 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 标签 - yejian's blog</title><link>https://lruihao.cn/tags/draft/</link><description>draft - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 16 Jul 2023 15:03:55 +0800</lastBuildDate><atom:link href="https://lruihao.cn/tags/draft/" rel="self" type="application/rss+xml"/><item><title>C++ STL Containers</title><link>https://lruihao.cn/posts/datastructrue/</link><pubDate>Sun, 16 Jul 2023 15:03:55 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/datastructrue/</guid><description><![CDATA[<h2 id="c-stl-standard-template-library-总结">C++ STL (Standard Template Library) 总结</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 标签 - yejian's blog</title><link>https://lruihao.cn/tags/draft/</link><description>draft - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 16 Jul 2023 17:13:44 +0800</lastBuildDate><atom:link href="https://lruihao.cn/tags/draft/" rel="self" type="application/rss+xml"/><item><title>VectorNet 论文解读</title><link>https://lruihao.cn/posts/vectornet/</link><pubDate>Sun, 16 Jul 2023 17:13:44 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/vectornet/</guid><description><![CDATA[<p><code>ref link</code>:
+[1] <a href="https://blog.csdn.net/qq_41897558/article/details/120087113"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41897558/article/details/120087113<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[2] <a href="https://zhuanlan.zhihu.com/p/355131328"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/355131328<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<code>ref code</code>:
+[1]https://github.com/xk-huang/yet-another-vectornet
+[2]https://github.com/DQSSSSS/VectorNet</p>
+<h2 id="novel-highlights">Novel Highlights</h2>
+<p>(1) 使用矢量化的高精地图以及障碍物的历史轨迹，从而避免有损渲染以及ConvNet编码(计算开销比较大)。</p>
+<p>(2) 设计子图网络以及全局图网络，建模低阶以及高阶交互</p>
+<p>(3) auxiliary task 提高网络性能</p>
+<p></p>
+<h2 id="vecotornet-网络介绍">VecotorNet 网络介绍</h2>
+<h3 id="轨迹和地图的向量表示-representing-trajectories-and-hd-maps">轨迹和地图的向量表示 Representing trajectories and HD maps</h3>
+<p>lane可以表示为splines，人行道可以表示为一个很多个点组成的polygon，stop sign标记可以表示为单一个点。 对于agent来说，他们的轨迹也是一种splines。 这些元素都可以向量表示。</p>
+<ul>
+<li>对于地图的特征：选择一个start point和朝向，等间距均匀采样关键点，并于相邻的关键点相连为向量</li>
+<li>对于agent轨迹，按照0.1s sample关键点，并将它们连接成向量。</li>
+</ul>
+<p>通过向量化的过程，可以得到折线polylines，这个polylines和轨迹、地图标注之间是一一对应的。如果给定的时空间隔足够小，得到的这些折线就与原始地图和轨迹十分接近。</p>
+<p>我们将属于折线 $P_j$​ 的每一个向量$v_i$看出图中的一个节点，节点特征如下:</p>
+<p>$$v_i = [d_i^s, d_i^e, a_i, j]$$</p>
+<ul>
+<li>其中前两个vector分别是vector的start point和end point的坐标，可以是(x,y)或者(x,y,z)三维的形式</li>
+<li>第三个向量则是attribute属性的特征，比如object的类型，轨迹的时间戳，道路的特征，道路限速等</li>
+<li>最后一个是障碍物id，表示 $v_i$ ​属于 $P_j$</li>
+</ul>
+<h3 id="polyline-子图构建">Polyline 子图构建</h3>
+<p>对于一个Polyline P, 它的节点有 ${v_1,v_2,&hellip;,v_p}$， 可以定义一个子图网络：</p>
+<p>$$v_i^{l+1} = \varphi_{rel}(g_{enc}(v_i^{(l)}), \varphi({g_{enc}(v_j^{(l)})}))$$</p>
+<ul>
+<li>
+<p>$v_i^{(l)}$​ 代表第i个节点第L层的节点特征。</p>
+</li>
+<li>
+<p>$g_{enc}(\cdot)$代表节点的变换，实践中采用MLP来实现。</p>
+</li>
+<li>
+<p>$\varphi_{agg}(\cdot)$代表特征聚合，用来从相邻的节点来获取信息，实践中采用的是max_pooling。</p>
+</li>
+<li>
+<p>$\varphi_{rel}(\cdot)$代表vi和周围节点的关系，实践中采用的是concate的操作。</p>
+</li>
+</ul>
+<p></p>
+<p>最后经过多层的堆叠，来获取整个Polyline级别的特征：</p>
+<p>$$P = \varphi_{agg}(v_i^{L_p})$$</p>
+<p>这里， $φ_{agg}(⋅)$也是max pooling操作.</p>
+<h3 id="全局图的高阶交互-global-graph-for-high-order-interactions">全局图的高阶交互 Global graph for high-order interactions</h3>
+<p>经过上面的子图进行低阶模型建模后，现在有了polyline级别节点的特征${p_1,p_2,&hellip;,p_P}$.</p>
+<p>为了建立高阶的交互，需要建立一个global的交互图，详见论文图2的第3个子图。</p>
+<p>$$P_i^{l+1} = GNN(p^l_i, A)$$</p>
+<ul>
+<li>
+<p>$p_i^l$​代表polyline节点的集合</p>
+</li>
+<li>
+<p>A代表邻接矩阵，实践中采用全链接</p>
+</li>
+<li>
+<p>$GNN(⋅)$代表一层的GNN网络，实践中采用的是self attention layer：
+$$GNN(P) = softmax(P_Q P_K^T)P_V$$</p>
+<p>其中，P是node的feature matrix， $P_Q$,$P_k$,$P_v$ ​则是它的线性投影。</p>
+</li>
+</ul>
+<p>经过了全局的网络之后，就生成了节点的特征$P^{L_t}_i$，其中Lt是全局GNN网络的层数。然后将$P^{(L_t)}_i$放入decoder进行轨迹的生成:</p>
+<p>$$v_i^{future} = \varphi_{traj}(P_i^{L_t})$$</p>
+<p>论文中，decoder $φ_{traj}(⋅)$ 使用的是MLP，当然也可以用MultiPath中anchor-based的方法或者variational RNNs 来进行多模态轨迹预测。</p>
+<h3 id="辅助任务训练-auxiliary-graph-completion-task">辅助任务训练 auxiliary graph completion task</h3>
+<p>为了让全局交互图能更好地捕捉不同轨迹和地图元素之间的交互信息，论文还提出了一个辅助的任务：在训练过程中，随机mask掉一些节点的特征，然后尝试去还原被掩盖的节点特征:</p>
+<p>$$\hat{P}<em>i = \varphi</em>{node}(P_i^{L_t})$$</p>
+<p>这里节点的decoder $φ_{node}(⋅)$ 也是一个MLP，只在训练的时候使用,在inference过程中不使用。</p>
+<h3 id="损失函数-loss-function">损失函数 Loss Function</h3>
+<p>多任务训练目标， multi-task training task:</p>
+<p>$$\mathcal{L} = \mathcal{L_{traj}} + \alpha \mathcal{L_{node}}$$</p>
+<ul>
+<li>
+<p>$L_{traj}​$: negative Gaussian log-likelihood loss</p>
+</li>
+<li>
+<p>$L_{node}$​: 是预测的节点和被掩盖节点的huber损失函数</p>
+</li>
+</ul>
+<p>其中，
+negative Gaussian Log Likelihood 损失函数为:</p>
+<p>$$L(x, y) = -\log P(y) = - \log P(y|\mu(x), \sum(x))$$</p>
+<p>where,</p>
+<p>$$p(y) = p(y∣μ,Σ)=1(2π)n/2∣Σ∣1/2exp−12(y−μ)⊤Σ−1(y−μ)$$</p>
+<p>Huber 损失函数为:</p>
+<p>$$ L(Y|f(x))= \begin{cases} \frac{1}{2} (Y-f(x))^2, &amp; |Y-f(x)|&lt;= \delta \\ \delta |Y-f(x)| - \frac{1}{2}\delta^2, &amp; |Y-f(x)| &gt; \delta \end{cases} $$</p>
+<h2 id="整理">整理</h2>
+<p><strong>VectorNet数据处理部分:</strong></p>
+<ul>
+<li>
+<p>对actor的处理:</p>
+<ul>
+<li>输入: 取轨迹点，每两个轨迹点构建vector, 形式为(x1, x2, y1, y2), 其他特征(object type, timestamp, track_id)</li>
+</ul>
+</li>
+<li>
+<p>对lane node的处理:</p>
+<ul>
+<li>输入: 针对lane segment 的点，求polyline，原则上求lane segment的左右边界的点的向量(x_start, x_end, y_start, y_end, turn_direction, traffic_control, is_intersection, lane_id)</li>
+</ul>
+</li>
+</ul>
+<p><strong>网络部分:</strong></p>
+<ul>
+<li>
+<p>构建subgraphnet: 针对每一个polyline，通过mlp和maxpool构构建subgraphnet</p>
+</li>
+<li>
+<p>构建globalgraphnet: 以每个polyline作为graph node，构建全局图网络，采用全链接，通过自注意力机制$GNN(P) = softmax(P_Q, P_K)^T(P_V)$</p>
+</li>
+</ul>
+<p><strong>轨迹生成:</strong></p>
+<p>将全局网络的节点特征，通过mlp进行轨迹生成。</p>
+]]></description></item><item><title>CRAT-Prediction</title><link>https://lruihao.cn/posts/crat_pred/</link><pubDate>Sun, 16 Jul 2023 15:54:26 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/crat_pred/</guid><description><![CDATA[<h2 id="overview">Overview</h2>
+<p><code>paper link:</code><a href="https://arxiv.org/pdf/2202.04488.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/pdf/2202.04488.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="论文概览">论文概览</h2>
+<ul>
+<li>
+<p>文章提出了一种结合Crystal Graph Convolutional Neural Network和Multi-Head Self-Attention Mechanism对交通agent处理的方式</p>
+</li>
+<li>
+<p>在argoverse数据集上进行验证，实现了map-free预测模型的SOTA效果; 相比较于其他模型，模型参数更少。</p>
+</li>
+<li>
+<p>证明: 可以通过 Self-Attention Mechanism 学习到交通参与者之间的交互关系。</p>
+</li>
+</ul>
+<h2 id="网络结构">网络结构</h2>
+<p></p>
+<ul>
+<li>数据处理: 以argoverse2数据为例，取前50帧数据，两两作差值，取49组位移向量数据为输入</li>
+<li>
+<ul>
+<li>首先用<code>EncoderLSTM</code>作为encoder</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>再将每一个agent作为node，通过<code>Crystal Graph Convolutional Neural Network</code>构建图神经网络</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>通过<code>Multi-Head Self-Attention</code>学习node之间的交互关系</li>
+</ul>
+</li>
+</ul>
+<h2 id="实现原理">实现原理</h2>
+<h3 id="input-encoder-输入编码器">Input Encoder 输入编码器</h3>
+<p>输入数据为过去5秒的离散位移:
+$$s_i^t = (\Delta{\tau_i^t} || b_i^t)$$</p>
+<p>其中， $\Delta \tau_i^t = \tau_i^{t-1}$.</p>
+<h3 id="interaction-module-交互模块">Interaction Module 交互模块</h3>
+<h3 id="output-decoder-输出编码器">Output Decoder 输出编码器</h3>
+<h3 id="training-训练过程">Training 训练过程</h3>
+<h2 id="代码实现结构">代码实现结构</h2>
+<p><strong>数据处理结构</strong>
+<code>input = dict()</code>
+<code>input['argo_id'] = list()</code>
+<code>input['city'] = list()</code>
+<code>input['past_trajs'] = list()</code>
+<code>input['fut_trajs'] = list()</code>
+<code>input['gt'] = list()</code>
+<code>input['displ'] = list()</code>
+<code>input['centers'] = list()</code>
+<code>input['origin'] = list()</code>
+<code>input['rotation'] = list()</code></p>
+<p>29 + 32 = 61
+<code>argo_id:</code>
+[&lsquo;01d7deae-31e9-4657-843f-c30009b09f1c&rsquo;, &lsquo;01ca1736-ec51-41aa-8c73-3338c574a83a&rsquo;]
+<code>city:</code>
+[&lsquo;austin&rsquo;, &lsquo;austin&rsquo;]
+<code>past_trajs:</code>
+torch.Size([29, 50, 3])
+torch.Size([32, 50, 3])
+<code>fut_trajs:</code>
+torch.Size([29, 60, 3])
+torch.Size([32, 60, 3])
+<code>gt:</code>
+torch.Size([29, 60, 2])
+torch.Size([32, 60, 2])
+<code>displ:</code>
+torch.Size([29, 49, 3])
+torch.Size([32, 49, 3])
+<code>centers:</code>
+torch.Size([29, 2])
+torch.Size([32, 2])
+<code>origin:</code>
+torch.Size([2])
+torch.Size([2])
+<code>rotation:</code>
+torch.Size([2, 2])
+torch.Size([2, 2])</p>
+<p><strong>网络输入输出结构详解</strong>
+In Inference with two sample data:
+<code>displ_cat:</code> 61 x 49 x 3
+<code>centers_cat:</code> 61 x 2
+<code>agents_per_sample:</code> [32, 29]</p>
+<h3 id="encoder_lstm">encoder_lstm</h3>
+<p><strong>input:</strong> <code>displ_cat</code>(61 x 49 x 3), <code>agents_per_sample</code> [32,29]
+$\downarrow$  input_size = 3; hidden_size = 128; num_layers = 1
+$\downarrow$<code>lstm_hidden_state = torch.randn(num_layers, lstm_in.shape[0], hidden_size) = torch.randn(1, 61, 128)</code>
+$\downarrow$<code>lstm_cell_state = torch.randn(num_layers, lstm_in.shape[0], hidden_size) = torch.randn(1, 61, 128)</code>
+$\downarrow$<code>lstm_out, lstm_hidden = self.lstm(lstm_in, lstm_hidden)</code> =&gt; lstm((61, 49, 3), (torch((1, 61, 128)), torch(1, 61, 128)))
+$\downarrow$ <code>lstm_out</code>(61 x 49 x 128)
+<strong>output:</strong> <code>lstm_out[:,-1,:]</code>(61 x 128)</p>
+<h3 id="agent_gnn">agent_gnn</h3>
+<p><strong>input:</strong> <code>out_encoder_lstm</code>(61 x 128), <code>centers_cat</code> (61 x 2) <code>agents_per_sample</code> [32,29]
+$\downarrow$ x = gnn_in =&gt; (61 x 128)
+$\downarrow$ edge_index = build_fully_connected_edge_idx(agents_per_sample).to(gnn_in.device) =&gt; (2, 1804) 1804 = (29 x 29-1) + (32 x (32-1))
+$\downarrow$
+$\downarrow$ edge_attr = build_edge_attr(edge_index, centers).to(gnn_in.device) =&gt; (1804, 2)
+$\downarrow$ x = F.relu(self.gcn1(x, edge_index, edge_attr)) =&gt; (61 x 128)
+<strong>output:</strong> gnn_out = F.relu(self.gcn2(x, edge_index, edge_attr)) =&gt; (61 x 128)</p>
+<p>$$\mathbf{x}^{\prime}<em>i = \mathbf{x}<em>i + \sum</em>{j \in \mathcal{N}(i)}
+\sigma \left( \mathbf{z}</em>{i,j} \mathbf{W}_f + \mathbf{b}<em>f \right)
+\odot g \left( \mathbf{z}</em>{i,j} \mathbf{W}_s + \mathbf{b}_s  \right)$$</p>
+<h3 id="multihead_self_attention">multihead_self_attention</h3>
+<p><strong>input:</strong> <code>out_agent_gnn</code> (61 x 128) <code>agents_per_sample</code>[32,29]
+$\downarrow$ max_agents = max(agents_per_sample) =&gt; 32
+$\downarrow$ padded_att_in = torch.zeros((len(agents_per_sample), max_agents, self.latent_size), device=att_in[0].device) =&gt; torch: (2 x 32 x 128)
+$\downarrow$ mask = torch.arange(max_agents) &lt; torch.tensor(agents_per_sample)[:, None] &amp;&amp; padded_att_in[mask] = att_in =&gt; torch: (2 x 32 x 128)
+$\downarrow$ padded_att_in_swapped = torch.swapaxes(padded_att_in, 0, 1) =&gt; torch: (32, 2, 128)
+$\downarrow$ padded_att_in_swapped, _ = self.multihead_attention(padded_att_in_swapped, padded_att_in_swapped, padded_att_in_swapped, key_padding_mask=mask_inverted) =&gt; torch: (32, 2, 128)
+$\downarrow$ padded_att_in_reswapped = torch.swapaxes(padded_att_in_swapped, 0, 1) =&gt; torch: (2, 32, 128)
+$\downarrow$ att_out_batch = [x[0:agents_per_sample[i]] for i, x in enumerate(padded_att_in_reswapped)] =&gt; list: 2
+<strong>output:</strong> <code>att_out_batch</code> =&gt; list: 2 for each with shape (29, 128) and (32, 128)</p>
+<h3 id="torchstack">torchstack()</h3>
+<p><strong>input:</strong> <code>out_self_attention:</code> list: 2 for each with shape (29, 128) and (32, 128)
+$\downarrow$ out_self_attention = torch.stack([x[0] for x in out_self_attention])
+<strong>output:</strong> <code>out_self_attention:</code> torch: (2, 128)</p>
+<h3 id="predictionnetout_self_attention">PredictionNet(out_self_attention)</h3>
+<h3 id="decoder_residual">decoder_residual</h3>
+<p><strong>input:</strong> <code>out_self_attention</code>(torch: (2, 128)) <code>frozen = False</code>
+$\downarrow$ [condition: frozen = False] sample_wise_out.append(PredictionNet(out_self_attention)) =&gt; torch: (2, 120)
+$\downarrow$ decoder_out = torch.stack(sample_wise_out) =&gt; torch: (1, 2, 120)
+$\downarrow$ decoder_out = torch.swapaxes(decoder_out, 0, 1) =&gt; torch: (2, 1, 120)
+<strong>output:</strong> decoder_out =&gt; torch: (2, 1, 120)</p>
+<h3 id="out--out_linearviewlendispl-1--1-selfconfignum_preds-2">out = out_linear.view(len(displ), 1, -1, self.config[&rsquo;num_preds&rsquo;], 2)</h3>
+<p><strong>input:</strong> decoder_out: torch: (2, 1, 120)
+$\downarrow$ out = out_linear.view(len(displ), 1, -1, self.config[&rsquo;num_preds&rsquo;], 2) =&gt; torch: (2, 1, 1, 60, 2)
+<strong>output:</strong> out =&gt; torch: (2, 1, 1, 60, 2)</p>
+<h3 id="将预测轨迹转换到全局坐标">将预测轨迹转换到全局坐标</h3>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">for i in range(len(out)):
+</span></span><span class="line"><span class="cl">	out[i] = torch.matmul(out[i], rotation[i]) + origin[i].view(
+</span></span><span class="line"><span class="cl">                1, 1, 1, -1
+</span></span><span class="line"><span class="cl">            )</span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>DenseTNT and TNT 论文解读</title><link>https://lruihao.cn/posts/densetnt_tnt/</link><pubDate>Sun, 16 Jul 2023 15:53:59 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/densetnt_tnt/</guid><description><![CDATA[<h2 id="tnt-target-driven-trajectory-prediction">TNT: Target-driveN Trajectory Prediction</h2>
+<p><code>**ref link:**</code>
+<a href="https://zhuanlan.zhihu.com/p/435953928"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/435953928<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<a href="https://blog.csdn.net/weixin_40633696/article/details/124542807?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_title~default-2-124542807-blog-122758833.pc_relevant_vip_default&amp;spm=1001.2101.3001.4242.2&amp;utm_relevant_index=5"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/weixin_40633696/article/details/124542807?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_title~default-2-124542807-blog-122758833.pc_relevant_vip_default&spm=1001.2101.3001.4242.2&utm_relevant_index=5<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h3 id="概览">概览</h3>
+<p>在预测车辆的轨迹时, 需要尽可能考虑到车辆不同的情况，即不同的模态，如前行或左转，并预测出对应的概率。</p>
+<p>模态的定义是比较模糊的，例如，有不同的速度前行，左转可以以不同的转弯角度实现。为了能够更加通用且精确地定义每条轨迹的模态，我们直接将每条轨迹的模态定义在每条轨迹的终点上。这里的一个重要假设是，轨迹的模态基本由终点所决定，当终点确定后，轨迹的形状也大体确定了。这样我们就把轨迹预测变成了终点预测问题，极大地简化了问题的复杂度。</p>
+<p>TNT的预测方式: <strong>首先预测轨迹的终点，然后基于这个终点补充完整条轨迹</strong>。</p>
+<p>TNT 基于终点的轨迹预测流程图:
+</p>
+<p>TNT使用VectorNet对高精地图和车辆信息进行编码，得到要预测的车辆的全局特征，以用于接下来的解码，从而完成轨迹预测：</p>
+<p>(1). <strong>终点预测:</strong> 为每个Anchor预测一个偏移，得到终点，这些Anchor从道路的中心线上采样得到;
+(2). <strong>轨迹补全:</strong> 基于上一步预测的终点将整条轨迹补充完整;
+(3). <strong>轨迹打分和筛选:</strong> 根据场景特征，为每条轨迹进行打分，并筛选出最有可能的若干条轨迹。</p>
+<h3 id="tnt-实现">TNT 实现</h3>
+<h4 id="原理">原理</h4>
+<p>给定一个单个障碍物的观测状态序列 $S_P = [s_{-T^{&rsquo;}+1}, s_{-T^{&rsquo;}+2}, &hellip;, s_0]$。我们的目标是预测它的未来状态 $S_F = [s_1, s_2, &hellip;, s_T]$ 到某个固定时间步 T。自然地，障碍物与由其它障碍物和场景元素组成的环境交互作为背景: $C_P​=[c_{-T′+1}​,c_{-T′+2}​,&hellip;,c_0​]$。为简洁起见，我们记 $X = (s_P, c_P)$，因此我们想捕捉的整体概率分布是 $p(S_F|X)$ 。</p>
+<p>实际上， $p(S_F|X)$ 可以是高度多模态的。例如，车辆驶近十字路口时可能左转、直行或改变车道。直观上，未来状态的不确定性可以被分解为两部分：<u>目标或者意图的不确定性</u>，比如左右转的决定；以及<u>控制的不确定性</u>，比如转弯时需要的细粒度运动。因此，我们可以通过对目标设定条件，然后将其边缘化，从而对概率分布进行分解：</p>
+<p>$$p(S_F​∣X)=∫_{τ∈τ(C_P​)}​p(τ∣X)p(S_F​∣τ,X)d_τ​, \tag{1}$$</p>
+<p>其中 $\tau(C_P)$ 表示取决于观察到的背景 $C_P$ ​的合理目标空间。</p>
+<p>在这个公式下，我们的主要见解是，对于轨迹预测等应用，通过正确设计目标空间 $\tau τ ( C_P )$（如目标位置），目标分布 $ p(\tau|X)$ 可以很好地捕捉意图不确定性。一旦目标确定，我们会进一步证明控制不确定性（如轨迹）可以通过<strong>简单的单模态分布</strong>可靠地建模。我们用一组离散位置来模拟目标空间  $\tau{C_P}$，将 $p(\tau|X)$ 的估计主要转化为一个分类任务。与隐变分模型相比，我们的模型以明确的目标分布的形式提供了更好的可解释性，并且在设计目标空间 $\tau{C_P}$ 时可以自然地结合专家知识（如道路拓扑）。</p>
+<p>我们的整体框架有三个概念阶段。第一阶段是<strong>障碍物意图预测</strong>，其目标是用基于观察背景 $X$ 的目标空间 $\tau$ 的离散集合<u>对意图不确定性进行建模</u>，并且输出目标分布 $p(\tau|X)$ 。第二个阶段是<strong>障碍物条件运动估计</strong>，它用单模态分布对从初始状态到目标可能的未来运动进行建模。前两个阶段产生了以下概率预测 $p(S_F|X) = \sum_{\tau\in\tau(C_P)}p(\tau|X)p(S_F|\tau, X)$。</p>
+<p>许多下游应用，例如实时行为预测，需要一小组具有代表性的未来预测，而不是所有可能未来的完整分布。我们的最终阶段，<strong>评分和选择</strong>，就是为此目的量身定制的。我们从所有代表性预测上学习一个评分函数 $\phi(S_F)$，并选择一个最终的多样化预测集。</p>
+<p></p>
+<h4 id="场景编码vectornet">场景编码VectorNet</h4>
+<p>建模场景背景是轨迹预测的第一步，以获取<u>车辆-道路</u>和<u>车辆-车辆</u>之间的交互。TNT可以使用任何合适的背景编码器：当高清地图可用时，我们使用最优秀的层次图神经网络 VectorNet 对背景进行编码。具体来说，使用多段线来抽象出高清地图元素 $C_P$(车道，交通标志) 和代理轨迹 $S_P$​；采用子图（subgraph）网络对多段线进行编码，多段线包含可变数量的向量；然后使用全局图（global graph）对多段线之间的交互进行建模。输出是每个建模代理的全局背景特征 $X$。如果场景背景只在自上而下的图像形式中可用，则使用卷积网络作为背景编码器。</p>
+<h4 id="目标预测">目标预测</h4>
+<p>在我们的公式中，目标 $\tau$ 被定义为一个预测目标可能在固定时间范围 $T$ 上的位置 $(x,y)$ 。在第一步目标预测阶段，我们的目的是提供一个预测目标的未来目标的分布 $p( \tau ∣ X )$ 。我们通过一组$N$个离散的、带有连续偏移的量化位置来建模潜在的未来目标： $\tau ={\tau^n}={(x^n,y^n)+(\Delta x^n,\Delta y^n)}^N_{n=1}$​。然后这个目标上分布可以通过一个离散-连续分解来建模：</p>
+<p>$$p(τ^n∣X)=π(τ^n∣X)⋅N(Δx^n∣v^x_n​(X))⋅N(Δ_y^n∣v_y^n​(X)),\tag{2}$$</p>
+<p>中 $\pi(\tau^n|X)=\frac{e^{f(\tau^n,X)}}{\sum_{\tau^{&rsquo;}}e^{f(\tau^{&rsquo;},X)}}$ 是在位置选择 $(x^n,y^n)$上的离散分布。术语 $N(·|v(·))$ 表示一个广义正态分布，其中我们选择Huber作为距离函数。我们将均值表示为 $v(·)$并假设单位方差。</p>
+<p>可训练函数 $f(·)$ 和  $v(·)$ 由一个2层的多层感知机(MLP)实现，目标坐标 $(x^k,y^k)$ 和场景背景特征 $X$ 作为输入。它们预测目标位置上的离散分布及其最可能的偏移量。这一阶段的训练损失函数由以下公式给出：</p>
+<p>$$L_{S1}​=L_{cls​}(π,u)+L_{offset}​(v_x​,v_y​,Δx^u,Δy^u),\tag{3}$$</p>
+<p>其中 $L_{cls}$ 是交叉熵损失， $L_{offset}$​ 是 Huber 损失；$u$ 是离真实位置最近的目标，并且 $\Delta x^u,\Delta y^u$ 是 $u$ 相对于真值的空间偏移量。</p>
+<p>离散目标空间的选择在不同应用中是灵活的，如图3所示。在车辆轨迹预测问题中，我们从高清地图里均匀地采样车道中心线上的点并且将他们作为目标候选点(标记为黄色菱形)，假设车辆从未远离车道线；对于行人，我们在代理周围生成了一个虚拟网格并将网格点作为目标候选点。对每个候选目标，TNT目标预测器生成了一个 $(\pi,\Delta x, \Delta y)$ 的元组；回归后的目标以橙色五角星标记。与直接回归相比，将未来建模成一组离散目标的最显著的优势在于，它不受模态平均的影响，模态平均是阻止多模态预测的主要因素。</p>
+<p></p>
+<h4 id="基于目标的运动估计">基于目标的运动估计</h4>
+<p>在第二阶段，我们将给定目标轨迹的可能性建模为 $p(S_F|\tau,X)=\prod^T_{t=1}p(s_t|\tau,X)$，同样采用了广义正态分布。这里有两个假设。首先，未来时间步是条件独立的，这使得我们的模型通过避免顺序预测提高了计算效率。其次，我们正在作出有力但合理的假设，即给定目标的轨迹分布是单模态(正态)的。对于短的时间范围来说，这当然是正确的；对于更长的时间范围，可以在(中间)目标预测和运动估计之间迭代，以便假设仍然成立。</p>
+<p>这一阶段使用2层的MLP实现。它将背景特征 X 和目标位置 $\tau$ 作为输入，并且每个目标输出一条最可能的轨迹 $[\hat{s_1},&hellip;,\hat{s_T}] [s1​^​,&hellip;,sT​^​]$。由于它以第一阶段的预测目标为条件，为了实现平滑的学习过程，我们在训练时采用teacher forcing Technique[36]，将真实位置 $(x^n,y^n)$ 作为目标。该阶段的损失项是预测状态 $\hat{s_t}$​ 和真值 $s_t$​ 之间的距离：</p>
+<p>$$L_{S2}​ = \sum_{t=1}^{T}​L_{reg}​(\hat{s},s_t​),\tag{4}$$</p>
+<p>其中， $L_{reg}$​ 作为每一步坐标偏移的 Huber 损失来实现。</p>
+<h4 id="轨迹评分和选择">轨迹评分和选择</h4>
+<p>我们的最终阶段估计未来完整轨迹 S F S_F SF​ 的可能性。这和第二阶段不同，第二阶段分解时间步和目标，也和第一阶段不同，第一阶段只知道目标，但没有完整的轨迹——例如，一个目标可能被估计有很高的可能性，但到达该目标完整轨迹的可能性可能不是。</p>
+<p>我们使用最大熵模型对第二阶段的所有 M 条轨迹进行评分:</p>
+<p>$$\phi (S_F | X) = \frac{e^{g(S_F, X)}}{{\sum}_{m=1}^{M} e^{g(S_F^m, X)}}​$$,</p>
+<p>其中 $g(·)$ 被建模为一个2层的 MLP。这一阶段训练的损失项是预测分数和真值分数之间的交叉熵，</p>
+<p>$$L_{S3} = L_{CE}(\phi (S_F | X), \psi(S_F))$$</p>
+<p>其中每个预测轨迹的真值评分由预测轨迹到真值轨迹的距离 $\psi(S_F)=\frac{exp(-D(S,S_{GT})/\alpha)}{\sum_{s^{&rsquo;}}exp(-D(S^{&rsquo;},S_{GT})/\alpha)}$ 定义，其中 $D(·)$ 单位为米， $\alpha$ 是温度。距离度量定义为 $D(S^i,S^j)=max(||s^i_1-s^j_1||^2_2,&hellip;,||s^i_t-s^j_t||^2_2)$。</p>
+<p>为了从已评分的 $M$ 个轨迹获得最终一小组 $K$ 个预测轨迹，我们实现了一个轨迹选择算法来排除近似重复的轨迹。我们首先根据他们的分数对轨迹进行降序排列，并且贪婪地选择轨迹； 如果一个轨迹距离所有的选择轨迹都足够远，我们也会选择它，否则排除它。这里使用的距离度量和评分过程相同。这个过程的灵感来源于通常应用于计算机视觉问题（如目标检测）的非极大值抑制算法。</p>
+<h4 id="训练和推理细节">训练和推理细节</h4>
+<p>上述的 TNT 公式产生全监督的端到端训练，具有损失函数
+$$L = \lambda_1 L_{S1} + \lambda_2 L_{S2} + \lambda_3 L_{S3}$$</p>
+<p>其中，选择 $\lambda_1,\lambda_2,\lambda_3$ 来平衡训练过程。</p>
+<p>在推理时，TNT 的工作原理如下：
+(1) 工作场景编码；
+(2) 采样 N 个候选目标作为目标预测器的输入，取由 $\pi(\tau|X)$ 估计的前 M 个目标；
+(3) 从运动估计模型 $p(S_F|\tau,X)$ 中获取 M 个目标中每个目标的 MAP 轨迹；
+(4) 通过  $\phi(S_F|\tau,X)$  给 M 个轨迹评分，并且选择一组最终的 K 个轨迹。</p>
+<h2 id="densetnt">DenseTNT:</h2>
+<p><code>ref link:</code> <a href="https://blog.csdn.net/weixin_39397852/article/details/122764880"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/weixin_39397852/article/details/122764880<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h3 id="comparison-between-densetnt-and-tnt">Comparison between DenseTNT and TNT</h3>
+<p></p>
+<p>TNT(左图)是根据lane定义一些anchor，再regress和classify获得最终的位置，之后还要通过NMS的筛选法选出最后的轨迹。
+DenseTNT(右图)是通过密集地采点避免了定义anchor，同时也避免了使用NMS等规则来筛选轨迹。</p>
+<p>意图预测中非常重要的一个问题是ground truth只有一个，而对于多意图的预测来说，多个方向的预测都是允许的，这导致了label中有很多都是无效的，因为gt只包含了一个意图下的结果。此处设计了一个offline的model来提供多个意图下的label。这个model使用了一个优化算法从goal的分布里取出了一个set作为online model的label。</p>
+<h3 id="method-具体实现方法">Method 具体实现方法</h3>
+<h4 id="sparse-context-encoding----vectornet">sparse context encoding &ndash; VectorNet</h4>
+<p>本文使用VectorNet来提取地图的feature。(没有的高精地图的话也可使用CNN)</p>
+<h4 id="dense-goal-probability-estimation">Dense goal probability estimation</h4>
+<p>TNT对于一个goal只预测一条轨迹的概率是有问题的：一个goal只有一条预测(可能通向这个goal的别的预测概率很高)，一个goal获取的feature不够丰富(goal附近的点的信息也用上会更好)。</p>
+<p>我们使用了<code>dense goal encoder</code>。它以一定的采样频率获取了地图上在道路上的所有点。然后预测了这些密集点的概率分布。</p>
+<h5 id="lane-scoring">Lane Scoring</h5>
+<blockquote>
+<p>在论文实现中，可以用point scoring代替，效果更好。目的在与选出距离final pos(gt)更近的点。</p>
+</blockquote>
+<p>为了减少需要sample的点，我们先预测goal落在不同lane上的概率，这样能过滤掉明显不在candidate lane附近的点，提升运算速度。
+这是一个二分类问题。因此使用了二分类的交叉熵计算loss。对于label，使用离gt的goal最近的lane作为1，别的lane为0。对于别的lane $l$，假设gt的goal是$y_{gt}$​，定义一个distance</p>
+<p>$$d(l,y_{gt}) = min(||l_1 - y_{gt}||^2, ||l_2 - y_{gt}||^2, &hellip;, ||l_t - y_{gt}||^2,)$$</p>
+<p>直觉上就是gt的goal到这条lane的最短距离的平方。</p>
+<h5 id="probability-estimation">Probability Estimation</h5>
+<p>获得概率分布的做法是self-attention。首先agent的feature经过两次MLP。然后把goal的feature $F$作为需要query的变量，从地图上所有元素 (lane，agent)的feature中去查找索引对应的键和值。<font color=red>目的就是建立goal的feature与地图上所有元素的联系。</font>直观上，这一步是把agent的未来状态(goal)表示成由历史的信息作为变量的函数，这个函数采用的是self-attention的做法。</p>
+<p>轨迹目标点(goals)和道路的局部信息可以用以下注意力机制表示:</p>
+<p>$$\mathbf{Q} = \mathbf{FW}^{\mathbf{Q}}, \mathbf{K} = \mathbf{LW}^{\mathbf{K}}, \mathbf{V}=\mathbf{LW}^{\mathbf{V}}$$</p>
+<p>$$\mathbf{A}(\mathbf{Q},\mathbf{K},\mathbf{V}) = softmax(\frac{\mathbf{QK^\top}}{\sqrt{d_k}})\mathbf{V}$$</p>
+<p>where $\mathbf{W}^Q, \mathbf{W}^{K}, \mathbf{W}^{V} \in \mathbb{R}^{d_h \times d_k}$ are the matrices for linear projection, $d_k$ is the dimension of query / key / value vectors, and $\mathbf{F}, \mathbf{F}$ are feature matrices of the dense goal candidates and all map elements (i.e., lanes or agents), respectively.</p>
+<p>这一步之后的结果是goal新的feature $\mathbf{F}$。再通过两次MLP，即下图中的 $g(.)$.用softmax中的方法获得每个goal的概率。将所有goal在地图上表示出来的话就是一个概率分布heatmap。</p>
+<p>$$\phi_i = \frac{\exp(g(\mathbf{F}<em>i))}{\sum</em>{n=1}^{N}\exp(g(\mathbf{F}_n))}$$</p>
+<p>对于Loss的计算，离gt的goal最近的goal的label定为1，其余都为0.采取二分类交叉熵的算法。</p>
+<p>$$\mathcal{L}<em>\text{goal} = \mathcal{L}</em>{\text{CE}}(\phi, \psi)$$</p>
+<h4 id="goal-set-prediction">Goal Set Prediction</h4>
+<p>对于多意图的预测，在TNT中，预先设定好target，采用NMS(non-maximum suppression)(靠的近或概率低的过滤掉)。而DenseTNT的上一步获得是heatmap，因此不能简单使用NMS，因为用于筛选的阈值比较难定。这是因为TNT中采用的是从高到低排序概率，而DenseTNT中的概率分布是针对于整个鸟瞰图的，一旦意图的可能性变多了，平均分布到每一个意图的概率就低了(对于概率分布，所有的点的概率加起来需要为1)。</p>
+<p>heatmap，输出是goal set，这个有点像目标检测的框生成。但和目标检测不同，对于一个输入，我们的label只有一个，即gt。这样的话可能会有别的意图的结果在训练中被忽略。为此，设计了一个offline model来制造这些label。它和online model的区别就在这一步中。没有使用goal set predictor而是采用了优化算法。</p>
+<p></p>
+<h5 id="offline-optimization">Offline Optimization</h5>
+<p>上一步heatmap的输出，实际上是对于地图上众多goal每个点的一个函数。设定 $C={c_1,c_2,&hellip;,c_m}$ 为所有dense goal的candidate，heatmap就把 $C$ 映射到一个0到1的集合，写成 $h(c_i)$ ，这也是每个goal的概率。
+接下来定义一个目标函数:</p>
+<p>$$E[d(\hat{y}, Y)] = \sum^m_{i=1}h(c_i)d(\hat{y}, c_i)$$</p>
+<p>其中，$d(\hat{y}, c_i) = \mathop{\min}\limits_{y_i \in \hat{y}}||y_j - y_{c_i}||$</p>
+<p>从直观上讲，目标是有M个goal（大池子），要从中选取K个靠谱的goal（小池子）。 $d$ 是针对于大池子的，对于大池子里所有candidate都有一个 $d$。这每个candidate都与小池子中的goal计算距离，取最近的作为 d d d，即寻找小池子中离candidate最近的点。对于所有的 $d$，用概率加权计算期望。总体的话在收敛情况，大池子中的所有goal到距离自己最近的小池子中的goal乘上概率加权应当达到最小。以下是这个优化算法的实现。</p>
+<p></p>
+<p>翻译成中文：</p>
+<ul>
+<li>初始化K个goal，从M个goal的大池子里随机选</li>
+<li>小池子里的每个goal做随机扰动，变为别的goal</li>
+<li>计算原来的和现在的小池子的d的期望e和e’</li>
+<li>如果现在的小池子d的期望更小，则使用现在的小池子。否则以1%的概率采用现在的小池子。（避免局部最优）</li>
+<li>不停循环2-4直到步数达到阈值（或时间太长）</li>
+</ul>
+<p>优化算法之后得到的就是全局最优的选中的小池子。这个小池子里的结果能作为训练online模型的伪label。</p>
+<h5 id="goal-set-predictor-online">Goal Set Predictor (online)</h5>
+<p>模型采用了encode+decode的办法。encoder部分是一层self-attention加上max pooling，decoder部分是2层MLP，输入是heatmap，输出是2K+1个值，分别对应K个2维坐标（goal set）和一个当前goal set的confidence。</p>
+<p>考虑到heatmap的概率分布比较散，可以采用N头同时运算。即N个goal set predictor输出N个2K+1的值，从当中选取confidence最高的那个goal set预测。为了运算效率的提升，这N头使用相同的self-attention层，但是不同的2个MLP。</p>
+<p>在训练过程中，采用了offline模型的伪label作为监督。上述offline中讲到的初始选定的小池子，在这里采用的是online模型的K个goal的set的预测。然后经过L次随机扰动（即不停随机选取邻居点，L=100），选取当中expected error（offline里的期望项）最小的那个set作为伪label。</p>
+<p>标记 $\dot{y}$ ​为预测结果， $\hat{y}$ ​为伪label，则loss的计算如下。即一一对应后的L1距离之和。</p>
+<p>$$\mathcal{L_{set}(\dot{y}, \hat{y})} = \sum_{i=1}^{k}\mathcal{L}_{\text{reg}}(\dot{y}, \hat{y})$$</p>
+<p>再考虑到采用了N头预测，这部分的loss将采用二分类的交叉熵。其中 $\mu$ 为所有head的confidence，$\nu$ 为label，只有expected error最低的label为1，别的为0。</p>
+<p>$$\mathcal{L}<em>\text{head} = \mathcal{L}</em>{\text{CE}}(\mu, \nu)$$</p>
+<h4 id="trajectory-completion">Trajectory Completion</h4>
+<p>这一步和TNT做法类似。类似于dense goal encoding（2层MLP后过self-attention）最后过2层MLP来decode得到整条预测轨迹的state。采用teacher forcing技巧（因为只有一条gt）训练时只用gt的goal来算这条预测轨迹。Loss的算法和TNT一样，用的是点点之间的Huber loss。</p>
+<p>$$\mathcal{L}<em>{\text{completion}} = \sum</em>{t=1}^{T}\mathcal{L_{reg}}(\hat{s}_t, s_t)$$</p>
+<h4 id="learning">Learning</h4>
+<p>训练分为两个stage。第一个stage使用gt轨迹训练除了goal set predictor的部分。即把dense的goal输入。获得大量的轨迹。</p>
+<p>$$\mathcal{L}<em>{s1} = \mathcal{L}</em>{lane} + \mathcal{L}<em>{goal}+ \mathcal{L}</em>{completion}$$</p>
+<p>第二个stage主要负责goal set predictor的部分。</p>
+<p>$$\mathcal{L}<em>{s2} = \mathcal{L}</em>{head} + \mathcal{L}_{set}$$</p>
+]]></description></item><item><title>LaneGCN 论文解读</title><link>https://lruihao.cn/posts/lanegcn/</link><pubDate>Sun, 16 Jul 2023 15:53:35 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/lanegcn/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2007.13732"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2007.13732<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<code>PPT:</code> <a href="https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="architechture">Architechture</h2>
+<p><strong><font color=red>Lane Graph + Actor Map:</font></strong></p>
+<ul>
+<li>
+<p>construct lane graph from vectorized map data to preserve the map structure and can avoid information loss 构建矢量化地图信息，避免地图信息丢失</p>
+</li>
+<li>
+<p>LaneGCN:</p>
+<ul>
+<li>
+<p>extends <strong>graph convolutions with multiple adjacency matrices</strong> and along-lane dilation</p>
+<ul>
+<li>to capture complex topology and long range dependencies of the lane graph.</li>
+</ul>
+</li>
+<li>
+<p>exploit a <strong>fusion network</strong> consisting of four types of interactions: <code>actor-to-lane</code>, <code>lane-to-actor</code>, <code>actor-to-actor</code>, <code>lane-to-lane</code>.</p>
+<ul>
+<li>present both actors and lanes as nodes in the graph and use a 1D CNN and LaneGCN to extract the features for the actor and lane nodes respectively, and then exploit spatial attention and another LaneGCN to model four types of interactions.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p></p>
+<p><strong><font color=red>Difference between VectorNet and LaneGCN:</font></strong></p>
+<ul>
+<li><u>VecotrNet</u> uses vanilla graph networks with undirected full connections; <u>LaneGCN</u> uses connected lane graph folllowing the map topology and propose task specific multi-type and dilated graph operators.</li>
+<li>VectorNet uses polyline-level nodes for interactions; LaneGCN uses polyline segments as map nodes to capture higher resolution.</li>
+</ul>
+<h2 id="lane-graph-representations-for-motion-forecasting">Lane Graph Representations for Motion Forecasting</h2>
+<p></p>
+<h3 id="font-colorredactornetfont-extracting-traffic-participant-representations"><font color=red>ActorNet</font>: Extracting Traffic Participant Representations</h3>
+<p>Each Trajctory is represented as a sequence of displacement ${ \bigtriangleup{p_{-(T-1)},&hellip;,\bigtriangleup{p_{-1}}, \bigtriangleup{p_0}}}$, where $\bigtriangleup{p_t}$ is the 2D displacement from time step $t-1$ to t, and T is the trajectory size.</p>
+<p>For trajectories with sizes smaller than $T$ , we pad them with zeros. We add a binary $1 × T$ mask to indicate if the element at each step is padded or not and concatenate it with the trajectory tensor, resulting in an input tensor of size $3 × T$.</p>
+<p>1D CNN is used to process the trajectory input for its effectiveness in extracting multi-scale features
+and efficiency in parallel computing. The output of ActorNet is a temporal feature map, whose element at $t = 0$ is used as the actor feature. The network has 3 groups/scales of 1D convolutions.</p>
+<p>Each group consists of 2 residual blocks, with the stride of the first block as 2. We then use a Feature Pyramid Network (FPN) to fuse the
+multi-scale features, and apply another residual block to obtain the output tensor. For all layers, the convolution kernel size is 3 and the number of output channels is 128. Layer normalization and the Rectified Linear Unit (ReLU) are used after each convolution.</p>
+<p></p>
+<h3 id="font-colorredmapnetfont-extracting-structured-map-representation"><font color=red>MapNet</font>: Extracting Structured Map Representation</h3>
+<p>General Architecture:</p>
+<ul>
+<li>part 1: building a lane graph from vectorized map data;</li>
+<li>part 2: applying our novel LaneGCN to the lane graph to output the map features.</li>
+</ul>
+<p><strong>Map Data:</strong></p>
+<p>In this paper, we adopt a simple form of vectorized map data as our representation of HD maps. Specifically, the map data is represented as a set of lanes and their connectivity. Each lane contains a centerline, i.e., a sequence of 2D BEV points, which are arranged following the lane direction (see Fig. 3, top). For any two lanes which are directly reachable, 4 types of connections are given: <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
+<p><strong>Lane Graph Construction:</strong></p>
+<p>first define a lane node as the straight line segment formed by any two consecutive points (grey circles in Fig. 3) of the centerline. The location of a lane node is the averaged coordinates of its two end points. Following the connections between lane centerlines, we also derive 4 connectivity types for the lane nodes, i.e., <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
+<p>We denote the lane nodes with $V ∈ \mathbb R^{N ×2}$ , where $N$ is the number of lane nodes and the $i$-th row of $V$ is the BEV coordinates of the $i$-th node. We represent the connectivity with 4 adjacency matrices ${\lbrace A_i \rbrace}_{i \in {pre,suc,left,right}}$ , with $A_i \in \mathbb R^{N ×N}$.</p>
+<p>We denote $A_{i,jk}$, as the element in the $j$-th row and $k$-th column of $A_i$. Then $A_{i,jk} = 1$ if node $k$ is an $i$-type neighbor of node $j$.</p>
+<p><strong>LaneConv Operator:</strong></p>
+<p><font color=green><em>Node Feature:</em></font>
+Each lane node corresponds to a straight line segment of a centerline. To encode all the lane node information, we need to take into account both the shape (size and orientation) and the location (the coordinates of the center) of the corresponding line segment. We parameterize the node feature as follows,</p>
+<p>$$x_i = MLP_{shape} (v_{i}^{end} - v_{i}^{start}) + MLP_{loc}(v_i) $$</p>
+<p>where $MLP$ indicates a multi-layer perceptron and the two subscripts refer to shape and location, respectively. $v_i$ is the location of the i-th lane node, i.e., the center between two end points, $v_i^{start}$ and $v_i^{end}$ are the BEV coordinates of the node $i’s$ starting and ending points, and $x_i$ is the $i$-th row of the node feature matrix $X$, denoting the input feature of the $i$-th lane node.</p>
+<p><font color=green><em>LaneConv:</em> </font>
+To aggregate the topology information of the lane graph at a larger scale, we design the following LaneConv operator:</p>
+<p>$$Y = XW_0 + \sum_{i\in{pre, suc, left, right}}A_iXW_i,\tag{2}$$</p>
+<p>where $A_i$ and $W_i$ are the adjacency and the weight matrices corresponding to the $i$-th connection type respectively. Since we order the lane nodes from the start to the end of the lane, $A_{suc}$ and $A_{pre}$ are matrices obtained by shifting the identity matrix (diagnal 1) one step towards upper right (non-zero superdiagonal) and lower left (non-zero subdiagonal). $A_{suc}$ and $A_{pre}$ can propagate information from the forward and backward neighbours whereas $A_{left}$ and $A_{right}$ allow information to flow from the cross-lane neighbours. It is not hard to see that our LaneConv builds on top of the general graph convolution and encodes more geometric (e.g., connection type/direction) information. As shown in our experiments this improves over the vanilla graph convolution.</p>
+<p><font color=green><em>Dilated LaneConv:</em></font></p>
+<p>Functionality: The model needs to capture the long range dependency along the lane direction for accurate prediction.</p>
+<p>the k-dilation LaneConv operator is defined as follows:</p>
+<p>$$Y = XW_0 + A_{pre}^k XW_{pre,k} + A_{suc}^k X W_{suc,k} \tag{3}$$</p>
+<p>where $A_{pre}^k$ is the $k$-th matrix power of $A_{pre}$. This allows us to directly propagate information along the lane for $k$ steps, with $k$ a hyperparameter. Since $A_{pre}^k$ is highly sparse, one can efficiently compute it using sparse matrix multiplication. Note that the dilated LaneConv is only used for predecessor and successor, as the long range dependency is mostly along the lane direction.</p>
+<p><font color=green><em>LaneGCN:</em></font></p>
+<p>With Eq.(2) and Eq.(3), we get a multi-scale LaneConv operator with C dilation size as follows:</p>
+<p>$$Y = XW_0 + \sum_{i\in \lbrace left, right \rbrace} A_i X W_i + \sum_{c=1}^C (A_{pre}^{k_c}XW_{pre, k_c} + A_{suc}^{k_c}XW_{suc, k_c})， \tag{4}$$</p>
+<p>where $k_c$ is the $c$-th dilation size. We denote $LaneConv(k_1 , · · · , k_C)$ this multi-scale layer.</p>
+<p></p>
+<h3 id="font-colorredfusion-netfont"><font color=red>Fusion Net</font></h3>
+<p>Four types fusion modules:</p>
+<ul>
+<li>A2L: introduces real-time traffic information to lane nodes, such as blockage or usage of the lanes.</li>
+<li>L2L: updates lane node features by propagating the traffic information over the lane graph. -&gt; LaneGCN</li>
+<li>L2A: fuses updated map features with real-time traffic information back to the actors.</li>
+<li>A2A: handles the interactions between actors and produces the output actor features, which are then used by the prediction header for motion forecasting.</li>
+</ul>
+<p>We implement L2L using another LaneGCN, which has the same architecture as the one used in our MapNet (see Section 3.2). In the following we describe the other three modules in detail. We exploit a spatial attention layer for A2L, L2A and A2A. The attention layer applies to each of the three modules in the same way. Taking A2L as an example, given an actor node i, we aggregate the features from its context lane nodes j as follows:</p>
+<p>$$y_i = x_i W_0 + \sum_j \phi (concat(x_i, \Delta_{i,j}, x_j)W_1)W_2, \tag{5}$$</p>
+<p>with $x_i$ the feature of the $i$-th node, $W$ a weight matrix, $\phi$ the compositon of layer notmalization and RelU, and $\Delta_{ij} = MLP(v_j - v_i)$, where $v$ denotes the node location.</p>
+<h3 id="font-colorredprediction-headerfont"><font color=red>Prediction Header</font></h3>
+<p>Take after-fusion actor features as input, a multi-modal prediction header outputs the final motion forecasting. For each actor, it predicts $K$ possible future trajectories and their confidence scores.</p>
+<p>The header has two branches, a regression branch to predict
+the trajectory of each mode and a classification branch to predict the confidence score of each mode.</p>
+<p>For the m-th actor, we apply a residual block and a linear layer in the
+regression branch to regress the K sequences of BEV coordinates:</p>
+<p>$$O_{m,reg} = \lbrace (p_{m,1}^k, p_{m,2}^k, &hellip;, p_{m,T}^k) \rbrace _{k\in[0,K-1]}$$</p>
+<p>where $p_{m,i}^k$ is the predicted $m$-th actor&rsquo;s BEV coordinates of the $k$-th mode at the $i$-th time step. For the classification branch, we apply an MLP to $p^k_{m,T} − p_{m,0}$ to get $K$ distance embeddings. We then concatenate each distance embedding with the actor feature, apply a residual block and a linear layer to output $K$ confidence scores, $O_{m,cls} = (c_{m,0}, c_{m,1}, &hellip;, c_{m,K−1})$.</p>
+<h3 id="font-colorredlearningfont"><font color=red>Learning</font></h3>
+<p>use the sum of classification and regreesion losses to train the model:</p>
+<p>$$ L = L_{cls} + \alpha L_{reg},$$</p>
+<p>where $\alpha = 1.0$.</p>
+<p>For classification, we use the max-margin loss:</p>
+<p>$$L_{cls} = \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k \neq \hat{k}} \max(0, c_{m,k} + \epsilon - c_{m, \hat{k}}) \tag{6}$$</p>
+<p>where $\epsilon$ is the margin and $M$ is the total number of actors. For regression, we apply the smooth $l1$ loss on all predicted time steps:</p>
+<p>$$L_{reg} = \frac{1}{MT} \sum_{m=1}^M \sum_{t=1}^T reg(p_{m,y}^{\hat{k}} - p_{m,t}^*) \tag{7}$$</p>
+<p>where $p_t^*$ is the ground truth BEV coordinates at time step $t$, $reg(x) = \sum\limits_i d(x_i)$, $x_i$ is the $i$-th element of $x$, and $d(x_i)$ is the smooth $\ell1$ loss defined as:</p>
+<p>$$d(x_i) = \begin{cases}
+0.5x_i^2 &amp;\text{if} ||x|| &lt; 1, \
+||x_i|| - 0.5 &amp; \text{otherwise,}
+\end{cases} \tag{8}$$</p>
+<p>where $||x_i||$ denotes the $\ell1$ norm of $x_i$.</p>
+<h3 id="font-colorred-neural-network-layoutfont"><font color=red> Neural Network Layout</font></h3>
+<p></p>
+<h3 id="font-colorreddata-process-and-network-constructionfont"><font color=red>Data Process And Network Construction</font></h3>
+<blockquote>
+<p>以官方的2645.csv数据集为例子</p>
+</blockquote>
+<p><strong>agent node:</strong></p>
+<ul>
+<li><code>data['city']:</code>城市名称</li>
+<li><code>data['trajs'] = [agt_traj] + ctx_trajs:</code>轨迹点，(agent + context vehicles)</li>
+<li><code>data['steps'] = [agt_step] + ctx_steps:</code>在原始数据中的位置</li>
+<li><code>data['feats'] = feats:</code> (13 X 20 X 3) 前20预测轨迹 + 一维是否存在点</li>
+<li><code>data['ctrs'] = ctrs:</code> (13 X 2) 中心点</li>
+<li><code>data['orig'] = orig:</code> AGENT 当前点坐标</li>
+<li><code>data['theta'] = theta:</code> AGENT 偏转角</li>
+<li><code>data['rot'] = rot:</code> (2 X 2) 旋转矩阵</li>
+<li><code>data['gt_preds'] = gt_preds:</code>(13 X 30 X 2) 后30帧真实轨迹</li>
+<li><code>data['has_preds'] = has_preds:</code> (13 X 30) 标识后30帧轨迹是否存在</li>
+</ul>
+<p><strong>lane node:</strong></p>
+<ul>
+<li><code>graph['ctrs'] = np.concatenate(ctrs, 0):</code> lane node的中心点坐标</li>
+<li><code>graph['num_nodes'] = num_nodes:</code> lane node的数量</li>
+<li><code>graph['feats'] = np.concatenate(feats, 0):</code> lane node 方向向量</li>
+<li><code>graph['turn'] = np.concatenate(turn, 0):</code> lane node 转向标识</li>
+<li><code>graph['control'] = np.concatenate(control, 0):</code> lane node 的 has_traffic_control 标识</li>
+<li><code>graph['intersect'] = np.concatenate(intersect, 0):</code> lane node 的 is_intersection 标识</li>
+<li><code>graph['pre'] = [pre]:</code> pre[&lsquo;u&rsquo;] 和 pre[&lsquo;v&rsquo;], v 是 u 的pre， 这里表述的是lane node之间的关系</li>
+<li><code>graph['suc'] = [suc]:</code> suc[&lsquo;u&rsquo;] 和 suc[&lsquo;v&rsquo;], v 是 u 的suc， 这里表述的是lane node之间的关系</li>
+<li><code>graph['lane_idcs'] = lane_idcs:</code> lane node index
+<ul>
+<li>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="mi">1</span> <span class="mi">1</span> <span class="mi">1</span> <span class="o">...</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="mi">83</span> <span class="mi">83</span> <span class="mi">83</span> <span class="o">...</span> <span class="mi">83</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+<li><code>graph['pre_pairs'] = pre_pairs:</code> pair 表述的是lane之间的关系</li>
+<li><code>graph['suc_pairs'] = suc_pairs:</code> pair 表述的是lane之间的关系</li>
+<li><code>graph['left_pairs'] = left_pairs:</code> pair 表述的是lane之间的关系</li>
+<li><code>graph['right_pairs'] = right_pairs:</code> pair 表述的是lane之间的关系
+<ul>
+<li>对于<code>pre['u']</code>和<code>pre['v']</code>, v 是 u 的 pre</li>
+<li>对于<code>suc['u']</code>和<code>suc['v']</code>, v 是 u 的 suc</li>
+<li>对于<code>left['u']</code>和<code>left['v']</code>, v 是 u 的 left</li>
+<li>对于<code>right['u']</code>和<code>right['v']</code>, v 是 u 的 right</li>
+</ul>
+</li>
+</ul>
+<p><strong>Net结构</strong></p>
+<ul>
+<li><strong>ActorNet</strong>
+<code>input:</code> M x 3 x 20
+<code>output:</code> M x 128 x 20</li>
+</ul>
+<p>解释:</p>
+<ul>
+<li>
+<p><strong>MapNet</strong>: 把 v 按照 u 加到center上
+<code>input:</code> N x 4
+<code>output:</code> N x 128</p>
+</li>
+<li>
+<p><strong>A2M</strong>
+<code>input:</code> N x 128
+<code>output:</code> N x 128</p>
+</li>
+<li>
+<p><strong>M2M</strong>
+<code>input:</code> N x 128
+<code>output:</code> N x 128</p>
+</li>
+<li>
+<p><strong>M2A</strong>
+<code>input:</code> N x 128
+<code>output:</code> M x 128</p>
+</li>
+<li>
+<p><strong>A2A</strong>
+<code>input:</code> N x 128
+<code>output:</code> N x 128</p>
+</li>
+<li>
+<p><strong>Prediction Header:</strong>
+<code>input</code> M x 128</p>
+<ul>
+<li>MLP Regression</li>
+<li>MLP Classification</li>
+</ul>
+</li>
+</ul>
+<p>ref link: <a href="https://zhuanlan.zhihu.com/p/447129428"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/447129428<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Social_NCE 论文解读</title><link>https://lruihao.cn/posts/social_nce/</link><pubDate>Sun, 16 Jul 2023 15:53:27 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/social_nce/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2012.11717"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2012.11717<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<code>论文解读参考:</code>
+[1] <a href="https://zhuanlan.zhihu.com/p/434650863"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/434650863<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[2] <a href="https://www.gushiciku.cn/pl/amod"target="_blank" rel="external nofollow noopener noreferrer">https://www.gushiciku.cn/pl/amod<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="issue-to-solve-and-its-solution">Issue to solve and its Solution</h2>
+<p>Due to the ill-distributed training Data, it&rsquo;s <u><font color=red>difficult to capture the notion of the &ldquo;negative&rdquo; examples</font></u> like collision.</p>
+<p><strong>Solution:</strong></p>
+<p>Modeling the negative samples through self-supervision:</p>
+<ul>
+<li><font color=red>a social contrastive loss</font>: regularizes the extracted motion representation by discerning the ground-truth positive events from synthetic negative ones;</li>
+<li><font color=red>Construct negative samples</font> based on prior knowledge of rare but dangerous circumstances.
+<blockquote>
+<p>a social sampling strategy (informed): construct the positive event from the ground-truth location of the primary agent and the negative events from the regions of other neighbors. given that one location cannot be occupied by multiple agents at the same time.</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="method-font-colorredcontrastive-learning--social-ncefont">Method: <font color=red><em>Contrastive Learning + Social NCE</em></font></h2>
+<h3 id="contrastive-representation-learning">Contrastive Representation Learning</h3>
+<ul>
+<li>
+<p>Functionality:</p>
+<ul>
+<li>
+<p><code>Representation Learning:</code> to learn a parametric function that maps the raw data into a feature space to extract abstract and useful information for downstream tasks.</p>
+</li>
+<li>
+<p><code>NCE(Noise Contrastive Estimation):</code> to train encoder</p>
+</li>
+</ul>
+<p>$$\mathcal{L_{NCE}} = -\log \frac{\exp(sim(q,k^+)/\tau)}{\sum_{n=0}^N  \exp(sim(q,k_n)/ \tau)}$$</p>
+<p>where the encoded query $q$ is brought close to one positive key $k_0 = k^+$ and pushed apart from $N$ negative keys ${ k_1, k_2, &hellip; , k_N}$, $\tau$ is a temperature hyperparameter, and $sim(u,v) = u^{\mathsf{T}}v/(||u||||v||)$ is the cosine similarity between two feature vectors.</p>
+</li>
+</ul>
+<h3 id="social-nce">Social NCE</h3>
+<p><strong>Social NCE Description:</strong></p>
+<p>智能体 $i$ 在时刻 $t$ 上的位置记为 $s^i_t=(x^i_t,y^i_t)$ 。那么 $M$ 个智能体的联合状态记为 $s_t = { s_t^1, &hellip;, s^M_t}$ 。给定一个历史观测序列 ${s_1, s_2, &hellip;, s_t}$ ，任务是预测所有智能体未来直至 $T$ 时刻的轨迹 ${s_{t+1}, &hellip;, s_T}$，许多最近的预测模型被设计为编码器 - 解码器神经网络，其中运动编码器 $f(\cdot)$ 首先提取与 $i$ 相关的紧密表示 $h_t^i$ ，然后解码器 $g(\cdot)$ 随后推测出其未来的轨迹 $\hat{s}^i_{t+1,T}$ :</p>
+<p>$$h^i_t = f(s_{1:t}, i),  $$
+$$\hat{s}^i_{t+1:T} = g(h^i_t)$$</p>
+<p>为了多智能体之间的社交互动，$f(\cdot)$通常包含两个子模块：一个序列建模模块 $f_S(\cdot)$ 用于编码每个单独的序列，以及一个交互模块 $f_I(\cdot)$ 用于在多智能体之间共享信息：</p>
+<p>$$z^i_t = f_S(h^i_{t-1}, s^i_t),$$
+$$h^i_t = f_I(z_t, i)$$</p>
+<p>其中， $z^i_t$ 是给定智能体 $i$ 在时间 $t$ 观察其自身状态的潜在表示， $z_t = {z^1_t,&hellip;,z^M_t}$ 。很多方法已经探索了各种架构，并验证了其准确性。尽管如此，它们的鲁棒性仍然是一个悬而未决的问题。 最近的几项工作表明，现有模型预测的轨迹通常会输出社会不可接受的解决方案（例如，碰撞），表明缺乏关于社会准则的常识。</p>
+<p></p>
+<ul>
+<li>
+<p><code>query</code>: embedding of history observations $q = \psi(h^i_t)$, where $\psi(\cdot)$ is an MLP projection head;</p>
+</li>
+<li>
+<p><code>key</code>: embedding of a future event $k = \phi(s^i_{s+\delta t}, \delta t)$, where $\phi(\cdot)$ is an event encoder modeled by an MLP, $s_{t+\delta t}^i$ is a sampled spatial location and $\delta_t &gt; 0$ is the sampling horizon.</p>
+<blockquote>
+<p>tuning $\delta_t \in \Lambda$, e.g. $\Lambda = {1,&hellip;,4}$, then future events in the next few step can be taken in account simultaneously. Nevertheless, when $\delta_t$ is a fixed value, then $\phi(\cdot)$ can be simplified as a location encoder, i.e., $\phi(s^i_{t+\delta t})$.</p>
+</blockquote>
+</li>
+</ul>
+<p>给定一个场景，包括感兴趣的主智体（蓝色）和附近多个相邻智体（灰色），Social-NCE 损失鼓励在嵌入空间中提取的运动表示，接近未来的正样本事件，并远离可能导致碰撞或不适的合成负样本事件. Social NCE的损失函数如下:</p>
+<p>$$\mathcal{L_{SocialNCE}} = -\log\frac{\exp(\psi(h^i_t)\cdot\phi(s^{i,+}<em>{t+\delta t}, \delta t)/\tau)}{\sum</em>{\delta t\in\Lambda}\sum_{n=0}^{N}\exp(\psi(h^i_t)\cdot\phi(s^{i,n}_{t+\delta t}, \delta t)/\tau))}$$</p>
+<p>最终的训练损失函数为Social-NCE和传统任务损失项之和，即轨迹预测的mean squared error (MSE) 或者negative log-likelihood (NLL)：</p>
+<p>$$\mathcal{L}(f,g,\psi, \phi) = \mathcal{L}<em>{task}(f,g) + \lambda \mathcal{L}</em>{SocialNCE}(f, \psi, \phi)$$</p>
+<p>其中，$\lambda$ 为超参数，控制SocialNCE损失函数的重要程度。</p>
+<h3 id="sampling-strategy-in-multi-agent-context-采样策略">sampling strategy in multi-agent context 采样策略</h3>
+<p></p>
+<p>在其他智能体附近寻求更多信息的负样本:</p>
+<p>$$s^{i,n-}<em>{t+\delta t} = s^{j}</em>{t+\delta t} + \bigtriangleup{s_p} + \epsilon$$</p>
+<p>其中， $j\in{1,2,&hellip;,M} \backslash i$ 是其他agent的index, $\bigtriangleup{s_p}$ 是适合社交距离的局部位移。</p>
+<p>对于positive sample, 对该agent周围直接采样获得:</p>
+<p>$$s^{i,n-}<em>{t+\delta t} = s^{i}</em>{t+\delta t} +  \epsilon$$</p>
+]]></description></item><item><title>Social_STGCNN 论文解读</title><link>https://lruihao.cn/posts/social_stgcnn/</link><pubDate>Sun, 16 Jul 2023 15:53:17 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/social_stgcnn/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2002.11927?from=leiphonecolumn_paperreview0323"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2002.11927?from=leiphonecolumn_paperreview0323<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="网络结构">网络结构</h2>
+<p>特点: Social STGCNN不同于其他方法只是聚合各种学习的行人状态，而是对行人交互做图建模。其中提出一种kernel function把行人社交交互嵌入一个adjacency matrix。</p>
+<blockquote>
+<p>代码显示，图建模一般在数据前处理完成。</p>
+</blockquote>
+<h3 id="model-description">Model Description</h3>
+<p>两部分：时空图卷积神经网络ST-GCNN、时间外推器TXP-CNN。</p>
+<p>ST-GCNN对行人轨迹的图表示进行时空卷积操作以提取特征。这些特征是观察到的行人轨迹历史的紧凑表示。
+TXP-CNN将这些特征作为输入，并预测所有行人作为一个整体的未来轨迹。我们使用时间外推器的名字是因为TXP-CNN期望通过卷积运算外推未来的轨迹。</p>
+<p></p>
+<p>给定T帧，构造表示 $G=(V,A)$ 的时空图. 然后，$G$ 通过时空图卷积神经网络(ST-GCNNs)转发，创建一个时空嵌入。 之后，TXP-CNNs 预测了未来的轨迹。 $P$ 是行人位置的维数，$N$ 是行人的数目，$T$ 是时间步长, $\hat{P}$是来自ST-GCNN的嵌入的维数.</p>
+<p>(1) <font color=red>Graph Representation of Pedestrian Trajectories</font></p>
+<p>我们首先构造一组空间图 $G_t$，表示每个时间步长 $t$ 在场景中行人的相对位置，$G_t = (V_t, E_t)$ 。 $V_t$是图 $G_t$ 的顶点集，观察到的位置 $(x^i_t，y^i_t)$ 是顶点 $v^i_t$ 的属性; $E_t$ 是边集，如果顶点 $v^i_t$ 和顶点 $v^j_t$ 相连 $e^{ij}_t = 1$ ，否则 $=0$。</p>
+<p>为了建模两个节点之间相互影响的强度，我们附加了一个值$a^{ij}_t$, 它是由每个$ e^{ij}_t$ 的某种核函数计算得到。$a^{ij}_t$ 被组织为带权邻接矩阵$A_t$。</p>
+<p><strong>$a^{ij}_{sim,t}$是要在邻接矩阵$A_t$中使用的内核函数。</strong> 定义为:</p>
+<p>$$\begin{equation}
+a^{ij}_{sim,t}=
+\left
+{
+\begin{aligned}
+1/||v^i_t - v^j_t||_2 , ||v^i_t - v^j_t||_1\neq0 \
+0, Otherwise
+\end{aligned}
+\right.
+\end{equation}$$</p>
+<p>(2) <font color=red>Graph Convolution Neural Network</font></p>
+<p>对于在二维网格地图或特征地图上定义的卷积运算，定义如下:</p>
+<p>$$z^{(l+1)} = \sigma(\sum_{h=1}^{k}\sum_{\omega=1}^{k}(p(z^{(l)},h, \omega) \cdot \boldsymbol{W}^{(l)}(h, \omega))$$</p>
+<p>其中，$k$是内核大小，$p(.)$ 是采样函数，其聚集以$z$为中心的邻居的信息， $\sigma$ 是激活函数。${l}$表示神经网络层。</p>
+<p>图卷积定义如下:</p>
+<p>$$v^{i(l+1)} =\sigma (\frac{1}{\Omega}\sum_{v^{j(l)}\in B(v^{j(l)})}p(v^{i(l)}, v^{j(l)}) \cdot \boldsymbol{W}(v^{i(l)}, v^{j(l)}))$$</p>
+<p>其中$\frac{1}{\Omega}$ 是正则化项，$B(v^i) =  { v^j|d(v^i,v^j)≤D }$是顶点的邻居集，而$d(v^i,v^j)$表示连接$v^i$和$v^j$的最短距离， $\Omega$是邻居集的基数。</p>
+<p>(3) <font color=red>Spatio-Temporal Graph Convolution Neural Network(ST-GCNNs)</font></p>
+<p>通过定义一个新的图G，其属性是$G_t$属性的集合，ST-GCNN将<strong>空间图卷积</strong>扩展到<strong>时空图卷积</strong>。 $G$结合了行人轨迹的时空信息。值得注意的是，$G_1，…，G_T$的拓扑结构是相同的，而当t变化时，不同的属性被分配给$v^i_t$。</p>
+<p>因此，我们将$G$定义为$(V,E)$，其中$V={v_i|i\in { 1，…，N }}$ 和 $E={e_{ij}|i，j，{1，…，N}}$。 顶点$v_i$在G中的属性是$v^i_t$的集合，$∀t∈{0，…，T}$。 另外， 加权邻接矩阵A对应于$G$ 是${ A_1，…，A_T}$的集合。 我们将ST-GCNN产生的嵌入表示为 $\overline{V}$.</p>
+<p>(4) <font color=red>Time-Extrapolator Convolution Neural Network (TXP-CNN)</font></p>
+<p>ST-GCNN的功能是从输入图中<strong>提取时空节点嵌入</strong>。然而，我们的目标是预测行人未来的进一步位置。
+TXP-CNN直接作用于图嵌入 $\overline{V}$ 的时间维度，并将其扩展为预测的必要条件。 由于TXP-CNN依赖于特征空间的卷积运算，因此与递归单元相比，它的参数较小。需要注意的一个特性是， TXP-CNN层不是置换不变的，因为在TXP-CNN之前，图嵌入的变化会导致不同的结果。Other than this, if the order of pedestrians is permutated starting from the input to Social-STGCNN then the predictions are invariant.</p>
+<h3 id="modelsocial-stgcnn-implementation">model(Social STGCNN) Implementation</h3>
+<ol>
+<li>Adjacency Matrix Normalization</li>
+</ol>
+<p>$$ A_t = \Lambda_t^{-\frac{1}{2}}\hat{A}\Lambda_t^{-\frac{1}{2}}$$</p>
+<p>where $\hat{A_t} = A_t + I$ and $\Lambda_t$ is the diagonal node degree matric of $\hat{A_t}$. We use $\hat{A}$ and $\Lambda$ to denote the stack of $\hat{A_t}$ and $\Lambda_t$ repectively.</p>
+<p>The normalization of adjacency is essential for the graph CNN to work properly.</p>
+<ol start="2">
+<li>STGCNN Network Mechanism</li>
+</ol>
+<p>$$f(V^{l}, A) = \sigma(\Lambda_t^{-\frac{1}{2}}\hat{A}\Lambda_t^{-\frac{1}{2}}V^{(l)}W^{(l)})$$</p>
+<p>where, $V^{(l)}$ denotes the stack of $V^{(l)}_t$, and $W^{(l)}$ denotes the trainable parameters.</p>
+<h2 id="data-processing-数据处理以及图构建">Data Processing 数据处理以及图构建</h2>
+<p>obs_traj - <font color=red><em>前8帧观察轨迹(绝对坐标)</em></font>
+pred_traj_gt - <font color=red><em>后12帧预测轨迹(ground truth)(绝对坐标)</em></font>
+obs_traj_rel - <em><font color=red>前8帧观察轨迹(相对坐标)</em></font>
+pred_traj_gt_rel - <em><font color=red>后12帧预测轨迹(ground truth)(相对坐标)</em></font>
+non_linear_ped - <em><font color=red>非线性轨迹 (剔除)</em></font>
+loss_mask
+V_obs - <em><font color=red>graph nodes</em></font>
+A_obs - <em><font color=red>graph Adjacency Matrix</em></font>
+V_tr - <em><font color=red>预测轨迹 graph nodes</em></font>
+A_tr - <em><font color=red>预测轨迹 graph Adjacency Matrix</em></font></p>
+]]></description></item><item><title>C++ STL Containers</title><link>https://lruihao.cn/posts/datastructrue/</link><pubDate>Sun, 16 Jul 2023 15:03:55 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/datastructrue/</guid><description><![CDATA[<h2 id="c-stl-standard-template-library-总结">C++ STL (Standard Template Library) 总结</h2>
 <p>C++ STL 容器是使用频率超高的基础设施，只有了解各个容器的底层原理，才能得心应手地用好不同的容器，做到用最合适的容器干最合适的事情。</p>
 <p>本文旨在对 C++ 标准模板库的 <em>array</em>, <em>vector</em>, <em>deque</em>, <em>list</em>, <em>forward_list</em>, <em>queue</em>, <em>priority_queue</em>, <em>stack</em>, <em>map</em>, <em>multimap</em>, <em>set</em>, <em>multi_set</em>, <em>unordered_map</em>, <em>unordered_multimap</em>, <em>unordered_set</em>, <em>unordered_multiset</em> 共十六类容器进行系统的对比分析，重点关注各个容器的底层原理与性能特点。本文唯一参考资料为C++官方文档，若有其它参考则会指明出处。</p>
 <h3 id="1-array">1. array</h3>
@@ -6780,156 +7500,4 @@ cartesian坐标系到frenet坐标系的变换公式：</p>
   - obs_cost： 表示障碍物距离损失。
 </code></pre>
 <p>最后选择出代价值最好的一条轨迹输入到控制器，用于控制器的跟踪控制。</p>
-]]></description></item><item><title>EM Planner</title><link>https://lruihao.cn/posts/emplanner/</link><pubDate>Sat, 15 Jul 2023 11:17:30 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/emplanner/</guid><description><![CDATA[<p>ref: </br>
-[1]. <a href="https://blog.csdn.net/qq_41667348/category_11789612.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41667348/category_11789612.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://zhuanlan.zhihu.com/p/492988036"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/492988036<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[3]. <a href="https://www.zhihu.com/column/c_1020971709242818560"target="_blank" rel="external nofollow noopener noreferrer">https://www.zhihu.com/column/c_1020971709242818560<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[4]. <a href="https://blog.csdn.net/qq_35503971/article/details/106337900"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_35503971/article/details/106337900<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
-<h1 id="简介">简介</h1>
-<p>EM Planner是Apollo面向L4的实时运动规划算法，该算法首先通过顶层多车道策略，选择出一条参考路径，再根据这条参考线，在Frenet坐标系下，进行车道级的路径和速度规划，规划主要通过Dynamic Programming和基于样条的Quadratic Programming实现。EM Planner充分考虑了无人车安全性、舒适性、可扩展性的需求，通过考虑交通规则、障碍物决策、轨迹光滑性等要求，可适应高速公路、低速城区场景的规划需求。通过Apollo仿真和在环测试，EM Planner算法体现了高度的可靠性，和低耗时性。</p>
-<h2 id="多车道em-planner框架">多车道EM Planner框架</h2>
-<h3 id="整体框架">整体框架</h3>
-<p>所有规划需要的信息在EM Planner的顶层汇集，然后参考线生成器会生成一些基于障碍物和交通规则的候选车道级参考线，这个过程主要是依赖于高精度地图和Routing模块给出的全局规划结果。以下是车道级的规划过程：</p>
-<ol>
-<li>首先会基于给定参考线生成Frenet坐标系，通过给定参考线将所有的自车信息和环境信息转换到参考线下的Frenet坐标系。</li>
-<li>接下来所有的车道级信息将会传递给车道级最优求解器，该求解器会求解最优路径和最优速度。在求解最优路径时，<font color=red>周围环境信息</font>将会被投影到Frenet坐标系（E-step），然后基于投影的信息生成一条光滑路径（M-step）。</li>
-<li>同样的，在求解最优速度时，一旦生成了一条最优路径，<font color=red>障碍物</font>就会被投影到ST图中（E-step），然后最优速度求解器会生成一条光滑的速度规划（M-step）。结合路径和速度规划结果，就生成了一条给定车道的光滑轨迹。</li>
-<li>最后一步会将所有的车道级轨迹传递给参考线轨迹决策器，基于当前车辆状态、相关约束和每条轨迹的代价，轨迹决策器会决定一条最优的轨迹。</li>
-</ol>
-<h3 id="多车道策略">多车道策略</h3>
-<p>利用搜索算法【2】【3】结合代价估算形成变道策略是一种比较常见的处理变道问题的方法，但是这种方法存在计算量大、难以适用交规以及前后决策可能缺少连贯性等特点。Apollo的解决办法是将多车道策略划分为两种类型：<u><em>无法通行的被动变道</em></u>，和<u><em>能够通行的主动变道</em></u>。</p>
-<ul>
-<li>被动变道一般由道路阻挡造成的，通过全局规划模块重新生成全局路径解决；</li>
-<li>主动变道是考虑动态障碍物而做出的决策。Apollo通过同步生成多条候选车道的方法解决主动变道问题，在Frenet坐标系下，投影障碍物、考虑交规后生成多条车道级的候选路径，最后传递到变道决策器中选择出一条最优的车道决策。</li>
-</ul>
-<h3 id="路径-速度迭代算法">路径-速度迭代算法</h3>
-<p>在Frenet坐标下的轨迹规划实际上是带约束的3D最优求解问题。该问题一般有两种求解方法：直接3D最优化求解和路径-速度解耦求解。</p>
-<ul>
-<li>直接方法【4】【5】试图在SLT坐标系下使用轨迹采样或Lattice搜索,这些方法都受到搜索复杂度的限制，因此搜索结果是次优的。</li>
-<li>而路径-速度解耦规划会分别求解路径和速度的最优解。速度的生成将会在生产的路径上进行【6】。虽然结果可能也不是最优的，但会在速度和路径分别求解时更加灵活。</li>
-</ul>
-<p>EM Planner迭代地进行路径和速度最优求解，通过估计和来向、低速障碍物的交互，上一帧的速度规划将有助于下一帧的路径规划。然后将路径规划结果再交给速度最优求解器来推算出一个最优的速度结果。</p>
-<h3 id="决策和交通规则约束">决策和交通规则约束</h3>
-<p>交通规则是硬约束，而与障碍物的交互是软约束。一些决策方法直接考虑的是数值上的最优解【7】，也有像【5】一样同时进行规划和决策。而Apollo EM Planner的决策是优先于规划的，决策模块将会为规划带来更明确的意图，减少最优求解的搜索空间。决策部分的第一步是将车辆的运动意图用一根粗略、灵活的轨迹来描述。这条轨迹也可以用来估计与障碍物之间的交互，并且当情景更加复杂时，这种基于轨迹的决策方法也是灵活的。第二步是基于决策生成的轨迹来构造一个凸空间，用来做基于样条光滑的轨迹生成，主要是通过二次规划来达到迭代生产路径、速度解的目的。</p>
-<h2 id="车道级em-planner框架">车道级EM PLanner框架</h2>
-<h3 id="整体框架-1">整体框架</h3>
-<p>框架包括了一帧规划中的两个E-step和两个M-step，轨迹信息将会在前后两帧中传递，以下是整个车道级规划的流程：</p>
-<ol>
-<li>在第一个E-step中，障碍物会被投影到车道Frenet坐标系，障碍物包括了静态障碍物和动态障碍物。静态障碍物会直接从笛卡尔坐标系转换到Frenet坐标系，而动态的信息则以其运动轨迹来描述。通过上一帧的预测信息，和自车的运动信息，可以估算自车和动态障碍物在每个时间点的交互情况，轨迹重叠的部分会被映射到Frenet坐标系中。初次之外，在最优路径求解过程中，动态障碍物的出现会最终导致自车做出避让的决策。因此，出于安全的考虑，SL投影只考虑低速和来向障碍物，而对于高速的动态障碍物，EM Planner的平行变道策略会考虑这种情景。</li>
-<li>在第二个E-step，所有的障碍物都会在ST中与生成的速度信息进行估计，如果对应的ST中重叠部分，那么对应区域将会在ST中进行重新生成。</li>
-<li>在两次M-step过程中，通过Dynamic Programming和Quadratic Programming生成路径和速度规划。然而在进行投影的SL和ST坐标内求解时非凸的，因此，为了解决这个问题，首先使用Dynamic Programming获得一个粗略的解，同时这个解也能够提供诸如避让、减速、超车的决策。通过这个粗略的解，可以构建一个凸的通道，然后使用基于Quadratic Programming的样条最优求解。</li>
-</ol>
-<p>接下来的部分将会详细介绍框架中的步骤。</p>
-<h3 id="sl和st投影e-step">SL和ST投影（E-step）</h3>
-<h4 id="sl投影">SL投影</h4>
-<p>SL投影是基于类似于【3】中的G2光滑参考线（曲率导数连续）。给定一个时刻，如果自车与预测的障碍物轨迹有重叠区域，那么这个重叠区域将会在SL坐标系被标注为与动态障碍物的估计交互区域。这个区域可以理解为自车和动态障碍物的包围盒的重叠区域。图4展示了这一种案例，红色代表动态障碍物的预测轨迹，用离散点来表示；蓝色表示自车的状态。</p>
-<h4 id="st投影">ST投影</h4>
-<p>ST投影用于帮助我们估计自车的速度规划。当生成了一条光滑的路径以后，与自车有交互的动态障碍物和静态障碍物都会被投影到路径上，同理，这种交互也定义为包围盒的重叠。如图5，这是一个ST图投影案例。</p>
-<p>红色区域表示在2s处距离自车40m远切入规划路径的动态障碍物ST信息，绿色表示在自车后的动态障碍物ST信息，M-step将会在剩下的区域找到可行光滑最优解。</p>
-<h3 id="dp路径m-step">DP路径（M-step）</h3>
-<p>M-step求解Frenet坐标系下的最优路径规划，实际上在一个非凸的区间（从左和从右避让是两个局部最优情景）就是找到一个最优的 $l=f(s)$ 方程。主要包括两步：基于Dynamic Programming的路径决策和基于样条的路径规划。</p>
-<p>基于Dynamic Programming的路径步骤提供一条粗略的路径信息，其可以带来可行通道和绕障决策，如图6所示，这一步包括Lattice采样、代价函数、Dynamic Programming搜索。</p>
-<p>Lattice采样基于Frenet坐标系，多行的点在撒在自车前。如图7所示，行与行之间的点使用五次方多项式连接，而行与行之间的间隔取决于自车速度、道路结构、是否换道等等。出于安全考虑，路径总长可以达到200m或者覆盖8s的行驶长度。</p>
-<p>每段Lattice路径的代价通过光滑程度、障碍物避让、车道代价来评价：</p>
-<p>而光滑程度又通过以下方程来衡量，一阶导表示朝向偏差，二阶导表示曲率，三阶导表示曲率导数：</p>
-<p>障碍物的代价由以下方程给出，方程中的d由自车bounding box到障碍物bounding box的距离表示。迹规划</p>
-<p>车道代价由以下方程给出，主要是考虑在道路上与否以及与参考线之间的差异，一般是与车道中心线的差异：</p>
-<h3 id="样条qp路径m-step">样条QP路径（M-step）</h3>
-<p>基于样条的路径可以理解为是Dynamic Programming更精细的版本。通过DP采样出的路径生成一条可通行通道，然后在通道中利用基于Quadratic Programming的样条曲线生产光滑路径。具体实例如图8所示，步骤流程可由图9所示：</p>
-<p>QP的目标函数为：</p>
-<p>其中 $ g(s) $ 为DP规划的路径，$ f(s) $ 的一阶导表示朝向、二阶导表示曲率、三阶导表示曲率的导数。该函数描述了避让障碍物和曲线光滑性之间的权衡。</p>
-<p>QP的约束包括边界约束和动力学可行性。这些约束都会施加在每个s处，通过限制l来将车辆限制在车道内。由于EM Planner使用的是自行车模型，因此这样对l的限制也是不够的。如图10所示，为了使得边界约束变凸并且线性，在自车的前后两端各增加了一个半圆。前轮到后轮中心的距离用 l_f ​表示，车宽用w表示，因此车的左前角的横向位置可以用以下方程给出：</p>
-<p>通过线性化可以变为：</p>
-<p>同理，其余三个角的位置都可以被线性化，显然因为 $ \theta $ 足够小，小于 $ pi/12 $，因此可以这样线性化。</p>
-<p>$ f(s) $ 的二阶导和三阶导与动力学可行性相关，除了边界条件以外，生成的路径还应该和自车的初始条件相匹配。因为所有的约束都是线性的，所以使用Quadratic Programming求解非常迅速。</p>
-<p>具体的光滑样条曲线和QP问题可以在附录中查阅。</p>
-<h3 id="dp速度求解m-step">DP速度求解（M-step）</h3>
-<p>M-step的速度规划是在ST图中求解最优速度规划，即求解出最优函数 S(t)。与求解最优路径相似，在ST图中求解最优速度规划也是非凸的最优化问题。同样也采用Dynamic Programming配合样条曲线Quadratic Programming来找到光滑速度规划。图12是速度求解的pipeline：</p>
-<p>DP速度求解包括代价函数、ST栅格图以及Dynamic Programming搜索。生成的结果包括分段线性的速度规划、可通行通道以及障碍物速度决策。如图11所示，该结果在QP中用来作为参考速度规划，通过该参考速度生成凸的区域。</p>
-<p>在栅格图中，使用有限差分法来估计速度、加速度和jerk：</p>
-<p>从DP生成的速度中选择出最优的一条的方法是最小化以下的代价函数：</p>
-<p>第一项是速度误差，g用来惩罚与 $ V_ref $ 的不同的误差。第二项、第三项用来描述曲线的光滑程度。最后一项用来描述障碍物代价，以到障碍物的距离来衡量。</p>
-<p>DP搜索空间也收到车辆动力学约束，并且也有单调性约束，因为不希望车辆倒退。一些对于动力学约束的必要简化也用来加速算法。</p>
-<h3 id="qp速度求解m-step">QP速度求解（M-step）</h3>
-<p>因为分段线性的速度规划不能满足动力学的要求，所以需要使用Quadratic Programming来填补动力学空缺。图13是样条曲线QP速度求解的pipeline：</p>
-<p>QP速度求解包括三部分：代价函数、线性约束以及样条曲线QP求解器。
-除了初始条件约束以外，主要有以下的边界约束：</p>
-<p>第一个约束是单调性约束；第二、第三、第四约束主要是交通规则和车辆动力学约束。通过约束、cost函数计算以后，spline QP speed会生成一条如图14中的光滑可行的速度规划。</p>
-<p>结合路径规划，EM Planner最终会生成一条光滑轨迹。</p>
-<h3 id="解qp问题的说明">解QP问题的说明</h3>
-<p>为了安全考虑，路径和速度大概在100个不同的位置或时间点，那么约束就有超过600个。对于速度、路径求解，分段五次多项式已经足够，因此样条曲线大概有3-5个多项式，大概就有30个参数。因此Quadratic Programming就变成了相对小的目标函数，和相对大的约束。QP能比较好的解决这个问题，并且使用了上一帧的解作为热启动，加速求解过程。实践中，QP问题解的平均时间3ms。</p>
-<h3 id="dp和qp非凸问题的说明">DP和QP非凸问题的说明</h3>
-<p>在非凸问题上，DP和QP都有他们单独的限制。DP和QP的组合，能够很好吸收两者优点，并求得一个理性解。</p>
-<ul>
-<li>DP:DP的优劣受到撒点分辨率和时间分辨率的影响，通常在运行时间限制的情况下，一般只会得出一个粗糙解而非最优解，比如会从障碍物左侧绕开，但并不是按照最完美的路径绕开。</li>
-<li>QP:QP需要在凸空间求解，因此必须借助DP的解来形成凸空间。随机的或者基于规则的决策，通常会给QP带来非凸的空间，因此解QP问题会失败或者陷入局部最优。</li>
-<li>DP+QP:（1）通过DP寻求粗糙解；（2）DP解能够生成凸空间；（3）QP在DP解形成的凸空间内，很大可能能够获得全局最优解。</li>
-</ul>
-<h2 id="案例分析">案例分析</h2>
-<p>图15展示了EM Planner在规划周期内，帧与帧之间完成最优轨迹规划的过程。</p>
-<p>假设自车以10m/s的速度行进，一动态障碍物沿着相反方向朝着我们以同样10m/s的速度驶来，EM Planner按以下步骤迭代生成速度和路径规划：</p>
-<ul>
-<li>历史规划（图15-a）：在动态障碍物出现之前，自车以恒定速度10m/s向前行驶。</li>
-<li>路径规划迭代1（图15-b）：基于当前车速和动态障碍物的车速，两者将会在S=40m处相遇，因此，最好的方法是在S=40m处绕开障碍物。</li>
-<li>速度规划迭代1（图15-c）：基于路径规划结果，即从右侧避开障碍物，自车将调整其速度规划，在避开障碍物之前减速到5m/s。</li>
-<li>路径规划迭代2（图15-d）：由于产生了新的速度规划，自车将不再会与动态障碍物在S=40m处避开，而会在一个新的位置S=30m处避开障碍物。因此，路径规划结果也将会随速度规划改变而重新更新。</li>
-<li>速度规划迭代2（图15-e）：由于路径规划已经更新，新的绕障位置在S=30m处，因此在S=40处减速也就没有必要了，新的速度规划使得自车可以在S=40m处加速而在S=30m处形成一个光滑的绕障。</li>
-</ul>
-<p>经过迭代之后，最终车辆将在S=30m处减速绕障，并且绕障结束之后会加速，这样一个过程和人类驾驶员的表现很相似。
-但值得注意的是，并不是每次规划都必须采取如上四步骤，根据场景不同可能会产生更多或更少的步骤。一般而言，场景越复杂，所需要的步骤就越多。</p>
-<h2 id="总结">总结</h2>
-<p>EM Planner是一种基于弱决策的算法，相比于强决策算法，EM Planner在复杂场景、多障碍物情况下表现更好。强决策依赖于提前制定出的决策行为，并且有难以理解和预测与障碍物交互的缺陷、难以满足大量障碍物阻挡生成基于规则的最佳轨迹的缺陷。
-EM Planner通过将三维规划问题转化为两个二维规划问题，显著地降低了运算复杂度，因此会带来运行时间的压缩和整个系统的可交互性。</p>
-]]></description></item><item><title>Decision and Planning [1]</title><link>https://lruihao.cn/posts/decisionandplanning_1/</link><pubDate>Sat, 15 Jul 2023 10:24:04 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/decisionandplanning_1/</guid><description><![CDATA[<h2 id="决策规划一自动驾驶安全舒适高效的守护神">决策规划（一）自动驾驶安全、舒适、高效的“守护神”</h2>
-<h3 id="决策规划分层架构">决策规划分层架构</h3>
-<p>决策规划的任务，就是在对感知到的周边物体的预测轨迹的基础上，结合自动驾驶车辆的和当前位置，对车辆做出最合理的决策和控制。</p>
-<p>正如人的大脑又分为左脑和右脑、并负责不同的任务一样，模块化自动驾驶系统中决策规划层也可以继续细分为执行不同任务的子层。而这一分层设计最早其实是源自2007年举办的DAPRA城市挑战赛，比赛中多数参赛队伍都将自动驾驶系统的决策规划方式包括三层：全局路径规划层（Route Planning）、行为决策层（Behavioral Layer）和运动规划层（Motion Planning），如图5所示。</p>
-<p>全局路径规划层聚焦在相对顶层的路径规划，聚焦在分钟到小时级别的规划。该层在接收到输入的目的地信息后，基于存储的地图信息搜素出一条自起始点至目标点的一条可通过的路径。如图6所示，在蓝色起点和黄色终点之间，黑色就是搜索出来的一条可通行的路径，当然路径不止一条，如何搜索出最优是下文将要介绍的内容。</p>
-<p>行为决策层在收到全局路径后，结合感知环境信息、交通规则信息、车辆状态信息、驾驶场景信息等，推导判断下一分钟或下一秒时刻的情况，作出车道保持、车辆跟随、车道变换和制动避撞等的适合当前交通环境的驾驶行为。如图8所示，自车在检测到前方存在低速行驶车辆，且右侧车道满足变道条件后，作出向右变道的驾驶行为决策。</p>
-<p>运动规划层也被成为局部路径规划层，与全局路径规划聚焦在分钟到小时级别的规划不同，运动规划聚焦在毫秒级到秒级的规划。规划的时候，根据输入的行为决策信息、结合车辆实时位姿信息、局部环境信息、全局路径参考信息等，在“安全、舒适、效率”的精神引领下，规划生成一条满足特定约束条件的平滑轨迹轨迹（包括行驶轨迹、速度、方向等），并输入给控制执行层。</p>
-]]></description></item><item><title>Decision and Planning [4]</title><link>https://lruihao.cn/posts/decisionandplanning_4/</link><pubDate>Sat, 15 Jul 2023 10:23:54 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/decisionandplanning_4/</guid><description><![CDATA[<p>ref: </br>
-[1]. <a href="https://mp.weixin.qq.com/s?__biz=MzI2NDY3OTExNw==&amp;mid=2247487486&amp;idx=1&amp;sn=830e7989f285214903c377b35e4b26d1&amp;chksm=eaa9b45cddde3d4a800aaf20fe318f491db75dda42e195cf14bf40084764c29464e7ccb4aad7&amp;mpshare=1&amp;scene=24&amp;srcid=0304BpDN7zLg79RhCijHZ2vJ&amp;sharer_sharetime=1677894823237&amp;sharer_shareid=56cef55fe29db276ae71bc9f586487a1&amp;key=2feb26e6a61e3d07649dfd6a51be6bb25154bc6376a7efb1822eb9800c6762bdec0839b31eac2d53e7f3a38b41696a04763e2640b202142a465d103b5d979e98f8f58c6e6605e2a76edf1c546c4d4d5f42dfe55935123958e7d001d2f802261f3473e6a62ac38fbb731fa7b486d65f38fe75c7121cb46fbab1e7b14f414379f9&amp;ascene=14&amp;uin=MjUyNzM0ODk1&amp;devicetype=Windows&#43;10&#43;x64&amp;version=6309001c&amp;lang=zh_CN&amp;countrycode=DE&amp;exportkey=n_ChQIAhIQpLbne6sMPw4l4V2IEPhLPxLZAQIE97dBBAEAAAAAAD%2FvOcyN4xcAAAAOpnltbLcz9gKNyK89dVj0cCpL6X4%2F9D%2BOuEd517ZezCwL3LfXM5G32y6FBL094wgcVWCTvgW%2Bz4fcrxht5Et9%2FUDDn2cw7Ay9T9fyCNiz21sZHDrEOhZlmmdWpjj2WKQ1flB1hocdJwzrYu0PN7DoVSQ4LEsw3yErLBUhYBSwGAArxC5y%2FzMbMZ8hFAQhKnpd9GPPRQCQmIeWvMl2Zb6nmhgch5icU5Ro%2F%2BmZx%2BV7tbmT0VIVBN7amHSXzs8eAiXSq0I%3D&amp;acctmode=0&amp;pass_ticket=xjMi8aZX3Oq63c%2B7lWkTHtjTObwzDeknqt%2FUl2bVeVY8VC%2F1bfFzwKgz6ydTfuv150JdS2QIagqoczC%2FeNOvBg%3D%3D&amp;wx_header=1&amp;fontgear=2"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=MzI2NDY3OTExNw==&mid=2247487486&idx=1&sn=830e7989f285214903c377b35e4b26d1&chksm=eaa9b45cddde3d4a800aaf20fe318f491db75dda42e195cf14bf40084764c29464e7ccb4aad7&mpshare=1&scene=24&srcid=0304BpDN7zLg79RhCijHZ2vJ&sharer_sharetime=1677894823237&sharer_shareid=56cef55fe29db276ae71bc9f586487a1&key=2feb26e6a61e3d07649dfd6a51be6bb25154bc6376a7efb1822eb9800c6762bdec0839b31eac2d53e7f3a38b41696a04763e2640b202142a465d103b5d979e98f8f58c6e6605e2a76edf1c546c4d4d5f42dfe55935123958e7d001d2f802261f3473e6a62ac38fbb731fa7b486d65f38fe75c7121cb46fbab1e7b14f414379f9&ascene=14&uin=MjUyNzM0ODk1&devicetype=Windows+10+x64&version=6309001c&lang=zh_CN&countrycode=DE&exportkey=n_ChQIAhIQpLbne6sMPw4l4V2IEPhLPxLZAQIE97dBBAEAAAAAAD%2FvOcyN4xcAAAAOpnltbLcz9gKNyK89dVj0cCpL6X4%2F9D%2BOuEd517ZezCwL3LfXM5G32y6FBL094wgcVWCTvgW%2Bz4fcrxht5Et9%2FUDDn2cw7Ay9T9fyCNiz21sZHDrEOhZlmmdWpjj2WKQ1flB1hocdJwzrYu0PN7DoVSQ4LEsw3yErLBUhYBSwGAArxC5y%2FzMbMZ8hFAQhKnpd9GPPRQCQmIeWvMl2Zb6nmhgch5icU5Ro%2F%2BmZx%2BV7tbmT0VIVBN7amHSXzs8eAiXSq0I%3D&acctmode=0&pass_ticket=xjMi8aZX3Oq63c%2B7lWkTHtjTObwzDeknqt%2FUl2bVeVY8VC%2F1bfFzwKgz6ydTfuv150JdS2QIagqoczC%2FeNOvBg%3D%3D&wx_header=1&fontgear=2<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="决策规划四行为决策常用算法">决策规划（四）行为决策常用算法</h2>
-<p>满足两个要求: 安全性和舒适性</p>
-<p>运动规划生成的轨迹是一种由二维空间和一维时间组成的三维空间中的曲线，是一种偏实时的路径规划。</p>
-<h3 id="prm">PRM</h3>
-<p>概率路标法 (Probabilistic Road Maps, PRM），是一种经典的采样方法，由Lydia E.等人在1996年提出。PRM主要包含三个阶段，一是采样阶段，二是碰撞检测阶段，三是搜索阶段。</p>
-<p>采样阶段: 在采样阶段中，PRM首先在地图空间进行均匀的随机采样，也就是对地图进行稀疏采样，目的是将大地图简化为较少的采样点。</p>
-<p>碰撞检测阶段: 剔除落在障碍物上的采样点，并将剩下的点与其一定距离范围内的点相连，同时删除穿越障碍物的连线，从而构成一张无向图。</p>
-<p>搜索阶段: 利用全局路径规划算法章节介绍的搜索算法（Dijkstra、A*等）在无向图中进行搜索，从而找出一条起点A到终点B之间的可行路径。</p>
-<p>算法步骤可以总结为：
-（1）构造无向图G =（V，E），其中V代表随机采样的点集，E代表两采样点之间所有可能的无碰撞路径，G初始状态为空。
-（2）随机撒点，并选取一个无碰撞的点c(i)加入到V中。
-（3）定义距离r，如果c(i)与V中某些点的距离小于r，则将V中这些点定义为c(i)的邻域点。
-（4）将c(i)与其邻域点相连，生成连线t，并检测连线t是否与障碍物发生碰撞，如果无碰撞，则将t加入E中。
-（5）重复步骤2-4，直到所有采样点（满足采样数量要求）均已完成上述步骤。
-（5）采用图搜索算法对无向图G进行搜索，如果能找到起始点A到终点B的路线，说明存在可行的行驶轨迹。</p>
-<p>PRM算法相比基于搜索的算法，简化了环境、提高了效率。但是在有狭窄通道场景中，很难采样出可行路径，效率会大幅降低。</p>
-<h3 id="rrt">RRT</h3>
-<p>快速探索随机树（Rapidly Exploring Random Trees，RRT），是Steven M. LaValle和James J. Kuffner Jr.在1998年提出的一种基于随机生长树思想实现对非凸高维空间快速搜索的算法。</p>
-<p>与PRM相同的是两者都是基于随机采样的算法，不同的是PRM最终生成的是一个无向图，而RRT生成的是一个随机树。RRT的最显著特征就是具备空间探索的能力，即从一点向外探索拓展的特征。</p>
-<p>RRT分单树和双树两种类型，单树RRT将起点作为随机树的根节点，通过随机采样、碰撞检测的方式为随机树增加叶子节点，最终生成一颗随机树。而双树RRT则拥有两颗随机树，分别以起点和终点为根节点，以同样的方式进行向外的探索，直到两颗随机树相遇，从而达到提高规划效率的目的。</p>
-<p>对于单树RRT算法，我们将起点A设置为随机树的根，并生成一个随机采样点，如图27所示，随机采样点有下面这几种情况。
-（1）随机采样点1落在自由区域中，但是根节点A和随机采样点1之间的连线存在障碍物，无法通过碰撞检测，采样点1会被舍弃，重新再生成随机采样点。
-（2）随机采样点2落在障碍物的位置，采样点2也会被舍弃，重新再生成随机采样点。
-（3）随机采样点3落在自由区域，且与根节点A之间的连线不存在障碍物，但是超过根节点的步长限制。但此时这个节点不会被简单的舍弃掉，而是会沿着根节点和随机采样点3的连线，找出符合步长限制的中间点，将这个中间点作为新的采样点，也就是图29中的4。</p>
-<p>接着我们继续生成新的随机采样点，如果新的随机采样点位于自由区域，那么我们就可以遍历随机树中已有的全部节点，找出距离新的随机采样点最近的节点，同时求出两者之间的距离，如果满足步长限制的话，我们将接着对这两个节点进行碰撞检测，如果不满足步长限制的话，我们需要沿着新的随机采样点和最近的节点的连线方向，找出一个符合步长限制的中间点，用来替代新的随机采样点。最后如果新的随机采样点和最近的节点通过了碰撞检测，就意味着二者之间存在边，我们便可以将新的随机采样点添加进随机树中，并将最近的点设置为新的随机采样点的父节点。</p>
-<p>重复上述过程，直到新的随机采样点在终点的步长限制范围内，且满足碰撞检测。则将新的随机采样点设为终点B的父节点，并将终点加入随机树，从而完成迭代，生成如图30所示的完整随机树。</p>
-<p>相比PRM，RRT无需搜索步骤、效率更高。通过增量式扩展的方式，找到路径后就立即结束，搜索终点的目的性更强。但是RRT作为一种纯粹的随机搜索算法，对环境类型不敏感，当地图空间中存在狭窄通道时，因被采样的概率低，导致算法的收敛速度慢，效率会大幅下降，有时候甚至难以在有狭窄通道的环境找到路径。</p>
-<p>图31展示了 RRT应对存在狭窄通道地图空间时的两种表现，一种是RRT很快就找到了出路，一种是一直被困在障碍物里面。</p>
-<p>围绕如何更好的“进行随机采样”、“定义最近的点”以及“进行树的扩展”等方面，诞生了多种改进型的算法，包括双树RRT-Connect（双树）、lazy-RRT, RRT-Extend等。
-PRM和RRT都是一个概率完备但非最优的路径规划算法，也就是只要起点和终点之间存在有效的路径，那么只要规划的时间足够长，采样点足够多，必然可以找到有效的路径。但是这个解无法保证是最优的。
-采用PRM和RRT等随机采样算法生成的行驶轨迹，大多是一条条线段，线段之间的曲率也不不连续，这样的行驶轨迹是不能保证舒适性的，所以还需要进一步进行曲线平滑、角度平滑处理。代表算法是基于曲线插值的方法：RS曲线、Dubins曲线、多项式曲线、贝塞尔曲线和样条曲线等。</p>
-<p>所有基于曲线插值方法要解决的问题就是：在图32上的若干点中，求出一条光滑曲线尽可能逼近所有点。下文以多项式曲线和贝塞尔曲线为例，介绍曲线插值算法的示例。</p>
-<h3 id="多项式曲线">多项式曲线</h3>
-]]></description></item><item><title>DPG</title><link>https://lruihao.cn/posts/dpg/</link><pubDate>Fri, 14 Jul 2023 08:43:57 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/dpg/</guid><description><![CDATA[<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div>
-<p><a href="https://zhuanlan.zhihu.com/p/337976595"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/337976595<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p><a href="https://blog.csdn.net/weixin_43145941/article/details/110994304"target="_blank" rel="external nofollow noopener noreferrer">DRL:DQN, PG, AC, DDPG, SAC概述<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item></channel></rss>
