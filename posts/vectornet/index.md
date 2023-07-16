@@ -16,7 +16,7 @@
 
  (3) auxiliary task 提高网络性能
 
-![VectorNet Overview](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/tech/2022-06-20_VectorNet/Overview_VectorNet.png#pic_center)
+![VectorNet Overview](images/Overview_VectorNet.png#pic_center)
 
 
 ## VecotorNet 网络介绍
@@ -51,7 +51,7 @@ $$v_i^{l+1} = \varphi_{rel}(g_{enc}(v_i^{(l)}), \varphi({g_{enc}(v_j^{(l)})}))$$
 
 - $\varphi_{rel}(\cdot)$代表vi和周围节点的关系，实践中采用的是concate的操作。
 
-![Subgraph](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/tech/2022-06-20_VectorNet/Subgraph.png#pic_center)
+![Subgraph](images/Subgraph.png#pic_center)
 
 最后经过多层的堆叠，来获取整个Polyline级别的特征：
 
