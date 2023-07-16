@@ -1,4 +1,1062 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://lruihao.cn/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 16 Jul 2023 13:28:44 +0800</lastBuildDate><atom:link href="https://lruihao.cn/index.xml" rel="self" type="application/rss+xml"/><item><title>详解最大似然估计(MLE)、最大后验概率估计(MAP)，以及贝叶斯公式的理解</title><link>https://lruihao.cn/posts/mleandmap/</link><pubDate>Sun, 16 Jul 2023 13:28:44 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/mleandmap/</guid><description><![CDATA[<p>最大似然估计（Maximum likelihood estimation, 简称MLE）和最大后验概率估计（Maximum a posteriori estimation, 简称MAP）是很常用的两种参数估计方法，如果不理解这两种方法的思路，很容易弄混它们。下文将详细说明MLE和MAP的思路与区别。</p>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://lruihao.cn/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 16 Jul 2023 15:03:55 +0800</lastBuildDate><atom:link href="https://lruihao.cn/index.xml" rel="self" type="application/rss+xml"/><item><title>C++ STL Containers</title><link>https://lruihao.cn/posts/datastructrue/</link><pubDate>Sun, 16 Jul 2023 15:03:55 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/datastructrue/</guid><description><![CDATA[<h2 id="c-stl-standard-template-library-总结">C++ STL (Standard Template Library) 总结</h2>
+<p>C++ STL 容器是使用频率超高的基础设施，只有了解各个容器的底层原理，才能得心应手地用好不同的容器，做到用最合适的容器干最合适的事情。</p>
+<p>本文旨在对 C++ 标准模板库的 <em>array</em>, <em>vector</em>, <em>deque</em>, <em>list</em>, <em>forward_list</em>, <em>queue</em>, <em>priority_queue</em>, <em>stack</em>, <em>map</em>, <em>multimap</em>, <em>set</em>, <em>multi_set</em>, <em>unordered_map</em>, <em>unordered_multimap</em>, <em>unordered_set</em>, <em>unordered_multiset</em> 共十六类容器进行系统的对比分析，重点关注各个容器的底层原理与性能特点。本文唯一参考资料为C++官方文档，若有其它参考则会指明出处。</p>
+<h3 id="1-array">1. array</h3>
+<blockquote>
+<p>Container properties: Sequence | Contiguous storage | Fixed-size aggregate
+容器属性：顺序容器（支持随机访问），连续内存空间，固定大小；//连续内存
+类模板头：template &lt; class T, size_t N &gt; class array;</p>
+</blockquote>
+<p>array 即数组，其大小固定，所有的元素严格按照内存地址线性排列，array 并不维护元素之外的任何多余数据，甚至也不会维护一个size这样的变量，这保证了它在存储性能上和C++语法中的数组符号[]无异。尽管其它大部分标准容器都可以通过 std::allocator 来动态的分配和回收内存空间，但 <strong>Array 并不支持这样做</strong>。</p>
+<p>Array 和其它标准容器一个很重要的不同是：<u>对两个 array 执行 swap 操作意味着真的会对相应 range 内的元素一一置换</u>，因此其时间花销正比于置换规模；但同时，对两个 array 执行 swap 操作不会改变两个容器各自的迭代器的依附属性，这是由 array 的 swap 操作不交换内存地址决定的。</p>
+<p>Array 的另一个特性是：不同于其它容器，<font color = red>array 可以被当作 std::tuple 使用</font>，因为 array 的头文件重载了get()以及tuple_size()和tuple_element()函数（注意这些函数非 array 的成员函数，而是外部函数）。</p>
+<p>最后需要注意，虽然 array 和 C++语法中的[]符号无限接近，但两者是两个存在，array 毕竟是标准模板库的一员，是一个class，因此支持
+<code>begin(), end(), front(), back(), at(), empty(), data(), fill(), swap(), ... </code> 等等标准接口，而[]是真正的最朴素的数组。</p>
+<h3 id="2-vector">2. vector</h3>
+<blockquote>
+<p>Container properties: Sequence | Dynamic array | Allocator-aware
+容器属性：<font color = red>顺序容器</font>（支持随机访问），动态调整大小，使用内存分配器动态管理内存；//连续内存
+类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class vector;</p>
+</blockquote>
+<p>一句话来说，<u>vector 就是能够动态调整大小的 array</u>。和 array 一样，vector 使用<font color=red>连续内存空间</font>来保存元素，这意味着其元素可以用普通指针的<code>++</code>和<code>--</code>操作来访问；不同于 array 的是，其<strong>存储空间可以自动调整</strong>。</p>
+<p>在底层上，vector 使用动态分配的 array，当现有空间无法满足增长需求时，会重新分配（reallocate）一个更大的 array 并把所有元素移动过去，因此，<font color=red>vector 的 reallocate 是一个很耗时的处理</font>。所以，每次 reallocate 时都会预留多余的空间，以满足潜在的增长需求，也就是说，vector的capacity()通常会大于size()。vector 什么时候做 reallocate，reallocate 多少多余空间，是有具体策略的，按下不表。总体来说，<u>vector 比 array 多了一些内存消耗，以换取更灵活的内存管理</u>。</p>
+<p>和其它的动态顺序容器（deque, list, forward_list）相比，<u>vector 在元素访问上效率最高，在尾部增删元素的效率也相对最高</u>。如果调用者有在尾部以外的地方增删元素的需求，vector 则不如其它容器，并且迭代器的一致性也较差（have less consistent iterators and references than lists and forward_lists）。</p>
+<h3 id="3-queue">3. queue</h3>
+<blockquote>
+<p>容器属性：<font color=red>容器适配器(adapter)</font>，先进先出型容器（FIFO）；//C++设计模式之适配器模式
+template &lt;class T, class Container = deque<T> &gt; class queue;</p>
+</blockquote>
+<p>queue（普通队列）是一个专为 FIFO 设计的容器适配器，也即只能从一端插入、从另一端删除；所谓容器适配器，是指它本身只是一个封装层，必须依赖指定的底层容器（通过模板参数中的class Container指定）才能实现具体功能。</p>
+<p>**容器适配器(Adapter)**实际上是C++设计模式的一种 &ndash; 称为 Adapter 模式（适配器模式），Adapter 模式的目的是将第三方库提供的接口做一个封装和转化，使其适配自己工程中预留的接口，或者适应自己工程的调用风格。换句话说，Adapter 模式的目的是将被调用类（如第三方库）的接口转化为希望的接口。</p>
+<p>回到正题，queue 可以接纳任何一个至少支持下列接口的容器作为底层容器：</p>
+<blockquote>
+<p>empty(); size(); front(); back(); push_back(); pop_front().</p>
+</blockquote>
+<p>在标准模板库容器中，deque 和 list 满足上述要求，当然用户也可以自定义一个满足上述要求的容器。通过模板参数可以看出，<font color=red>默认情况下，queue 使用 deque 作为底层容器</font>。</p>
+<h3 id="4-deque">4. deque</h3>
+<blockquote>
+<p>Container properties: Sequence | Dynamic array | Allocator-aware
+容器属性：<font color=red>顺序容器</font>（支持随机访问），动态调整大小，使用内存分配器动态管理内存；//分段连续内存
+类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class deque;</p>
+</blockquote>
+<p>deque（读作&quot;deck&quot;）是 double-ended queue 的缩写，是一个可以在首尾两端进行动态增删的顺序容器。</p>
+<p>不同的库对 deque 的实现可能不同，但大体上都是<font color=green>某种形式的动态 array</font>，且都支持随机访问。deque 的功能和 vector 比较接近，但 deque 额外支持在头部动态增删元素。和 vector 不一样的是，<font color = red><u>deque 不保证存储区域一定是连续的!</u></font> 因此用指向元素的普通指针做<code>++</code>和<code>--</code>操作是非常危险的行为。</p>
+<p>从底层机理上能更透彻地理解 deque 的特点：<font color = red>vector 使用的是单一的 array，deque 则会使用很多个离散的 array 来组织数据</font>「the elements of a deque can be scattered in different chunks of storage」！如果说 vector 是连续的，deque 则是分段连续。deque 会维护不同 array 之间的关联信息，使用户无需关心分段这个事实。这样做的好处是很明显的：deque 在 reallocate 时，只需新增/释放两端的 storage chunk 即可，无需移动已有数据（vector 的弊端），极大提升了效率，尤其在数据规模很大时，优势明显。</p>
+<p>相比于 vector 和 list，deque 并不适合遍历！因为每次访问元素时，deque 底层都要检查是否触达了内存片段的边界，造成了额外的开销！deque 的核心优势是在双端都支持高效的增删操作，程序员选择使用 deque 时需要有双端操作的明确理由。</p>
+<h3 id="5-priority_queue">5. priority_queue</h3>
+<blockquote>
+<p>容器属性：<font color=red>容器适配器</font>，严格弱序（Strict Weak Ordering），优先级队列；
+template &lt;class T, class Container = vector<T>,
+class Compare = less<typename Container::value_type> &gt; class priority_queue;</p>
+</blockquote>
+<p>和 queue 类似，priority_queue（术语叫作优先级队列）也只是一个容器适配器，需要指定底层容器才能实例化，参见模板参数中的class Container形参。priority_queue 的核心特点在于其严格弱序特性（strict weak ordering）：也即 priority_queue 保证容器中的第一个元素始终是所有元素中最大的！为此，用户在实例化一个 priority_queue 时，必须为元素类型（class T）重载&lt;运算符，以用于元素排序！</p>
+<p>priority_queue 的原理可以用一个大顶堆来解释：priority_queue 在内部维护一个基于二叉树的大顶堆数据结构，在这个数据结构中，最大的元素始终位于堆顶部，且只有堆顶部的元素（max heap element）才能被访问和获取，大顶堆的具体原理可参见任何一本数据结构书籍。</p>
+<p>为了支持这种工作原理，priority_queue 对底层容器也是有要求的，priority_queue 的底层容器必须支持随机访问和至少以下接口：</p>
+<blockquote>
+<p>empty(); size(); front(); push_back(); pop_back().</p>
+</blockquote>
+<p>标准模板库中的 vector 和 deque 能够满足上述需求，默认情况下，priority_queue 使用 vector 作为底层容器。</p>
+<p>某种程度上来说，priority_queue 默认在 vector 上使用堆算法将 vector 中元素构造成大顶堆的结构，因此 priority_queue 就是堆 ，所有需要用到堆的位置，都可以考虑使用 priority_queue。priority_queue 默认是大顶堆，用户也可以通过自定义模板参数中的 class Compare 来实现一个小顶堆。</p>
+<p>相比于 queue（普通队列）的先进先出FIFO，priority_queue 实现了最高优先级先出。</p>
+<h3 id="6-list">6. list</h3>
+<blockquote>
+<p>Container properties: Sequence | Doubly-linked list | Allocator-aware
+容器属性：<font color = red>顺序容器</font>（可顺序访问，但不支持随机访问），双链表，使用内存分配器动态管理内存；//离散内存
+类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class list;</p>
+</blockquote>
+<p>list 是一种支持在<strong>任意位置都可以快速地插入和删除</strong>元素的容器，且支持<strong>双向遍历</strong>。list 容器能够做到这些的原因在于<strong>其底层结构是双链表</strong>，双链表允许把各个元素都保存在彼此不相干的内存地址上，但每个元素都会与前后相邻元素关联。</p>
+<p>和其它的顺序容器（array, vector, deque）相比，<u>list 的最大优势在于支持在任意位置插入、删除和移动元素</u>，对 list 来说，在哪个位置进行操作并没有区别。list 在部分算法（如 sorting）中的效率可能优于其它顺序容器。</p>
+<p>list 的<strong>主要缺点</strong>是<u>不支持元素的随机访问</u>！如果我们想要访问某个元素，则必须从一个已知元素（如 begin 或 end）开始朝一个方向遍历，直至到达要访问的元素。此外，list 还要消耗更多的内存空间，用于保存各个元素的关联信息。</p>
+<p>[另说] <strong>list 对内存空间的使用效率并不高，一方面元素内存地址是离散的而非连续，另一方面，list 需要保存额外的关联信息。</strong></p>
+<h3 id="7-forward_list">7. forward_list</h3>
+<blockquote>
+<p>Container properties: Sequence | Linked list | Allocator-aware
+容器属性：<font color = red>顺序容器</font>（可顺序访问，但不支持随机访问），单链表，使用内存分配器动态管理内存；
+类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class list;</p>
+</blockquote>
+<p>forward_list 也是一种支持在任意位置快速插入和删除元素的容器，forward_list 相比于 list 的核心区别是它是一个单链表，因此, 每个元素只会与相邻的下一个元素关联！由于关联信息少了一半，因此 forward_list 占用的内存空间更小，且插入和删除的效率稍稍高于 list。作为代价，forward_list 只能单向遍历。</p>
+<p>相比于其它顺序容器（array, vector, deque），forward_list 的优缺点和 list 基本相同。</p>
+<p>既然已经有了 list，为什么 C++ STL 又设计了 forward_list 这一容器呢？设计 forward_list 的目的是为了达到不输于任何一个C风格<strong>手写链表的极值效率</strong>！为此，forward_list 是一个最小链表设计，它甚至没有size()接口，因为内部维护一个size变量会降低增删元素的效率。如果想要获取 forward_list 的 size，一个通常的做法是，用 std::distance 计算 begin 到 end 的距离得出 size。一句话总结：list 兼顾了接口丰富性牺牲了效率，而 forward_list 舍弃了不必要的接口只为追求极致效率。</p>
+<h3 id="8-stack">8. stack</h3>
+<blockquote>
+<p>容器属性：<font color = red>容器适配器</font>，后进先出型容器（LIFO）；
+template &lt;class T, class Container = deque<T> &gt; class stack;</p>
+</blockquote>
+<p>stack（栈）是一个专为 LIFO 设计的容器适配器，也即只能从一端插入和删除；作为适配器，需要指定底层容器才能实例化，参见模板参数中的<code>class Container</code>形参。</p>
+<p>stack 的特点是后进先出（一端进出），不允许遍历；任何时候外界只能访问 stack 顶部的元素；只有在移除 stack 顶部的元素后，才能访问下方的元素。stack 需要底层容器能够在一端增删元素，这一端也即 stack 的“栈顶”；stack 可以接纳任何一个至少支持下列接口的容器作为底层容器：</p>
+<blockquote>
+<p>empty(); size(); back(); push_back(); pop_back()</p>
+</blockquote>
+<p>在标准模板库容器中，vector、deque 和 list 满足上述要求，当然用户也可以自定义一个满足上述要求的容器。通过模板参数可以看出，默认情况下，<strong>stack 使用 deque 作为底层容器</strong>。</p>
+<p>stack 容器应用广泛，例如，编辑器中的 undo （撤销操作）机制就是用栈来记录连续的操作。stack 的设计场景和自助餐馆中堆叠的盘子、摞起来的一堆书类似。</p>
+<h3 id="9-map">9. map</h3>
+<blockquote>
+<p>Container properties: Associative | Ordered | Map | Unique keys | Allocator-aware
+容器属性：<font color = red>关联容器</font>，有序，元素类型&lt;key, value&gt;，key是唯一的，使用内存分配器动态管理内存 ；
+template &lt; class Key, // map::key_type
+class T, // map::mapped_type
+class Compare = less<Key>, // map::key_compare
+class Alloc = allocator&lt;pair&lt;const Key,T&gt; &gt; // map::allocator_type
+class map;</p>
+</blockquote>
+<p>map 是一个关联型容器，其元素类型是由 key 和 value 组成的 std::pair，实际上 map 中元素的数据类型正是 <code>typedef pair&lt;const Key, T&gt; value_type</code>;，这就看的很清楚了。</p>
+<p>所谓关联容器，是指<strong>对所有元素的检索都是通过元素的 key 进行的（而非元素的内存地址）</strong>，map 通过底层的「红黑树」数据结构来将所有的元素按照 key 的相对大小进行排序，所实现的排序效果也是严格弱序特性（strict weak ordering），为此，开发者需要重载 key 的&lt;运算符或者模板参数中的 class Compare。所提到的红黑树是一种自平衡二叉搜索树，它衍生自B树，这里推荐两篇文章（<a href="https://zhuanlan.zhihu.com/p/72505589"target="_blank" rel="external nofollow noopener noreferrer">记一次腾讯面试：有了二叉查找树、平衡树（AVL）为啥还需要红黑树？<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，<a href="https://zhuanlan.zhihu.com/p/273829162"target="_blank" rel="external nofollow noopener noreferrer">图解：什么是红黑树？<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>）作为更深入的参考。</p>
+<p>大体来说，map 访问元素的速度要稍慢于下文的 unordered_map，这是因为虽然都叫“map”，但两者的底层机制完全不一样。但是，相比于后者，map 支持在一个子集合上进行直接迭代器访问，原因在于 map 中的元素是被有序组织的。</p>
+<p>最后，map 也支持通过operator[]的方式来直接访问 value。</p>
+<h3 id="10-multimap">10. multimap</h3>
+<blockquote>
+<p>Container properties: Associative | Ordered | Map | Multiple equivalent keys | Allocator-aware
+容器属性: 关联容器，有序，元素类型&lt;key, value&gt;，允许不同元素key相同，使用内存分配器管理内存；
+template &lt; class Key, // map::key_type
+class T, // map::mapped_type
+class Compare = less<Key>, // map::key_compare
+class Alloc = allocator&lt;pair&lt;const Key,T&gt; &gt; // map::allocator_type
+class map;</p>
+</blockquote>
+<p><strong>map 中不允许出现 key 相同的两个元素，但 multimap 则可以这样做！</strong></p>
+<p>multimap 与 map 底层原理完全一样，都是使用「红黑树」对元素数据按 key 的比较关系，进行快速的插入、删除和检索操作；所不同的是 multimap 允许将具有相同 key 的不同元素插入容器（这个不同体现了 multimap 对红黑树的使用方式的差异）。在 multimap 容器中，元素的 key 与元素 value 的映射关系，是一对多的，因此，multimap 是多重映射容器。</p>
+<p>注意，在向 multimap 中新增元素时，multimap 只会判断 key 是否相同，而完全不会判断 value 是否相同！<font color=red>这意味着如果相同的 &lt;key, value&gt; 插入了多次，multimap 会对它们悉数保存！</font></p>
+<p>在使用中，我们可以通过迭代器配合 lower_bound() 和 upper_bound() 来访问一个 key 对应的所有 value，也可以使用equal_range()来访问一个 key 对应的所有 value，也可以通过find()配合count()来访问一个 key 对应的所有 value，个人认为前两种方法使用起来更方便一点。</p>
+<p>下文中将要提到的 multiset 之于 set 类似于这里的 multimap 之于 map。</p>
+<h3 id="11-set">11. set</h3>
+<blockquote>
+<p>Container properties: Associative | Ordered | Set | Unique keys | Allocator-aware
+容器属性：<font color=red>关联容器</font>，有序，元素自身即key，元素有唯一性，使用内存分配器动态管理内存；
+template &lt; class T, // set::key_type/value_type
+class Compare = less<T>, // set::key_compare/value_compare
+class Alloc = allocator<T> // set::allocator_type
+class set;</p>
+</blockquote>
+<p>set 是一个关联型容器，和 map 一样，它的底层结构是「红黑树」，但和 map 不一样的是，<strong>set 是直接保存 value 的</strong>，或者说，set 中的 value 就是 key。</p>
+<p><strong>set 中的元素必须是唯一的，不允许出现重复的元素</strong>，且元素不可更改，但可以自由插入或者删除。</p>
+<p>由于底层是红黑树，所以 set 中的元素也是严格弱序（strict weak ordering）排序的，因此<u>支持用迭代器做范围访问</u>（迭代器自加自减）。</p>
+<p>实际使用中，set 和 map 是近亲，性能相似，他们的差别是元素的 value 本身是否也作为 key 来标识自己。</p>
+<h3 id="12-multi_set">12. multi_set</h3>
+<blockquote>
+<p>Container properties: Associative | Ordered | Set | Multiple equivalent keys | Allocator-aware
+容器属性：<font color=red>关联容器</font>，有序，元素自身即key，允许不同元素值相同，使用内存分配器动态管理内存 ；
+template &lt; class T, // multiset::key_type/value_type
+class Compare = less<T>, // multiset::key_compare/value_compare
+class Alloc = allocator<T> &gt; // multiset::allocator_type
+class multiset;</p>
+</blockquote>
+<p>multiset 之于 set 就如同 multimap 之于 map：</p>
+<p>multiset 和 set 底层都是红黑树，multiset 相比于 set 支持保存多个相同的元素；</p>
+<p>multimap 和 map 底层都是红黑树，multimap 相比于 map 支持保存多个key相同的元素。</p>
+<p>鉴于以上近亲关系，multiset 的性能特点与其它三者相似，不再赘述。</p>
+<h3 id="13-unordered_map">13. unordered_map</h3>
+<blockquote>
+<p>Container properties: Associative | Unordered | Map | Unique keys | Allocator-aware
+容器属性：<font color = red>关联容器</font>，无序，元素类型&lt;key, value&gt;，key是唯一的，使用内存分配器动态管理内存 ； template &lt; class Key, // unordered_map::key_type
+class T, // unordered_map::mapped_type
+class Hash = hash<Key>, // unordered_map::hasher
+class Pred = equal_to<Key>, // unordered_map::key_equal
+class Alloc = allocator&lt; pair&lt;const Key,T&gt; &gt; // unordered_map::allocator_type
+class unordered_map;</p>
+</blockquote>
+<p>unordered_map 和 map 一样，都是关联容器，以键值对儿 &lt;key, value&gt; 作为元素进行存储；但是，除此之外，两者可以说是完全不一样！</p>
+<p>这是由底层的数据结构决定的，map 以红黑树作为底层结构组织数据，而 <strong>unordered_map 以哈希表(hash table)作为底层数据结构</strong>来组织数据，这造成了两点重要影响：
+1. unordered_map 不支持排序，<font color=red>在使用迭代器做范围访问时（迭代器自加自减）效率更低</font>；
+2. 但 unordered_map 直接访问元素的速度更快（尤其在规模很大时），因为它通过直接计算 key 的哈希值来访问元素，是O(1)复杂度！</p>
+<p>网络上有对 map VS unordered_map 效率对比的测试，通常 <strong>map 增删元素的效率更高，unordered_map 访问元素的效率更高</strong>，可以参见<a href="https://link.zhihu.com/?target=https%3A//blog.csdn.net/uniqsa/article/details/62442383"target="_blank" rel="external nofollow noopener noreferrer">这篇文章<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。另外，unordered_map 内存占用更高，因为底层的哈希表需要预分配足量的空间。</p>
+<p>综上，unordered_map 更适用于增删操作不多，但需要频繁访问，且内存资源充足的场合。</p>
+<blockquote>
+<p>比如在机器人领域的SLAM技术中，可以选择 unordered_map 来维护体素形式的 local map？ 当然 deque 应该也是不错的选择。</p>
+</blockquote>
+<h3 id="14-unordered_multimap">14. unordered_multimap</h3>
+<blockquote>
+<p>Container properties: Associative | Unordered | Map | Multiple equivalent keys | Allocator-aware
+容器属性：关联容器，无序，元素类型&lt;key, value&gt;，允许不同元素key相同，使用内存分配器管理内存 ；
+template &lt; class Key, // unordered_multimap::key_type
+class T, // unordered_multimap::mapped_type
+class Hash = hash<Key>, // unordered_multimap::hasher
+class Pred = equal_to<Key>, // unordered_multimap::key_equal
+class Alloc = allocator&lt; pair&lt;const Key,T&gt; &gt; // unordered_multimap::allocator_type
+class unordered_multimap;</p>
+</blockquote>
+<p>unordered_multimap 是对 unordered_map 的拓展，唯一区别在于 unordered_multimap 允许不同元素的 key 相同，但两者无论是在底层结构还是在容器特性上都是相通的，仅仅是对底层哈希表的使用方式稍有不同。</p>
+<p>在 unordered_multimap 中想要访问同一个 key 下对应的所有元素的话，可以使用equal_range()轻松做到；当然，也可以使用find()和count()配合的方式来访问。</p>
+<p>unordered_multimap 的容器特性参见 unordered_map，不再赘述。</p>
+<h3 id="15-unordered_set">15. unordered_set</h3>
+<blockquote>
+<p>Container properties: Associative | Unordered | Set | Unique keys | Allocator-aware
+容器属性：<font color=red>关联容器</font>，无序，元素自身即key，元素有唯一性，使用内存分配器动态管理内存 ；
+template &lt; class Key, // unordered_set::key_type/value_type
+class Hash = hash<Key>, // unordered_set::hasher
+class Pred = equal_to<Key>, // unordered_set::key_equal
+class Alloc = allocator<Key> // unordered_set::allocator_type
+class unordered_set;</p>
+</blockquote>
+<p>所有unordered_XXX类容器的特点都是以哈希表作为底层结构；所有 XXX_set 类容器的特点都是「元素自身也作为key」来标识自己。我们在把两类特性叠加到一起，就得到了 unordered_set。</p>
+<p>在 unordered_set 中，元素自身同时也作为 key 使用；既然是作为 key 使用，那么元素就不能被更改，也即 unordered_set 中的元素都是 constant 的，但我们可以自由的插入和删除元素，这也是所有XXX_set类容器的性质。既然底层结构是哈希表，意味着 unordered_set 中的元素是无序的，不能按照大小排序，这也是所有unordered_XXX类容器的性质。</p>
+<p>和所有的unordered_XXX类容器一样：
+1. unordered_set 直接用迭代器做范围访问时（迭代器自加自减）效率更低，低于 set；
+2. 但 unordered_set 直接访问元素的速度更快（尤其在规模很大时），因为它通过直接计算 key 的哈希值来访问元素，是O(1)复杂度！</p>
+<h3 id="16-unordered_multiset">16. unordered_multiset</h3>
+<blockquote>
+<p>Container properties: Associative | Unordered | Set | Multiple equivalent keys | Allocator-aware
+容器属性：<font color=red>关联容器</font>，无序，元素自身即key，允许不同元素值相同，使用内存分配器动态管理内存 ；
+template &lt; class Key, // unordered_multiset::key_type/value_type
+class Hash = hash<Key>, // unordered_multiset::hasher
+class Pred = equal_to<Key>, // unordered_multiset::key_equal
+class Alloc = allocator<Key> // unordered_multiset::allocator_type
+class unordered_multiset;</p>
+</blockquote>
+<p>unordered_multiset，顾名思义，就是集齐了“哈希表为底层结构”，“元素自身即key”，“允许不同元素值相同”这三个特性的容器，是对 unordered_set 的简单拓展。</p>
+<p>unordered_multiset 的效率特性与所有基于哈希表的容器相似，参见 unordered_set，不再赘述。</p>
+<h3 id="17-pair--tuple">17. pair &amp;&amp; tuple</h3>
+<blockquote>
+<p>template &lt;class&hellip; Types&gt; class tuple;
+template &lt;class T1, class T2&gt; struct pair;</p>
+</blockquote>
+<p><code>std::pair</code> 和 <code>std::tuple</code> 并不是stl容器库中的容器，不过鉴于经常用到，就顺便整理一下。先从 tuple 说起，pair 相当于 tuple 的特例。</p>
+<p>tuple 叫作元组，它可以把一组类型相同或不同的元素组合到一起，且元素的数量不限。tuple 的底层原理与 stl 中的容器完全不同，但在功能上，tuple 是对容器的有效补充，因为所有的容器都只能组合相同类型的元素，但tuple 可以组合任意不同类型的元素。在使用上，可以用std::make_tuple()来构造 tuple 对象，可以用std::get<index>()来获取 tuple 对象的某个元素，注意std::get<index>()返回的是 tuple 对象中某个元素的索引，因此是可以用作左值的！此外，也可以用std::tie()打包一组变量来作为左值接受 tuple 对象的赋值。</p>
+<p>tuple 的底层原理大概是一个层层继承的类，详情可以参考<a href="https://zhuanlan.zhihu.com/p/356954012"target="_blank" rel="external nofollow noopener noreferrer">这篇文章<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，写的非常透彻。</p>
+<p>pair 可以看作是把 tuple 的 size 限制为 2 的一个特例，pair 只能把一对儿元素组合到一起。在使用上，可以用std::make_pair()来直接构建 pair 对象，可以用std::get&lt;0&gt;()和std::get&lt;1&gt;()来分别获取 pair 对象的两个元素，但更方便的做法是直接访问 pair 类型的两个数据成员pair对象.first和pair对象.second来访问元素</p>
+<p>reference:
+[1]. <a href="https://zhuanlan.zhihu.com/p/542115773"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/542115773<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>TreeNode 二叉树</title><link>https://lruihao.cn/posts/treenode/</link><pubDate>Sun, 16 Jul 2023 14:49:58 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/treenode/</guid><description><![CDATA[<p>Runebook
+<a href="https://www.doc4dev.com"target="_blank" rel="external nofollow noopener noreferrer">www.doc4dev.com<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="深度优先遍历">深度优先遍历</h2>
+<p></p>
+<ul>
+<li>前序遍历：中左右 <code>5 4 1 2 6 7 8</code></li>
+<li>中序遍历：左中右 <code>1 4 2 5 7 6 8</code></li>
+<li>后序遍历：左右中 <code>1 2 4 7 8 6 5</code></li>
+</ul>
+<p><strong>二叉树的定义</strong></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">TreeNode</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">val</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">TreeNode</span> <span class="o">*</span><span class="n">left</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">TreeNode</span> <span class="o">*</span><span class="n">right</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">TreeNode</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">)</span> <span class="o">:</span> <span class="n">val</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">left</span><span class="p">(</span><span class="nb">NULL</span><span class="p">),</span> <span class="n">right</span><span class="p">(</span><span class="nb">NULL</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="前序遍历">前序遍历</h3>
+<p><strong>递归法</strong></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="n">traversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">cur</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">vec</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">cur</span> <span class="o">==</span> <span class="k">nullptr</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vec</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">cur</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">preorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代法</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">preorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">stack</span><span class="o">&lt;</span><span class="n">TreeNode</span><span class="o">*&gt;</span> <span class="n">st</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">root</span> <span class="o">==</span> <span class="k">nullptr</span><span class="p">)</span> <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">root</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">st</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">TreeNode</span><span class="o">*</span> <span class="n">node</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="n">res</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">)</span>  <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="中序遍历">中序遍历</h3>
+<p><strong>递归法</strong></p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="n">traversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">cur</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">vec</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">cur</span> <span class="o">==</span> <span class="k">nullptr</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vec</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">cur</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">inorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代法</strong></p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 中序遍历
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">inorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">stack</span><span class="o">&lt;</span><span class="n">TreeNode</span><span class="o">*&gt;</span> <span class="n">st</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">root</span> <span class="o">==</span> <span class="k">nullptr</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">TreeNode</span><span class="o">*</span> <span class="n">cur</span> <span class="o">=</span> <span class="n">root</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">cur</span> <span class="o">||</span> <span class="o">!</span><span class="n">st</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">cur</span> <span class="o">!=</span> <span class="k">nullptr</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">cur</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">cur</span> <span class="o">=</span> <span class="n">cur</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">;</span> <span class="c1">// 左
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">cur</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">res</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">cur</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">cur</span> <span class="o">=</span> <span class="n">cur</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="后序遍历">后序遍历</h3>
+<p><strong>递归法</strong></p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="n">traversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">cur</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">vec</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">cur</span> <span class="o">==</span> <span class="k">nullptr</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vec</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">cur</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">postorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">traversal</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代法</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">postorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">root</span><span class="p">)</span> <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">stack</span><span class="o">&lt;</span><span class="n">TreeNode</span><span class="o">*&gt;</span> <span class="n">st</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">root</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">st</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">TreeNode</span><span class="o">*</span> <span class="n">node</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="n">res</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="n">reverse</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">res</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="二叉树的统一迭代法">二叉树的统一迭代法</h2>
+<p><strong>迭代法前序遍历</strong></p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 中左右
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">preorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">stack</span><span class="o">&lt;</span><span class="n">TreeNode</span><span class="o">*&gt;</span> <span class="n">st</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">root</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">st</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">TreeNode</span><span class="o">*</span> <span class="n">node</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="k">nullptr</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">node</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">res</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代法中序遍历</strong></p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//左中右
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">inorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">stack</span><span class="o">&lt;</span><span class="n">TreeNode</span><span class="o">*&gt;</span> <span class="n">st</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">root</span> <span class="o">!=</span> <span class="k">nullptr</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">root</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span><span class="p">(</span><span class="o">!</span><span class="n">st</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">TreeNode</span><span class="o">*</span> <span class="n">node</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">node</span> <span class="o">!=</span> <span class="k">nullptr</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span> <span class="c1">//将该节点弹出，避免重复操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="k">nullptr</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">node</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">res</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代法后序遍历</strong></p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 左右中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">postorderTraversal</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">stack</span><span class="o">&lt;</span><span class="n">TreeNode</span><span class="o">*&gt;</span> <span class="n">st</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">root</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">st</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">TreeNode</span><span class="o">*</span> <span class="n">node</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="k">nullptr</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">)</span> <span class="n">st</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">node</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">st</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">res</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="广度优先遍历-层序遍历">广度优先遍历 (层序遍历)</h2>
+<p><strong>递归法</strong></p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">levelOrder</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">queue</span><span class="o">&lt;</span><span class="n">TreeNode</span><span class="o">*&gt;</span> <span class="n">que</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="n">que</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">root</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">ans</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">que</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="kt">int</span> <span class="n">size</span> <span class="o">=</span> <span class="n">que</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">vec</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">TreeNode</span><span class="o">*</span> <span class="n">node</span> <span class="o">=</span> <span class="n">que</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">que</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">                <span class="n">vec</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">)</span> <span class="n">que</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">)</span> <span class="n">que</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">node</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="n">ans</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">vec</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">ans</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代法</strong></p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="n">order</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">cur</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;&amp;</span> <span class="n">res</span><span class="p">,</span> <span class="kt">int</span> <span class="n">depth</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">cur</span> <span class="o">==</span> <span class="k">nullptr</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="n">depth</span><span class="p">)</span> <span class="n">res</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">        <span class="n">res</span><span class="p">[</span><span class="n">depth</span><span class="p">].</span><span class="n">push_back</span><span class="p">(</span><span class="n">cur</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">order</span><span class="p">(</span><span class="n">cur</span><span class="o">-&gt;</span><span class="n">left</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">depth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">order</span><span class="p">(</span><span class="n">cur</span><span class="o">-&gt;</span><span class="n">right</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">depth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">levelOrder</span><span class="p">(</span><span class="n">TreeNode</span><span class="o">*</span> <span class="n">root</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">depth</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">order</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">depth</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>Sorting Algorithms</title><link>https://lruihao.cn/posts/sortingalgo/</link><pubDate>Sun, 16 Jul 2023 13:54:12 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/sortingalgo/</guid><description><![CDATA[<h3 id="sorting-algotithms-collection">Sorting Algotithms Collection</h3>
+<h4 id="quick-sort-快速排序">Quick Sort 快速排序</h4>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">quick_sort</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">nums</span><span class="p">,</span> <span class="kt">int</span> <span class="n">l</span><span class="p">,</span> <span class="kt">int</span> <span class="n">r</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="n">r</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">first</span> <span class="o">=</span> <span class="n">l</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">r</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">nums</span><span class="p">[</span><span class="n">first</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="p">(</span><span class="n">first</span> <span class="o">&lt;</span> <span class="n">last</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="n">first</span> <span class="o">&lt;</span> <span class="n">last</span> <span class="o">&amp;&amp;</span> <span class="n">nums</span><span class="p">[</span><span class="n">last</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">key</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="o">--</span><span class="n">last</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="n">nums</span><span class="p">[</span><span class="n">first</span><span class="p">]</span> <span class="o">=</span> <span class="n">nums</span><span class="p">[</span><span class="n">last</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="n">first</span> <span class="o">&lt;</span> <span class="n">last</span> <span class="o">&amp;&amp;</span> <span class="n">nums</span><span class="p">[</span><span class="n">first</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">key</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="o">++</span><span class="n">first</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="n">nums</span><span class="p">[</span><span class="n">last</span><span class="p">]</span> <span class="o">=</span> <span class="n">nums</span><span class="p">[</span><span class="n">first</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">nums</span><span class="p">[</span><span class="n">first</span><span class="p">]</span> <span class="o">=</span> <span class="n">key</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">quick_sort</span><span class="p">(</span><span class="n">nums</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">first</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">quick_sort</span><span class="p">(</span><span class="n">nums</span><span class="p">,</span> <span class="n">first</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">r</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="merge-sort-归并排序">Merge Sort 归并排序</h4>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">merge_sort</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">nums</span><span class="p">,</span> <span class="kt">int</span> <span class="n">l</span><span class="p">,</span> <span class="kt">int</span> <span class="n">r</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">temp</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="n">r</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// divide
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">int</span> <span class="n">m</span> <span class="o">=</span> <span class="n">l</span> <span class="o">+</span> <span class="p">(</span><span class="n">r</span> <span class="o">-</span> <span class="n">l</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">merge_sort</span><span class="p">(</span><span class="n">nums</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">temp</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">merge_sort</span><span class="p">(</span><span class="n">nums</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">temp</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// conquer
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">int</span> <span class="n">p</span> <span class="o">=</span> <span class="n">l</span><span class="p">,</span> <span class="n">q</span> <span class="o">=</span> <span class="n">m</span><span class="p">,</span> <span class="n">i</span> <span class="o">=</span> <span class="n">l</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="p">(</span><span class="n">q</span> <span class="o">&lt;</span> <span class="n">m</span> <span class="o">||</span> <span class="n">q</span> <span class="o">&lt;</span> <span class="n">r</span><span class="o">&gt;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">q</span> <span class="o">&gt;=</span> <span class="n">r</span> <span class="o">||</span> <span class="n">q</span> <span class="o">&lt;</span> <span class="n">r</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">q</span> <span class="o">&gt;=</span> <span class="n">r</span> <span class="o">||</span> <span class="p">(</span><span class="n">p</span> <span class="o">&lt;</span> <span class="n">m</span> <span class="o">&amp;&amp;</span> <span class="n">nums</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">nums</span><span class="p">[</span><span class="n">q</span><span class="p">]))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">temp</span><span class="p">[</span><span class="n">i</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">nums</span><span class="p">[</span><span class="n">p</span><span class="o">++</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">temp</span><span class="p">[</span><span class="n">i</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">nums</span><span class="p">[</span><span class="n">q</span><span class="o">++</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">l</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">r</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">nums</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="insertion-sort-插入排序">Insertion Sort 插入排序</h4>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">insertion_sort</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">nums</span><span class="p">,</span> <span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">i</span><span class="p">;</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">nums</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">nums</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span> <span class="o">--</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">swap</span><span class="p">(</span><span class="n">nums</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">nums</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="bubble-sort-冒泡排序">Bubble Sort 冒泡排序</h4>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">bubble_sort</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">nums</span><span class="p">,</span> <span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">bool</span> <span class="n">swapped</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">swapped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">-</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">nums</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">nums</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">swap</span><span class="p">(</span><span class="n">nums</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">nums</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">swapped</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">swapped</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">break</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="selection-sort-选择排序">Selection Sort 选择排序</h4>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">selection_sort</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">nums</span><span class="p">,</span> <span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">mid</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">mid</span> <span class="o">=</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">mid</span> <span class="o">=</span> <span class="n">j</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">swap</span><span class="p">(</span><span class="n">nums</span><span class="p">[</span><span class="n">mid</span><span class="p">],</span> <span class="n">nums</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>KnapSack Problem</title><link>https://lruihao.cn/posts/knapsack/</link><pubDate>Sun, 16 Jul 2023 13:42:09 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/knapsack/</guid><description><![CDATA[<p>ref:</br>
+<code>dp:</code> <a href="https://juejin.cn/post/6844903993429196813"target="_blank" rel="external nofollow noopener noreferrer">https://juejin.cn/post/6844903993429196813<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+<code>knapsack problem:</code> <a href="https://blog.csdn.net/qq_38410730/article/details/81667885"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_38410730/article/details/81667885<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+<code>完全背包问题:</code> <a href="https://www.cnblogs.com/darkerg/p/15464987.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/darkerg/p/15464987.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
+<h3 id="knapsack-背包问题">KnapSack 背包问题</h3>
+<h4 id="definiton-定义">Definiton 定义</h4>
+<p><u>背包问题</u>是一种组合优化的NP完全问题:有N个物品和容量为W的背包，每个物品都有自己的体积w和价值v， 求拿哪些物品可以使得背包所装下的物品的总价值最大。如果限定每种物品只能选择0个或者1个，则称问题为<u>0-1背包问题</u>;如果不限定每种物品的数量，则问题称为<u>无界背包问题和或者完全背包问题</u>。</p>
+<h4 id="0-1-背包问题">0-1 背包问题</h4>
+<p>以 0-1 背包问题为例。我们可以定义一个二维数组 <code>dp</code> 存储最大价值，其中<u> <code>dp[i][j]</code> 表示前 <code>i</code> 件物品体积不超过 <code>j</code> 的情况下能达到的最大价值</u>。在我们遍历到第 <code>i</code> 件物品时，在当前背包总容量为 <code>j</code> 的情况下，如果我们不将物品 <code>i</code> 放入背包，那么 <code>dp[i][j] = dp[i-1][j]</code>，即前 <code>i</code> 个物品的最大价值等于只取前 <code>i-1</code> 个物品时的最大价值；如果我们将物品 <code>i</code> 放入背包，假设第 <code>i</code> 件物品体积为 <code>w</code>，价值为 <code>v</code>，那么我们得到 <code>dp[i][j] = dp[i-1][j-w] + v</code>。我们只需在遍历过程中对这两种情况取最大值即可，总时间复杂度和空间复杂度都为 <code>O(NW)</code>。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">knapsack</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="p">(</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="p">(</span><span class="n">W</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">w</span> <span class="o">=</span> <span class="n">weight</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;=</span> <span class="n">W</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">j</span> <span class="o">&gt;=</span> <span class="n">w</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="n">w</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">dp</span><span class="p">[</span><span class="n">N</span><span class="p">][</span><span class="n">W</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>空间压缩:</strong></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">knapsack</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">dp</span><span class="p">(</span><span class="n">W</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">w</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="n">W</span><span class="p">;</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="n">w</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="n">w</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">dp</span><span class="p">[</span><span class="n">W</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="完全背包问题">完全背包问题</h4>
+<p><u>完全背包问题</u>中，一个物品可以拿多次。对于拿多个物品的情况，我们只需考虑 <code>dp[2][3]</code> 即可，即 <code>dp[2][5] = max(dp[1][5], dp[2][3] + 3)</code>。这样，我们
+就得到了完全背包问题的状态转移方程：<code>dp[i][j] = max(dp[i-1][j], dp[i][j-w] + v)</code>，其与 <code>0-1背包问题</code>的差别仅仅是把状态转移方程中的第二个 <code>i-1</code> 变成了 <code>i</code>。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">knapsack</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="p">(</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">W</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">w</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;=</span> <span class="n">W</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">j</span> <span class="o">&gt;=</span> <span class="n">w</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="n">w</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">dp</span><span class="p">[</span><span class="n">N</span><span class="p">][</span><span class="n">W</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>空间压缩:</strong></p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">knapsack</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">dp</span><span class="p">(</span><span class="n">W</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">w</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">w</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;=</span> <span class="n">W</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="n">w</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">dp</span><span class="p">[</span><span class="n">W</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>详解最大似然估计(MLE)、最大后验概率估计(MAP)，以及贝叶斯公式的理解</title><link>https://lruihao.cn/posts/mleandmap/</link><pubDate>Sun, 16 Jul 2023 13:28:44 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/mleandmap/</guid><description><![CDATA[<p>最大似然估计（Maximum likelihood estimation, 简称MLE）和最大后验概率估计（Maximum a posteriori estimation, 简称MAP）是很常用的两种参数估计方法，如果不理解这两种方法的思路，很容易弄混它们。下文将详细说明MLE和MAP的思路与区别。</p>
 <p>但别急，我们先从概率和统计的区别讲起。</p>
 <h1 id="概率和统计是一个东西吗">概率和统计是一个东西吗？</h1>
 <p>概率(probabilty)和统计(statistics)看似两个相近的概念，其实研究的问题刚好相反。</p>
@@ -7764,160 +8822,4 @@ cartesian坐标系到frenet坐标系的变换公式：</p>
   - obs_cost： 表示障碍物距离损失。
 </code></pre>
 <p>最后选择出代价值最好的一条轨迹输入到控制器，用于控制器的跟踪控制。</p>
-]]></description></item><item><title>EM Planner</title><link>https://lruihao.cn/posts/emplanner/</link><pubDate>Sat, 15 Jul 2023 11:17:30 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/emplanner/</guid><description><![CDATA[<p>ref: </br>
-[1]. <a href="https://blog.csdn.net/qq_41667348/category_11789612.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41667348/category_11789612.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://zhuanlan.zhihu.com/p/492988036"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/492988036<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[3]. <a href="https://www.zhihu.com/column/c_1020971709242818560"target="_blank" rel="external nofollow noopener noreferrer">https://www.zhihu.com/column/c_1020971709242818560<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[4]. <a href="https://blog.csdn.net/qq_35503971/article/details/106337900"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_35503971/article/details/106337900<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
-<h1 id="简介">简介</h1>
-<p>EM Planner是Apollo面向L4的实时运动规划算法，该算法首先通过顶层多车道策略，选择出一条参考路径，再根据这条参考线，在Frenet坐标系下，进行车道级的路径和速度规划，规划主要通过Dynamic Programming和基于样条的Quadratic Programming实现。EM Planner充分考虑了无人车安全性、舒适性、可扩展性的需求，通过考虑交通规则、障碍物决策、轨迹光滑性等要求，可适应高速公路、低速城区场景的规划需求。通过Apollo仿真和在环测试，EM Planner算法体现了高度的可靠性，和低耗时性。</p>
-<h2 id="多车道em-planner框架">多车道EM Planner框架</h2>
-<h3 id="整体框架">整体框架</h3>
-<p>所有规划需要的信息在EM Planner的顶层汇集，然后参考线生成器会生成一些基于障碍物和交通规则的候选车道级参考线，这个过程主要是依赖于高精度地图和Routing模块给出的全局规划结果。以下是车道级的规划过程：</p>
-<ol>
-<li>首先会基于给定参考线生成Frenet坐标系，通过给定参考线将所有的自车信息和环境信息转换到参考线下的Frenet坐标系。</li>
-<li>接下来所有的车道级信息将会传递给车道级最优求解器，该求解器会求解最优路径和最优速度。在求解最优路径时，<font color=red>周围环境信息</font>将会被投影到Frenet坐标系（E-step），然后基于投影的信息生成一条光滑路径（M-step）。</li>
-<li>同样的，在求解最优速度时，一旦生成了一条最优路径，<font color=red>障碍物</font>就会被投影到ST图中（E-step），然后最优速度求解器会生成一条光滑的速度规划（M-step）。结合路径和速度规划结果，就生成了一条给定车道的光滑轨迹。</li>
-<li>最后一步会将所有的车道级轨迹传递给参考线轨迹决策器，基于当前车辆状态、相关约束和每条轨迹的代价，轨迹决策器会决定一条最优的轨迹。</li>
-</ol>
-<h3 id="多车道策略">多车道策略</h3>
-<p>利用搜索算法【2】【3】结合代价估算形成变道策略是一种比较常见的处理变道问题的方法，但是这种方法存在计算量大、难以适用交规以及前后决策可能缺少连贯性等特点。Apollo的解决办法是将多车道策略划分为两种类型：<u><em>无法通行的被动变道</em></u>，和<u><em>能够通行的主动变道</em></u>。</p>
-<ul>
-<li>被动变道一般由道路阻挡造成的，通过全局规划模块重新生成全局路径解决；</li>
-<li>主动变道是考虑动态障碍物而做出的决策。Apollo通过同步生成多条候选车道的方法解决主动变道问题，在Frenet坐标系下，投影障碍物、考虑交规后生成多条车道级的候选路径，最后传递到变道决策器中选择出一条最优的车道决策。</li>
-</ul>
-<h3 id="路径-速度迭代算法">路径-速度迭代算法</h3>
-<p>在Frenet坐标下的轨迹规划实际上是带约束的3D最优求解问题。该问题一般有两种求解方法：直接3D最优化求解和路径-速度解耦求解。</p>
-<ul>
-<li>直接方法【4】【5】试图在SLT坐标系下使用轨迹采样或Lattice搜索,这些方法都受到搜索复杂度的限制，因此搜索结果是次优的。</li>
-<li>而路径-速度解耦规划会分别求解路径和速度的最优解。速度的生成将会在生产的路径上进行【6】。虽然结果可能也不是最优的，但会在速度和路径分别求解时更加灵活。</li>
-</ul>
-<p>EM Planner迭代地进行路径和速度最优求解，通过估计和来向、低速障碍物的交互，上一帧的速度规划将有助于下一帧的路径规划。然后将路径规划结果再交给速度最优求解器来推算出一个最优的速度结果。</p>
-<h3 id="决策和交通规则约束">决策和交通规则约束</h3>
-<p>交通规则是硬约束，而与障碍物的交互是软约束。一些决策方法直接考虑的是数值上的最优解【7】，也有像【5】一样同时进行规划和决策。而Apollo EM Planner的决策是优先于规划的，决策模块将会为规划带来更明确的意图，减少最优求解的搜索空间。决策部分的第一步是将车辆的运动意图用一根粗略、灵活的轨迹来描述。这条轨迹也可以用来估计与障碍物之间的交互，并且当情景更加复杂时，这种基于轨迹的决策方法也是灵活的。第二步是基于决策生成的轨迹来构造一个凸空间，用来做基于样条光滑的轨迹生成，主要是通过二次规划来达到迭代生产路径、速度解的目的。</p>
-<h2 id="车道级em-planner框架">车道级EM PLanner框架</h2>
-<h3 id="整体框架-1">整体框架</h3>
-<p>框架包括了一帧规划中的两个E-step和两个M-step，轨迹信息将会在前后两帧中传递，以下是整个车道级规划的流程：</p>
-<ol>
-<li>在第一个E-step中，障碍物会被投影到车道Frenet坐标系，障碍物包括了静态障碍物和动态障碍物。静态障碍物会直接从笛卡尔坐标系转换到Frenet坐标系，而动态的信息则以其运动轨迹来描述。通过上一帧的预测信息，和自车的运动信息，可以估算自车和动态障碍物在每个时间点的交互情况，轨迹重叠的部分会被映射到Frenet坐标系中。初次之外，在最优路径求解过程中，动态障碍物的出现会最终导致自车做出避让的决策。因此，出于安全的考虑，SL投影只考虑低速和来向障碍物，而对于高速的动态障碍物，EM Planner的平行变道策略会考虑这种情景。</li>
-<li>在第二个E-step，所有的障碍物都会在ST中与生成的速度信息进行估计，如果对应的ST中重叠部分，那么对应区域将会在ST中进行重新生成。</li>
-<li>在两次M-step过程中，通过Dynamic Programming和Quadratic Programming生成路径和速度规划。然而在进行投影的SL和ST坐标内求解时非凸的，因此，为了解决这个问题，首先使用Dynamic Programming获得一个粗略的解，同时这个解也能够提供诸如避让、减速、超车的决策。通过这个粗略的解，可以构建一个凸的通道，然后使用基于Quadratic Programming的样条最优求解。</li>
-</ol>
-<p>接下来的部分将会详细介绍框架中的步骤。</p>
-<h3 id="sl和st投影e-step">SL和ST投影（E-step）</h3>
-<h4 id="sl投影">SL投影</h4>
-<p>SL投影是基于类似于【3】中的G2光滑参考线（曲率导数连续）。给定一个时刻，如果自车与预测的障碍物轨迹有重叠区域，那么这个重叠区域将会在SL坐标系被标注为与动态障碍物的估计交互区域。这个区域可以理解为自车和动态障碍物的包围盒的重叠区域。图4展示了这一种案例，红色代表动态障碍物的预测轨迹，用离散点来表示；蓝色表示自车的状态。</p>
-<h4 id="st投影">ST投影</h4>
-<p>ST投影用于帮助我们估计自车的速度规划。当生成了一条光滑的路径以后，与自车有交互的动态障碍物和静态障碍物都会被投影到路径上，同理，这种交互也定义为包围盒的重叠。如图5，这是一个ST图投影案例。</p>
-<p>红色区域表示在2s处距离自车40m远切入规划路径的动态障碍物ST信息，绿色表示在自车后的动态障碍物ST信息，M-step将会在剩下的区域找到可行光滑最优解。</p>
-<h3 id="dp路径m-step">DP路径（M-step）</h3>
-<p>M-step求解Frenet坐标系下的最优路径规划，实际上在一个非凸的区间（从左和从右避让是两个局部最优情景）就是找到一个最优的 $l=f(s)$ 方程。主要包括两步：基于Dynamic Programming的路径决策和基于样条的路径规划。</p>
-<p>基于Dynamic Programming的路径步骤提供一条粗略的路径信息，其可以带来可行通道和绕障决策，如图6所示，这一步包括Lattice采样、代价函数、Dynamic Programming搜索。</p>
-<p>Lattice采样基于Frenet坐标系，多行的点在撒在自车前。如图7所示，行与行之间的点使用五次方多项式连接，而行与行之间的间隔取决于自车速度、道路结构、是否换道等等。出于安全考虑，路径总长可以达到200m或者覆盖8s的行驶长度。</p>
-<p>每段Lattice路径的代价通过光滑程度、障碍物避让、车道代价来评价：</p>
-<p>而光滑程度又通过以下方程来衡量，一阶导表示朝向偏差，二阶导表示曲率，三阶导表示曲率导数：</p>
-<p>障碍物的代价由以下方程给出，方程中的d由自车bounding box到障碍物bounding box的距离表示。迹规划</p>
-<p>车道代价由以下方程给出，主要是考虑在道路上与否以及与参考线之间的差异，一般是与车道中心线的差异：</p>
-<h3 id="样条qp路径m-step">样条QP路径（M-step）</h3>
-<p>基于样条的路径可以理解为是Dynamic Programming更精细的版本。通过DP采样出的路径生成一条可通行通道，然后在通道中利用基于Quadratic Programming的样条曲线生产光滑路径。具体实例如图8所示，步骤流程可由图9所示：</p>
-<p>QP的目标函数为：</p>
-<p>其中 $ g(s) $ 为DP规划的路径，$ f(s) $ 的一阶导表示朝向、二阶导表示曲率、三阶导表示曲率的导数。该函数描述了避让障碍物和曲线光滑性之间的权衡。</p>
-<p>QP的约束包括边界约束和动力学可行性。这些约束都会施加在每个s处，通过限制l来将车辆限制在车道内。由于EM Planner使用的是自行车模型，因此这样对l的限制也是不够的。如图10所示，为了使得边界约束变凸并且线性，在自车的前后两端各增加了一个半圆。前轮到后轮中心的距离用 l_f ​表示，车宽用w表示，因此车的左前角的横向位置可以用以下方程给出：</p>
-<p>通过线性化可以变为：</p>
-<p>同理，其余三个角的位置都可以被线性化，显然因为 $ \theta $ 足够小，小于 $ pi/12 $，因此可以这样线性化。</p>
-<p>$ f(s) $ 的二阶导和三阶导与动力学可行性相关，除了边界条件以外，生成的路径还应该和自车的初始条件相匹配。因为所有的约束都是线性的，所以使用Quadratic Programming求解非常迅速。</p>
-<p>具体的光滑样条曲线和QP问题可以在附录中查阅。</p>
-<h3 id="dp速度求解m-step">DP速度求解（M-step）</h3>
-<p>M-step的速度规划是在ST图中求解最优速度规划，即求解出最优函数 S(t)。与求解最优路径相似，在ST图中求解最优速度规划也是非凸的最优化问题。同样也采用Dynamic Programming配合样条曲线Quadratic Programming来找到光滑速度规划。图12是速度求解的pipeline：</p>
-<p>DP速度求解包括代价函数、ST栅格图以及Dynamic Programming搜索。生成的结果包括分段线性的速度规划、可通行通道以及障碍物速度决策。如图11所示，该结果在QP中用来作为参考速度规划，通过该参考速度生成凸的区域。</p>
-<p>在栅格图中，使用有限差分法来估计速度、加速度和jerk：</p>
-<p>从DP生成的速度中选择出最优的一条的方法是最小化以下的代价函数：</p>
-<p>第一项是速度误差，g用来惩罚与 $ V_ref $ 的不同的误差。第二项、第三项用来描述曲线的光滑程度。最后一项用来描述障碍物代价，以到障碍物的距离来衡量。</p>
-<p>DP搜索空间也收到车辆动力学约束，并且也有单调性约束，因为不希望车辆倒退。一些对于动力学约束的必要简化也用来加速算法。</p>
-<h3 id="qp速度求解m-step">QP速度求解（M-step）</h3>
-<p>因为分段线性的速度规划不能满足动力学的要求，所以需要使用Quadratic Programming来填补动力学空缺。图13是样条曲线QP速度求解的pipeline：</p>
-<p>QP速度求解包括三部分：代价函数、线性约束以及样条曲线QP求解器。
-除了初始条件约束以外，主要有以下的边界约束：</p>
-<p>第一个约束是单调性约束；第二、第三、第四约束主要是交通规则和车辆动力学约束。通过约束、cost函数计算以后，spline QP speed会生成一条如图14中的光滑可行的速度规划。</p>
-<p>结合路径规划，EM Planner最终会生成一条光滑轨迹。</p>
-<h3 id="解qp问题的说明">解QP问题的说明</h3>
-<p>为了安全考虑，路径和速度大概在100个不同的位置或时间点，那么约束就有超过600个。对于速度、路径求解，分段五次多项式已经足够，因此样条曲线大概有3-5个多项式，大概就有30个参数。因此Quadratic Programming就变成了相对小的目标函数，和相对大的约束。QP能比较好的解决这个问题，并且使用了上一帧的解作为热启动，加速求解过程。实践中，QP问题解的平均时间3ms。</p>
-<h3 id="dp和qp非凸问题的说明">DP和QP非凸问题的说明</h3>
-<p>在非凸问题上，DP和QP都有他们单独的限制。DP和QP的组合，能够很好吸收两者优点，并求得一个理性解。</p>
-<ul>
-<li>DP:DP的优劣受到撒点分辨率和时间分辨率的影响，通常在运行时间限制的情况下，一般只会得出一个粗糙解而非最优解，比如会从障碍物左侧绕开，但并不是按照最完美的路径绕开。</li>
-<li>QP:QP需要在凸空间求解，因此必须借助DP的解来形成凸空间。随机的或者基于规则的决策，通常会给QP带来非凸的空间，因此解QP问题会失败或者陷入局部最优。</li>
-<li>DP+QP:（1）通过DP寻求粗糙解；（2）DP解能够生成凸空间；（3）QP在DP解形成的凸空间内，很大可能能够获得全局最优解。</li>
-</ul>
-<h2 id="案例分析">案例分析</h2>
-<p>图15展示了EM Planner在规划周期内，帧与帧之间完成最优轨迹规划的过程。</p>
-<p>假设自车以10m/s的速度行进，一动态障碍物沿着相反方向朝着我们以同样10m/s的速度驶来，EM Planner按以下步骤迭代生成速度和路径规划：</p>
-<ul>
-<li>历史规划（图15-a）：在动态障碍物出现之前，自车以恒定速度10m/s向前行驶。</li>
-<li>路径规划迭代1（图15-b）：基于当前车速和动态障碍物的车速，两者将会在S=40m处相遇，因此，最好的方法是在S=40m处绕开障碍物。</li>
-<li>速度规划迭代1（图15-c）：基于路径规划结果，即从右侧避开障碍物，自车将调整其速度规划，在避开障碍物之前减速到5m/s。</li>
-<li>路径规划迭代2（图15-d）：由于产生了新的速度规划，自车将不再会与动态障碍物在S=40m处避开，而会在一个新的位置S=30m处避开障碍物。因此，路径规划结果也将会随速度规划改变而重新更新。</li>
-<li>速度规划迭代2（图15-e）：由于路径规划已经更新，新的绕障位置在S=30m处，因此在S=40处减速也就没有必要了，新的速度规划使得自车可以在S=40m处加速而在S=30m处形成一个光滑的绕障。</li>
-</ul>
-<p>经过迭代之后，最终车辆将在S=30m处减速绕障，并且绕障结束之后会加速，这样一个过程和人类驾驶员的表现很相似。
-但值得注意的是，并不是每次规划都必须采取如上四步骤，根据场景不同可能会产生更多或更少的步骤。一般而言，场景越复杂，所需要的步骤就越多。</p>
-<h2 id="总结">总结</h2>
-<p>EM Planner是一种基于弱决策的算法，相比于强决策算法，EM Planner在复杂场景、多障碍物情况下表现更好。强决策依赖于提前制定出的决策行为，并且有难以理解和预测与障碍物交互的缺陷、难以满足大量障碍物阻挡生成基于规则的最佳轨迹的缺陷。
-EM Planner通过将三维规划问题转化为两个二维规划问题，显著地降低了运算复杂度，因此会带来运行时间的压缩和整个系统的可交互性。</p>
-]]></description></item><item><title>Decision and Planning [1]</title><link>https://lruihao.cn/posts/decisionandplanning_1/</link><pubDate>Sat, 15 Jul 2023 10:24:04 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/decisionandplanning_1/</guid><description><![CDATA[<h2 id="决策规划一自动驾驶安全舒适高效的守护神">决策规划（一）自动驾驶安全、舒适、高效的“守护神”</h2>
-<h3 id="决策规划分层架构">决策规划分层架构</h3>
-<p>决策规划的任务，就是在对感知到的周边物体的预测轨迹的基础上，结合自动驾驶车辆的和当前位置，对车辆做出最合理的决策和控制。</p>
-<p>正如人的大脑又分为左脑和右脑、并负责不同的任务一样，模块化自动驾驶系统中决策规划层也可以继续细分为执行不同任务的子层。而这一分层设计最早其实是源自2007年举办的DAPRA城市挑战赛，比赛中多数参赛队伍都将自动驾驶系统的决策规划方式包括三层：全局路径规划层（Route Planning）、行为决策层（Behavioral Layer）和运动规划层（Motion Planning），如图5所示。</p>
-<p>全局路径规划层聚焦在相对顶层的路径规划，聚焦在分钟到小时级别的规划。该层在接收到输入的目的地信息后，基于存储的地图信息搜素出一条自起始点至目标点的一条可通过的路径。如图6所示，在蓝色起点和黄色终点之间，黑色就是搜索出来的一条可通行的路径，当然路径不止一条，如何搜索出最优是下文将要介绍的内容。</p>
-<p>行为决策层在收到全局路径后，结合感知环境信息、交通规则信息、车辆状态信息、驾驶场景信息等，推导判断下一分钟或下一秒时刻的情况，作出车道保持、车辆跟随、车道变换和制动避撞等的适合当前交通环境的驾驶行为。如图8所示，自车在检测到前方存在低速行驶车辆，且右侧车道满足变道条件后，作出向右变道的驾驶行为决策。</p>
-<p>运动规划层也被成为局部路径规划层，与全局路径规划聚焦在分钟到小时级别的规划不同，运动规划聚焦在毫秒级到秒级的规划。规划的时候，根据输入的行为决策信息、结合车辆实时位姿信息、局部环境信息、全局路径参考信息等，在“安全、舒适、效率”的精神引领下，规划生成一条满足特定约束条件的平滑轨迹轨迹（包括行驶轨迹、速度、方向等），并输入给控制执行层。</p>
-]]></description></item><item><title>Decision and Planning [4]</title><link>https://lruihao.cn/posts/decisionandplanning_4/</link><pubDate>Sat, 15 Jul 2023 10:23:54 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/decisionandplanning_4/</guid><description><![CDATA[<p>ref: </br>
-[1]. <a href="https://mp.weixin.qq.com/s?__biz=MzI2NDY3OTExNw==&amp;mid=2247487486&amp;idx=1&amp;sn=830e7989f285214903c377b35e4b26d1&amp;chksm=eaa9b45cddde3d4a800aaf20fe318f491db75dda42e195cf14bf40084764c29464e7ccb4aad7&amp;mpshare=1&amp;scene=24&amp;srcid=0304BpDN7zLg79RhCijHZ2vJ&amp;sharer_sharetime=1677894823237&amp;sharer_shareid=56cef55fe29db276ae71bc9f586487a1&amp;key=2feb26e6a61e3d07649dfd6a51be6bb25154bc6376a7efb1822eb9800c6762bdec0839b31eac2d53e7f3a38b41696a04763e2640b202142a465d103b5d979e98f8f58c6e6605e2a76edf1c546c4d4d5f42dfe55935123958e7d001d2f802261f3473e6a62ac38fbb731fa7b486d65f38fe75c7121cb46fbab1e7b14f414379f9&amp;ascene=14&amp;uin=MjUyNzM0ODk1&amp;devicetype=Windows&#43;10&#43;x64&amp;version=6309001c&amp;lang=zh_CN&amp;countrycode=DE&amp;exportkey=n_ChQIAhIQpLbne6sMPw4l4V2IEPhLPxLZAQIE97dBBAEAAAAAAD%2FvOcyN4xcAAAAOpnltbLcz9gKNyK89dVj0cCpL6X4%2F9D%2BOuEd517ZezCwL3LfXM5G32y6FBL094wgcVWCTvgW%2Bz4fcrxht5Et9%2FUDDn2cw7Ay9T9fyCNiz21sZHDrEOhZlmmdWpjj2WKQ1flB1hocdJwzrYu0PN7DoVSQ4LEsw3yErLBUhYBSwGAArxC5y%2FzMbMZ8hFAQhKnpd9GPPRQCQmIeWvMl2Zb6nmhgch5icU5Ro%2F%2BmZx%2BV7tbmT0VIVBN7amHSXzs8eAiXSq0I%3D&amp;acctmode=0&amp;pass_ticket=xjMi8aZX3Oq63c%2B7lWkTHtjTObwzDeknqt%2FUl2bVeVY8VC%2F1bfFzwKgz6ydTfuv150JdS2QIagqoczC%2FeNOvBg%3D%3D&amp;wx_header=1&amp;fontgear=2"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=MzI2NDY3OTExNw==&mid=2247487486&idx=1&sn=830e7989f285214903c377b35e4b26d1&chksm=eaa9b45cddde3d4a800aaf20fe318f491db75dda42e195cf14bf40084764c29464e7ccb4aad7&mpshare=1&scene=24&srcid=0304BpDN7zLg79RhCijHZ2vJ&sharer_sharetime=1677894823237&sharer_shareid=56cef55fe29db276ae71bc9f586487a1&key=2feb26e6a61e3d07649dfd6a51be6bb25154bc6376a7efb1822eb9800c6762bdec0839b31eac2d53e7f3a38b41696a04763e2640b202142a465d103b5d979e98f8f58c6e6605e2a76edf1c546c4d4d5f42dfe55935123958e7d001d2f802261f3473e6a62ac38fbb731fa7b486d65f38fe75c7121cb46fbab1e7b14f414379f9&ascene=14&uin=MjUyNzM0ODk1&devicetype=Windows+10+x64&version=6309001c&lang=zh_CN&countrycode=DE&exportkey=n_ChQIAhIQpLbne6sMPw4l4V2IEPhLPxLZAQIE97dBBAEAAAAAAD%2FvOcyN4xcAAAAOpnltbLcz9gKNyK89dVj0cCpL6X4%2F9D%2BOuEd517ZezCwL3LfXM5G32y6FBL094wgcVWCTvgW%2Bz4fcrxht5Et9%2FUDDn2cw7Ay9T9fyCNiz21sZHDrEOhZlmmdWpjj2WKQ1flB1hocdJwzrYu0PN7DoVSQ4LEsw3yErLBUhYBSwGAArxC5y%2FzMbMZ8hFAQhKnpd9GPPRQCQmIeWvMl2Zb6nmhgch5icU5Ro%2F%2BmZx%2BV7tbmT0VIVBN7amHSXzs8eAiXSq0I%3D&acctmode=0&pass_ticket=xjMi8aZX3Oq63c%2B7lWkTHtjTObwzDeknqt%2FUl2bVeVY8VC%2F1bfFzwKgz6ydTfuv150JdS2QIagqoczC%2FeNOvBg%3D%3D&wx_header=1&fontgear=2<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="决策规划四行为决策常用算法">决策规划（四）行为决策常用算法</h2>
-<p>满足两个要求: 安全性和舒适性</p>
-<p>运动规划生成的轨迹是一种由二维空间和一维时间组成的三维空间中的曲线，是一种偏实时的路径规划。</p>
-<h3 id="prm">PRM</h3>
-<p>概率路标法 (Probabilistic Road Maps, PRM），是一种经典的采样方法，由Lydia E.等人在1996年提出。PRM主要包含三个阶段，一是采样阶段，二是碰撞检测阶段，三是搜索阶段。</p>
-<p>采样阶段: 在采样阶段中，PRM首先在地图空间进行均匀的随机采样，也就是对地图进行稀疏采样，目的是将大地图简化为较少的采样点。</p>
-<p>碰撞检测阶段: 剔除落在障碍物上的采样点，并将剩下的点与其一定距离范围内的点相连，同时删除穿越障碍物的连线，从而构成一张无向图。</p>
-<p>搜索阶段: 利用全局路径规划算法章节介绍的搜索算法（Dijkstra、A*等）在无向图中进行搜索，从而找出一条起点A到终点B之间的可行路径。</p>
-<p>算法步骤可以总结为：
-（1）构造无向图G =（V，E），其中V代表随机采样的点集，E代表两采样点之间所有可能的无碰撞路径，G初始状态为空。
-（2）随机撒点，并选取一个无碰撞的点c(i)加入到V中。
-（3）定义距离r，如果c(i)与V中某些点的距离小于r，则将V中这些点定义为c(i)的邻域点。
-（4）将c(i)与其邻域点相连，生成连线t，并检测连线t是否与障碍物发生碰撞，如果无碰撞，则将t加入E中。
-（5）重复步骤2-4，直到所有采样点（满足采样数量要求）均已完成上述步骤。
-（5）采用图搜索算法对无向图G进行搜索，如果能找到起始点A到终点B的路线，说明存在可行的行驶轨迹。</p>
-<p>PRM算法相比基于搜索的算法，简化了环境、提高了效率。但是在有狭窄通道场景中，很难采样出可行路径，效率会大幅降低。</p>
-<h3 id="rrt">RRT</h3>
-<p>快速探索随机树（Rapidly Exploring Random Trees，RRT），是Steven M. LaValle和James J. Kuffner Jr.在1998年提出的一种基于随机生长树思想实现对非凸高维空间快速搜索的算法。</p>
-<p>与PRM相同的是两者都是基于随机采样的算法，不同的是PRM最终生成的是一个无向图，而RRT生成的是一个随机树。RRT的最显著特征就是具备空间探索的能力，即从一点向外探索拓展的特征。</p>
-<p>RRT分单树和双树两种类型，单树RRT将起点作为随机树的根节点，通过随机采样、碰撞检测的方式为随机树增加叶子节点，最终生成一颗随机树。而双树RRT则拥有两颗随机树，分别以起点和终点为根节点，以同样的方式进行向外的探索，直到两颗随机树相遇，从而达到提高规划效率的目的。</p>
-<p>对于单树RRT算法，我们将起点A设置为随机树的根，并生成一个随机采样点，如图27所示，随机采样点有下面这几种情况。
-（1）随机采样点1落在自由区域中，但是根节点A和随机采样点1之间的连线存在障碍物，无法通过碰撞检测，采样点1会被舍弃，重新再生成随机采样点。
-（2）随机采样点2落在障碍物的位置，采样点2也会被舍弃，重新再生成随机采样点。
-（3）随机采样点3落在自由区域，且与根节点A之间的连线不存在障碍物，但是超过根节点的步长限制。但此时这个节点不会被简单的舍弃掉，而是会沿着根节点和随机采样点3的连线，找出符合步长限制的中间点，将这个中间点作为新的采样点，也就是图29中的4。</p>
-<p>接着我们继续生成新的随机采样点，如果新的随机采样点位于自由区域，那么我们就可以遍历随机树中已有的全部节点，找出距离新的随机采样点最近的节点，同时求出两者之间的距离，如果满足步长限制的话，我们将接着对这两个节点进行碰撞检测，如果不满足步长限制的话，我们需要沿着新的随机采样点和最近的节点的连线方向，找出一个符合步长限制的中间点，用来替代新的随机采样点。最后如果新的随机采样点和最近的节点通过了碰撞检测，就意味着二者之间存在边，我们便可以将新的随机采样点添加进随机树中，并将最近的点设置为新的随机采样点的父节点。</p>
-<p>重复上述过程，直到新的随机采样点在终点的步长限制范围内，且满足碰撞检测。则将新的随机采样点设为终点B的父节点，并将终点加入随机树，从而完成迭代，生成如图30所示的完整随机树。</p>
-<p>相比PRM，RRT无需搜索步骤、效率更高。通过增量式扩展的方式，找到路径后就立即结束，搜索终点的目的性更强。但是RRT作为一种纯粹的随机搜索算法，对环境类型不敏感，当地图空间中存在狭窄通道时，因被采样的概率低，导致算法的收敛速度慢，效率会大幅下降，有时候甚至难以在有狭窄通道的环境找到路径。</p>
-<p>图31展示了 RRT应对存在狭窄通道地图空间时的两种表现，一种是RRT很快就找到了出路，一种是一直被困在障碍物里面。</p>
-<p>围绕如何更好的“进行随机采样”、“定义最近的点”以及“进行树的扩展”等方面，诞生了多种改进型的算法，包括双树RRT-Connect（双树）、lazy-RRT, RRT-Extend等。
-PRM和RRT都是一个概率完备但非最优的路径规划算法，也就是只要起点和终点之间存在有效的路径，那么只要规划的时间足够长，采样点足够多，必然可以找到有效的路径。但是这个解无法保证是最优的。
-采用PRM和RRT等随机采样算法生成的行驶轨迹，大多是一条条线段，线段之间的曲率也不不连续，这样的行驶轨迹是不能保证舒适性的，所以还需要进一步进行曲线平滑、角度平滑处理。代表算法是基于曲线插值的方法：RS曲线、Dubins曲线、多项式曲线、贝塞尔曲线和样条曲线等。</p>
-<p>所有基于曲线插值方法要解决的问题就是：在图32上的若干点中，求出一条光滑曲线尽可能逼近所有点。下文以多项式曲线和贝塞尔曲线为例，介绍曲线插值算法的示例。</p>
-<h3 id="多项式曲线">多项式曲线</h3>
-]]></description></item><item><title>A star (A*) 算法</title><link>https://lruihao.cn/posts/a_star/</link><pubDate>Sat, 15 Jul 2023 10:12:17 +0800</pubDate><author>Jian YE</author><guid>https://lruihao.cn/posts/a_star/</guid><description><![CDATA[<p>ref:</br>
-[1] <a href="https://mp.weixin.qq.com/s/hgT-a3Ug9578k1DmioRgUg"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/hgT-a3Ug9578k1DmioRgUg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2] <a href="http://www.gamedev.net/reference/articles/article2003.asp"target="_blank" rel="external nofollow noopener noreferrer">http://www.gamedev.net/reference/articles/article2003.asp<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="a算法详解">A*算法详解</h2>
-<h3 id="概述">概述</h3>
-<p>虽然掌握了 A* 算法的人认为它容易，但是对于初学者来说， A* 算法还是很复杂的。</p>
-<h3 id="搜索区域the-search-area">搜索区域(The Search Area)</h3>
-<h3 id="开始搜索starting-the-search">开始搜索(Starting the Search)</h3>
-<p>一旦我们把搜寻区域简化为一组可以量化的节点后，就像上面做的一样，我们下一步要做的便是查找最短路径。在 A* 中，我们从起点开始，检查其相邻的方格，然后向四周扩展，直至找到目标。</p>
-<p>我们这样开始我们的寻路旅途：</p>
-<p>1.从起点 A 开始，并把它就加入到一个由方格组成的 open list( 开放列表 ) 中。这个 open list 有点像是一个购物单。当然现在 open list 里只有一项，它就是起点 A ，后面会慢慢加入更多的项。 Open list 里的格子是路径可能会是沿途经过的，也有可能不经过。基本上 open list 是一个待检查的方格列表。</p>
-<p>2.查看与起点 A 相邻的方格 ( 忽略其中墙壁所占领的方格，河流所占领的方格及其他非法地形占领的方格 ) ，把其中可走的 (walkable) 或可到达的 (reachable) 方格也加入到 open list 中。把起点 A 设置为这些方格的父亲 (parent node 或 parent square) 。当我们在追踪路径时，这些父节点的内容是很重要的。稍后解释。</p>
-<p>3.把 A 从 open list 中移除，加入到 close list( 封闭列表 ) 中， close list 中的每个方格都是现在不需要再关注的。</p>
-<p>如下图所示，深绿色的方格为起点，它的外框是亮蓝色，表示该方格被加入到了 close list 。与它相邻的黑色方格是需要被检查的，他们的外框是亮绿色。每个黑方格都有一个灰色的指针指向他们的父节点，这里是起点 A 。</p>
 ]]></description></item></channel></rss>
