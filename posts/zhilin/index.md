@@ -323,5 +323,5 @@
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/command/  
+> URL: https://lruihao.cn/posts/zhilin/  
 
