@@ -85,5 +85,5 @@ $$traj_{cost} = k_{lat} * cost_{lat} + k_{lon} * cost_{lon} + k_{obs} * obs_{cos
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/latticeplanner/  
+> URL: https://jianye0428.github.io/posts/latticeplanner/  
 

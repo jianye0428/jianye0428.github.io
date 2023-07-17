@@ -120,5 +120,5 @@ int main()
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/wannafly-20/  
+> URL: https://jianye0428.github.io/posts/wannafly-20/  
 

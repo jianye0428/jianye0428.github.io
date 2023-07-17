@@ -64,5 +64,5 @@ PRM和RRT都是一个概率完备但非最优的路径规划算法，也就是�
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/decisionandplanning_4/  
+> URL: https://jianye0428.github.io/posts/decisionandplanning_4/  
 

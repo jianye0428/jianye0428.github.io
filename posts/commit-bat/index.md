@@ -68,5 +68,5 @@ dir \\?\%1 /a:-d /b /o /p /w >Filelist.txt
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/commit-bat/  
+> URL: https://jianye0428.github.io/posts/commit-bat/  
 

@@ -55,5 +55,5 @@ sudo bash install-ubuntu16+.sh
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/hustoj/  
+> URL: https://jianye0428.github.io/posts/hustoj/  
 

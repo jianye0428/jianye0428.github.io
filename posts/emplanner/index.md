@@ -159,5 +159,5 @@ EM Planner通过将三维规划问题转化为两个二维规划问题，显著�
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/emplanner/  
+> URL: https://jianye0428.github.io/posts/emplanner/  
 

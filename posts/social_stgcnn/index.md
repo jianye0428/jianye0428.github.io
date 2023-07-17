@@ -101,5 +101,5 @@ A_tr - *<font color=red>预测轨迹 graph Adjacency Matrix*</font>
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/social_stgcnn/  
+> URL: https://jianye0428.github.io/posts/social_stgcnn/  
 

@@ -125,5 +125,5 @@ repaint 的本质就是重新根据分层信息计算了绘制指令。
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/browser-rendering/  
+> URL: https://jianye0428.github.io/posts/browser-rendering/  
 

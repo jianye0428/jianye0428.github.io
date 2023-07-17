@@ -100,5 +100,5 @@ void join(int x,int y){
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/%E7%95%85%E9%80%9A%E5%B7%A5%E7%A8%8B/  
+> URL: https://jianye0428.github.io/posts/%E7%95%85%E9%80%9A%E5%B7%A5%E7%A8%8B/  
 

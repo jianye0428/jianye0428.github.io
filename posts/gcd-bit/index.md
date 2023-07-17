@@ -56,5 +56,5 @@ int get_lcm(int a,int b)///获得最小公倍数
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/gcd-bit/  
+> URL: https://jianye0428.github.io/posts/gcd-bit/  
 

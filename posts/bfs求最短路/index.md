@@ -124,5 +124,5 @@ int main()
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/bfs%E6%B1%82%E6%9C%80%E7%9F%AD%E8%B7%AF/  
+> URL: https://jianye0428.github.io/posts/bfs%E6%B1%82%E6%9C%80%E7%9F%AD%E8%B7%AF/  
 

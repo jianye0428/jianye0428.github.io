@@ -115,5 +115,5 @@ int main()
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/taotao%E8%A6%81%E5%90%83%E9%B8%A1/  
+> URL: https://jianye0428.github.io/posts/taotao%E8%A6%81%E5%90%83%E9%B8%A1/  
 

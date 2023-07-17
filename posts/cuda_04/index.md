@@ -294,5 +294,5 @@ cudaHostAllocDefault函数使cudaHostAlloc函数的行为与cudaMallocHost函数
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/cuda_04/  
+> URL: https://jianye0428.github.io/posts/cuda_04/  
 

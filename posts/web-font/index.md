@@ -43,5 +43,5 @@ font-spider C:\Users\李瑞豪、Desktop\love\index.html
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/web-font/  
+> URL: https://jianye0428.github.io/posts/web-font/  
 

@@ -55,5 +55,5 @@ GPU中有两种类型的内存:
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/cuda_05/  
+> URL: https://jianye0428.github.io/posts/cuda_05/  
 

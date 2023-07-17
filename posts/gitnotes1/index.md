@@ -323,5 +323,5 @@
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/gitnotes1/  
+> URL: https://jianye0428.github.io/posts/gitnotes1/  
 

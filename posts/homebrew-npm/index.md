@@ -53,5 +53,5 @@ npx -v
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/homebrew-npm/  
+> URL: https://jianye0428.github.io/posts/homebrew-npm/  
 

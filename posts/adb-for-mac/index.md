@@ -54,5 +54,5 @@ push 和 pull 命令时由于编码方式的不同会产生错误，因此需要
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/adb-for-mac/  
+> URL: https://jianye0428.github.io/posts/adb-for-mac/  
 

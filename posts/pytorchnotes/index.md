@@ -253,5 +253,5 @@ ref link: https://zhuanlan.zhihu.com/p/76908135
 ---
 
 > 作者: Jian Ye  
-> URL: https://lruihao.cn/posts/pytorchnotes/  
+> URL: https://jianye0428.github.io/posts/pytorchnotes/  
 

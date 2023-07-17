@@ -92,5 +92,5 @@ recent_posts:
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/recent-posts/  
+> URL: https://jianye0428.github.io/posts/recent-posts/  
 

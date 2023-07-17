@@ -33,5 +33,5 @@ tips for hugo installation and new site creation.
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/hugo_command/  
+> URL: https://jianye0428.github.io/posts/hugo_command/  
 

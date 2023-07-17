@@ -79,5 +79,5 @@ B: 自动生成 get/set 方法
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/eclipseuse/  
+> URL: https://jianye0428.github.io/posts/eclipseuse/  
 

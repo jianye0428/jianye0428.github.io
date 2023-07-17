@@ -56,5 +56,5 @@ tensorboard --logdir=training_model:/log_path_1, baseline:/log_path_2
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/distributedtraining_2/  
+> URL: https://jianye0428.github.io/posts/distributedtraining_2/  
 

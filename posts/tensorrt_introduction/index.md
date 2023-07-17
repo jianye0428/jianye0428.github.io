@@ -192,5 +192,5 @@ make -j$(nproc)
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/tensorrt_introduction/  
+> URL: https://jianye0428.github.io/posts/tensorrt_introduction/  
 

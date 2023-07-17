@@ -50,5 +50,5 @@ cock number:12  hen number:4    chick number:84
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/bqbj/  
+> URL: https://jianye0428.github.io/posts/bqbj/  
 

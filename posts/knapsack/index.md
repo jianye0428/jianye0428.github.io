@@ -89,5 +89,5 @@ int knapsack(vector<int>& weights, vector<int>& values, int N, int W) {
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/knapsack/  
+> URL: https://jianye0428.github.io/posts/knapsack/  
 

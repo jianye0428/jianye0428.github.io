@@ -44,5 +44,5 @@ wget -O install.sh http://download.bt.cn/install/install_6.0.sh && bash install.
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/bt/  
+> URL: https://jianye0428.github.io/posts/bt/  
 

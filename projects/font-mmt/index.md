@@ -66,5 +66,5 @@ new Vue({ el: '#app-mmt', data: { message: '' }});
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/projects/font-mmt/  
+> URL: https://jianye0428.github.io/projects/font-mmt/  
 

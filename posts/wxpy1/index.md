@@ -157,5 +157,5 @@ for curr_group in target_group:
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/wxpy1/  
+> URL: https://jianye0428.github.io/posts/wxpy1/  
 

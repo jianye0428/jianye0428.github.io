@@ -220,5 +220,5 @@ Vim 速查表-帮你提高 N 倍效率
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/vim/  
+> URL: https://jianye0428.github.io/posts/vim/  
 > 转载 URL: https://www.jianshu.com/p/6aa2e0e39f99

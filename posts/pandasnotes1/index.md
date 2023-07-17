@@ -106,5 +106,5 @@ DataFrame是一个【表格型】的数据结构，可以看做是【由Series�
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/pandasnotes1/  
+> URL: https://jianye0428.github.io/posts/pandasnotes1/  
 

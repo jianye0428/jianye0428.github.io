@@ -230,5 +230,5 @@ $$\mathcal{L}_{s2} = \mathcal{L}_{head} + \mathcal{L}_{set}$$
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/densetnt_tnt/  
+> URL: https://jianye0428.github.io/posts/densetnt_tnt/  
 

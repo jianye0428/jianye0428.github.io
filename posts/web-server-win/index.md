@@ -36,5 +36,5 @@
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/web-server-win/  
+> URL: https://jianye0428.github.io/posts/web-server-win/  
 

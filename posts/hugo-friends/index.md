@@ -170,5 +170,5 @@ hugo new friends/index.md
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/hugo-friends/  
+> URL: https://jianye0428.github.io/posts/hugo-friends/  
 

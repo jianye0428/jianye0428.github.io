@@ -200,5 +200,5 @@ CPU + GPU的异构系统成为高性能计算的主流架构: 在GPU上执行数
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/cuda_01/  
+> URL: https://jianye0428.github.io/posts/cuda_01/  
 

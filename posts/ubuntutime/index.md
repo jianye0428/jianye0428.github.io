@@ -52,5 +52,5 @@ $sudo hwclock --localtime --systohc
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/ubuntutime/  
+> URL: https://jianye0428.github.io/posts/ubuntutime/  
 

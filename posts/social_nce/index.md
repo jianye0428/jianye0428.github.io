@@ -86,5 +86,5 @@ $$s^{i,n-}_{t+\delta t} = s^{i}_{t+\delta t} +  \epsilon$$
 ---
 
 > 作者: <no value>  
-> URL: https://lruihao.cn/posts/social_nce/  
+> URL: https://jianye0428.github.io/posts/social_nce/  
 

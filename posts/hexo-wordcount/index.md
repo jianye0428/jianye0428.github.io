@@ -61,5 +61,5 @@ npm install hexo-wordcount@2 --save
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/hexo-wordcount/  
+> URL: https://jianye0428.github.io/posts/hexo-wordcount/  
 

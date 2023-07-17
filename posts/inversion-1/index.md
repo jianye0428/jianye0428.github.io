@@ -106,5 +106,5 @@ What is wrong? = What is the matter?
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/inversion-1/  
+> URL: https://jianye0428.github.io/posts/inversion-1/  
 

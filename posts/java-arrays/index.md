@@ -95,5 +95,5 @@ fill() 后：-1 -1 -1 41 44 49 87 96 96
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/java-arrays/  
+> URL: https://jianye0428.github.io/posts/java-arrays/  
 

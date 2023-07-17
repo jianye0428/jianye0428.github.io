@@ -117,5 +117,5 @@ ps: `title`和`subtitle`的`字体`还有`颜色`也可以在这个文件修改�
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/dongtaisub/  
+> URL: https://jianye0428.github.io/posts/dongtaisub/  
 

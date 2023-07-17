@@ -73,5 +73,5 @@ ServerName 服务器 IP 或 域名
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/web-server-yun/  
+> URL: https://jianye0428.github.io/posts/web-server-yun/  
 > 转载 URL: https://www.jianshu.com/p/0b67c6c5d21d

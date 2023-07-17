@@ -139,5 +139,5 @@ $$ L(Y|f(x))= \begin{cases} \frac{1}{2} (Y-f(x))^2, & |Y-f(x)|<= \delta \\\\ \de
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/vectornet/  
+> URL: https://jianye0428.github.io/posts/vectornet/  
 

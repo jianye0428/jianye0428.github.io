@@ -181,5 +181,5 @@ exports.main_handler = async (event, context, callback) => {
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/cos-hexo/  
+> URL: https://jianye0428.github.io/posts/cos-hexo/  
 

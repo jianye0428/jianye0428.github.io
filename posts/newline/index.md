@@ -44,5 +44,5 @@ Windows 系统设计遵循了 `CR + LF` 的约定，而 Unix 系统则遵循了 
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/newline/  
+> URL: https://jianye0428.github.io/posts/newline/  
 

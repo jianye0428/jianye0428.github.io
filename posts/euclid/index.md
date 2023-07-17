@@ -271,5 +271,5 @@ return 0;
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/euclid/  
+> URL: https://jianye0428.github.io/posts/euclid/  
 > 转载 URL: https://www.cnblogs.com/Rinyo/archive/2012/11/25/2787419.html

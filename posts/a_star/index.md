@@ -33,5 +33,5 @@ ref:</br>
 ---
 
 > 作者: <no value>  
-> URL: https://lruihao.cn/posts/a_star/  
+> URL: https://jianye0428.github.io/posts/a_star/  
 

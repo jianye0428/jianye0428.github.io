@@ -731,5 +731,5 @@ reference:
 ---
 
 > 作者: <no value>  
-> URL: https://lruihao.cn/posts/2022-10-08_horovod_2/  
+> URL: https://jianye0428.github.io/posts/2022-10-08_horovod_2/  
 

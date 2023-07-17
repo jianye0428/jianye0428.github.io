@@ -104,5 +104,5 @@ python /home/python/yiban_daka/daka.py
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/daka/  
+> URL: https://jianye0428.github.io/posts/daka/  
 

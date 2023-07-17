@@ -133,5 +133,5 @@ CASE WHEN <求值表达式> THEN <表达式>
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/sql/  
+> URL: https://jianye0428.github.io/posts/sql/  
 

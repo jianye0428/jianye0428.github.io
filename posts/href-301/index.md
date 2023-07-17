@@ -176,5 +176,5 @@ http 强制重定向 https
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/href-301/  
+> URL: https://jianye0428.github.io/posts/href-301/  
 

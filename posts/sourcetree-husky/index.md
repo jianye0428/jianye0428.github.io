@@ -75,5 +75,5 @@ export NVM_NODEJS_ORG_MIRROR=https://mirrors.ustc.edu.cn/node/
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/sourcetree-husky/  
+> URL: https://jianye0428.github.io/posts/sourcetree-husky/  
 

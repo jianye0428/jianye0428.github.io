@@ -89,5 +89,5 @@ function isWeiXin(){
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/js-device/  
+> URL: https://jianye0428.github.io/posts/js-device/  
 > 转载 URL: https://www.cnblogs.com/coober/p/6594379.html

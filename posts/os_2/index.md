@@ -185,5 +185,5 @@ python可以通过 yield/send 的方式实现协程。**在python 3.5以后，as
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/os_2/  
+> URL: https://jianye0428.github.io/posts/os_2/  
 

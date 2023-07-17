@@ -229,5 +229,5 @@ defaultContentLanguage = "zh-tw"
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/hugo-i18n-zh-tw/  
+> URL: https://jianye0428.github.io/posts/hugo-i18n-zh-tw/  
 

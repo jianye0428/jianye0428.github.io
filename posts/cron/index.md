@@ -61,5 +61,5 @@ Cron 表达式是一个具有时间含义的字符串，字符串以 5 个空格
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/cron/  
+> URL: https://jianye0428.github.io/posts/cron/  
 

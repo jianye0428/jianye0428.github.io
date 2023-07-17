@@ -12,5 +12,5 @@ https://zhuanlan.zhihu.com/p/337976595
 ---
 
 > 作者: <no value>  
-> URL: https://lruihao.cn/posts/dpg/  
+> URL: https://jianye0428.github.io/posts/dpg/  
 

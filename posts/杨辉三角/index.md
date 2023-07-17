@@ -44,5 +44,5 @@
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/%E6%9D%A8%E8%BE%89%E4%B8%89%E8%A7%92/  
+> URL: https://jianye0428.github.io/posts/%E6%9D%A8%E8%BE%89%E4%B8%89%E8%A7%92/  
 

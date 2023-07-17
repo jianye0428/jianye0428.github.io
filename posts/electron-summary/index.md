@@ -282,5 +282,5 @@ windows 系统打包配置，当没有配置签名时，`sign` 字段应删除�
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/electron-summary/  
+> URL: https://jianye0428.github.io/posts/electron-summary/  
 

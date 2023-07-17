@@ -237,5 +237,5 @@ CUDA内核调用是对C语言函数调用语句的延伸， <<<>>>运算符内�
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/cuda_02/  
+> URL: https://jianye0428.github.io/posts/cuda_02/  
 

@@ -7,5 +7,5 @@
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/offline/  
+> URL: https://jianye0428.github.io/offline/  
 

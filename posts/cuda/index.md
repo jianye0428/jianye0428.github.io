@@ -435,5 +435,5 @@ CUDA数组是使用cudaMallocArray()、cudaMalloc3DArray()分配的，使用cuda
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/cuda/  
+> URL: https://jianye0428.github.io/posts/cuda/  
 

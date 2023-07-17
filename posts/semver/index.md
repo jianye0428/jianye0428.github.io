@@ -200,5 +200,5 @@ package.json 版本控制规则使用了一些些符号：
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/semver/  
+> URL: https://jianye0428.github.io/posts/semver/  
 

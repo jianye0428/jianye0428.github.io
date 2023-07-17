@@ -72,5 +72,5 @@ window.addEventListener('keydown', function(e) {
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/night/  
+> URL: https://jianye0428.github.io/posts/night/  
 

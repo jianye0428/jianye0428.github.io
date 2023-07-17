@@ -1689,5 +1689,5 @@ ref: https://blog.csdn.net/m0_46245582/category_11569287.html
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/basics_one/  
+> URL: https://jianye0428.github.io/posts/basics_one/  
 

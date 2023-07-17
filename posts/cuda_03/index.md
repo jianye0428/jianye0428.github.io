@@ -264,5 +264,5 @@ $$占用率 = \frac{活跃线程束数量}{最大线程束数量}$$
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/cuda_03/  
+> URL: https://jianye0428.github.io/posts/cuda_03/  
 

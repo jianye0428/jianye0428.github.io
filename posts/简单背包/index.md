@@ -120,5 +120,5 @@ int main() {
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/%E7%AE%80%E5%8D%95%E8%83%8C%E5%8C%85/  
+> URL: https://jianye0428.github.io/posts/%E7%AE%80%E5%8D%95%E8%83%8C%E5%8C%85/  
 

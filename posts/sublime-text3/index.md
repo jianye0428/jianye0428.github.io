@@ -101,5 +101,5 @@ Sublime Text3 快捷键一览表
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/sublime-text3/  
+> URL: https://jianye0428.github.io/posts/sublime-text3/  
 > 转载 URL: https://www.cnblogs.com/rudong/p/7889114.html

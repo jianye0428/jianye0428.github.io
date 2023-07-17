@@ -115,5 +115,5 @@ npm run serve
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/v2-tailwind/  
+> URL: https://jianye0428.github.io/posts/v2-tailwind/  
 

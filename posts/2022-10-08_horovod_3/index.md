@@ -1326,5 +1326,5 @@ references:
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/2022-10-08_horovod_3/  
+> URL: https://jianye0428.github.io/posts/2022-10-08_horovod_3/  
 

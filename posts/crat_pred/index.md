@@ -146,5 +146,5 @@ for i in range(len(out)):
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/crat_pred/  
+> URL: https://jianye0428.github.io/posts/crat_pred/  
 

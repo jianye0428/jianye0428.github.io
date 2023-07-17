@@ -57,5 +57,5 @@ public class QFrame extends JFrame {
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/qframe/  
+> URL: https://jianye0428.github.io/posts/qframe/  
 

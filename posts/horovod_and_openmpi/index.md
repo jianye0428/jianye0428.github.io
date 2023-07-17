@@ -751,5 +751,5 @@ https://blog.csdn.net/weixin_45385568/article/details/121208161?spm=1001.2101.30
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/horovod_and_openmpi/  
+> URL: https://jianye0428.github.io/posts/horovod_and_openmpi/  
 

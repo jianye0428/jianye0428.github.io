@@ -140,5 +140,5 @@ Signal与Wait属于记录型信号量机制： wait(s)，signal(s)可用于解�
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/posts/distributedtraining_3/  
+> URL: https://jianye0428.github.io/posts/distributedtraining_3/  
 

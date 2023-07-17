@@ -31,5 +31,5 @@
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://lruihao.cn/friends/  
+> URL: https://jianye0428.github.io/friends/  
 
