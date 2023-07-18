@@ -23,7 +23,7 @@
 
 
 
-![NN Architecture](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/tech/2022-06-13_LaneGCN/NN_Architecture.png#pic_center)
+![NN Architecture](images/NN_Architecture.png#pic_center)
 
 
 **<font color=red>Difference between VectorNet and LaneGCN:</font>**
@@ -33,7 +33,7 @@
 
 ## Lane Graph Representations for Motion Forecasting
 
-![Model_Layout](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/tech/2022-06-13_LaneGCN/Model_Layout.png#pic_center)
+![Model_Layout](images/Model_Layout.png#pic_center)
 
 ### <font color=red>ActorNet</font>: Extracting Traffic Participant Representations
 
@@ -47,7 +47,7 @@ and efficiency in parallel computing. The output of ActorNet is a temporal featu
 Each group consists of 2 residual blocks, with the stride of the first block as 2. We then use a Feature Pyramid Network (FPN) to fuse the
 multi-scale features, and apply another residual block to obtain the output tensor. For all layers, the convolution kernel size is 3 and the number of output channels is 128. Layer normalization and the Rectified Linear Unit (ReLU) are used after each convolution.
 
-![ActorNet](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/tech/2022-06-13_LaneGCN/ActorNet.png#pic_center)
+![ActorNet](images/ActorNet.png#pic_center)
 
 
 ### <font color=red>MapNet</font>: Extracting Structured Map Representation
@@ -107,7 +107,7 @@ $$Y = XW_0 + \sum_{i\in \lbrace left, right \rbrace} A_i X W_i + \sum_{c=1}^C (A
 
 where $k_c$ is the $c$-th dilation size. We denote $LaneConv(k_1 , · · · , k_C)$ this multi-scale layer.
 
-![LaneGCN Architecture](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/tech/2022-06-13_LaneGCN/LaneGCN_Architecture.png)
+![LaneGCN Architecture](images/LaneGCN_Architecture.png)
 
 
 ### <font color=red>Fusion Net</font>
@@ -168,7 +168,7 @@ where $||x_i||$ denotes the $\ell1$ norm of $x_i$.
 
 ### <font color=red> Neural Network Layout</font>
 
-![LaneGCN Architecture](https://github.com/jianye0428/hello-hugo/raw/master/img/posts/tech/2022-06-13_LaneGCN/NN_Layout.png)
+![LaneGCN Architecture](images/NN_Layout.png)
 
 
 ### <font color=red>Data Process And Network Construction</font>
