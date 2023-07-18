@@ -46,7 +46,7 @@ const site = new Blog('Jian Blog', 'Jian YE', 'https://jianye0428.github.io');
 ## 致謝
 
 {{< details "感謝大家的支持 🙏" >}}
-{{< reward wechatpay="/images/wechatpay.jpg" alipay="/images/alipay.jpg" comment="给博主买杯卡布奇诺～" mode="fixed" >}}
+{{< reward wechatpay="/images/wechatpay.png" alipay="/images/alipay.png" comment="给博主买杯卡布奇诺～" mode="fixed" >}}
 {{< sponsor-log >}}
 {{< /details >}}
 
