@@ -18,7 +18,7 @@
 
 ---
 
-{{< reward wechatpay="/images/wechatpay.jpg" alipay="/images/alipay.jpg" comment="给博主买杯卡布奇诺～" >}}
+{{< reward wechatpay="/images/wechatpay.png" alipay="/images/alipay.png" comment="给博主买杯卡布奇诺～" >}}
 
 
 ---
