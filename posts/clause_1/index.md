@@ -48,7 +48,7 @@ STL有<font color=red>**迭代器**</font>、<font color=red>**算法**</font>�
 |:---|:---|
 |标准STL序列容器	|vector、string、deque和list|
 |标准STL关联容器	|set、multiset、map和multimap|
-|非标准序列容器slist和rope|	slist是一个单向链表，rope本质上是一个重型字符串。（“绳子（rope）”是重型的“线（string）”）|
+|非标准序列容器slist和rope|	slist是一个单向链表，rope本质上是一个重型字符串。("绳子(rope)"是重型的"线(string)")|
 |非标准关联容器|	hash_set、hash_multiset、hash_map和hash_multimap|
 |vector	可以作为string的替代品|vector作为标准关联容器的替代品</br>	有时候vector可以在时间和空间上都表现得比标准关联容器好|
 |标准非STL容器|	包括数组、bitset、valarray、stack、queue和priority_queue 。</br>值得注意的是，数组可以和STL算法配合，因为指针可以当作数组的迭代器使用|
