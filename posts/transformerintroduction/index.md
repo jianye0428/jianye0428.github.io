@@ -1359,7 +1359,6 @@ $$Attention(Q, K, V) = softmax(\frac{QK^{T}}{\sqrt{d_k}}) V$$
 
 Liu[5]等针对如何实现多模态轨迹预测，提出mmTransformer框架，该方法在Argoverse基准排行榜排名第一名，框架由三个独立的堆叠式的Transformer模型组成，分别聚合历史轨迹，道路信息以及交互信息。如图2所示，mmTransformer整体框架可由两部分组成，第一部分仅由运动提取器和地图聚合器分别对车辆的信息及环境信息进行编码，不考虑交互信息，第二部分通过社会构造函数对临近信息进行聚合，并对车辆之间的依赖关系进行建模，整个过程是依照逻辑顺序，即社会关系是基于每个车辆特征构建的。该方法还提出基于区域的训练策略(RTS)，在初始化建议后，将建议路径分为空间群组，通过路径分配计算路径回归损失和分类损失，以确保生成预测轨迹的多样性。
 
-
 ![mmTransformer](images/Transformer_mmTransformer.jpg)
 
 Yuan等针对时间和社会维度上独立特征编码信息丢失问题，提出AgentFormer[6]允许一个智能体在某个时间的状态直接影响另一个智能体未来的状态，而不是通过在一个维度上编码的中间特征，AgentFormer(图3)可以同时学习时序信息和交互关系，智能体当前时刻的关系可以通过不同时刻关系体现，解决了传统Transformer注意力中各个输入元素权重平等造成的时间和智能体信息损失，该模型采用时间编码减少时间信息损失，通过独特的Agent-aware注意力机制编码智能体和时间的关系，采用CVAE形式，以概率形式描述，确保了生成轨迹的多模态性。
@@ -1464,7 +1463,6 @@ $$\left\{\begin{aligned}
 PE(pos, 2i) = \sin (pos/10000^{2i/d_{model}}) \\
 PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \\
 \end{aligned}\right.$$
-
 
 上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max\_sequence\_length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding\_dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值
 
