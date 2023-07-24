@@ -1,4 +1,129 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/stl/</link><description>STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 20 Jul 2023 15:58:12 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL 2 | 小心对“容器无关代码”的幻想</title><link>https://jianye0428.github.io/posts/clause_2/</link><pubDate>Thu, 20 Jul 2023 15:58:12 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_2/</guid><description><![CDATA[<h2 id="stl-容器特点">STL 容器特点</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/stl/</link><description>STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 24 Jul 2023 09:11:28 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [3] | 使容器里对象的拷贝操作轻量而正确</title><link>https://jianye0428.github.io/posts/clause_3/</link><pubDate>Mon, 24 Jul 2023 09:11:28 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_3/</guid><description><![CDATA[<h2 id="拷贝对象是stl的方式">拷贝对象是STL的方式</h2>
+<ul>
+<li>
+<p>当一个对象进入一个容器，它已经不是你添加（<code>insert</code>或<code>push_back</code>等）的那个对象了，进入容器的是你指定的对象的拷贝；</p>
+</li>
+<li>
+<p>当从容器中取出一个对象时，所得到的也不是容器里的对象；</p>
+</li>
+<li>
+<p>如果从<code>vector</code>、<code>string</code>或<code>deque</code>中插入或删除了什么，现有的容器元素会移动（拷贝）</p>
+</li>
+<li>
+<p>如果使用了任何排序算法：<code>next_permutation</code>或者<code>previous_permutation</code>；</p>
+</li>
+<li>
+<p><code>remove</code>、<code>unique</code>或它们的同类；</p>
+</li>
+<li>
+<p><code>rotate</code>或<code>reverse</code>等，对象会移动（拷贝）</p>
+</li>
+</ul>
+<p><strong>拷进去，拷出来</strong>。这就是STL的方式.</p>
+<p>因为拷贝，还解决了一个 double free 的 bug<a href="https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&amp;mid=2247490628&amp;idx=1&amp;sn=43650727bc93d8064fd2969733873fdc&amp;chksm=f9e422d7ce93abc1d2784bcb5772536f55aa79902bbb783003c3314df7ed6461a014ed3cce25&amp;token=235869638&amp;lang=zh_CN&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">点击查看<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="how-copy-如何完成拷贝">How Copy? 如何完成拷贝</h2>
+<div class="details admonition info open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-info-circle fa-fw" aria-hidden="true"></i>Notice<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">通过拷贝构造函数和拷贝复制操作符完成！</div>
+    </div>
+  </div>
+<p>一个对象通过使用它的拷贝成员函数来拷贝，特别是它的拷贝构造函数和它的拷贝赋值操作符。</p>
+<p>对于用户自定义类，比如Widget，这些函数传统上是这么声明的：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">Widget</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span><span class="p">);</span> <span class="c1">// 拷贝构造函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Widget</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span><span class="p">);</span> <span class="c1">// 拷贝赋值操作符
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>如果你自己没有声明这些函数，你的编译器始终会为你声明它们。</strong></p>
+<p>拷贝内建类型（比如int、指针等）也始终是通过简单地拷贝他们的内在比特来完成的。（请参考《Effective C++》中，条款11和27专注于这些函数的行为。）</p>
+<h2 id="拷贝带来的问题">拷贝带来的问题</h2>
+<p><strong>性能瓶颈</strong></p>
+<p>拷贝会导致把对象放进容器也会被证明为是一个性能瓶颈。</p>
+<p>容器中移动越多的东西，你就会在拷贝上浪费越多的内存和时钟周期。</p>
+<p><strong>切片分割</strong></p>
+<p>当然由于继承的存在，拷贝会导致分割。</p>
+<p>如果以基类对象建立一个容器，而你试图插入派生类对象，那么当对象（通过基类的拷贝构造函数）拷入容器的时候对象的派生部分会被删除：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">randy</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecialWidget</span><span class="o">:</span> <span class="k">public</span> <span class="n">Widget</span> <span class="p">{...};</span> <span class="c1">// SpecialWidget从上面的Widget派生
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">SpecialWidget</span> <span class="n">sw</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">randy</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">sw</span><span class="p">);</span> <span class="c1">// sw被当作基类对象拷入randy，当拷贝时它的特殊部分丢失了
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>分割问题暗示了把一个派生类对象插入基类对象的容器几乎总是错的。</p>
+<p>如果你希望结果对象表现为派生类对象，比如，调用派生类的虚函数等，总是错的。</p>
+<h2 id="解决">解决</h2>
+<p>一个使拷贝更高效、正确而且对分割问题免疫的简单的方式是<strong>建立指针的容器而不是对象的容器</strong>。</p>
+<p>也就是说，不是建立一个Widget的容器，建立一个Widget*的容器。</p>
+<p><strong>拷贝指针很快，它总是严密地做你希望的（指针拷贝比特），而且当指针拷贝时没有分割，就是int类型的地址。</strong></p>
+<p><font color=red>但是一定要记得在销毁容器的时候，使用delete 销毁里面保存的每个指针。而且一定要定义对象的深拷贝构造函数和深拷贝拷贝赋值操作符，否则delete 的时候会报错。</font></p>
+<h2 id="和数组对比stl容器更文明">和数组对比，STL容器更文明</h2>
+<p><strong>STL容器只建立（通过拷贝）你需要的个数的对象，而且它们只在你指定的时候做。</strong></p>
+<p>STL进行了大量拷贝，但它通常设计为避免不必要的对象拷贝，实际上，它也被实现为避免不必要的对象拷贝。</p>
+<ol>
+<li>数组在声明的时候，会默认先构造好每个元素；STL容器可以实现动态扩展</li>
+</ol>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Widget</span> <span class="n">randy</span><span class="p">[</span><span class="n">maxNumWidgets</span><span class="p">];</span> <span class="c1">// 建立一个大小为maxNumWidgets的Widgets数组
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 默认构造每个元素
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>即使只使用其中的一些或者我们立刻使用从某个地方获取（比如，一个文件）的值覆盖每个默认构造的值，这也得构造maxNumWidgets个Widget对象。</p>
+<p>使用STL来代替数组，你可以使用一个可以在需要的时候增长的vector，就是动态数组的概念：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">randy</span><span class="p">;</span> <span class="c1">// 建立一个0个Widget对象的vector
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 需要的时候可以扩展
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="2">
+<li>建立一个可以足够包含maxNumWidgets个Widget的空vector，但不去构造Widget，需要时再构造：</li>
+</ol>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">randy</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">randy</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">maxNumWidgets</span><span class="p">);</span> <span class="c1">// reserve的详细信息请参见条款14
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>即便需要知道STL容器使用了拷贝，但是别忘了一个事实：比起数组它们仍然是一个进步。</p>
+]]></description></item><item><title>Effective STL [2] | 小心对“容器无关代码”的幻想</title><link>https://jianye0428.github.io/posts/clause_2/</link><pubDate>Thu, 20 Jul 2023 15:58:12 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_2/</guid><description><![CDATA[<h2 id="stl-容器特点">STL 容器特点</h2>
 <p>STL是建立在<strong>泛化</strong>之上的</p>
 <ul>
 <li>数组泛化为容器，参数化了所包含的对象的类型</br></li>
@@ -149,7 +274,7 @@
 <p>在这种情况下，你的客户&quot;list&quot;可能更应该用&quot;vector&quot;或&quot;deque&quot;来实现</p>
 <p>当你决定作这种更改的时候，你仍然<strong>必须检查每个CustomerList的成员函数和每个友元，看看他们受影响的程度（根据性能和迭代器/指针/引用失效的情况等等）</strong>。</p>
 <p>但如果你做好了对CustomerList地实现细节做好封装的话，那对CustomerList的客户的影响将会很小。</p>
-]]></description></item><item><title>Effective STL 1 | 仔细选择你的容器</title><link>https://jianye0428.github.io/posts/clause_1/</link><pubDate>Wed, 19 Jul 2023 08:51:49 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_1/</guid><description><![CDATA[<div class="details admonition quote">
+]]></description></item><item><title>Effective STL [1] | 仔细选择你的容器</title><link>https://jianye0428.github.io/posts/clause_1/</link><pubDate>Wed, 19 Jul 2023 08:51:49 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_1/</guid><description><![CDATA[<div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>

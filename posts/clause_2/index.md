@@ -1,4 +1,4 @@
-# Effective STL 2 |  小心对“容器无关代码”的幻想
+# Effective STL [2] | 小心对“容器无关代码”的幻想
 
 
 ## STL 容器特点
