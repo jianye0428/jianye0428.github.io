@@ -10,26 +10,27 @@
 ref:
 [1]. [B站讲解视频](https://www.bilibili.com/video/BV1mk4y1q7eK?p=1)
 [2]. https://wmathor.com/index.php/archives/1438/
+[3]. [Transformer的pytorch实现](https://wmathor.com/index.php/archives/1455/)
 
 ## Transformer 详解
 
 Transformer 是谷歌大脑在 2017 年底发表的论文 [attention is all you need](https://arxiv.org/pdf/1706.03762.pdf) 中所提出的 seq2seq 模型。现在已经取得了大范围的应用和扩展，而 BERT 就是从 Transformer 中衍生出来的预训练语言模型
 
 这篇文章分为以下几个部分
-    - Transformer 直观认识
-    - Positional Encoding
-    - Self Attention Mechanism
-    - 残差连接和 Layer Normalization
-    - Transformer Encoder 整体结构
-    - Transformer Decoder 整体结构
-    - 总结
-    - 参考文章
+  - Transformer 直观认识</br>
+  - Positional Encoding</br>
+  - Self Attention Mechanism</br>
+  - 残差连接和 Layer Normalization</br>
+  - Transformer Encoder 整体结构</br>
+  - Transformer Decoder 整体结构</br>
+  - 总结</br>
+  - 参考文章</br>
 
 ### 0. Transformer 直观认识
 
-Transformer 和 LSTM 的最大区别，就是 LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字。而 Transformer 的训练时并行的，即所有字是同时训练的，这样就大大增加了计算效率。Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序，使用自注意力机制（Self Attention Mechanism）和全连接层进行计算，这些后面会讲到
+Transformer 和 LSTM 的最大区别，就是 LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字。而 Transformer 的训练时并行的，即所有字是同时训练的，这样就大大增加了计算效率。<font color=green>Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序</font>，使用自注意力机制（Self Attention Mechanism）和全连接层进行计算，这些后面会讲到
 
-Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。Encoder 负责把输入（语言序列）隐射成隐藏层（下图中第 2 步用九宫格代表的部分），然后解码器再把隐藏层映射为自然语言序列。例如下图机器翻译的例子（Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token）
+Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<font color=red>Encoder 负责把输入（语言序列）隐射成隐藏层（下图中第 2 步用九宫格代表的部分），然后解码器再把隐藏层映射为自然语言序列</font>。例如下图机器翻译的例子（Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token）
 
 ![general architecture](images/Transformer_xiangjie_1.png#center)
 
@@ -41,7 +42,7 @@ Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。Enc
 
 ### 1. Positional Encoding
 
-由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能识别出语言中的顺序关系
+由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能识别出语言中的顺序关系。
 
 现在定义一个**位置嵌入**的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成
 
@@ -56,7 +57,7 @@ PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \\
 
 上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max\_sequence\_length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding\_dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值
 
-上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到位置之间的依赖关系和自然语言的时序特性。
+上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到**位置之间的依赖关系和自然语言的时序特性**。
 
 如果不理解这里为何这么设计，可以看这篇文章 [Transformer 中的 Positional Encoding](https://wmathor.com/index.php/archives/1453/)
 
@@ -205,7 +206,7 @@ $$X_{\text{embedding}} + \text{Self-Attention(Q, K, V)}$$
 
 **Layer Normalization**
 
-Layer Normalization 的作用是把神经网络中隐藏层归一为标准正态分布，也就是 $i.i.d$ 独立同分布，以起到加快训练速度，加速收敛的作用
+Layer Normalization 的作用是**把神经网络中隐藏层归一为标准正态分布**，也就是 $i.i.d$ 独立同分布，以起到**加快训练速度，加速收敛**的作用
 
 $$\mu_j = \frac{1}{m} \sum^{i}_{i=1} x_{ij}$$
 
@@ -271,9 +272,9 @@ $$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$
 
 **Masked Self-Attention**
 
-具体来说，传统 Seq2Seq 中 Decoder 使用的是 RNN 模型，因此在训练过程中输入 $t$ 时刻的词，模型无论如何也看不到未来时刻的词，因为循环神经网络是时间驱动的，只有当 $t$ 时刻运算结束了，才能看到 $t + 1$ 时刻的词。而 Transformer Decoder 抛弃了 RNN，改为 Self-Attention，由此就产生了一个问题，在训练过程中，整个 ground truth 都暴露在 Decoder 中，这显然是不对的，我们需要对 Decoder 的输入进行一些处理，该处理被称为 Mask
+具体来说，传统 Seq2Seq 中 Decoder 使用的是 RNN 模型，因此在训练过程中输入 $t$ 时刻的词，模型无论如何也看不到未来时刻的词，因为循环神经网络是时间驱动的，只有当 $t$ 时刻运算结束了，才能看到 $t + 1$ 时刻的词。而 Transformer Decoder 抛弃了 RNN，改为 Self-Attention，由此就产生了一个问题，<font color=red>在训练过程中，整个 ground truth 都暴露在 Decoder 中</font>，这显然是不对的，我们需要对 Decoder 的输入进行一些处理，该处理被称为 Mask
 </br>
-举个例子，Decoder 的 ground truth 为 "<start> I am fine"，我们将这个句子输入到 Decoder 中，经过 WordEmbedding 和 Positional Encoding 之后，将得到的矩阵做三次线性变换 $(W_Q, W_K, W_V)$。然后进行 self-attention 操作，首先通过得到 Scaled Scores，接下来非常关键，我们要对 Scaled Scores 进行 Mask，举个例子，当我们输入 "I" 时，模型目前仅知道包括 "I" 在内之前所有字的信息，即 "<start>" 和 "I" 的信息，不应该让其知道 "I" 之后词的信息。道理很简单，我们做预测的时候是按照顺序一个字一个字的预测，怎么能这个字都没预测完，就已经知道后面字的信息了呢？Mask 非常简单，首先生成一个下三角全 0，上三角全为负无穷的矩阵，然后将其与 Scaled Scores 相加即可
+举个例子，Decoder 的 ground truth 为 "<start> I am fine"，我们将这个句子输入到 Decoder 中，经过 WordEmbedding 和 Positional Encoding 之后，将得到的矩阵做三次线性变换 $(W_Q, W_K, W_V)$。然后进行 self-attention 操作，首先通过得到 Scaled Scores，接下来非常关键，我们要**对 Scaled Scores 进行 Mask**，举个例子，当我们输入 "I" 时，模型目前仅知道包括 "I" 在内之前所有字的信息，即 "<start>" 和 "I" 的信息，不应该让其知道 "I" 之后词的信息。道理很简单，我们做预测的时候是按照顺序一个字一个字的预测，怎么能这个字都没预测完，就已经知道后面字的信息了呢？Mask 非常简单，首先生成一个下三角全 0，上三角全为负无穷的矩阵，然后将其与 Scaled Scores 相加即可
 
 ![Decoder 2](images/Transformer_xiangjie_19.png)
 
