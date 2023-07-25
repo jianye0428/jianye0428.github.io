@@ -1,4 +1,4 @@
-# Linux Filysystem
+# Linux Filesystem
 
 
 # Linux系统各系统文件夹下的区别
