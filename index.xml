@@ -271,7 +271,199 @@ $$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
 <li><a href="http://jalammar.github.io/illustrated-transformer/"target="_blank" rel="external nofollow noopener noreferrer">The Illustrated Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 <li><a href="http://www.peterbloem.nl/blog/transformers"target="_blank" rel="external nofollow noopener noreferrer">TRANSFORMERS FROM SCRATCH<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 <li><a href="https://medium.com/@bgg/seq2seq-pay-attention-to-self-attention-part-2-%E4%B8%AD%E6%96%87%E7%89%88-ef2ddf8597a4"target="_blank" rel="external nofollow noopener noreferrer">Seq2seq pay Attention to Self Attention: Part 2<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ul>]]></description></item><item><title>Effective STL [3] | 使容器里对象的拷贝操作轻量而正确</title><link>https://jianye0428.github.io/posts/clause_3/</link><pubDate>Mon, 24 Jul 2023 09:11:28 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_3/</guid><description><![CDATA[<h2 id="拷贝对象是stl的方式">拷贝对象是STL的方式</h2>
+</ul>]]></description></item><item><title>Effective STL [5] | 尽量使用区间成员函数代替它们的单元素兄弟</title><link>https://jianye0428.github.io/posts/clause_5/</link><pubDate>Mon, 24 Jul 2023 13:15:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_5/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<p>ref:</br>
+[1]. <a href="https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&amp;mid=2247490705&amp;idx=1&amp;sn=830797e69b61fe9693bf4aaea72df4b3&amp;chksm=f9e42202ce93ab1437ad36c37e141b0794328495c0c584d808d0f4ad36251680dbfba257b060&amp;cur_album_id=3009999611861975043&amp;scene=189#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&mid=2247490705&idx=1&sn=830797e69b61fe9693bf4aaea72df4b3&chksm=f9e42202ce93ab1437ad36c37e141b0794328495c0c584d808d0f4ad36251680dbfba257b060&cur_album_id=3009999611861975043&scene=189#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="example">Example</h2>
+<p>Q：给定两个vector，v1和v2，使v1的内容和v2的后半部分一样的最简单方式是什么？</p>
+<p>A：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">v1</span><span class="p">.</span><span class="n">assign</span><span class="p">(</span><span class="n">v2</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">v2</span><span class="p">.</span><span class="n">end</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个测验设计为做两件事:</p>
+<ol>
+<li>它提供给我一个机会来提醒你assign成员函数的存在</li>
+</ol>
+<p>太多的程序员没注意到这是一个很方便的方法。<strong>它对于所有标准序列容器（vector，string，deque和list）都有效。</strong></p>
+<p>无论何时你必须完全代替一个容器的内容，你就应该想到赋值。</p>
+<p>如果你只是拷贝一个容器到另一个同类型的容器，<code>operator=</code>就是选择的赋值函数，但对于示范的那个例子，当你想要给一个容器完全的新数据集时，assign就可以利用，但<code>operator=</code>做不了。</p>
+<ol start="2">
+<li>演示为什么区间成员函数优先于它们的单元素替代品。</li>
+</ol>
+<p>区间成员函数是一个像STL算法的成员函数，使用两个迭代器参数来指定元素的一个区间来进行某个操作。</p>
+<p>不用区间成员函数来解决这个条款开头的问题，你就必须写一个显式循环，可能就像这样:</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Randy</span><span class="o">&gt;</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">;</span> <span class="c1">// 假设v1和v2是Randy的vector
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">v1</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Randy</span><span class="o">&gt;::</span><span class="n">const_iterator</span> <span class="n">ci</span> <span class="o">=</span> <span class="n">v2</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ci</span> <span class="o">!=</span> <span class="n">v2</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">ci</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">v1</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="o">*</span><span class="n">ci</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>写这段代码比写assign的调用要做多得多的工作。</p>
+<p><strong>copy 替代循环</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">v1</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="n">copy</span><span class="p">(</span><span class="n">v2</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">v2</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">back_inserter</span><span class="p">(</span><span class="n">v1</span><span class="p">))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>虽然在这段代码中没有表现出循环，在copy中的确存在一个循环 。</p>
+<p>效率损失仍然存在。</p>
+<p>几乎所有目标区间是通过插入迭代器（比如，通过inserter，back_inserter或front_inserter）指定的copy的使用都可以——应该——通过调用区间 成员函数来代替。</p>
+<p>比如这里，这个copy的调用可以用一个insert的区间版本代替：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">v1</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">v1</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">v2</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">v2</span><span class="p">.</span><span class="n">end</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个输入量稍微比调用copy少，但它发生的也比说的要直接：数据插入v1。</p>
+<p>这里insert 也比 copy 好，因为字面上insert 表示有数据插入到了 v1中，而copy 的使用把它变得晦涩。</p>
+<p><strong>关于东西被拷贝这个事实并没有什么好关注的，因为STL构建在东西会被拷贝的假定上。拷贝对STL来说很基本。</strong></p>
+<p><strong>小结</strong></p>
+<p>我们已经确定3个尽量使用区间成员函数代替它们的单元素兄弟的理由。 ● 一般来说使用区间成员函数可以输入更少的代码。 ● 区间成员函数会导致代码更清晰更直接了当。</p>
+<h2 id="效率">效率</h2>
+<p>当处理标准序列容器时，应用单元素成员函数比完成同样目的的区间成员函数需要更多地内存分配，更频繁地拷贝对象，而且/或者造成多余操作。</p>
+<p>对此，我之前还做了个单元素兄弟插入和批量插入的效率比较的文章<a href="https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&amp;mid=2247490268&amp;idx=1&amp;sn=fcf5b24ec09e544f1f0fea544e59bfd6&amp;chksm=f9e4244fce93ad5988926b2cba002426ada65b79d4672b7bad565fff633c52a29f9f451d6494&amp;token=855912511&amp;lang=zh_CN&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">《vector 用 insert 批量插入效率高还是emplace_back效率高》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，也证实了这个观点。</p>
+<p>标准要求区间<code>insert</code>函数直接把现有元素移动到它们最后的位置，也就是，开销是每个元素一次移动。总共开销是n次移动，numValues次容器中的对象类型的拷贝构造函数，剩下的是类型的赋值操作符。</p>
+<p>相比单元素插入策略，区间insert少执行了n*(numValues-1)次移动。</p>
+<p>花一分钟想想。这意味着如果numValues是100，insert的区间形式会比重复调用insert的单元素形式的代码少花费99%的移动！</p>
+<p>仅当可以不用失去两个迭代器的位置就能决定它们之间的距离时，一个区间insert函数才能在一次移动中把一个元素移动到它的最终位置。</p>
+<p>这几乎总是可能的，因为所有前向迭代器提供了这个功能，而且前向迭代器几乎到处都是。</p>
+<p>所有用于标准容器的迭代器都提供了前向迭代器的功能。非标准的散列容器的迭代器也是。</p>
+<p>在数组中表现为迭代器的指针也提供了这样的功能。事实上，唯一不提供前向迭代器能力的标准迭代器是输入和输出迭代器。</p>
+<p><strong>单元素插入的问题</strong></p>
+<ul>
+<li>
+<p>当你试图去把一个元素插入内存已经满了的vector时，这个vector会分配具有更多容量的新内存，从旧内存把它的元素拷贝到新内存，销毁旧内存里的元素，回收旧内存。然后它添加插入的元素。</p>
+</li>
+<li>
+<p>每当用完内存时，大部分vector实现都使它们的容量翻倍，所以插入numValues个新元素会导致最多$\log_2{numValues}$次新内存的分配。</p>
+</li>
+<li>
+<p>每次一个地插入1000个元素会导致10次新的分配（包括它们负责的元素拷贝）。</p>
+</li>
+</ul>
+<p>与之对比的是，一个区间插入可以在开始插入东西前计算出需要多少新内存（假设给的是前向迭代器），所以它不用多于一次地重新分配vector的内在内存。</p>
+<p>刚才进行分析是用于vector的，但同样的理由也作用于string。</p>
+<p><strong>deque</strong></p>
+<p>对于deque，理由也很相似，但deque管理它们内存的方式和vector和string不同，所以重复内存分配的论点不能应用。</p>
+<p>但是，关于<strong>很多次不必要的元素移动</strong>的论点通常通过对函数调用次数的观察也应用到了（虽然细节不同）。</p>
+<p><strong>list</strong></p>
+<p>在这里使用insert区间形式代替单元素形式也有一个性能优势。</p>
+<p>关于重复函数调用的论点当然继续有效，但因为链表的工作方式，拷贝和内存分配问题没有发生。</p>
+<p>取而代之的是，这里有一个新问题：过多重复地对list中的一些节点的next和prev指针赋值。</p>
+<p>每当一个元素添加到一个链表时，持有元素的链表节点必须有它的next和prev指针集，而且当然新节点前面的节点（我们叫它B，就是“before”）必须设置它的next指针，新节点后面的节点（我们叫它A，就是“after”）必须设置它的prev指针</p>
+<p></p>
+<p>当一系列新节点通过调用list的单元素insert一个接一个添加时，除了最后一个以外的其他新节点都会设置它的next指针两次，第一次指向A，第二次指向在它后面插入的元素。每次在A前面插入时，它都会设置它的prev指针指向一个新节点。</p>
+<p>如果numValues个节点插入A前面，插入节点的next指针会发生次多余的赋值，而且A的prev指针会发生numValues-1次多余的赋值。合计次没有必要的指针赋值。当然，指针赋值很轻量，但如果不是必须，为什么要为它们花费呢？</p>
+<p>**避免开销的关键是使用list的insert区间形式。**因为那个函数知道最后有多少节点会被插入，它可以避免多余的指针赋值，对每个指针只使用一次赋值就能设置它正确的插入后的值</p>
+<h2 id="区间函数">区间函数</h2>
+<p>参数类型iterator意思是容器的迭代器类型，也就是container::iterator。</p>
+<p>参数类型InputIterator意思是可以接受任何输入迭代器。</p>
+<ul>
+<li><strong>区间构造</strong></li>
+</ul>
+<p>所有标准容器都提供这种形式的构造函数：</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">container</span><span class="o">::</span><span class="n">container</span><span class="p">(</span><span class="n">InputIterator</span> <span class="n">begin</span><span class="p">,</span> <span class="c1">// 区间的起点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">InputIterator</span> <span class="n">end</span><span class="p">);</span> <span class="c1">// 区间的终点
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果传给这个构造函数的迭代器是<code>istream_iterators</code>或<code>istreambuf_iterators</code>，你可能会遇到C++的最惊异的解析，原因之一是你的编译器可能会因为把这个构造看作一个函数声明而不是一个新容器对象的定义而中断。</p>
+<ul>
+<li><strong>区间插入</strong></li>
+</ul>
+<p>所有标准序列容器都提供这种形式的insert:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">container</span><span class="o">::</span><span class="n">insert</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">,</span> <span class="c1">// 区间插入的位置
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">InputIterator</span> <span class="n">begin</span><span class="p">,</span> <span class="c1">// 插入区间的起点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">InputIterator</span> <span class="n">end</span><span class="p">);</span> <span class="c1">// 插入区间的终点
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>关联容器使用它们的比较函数来决定元素要放在哪里，所以它们了省略position参数。</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">container</span><span class="o">::</span><span class="n">insert</span><span class="p">(</span><span class="n">lnputIterator</span> <span class="n">begin</span><span class="p">,</span> <span class="n">InputIterator</span> <span class="n">end</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当寻找用区间版本代替单元素插入的方法时，不要忘记有些单元素变量用采用不同的函数名伪装它们自己。比如，<code>push_front</code>和<code>push_back</code>都把单元素插入容器，即使它们不叫<code>insert</code>。如果你看见一个循环调用<code>push_front</code>或<code>push_back</code>，或如果你看见一个算法——比如copy——的参数是<code>front_inserter</code>或者<code>back_inserter</code>，你就发现了一个<code>insert</code>的区间形式应该作为优先策略的地方。</p>
+<ul>
+<li><strong>区间删除</strong></li>
+</ul>
+<p>每个标准容器都提供了一个区间形式的<code>erase</code>，但是序列和关联容器的返回类型不同。</p>
+<p><strong>序列容器</strong>提供了这个：</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">iterator</span> <span class="n">container</span><span class="o">::</span><span class="n">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">begin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">end</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>关联容器提供这个:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">container</span><span class="o">::</span><span class="n">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">begin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">end</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>Q：为什么不同？</p>
+<p>A：解释是，如果erase的关联容器版本返回一个迭代器（被删除的那个元素的下一个）会<strong>招致一个无法接受的性能下降</strong>。</p>
+<p>这个条款的对insert的性能分析大部分也同样可以用于erase。单元素删除的函数调用次数仍然大于一次调用区间删除。当使用单元素删除时，每一次元素值仍然必须向它们的目的地移动一位，而区间删除可以在一个单独的移动中把它们移动到目标位置。</p>
+<p>关于vector和string的插入和删除的一个论点是必须做很多重复的分配。（当然对于删除，会发生重复的回收。）那是因为用于vector和string的内存自动增长来适应于新元素，但当元素的数目减少时它不自动收缩。</p>
+<ul>
+<li><strong>区间赋值</strong></li>
+</ul>
+<p>所有标准列容器都提供了区间形式的assign:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">container</span><span class="o">::</span><span class="n">assign</span><span class="p">(</span><span class="n">InputIterator</span> <span class="n">begin</span><span class="p">,</span> <span class="n">InputIterator</span> <span class="n">end</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="结论">结论</h2>
+<p>几乎所有目标区间被插入迭代器指定的copy的使用都可以用调用的区间成员函数的来代替 。</p>
+<p>尽量使用区间成员函数来代替单元素兄弟的三个可靠的论点。区间成员函数更容易写，它们更清楚地表达你的意图，而且它们提供了更高的性能。那是很难打败的三驾马车。</p>]]></description></item><item><title>Effective STL [3] | 使容器里对象的拷贝操作轻量而正确</title><link>https://jianye0428.github.io/posts/clause_3/</link><pubDate>Mon, 24 Jul 2023 09:11:28 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_3/</guid><description><![CDATA[<h2 id="拷贝对象是stl的方式">拷贝对象是STL的方式</h2>
 <ul>
 <li>
 <p>当一个对象进入一个容器，它已经不是你添加（<code>insert</code>或<code>push_back</code>等）的那个对象了，进入容器的是你指定的对象的拷贝；</p>
@@ -4084,625 +4276,4 @@ $P(A|B)=\frac{P(B|A)P(A)}{P(B|A)P(A) + P(B|\sim A)P(\sim A)}$</p>
 <li><a href="http://www.ruanyifeng.com/blog/2015/12/git-cheat-sheet.html"target="_blank" rel="external nofollow noopener noreferrer">常用 Git 命令清单<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 <li><a href="https://blog.csdn.net/qq1332479771/article/details/56087333"target="_blank" rel="external nofollow noopener noreferrer">github 上 fork 了别人的项目后，再同步更新别人的提交<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 <li><a href="https://learngitbranching.js.org/"target="_blank" rel="external nofollow noopener noreferrer">Gearn Git Branching<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ul>]]></description></item><item><title>Git Command Notes</title><link>https://jianye0428.github.io/posts/gitnotes1/</link><pubDate>Sun, 16 Jul 2023 10:01:28 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/gitnotes1/</guid><description><![CDATA[<h2 id="git-command-record-as-my-cheatsheet">git command record as my cheatsheet</h2>
-<h3 id="1-font-colorredgit-rebasefont">1. <strong><font color=red>git rebase</font></strong></h3>
-<p>ref: <a href="https://git-scm.com/docs/git-rebase"target="_blank" rel="external nofollow noopener noreferrer">https://git-scm.com/docs/git-rebase<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<ul>
-<li>
-<p><strong>用法一:<code>git rebase &lt;branch-name&gt;</code></strong> 将topic分支的base由E改为master</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">        A---B---C topic
-</span></span><span class="line"><span class="cl">        /
-</span></span><span class="line"><span class="cl">D---E---F---G master</span></span></code></pre></td></tr></table>
-</div>
-</div><p>运行:</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git rebase master
-</span></span><span class="line"><span class="cl">git rebase master topic</span></span></code></pre></td></tr></table>
-</div>
-</div><p>结果:</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">                A<span class="s1">&#39;--B&#39;</span>--C<span class="err">&#39;</span> topic
-</span></span><span class="line"><span class="cl">                /
-</span></span><span class="line"><span class="cl">D---E---F---G master</span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p>if upstream branch already has a change like below:</p>
-</blockquote>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">        A---B---C topic
-</span></span><span class="line"><span class="cl">        /
-</span></span><span class="line"><span class="cl">D---E---A<span class="err">&#39;</span>---F master</span></span></code></pre></td></tr></table>
-</div>
-</div><p>then run the command <code>git rebase master</code>, you will get following result:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">                B<span class="s1">&#39;---C&#39;</span> topic
-</span></span><span class="line"><span class="cl">              /
-</span></span><span class="line"><span class="cl">D---E---A<span class="err">&#39;</span>---F master</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p><strong>用法二:<code>git rebase --onto</code></strong>
-assume <strong>topic</strong> is based on <strong>next</strong>, and <strong>next</strong> is based on master</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">    o---o---o---o---o  master
-</span></span><span class="line"><span class="cl">        <span class="se">\
-</span></span></span><span class="line"><span class="cl"><span class="se"></span>        o---o---o---o---o  next
-</span></span><span class="line"><span class="cl">                        <span class="se">\
-</span></span></span><span class="line"><span class="cl"><span class="se"></span>                        o---o---o  topic</span></span></code></pre></td></tr></table>
-</div>
-</div><p>run the command below:</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git rebase --onto master next topic</span></span></code></pre></td></tr></table>
-</div>
-</div><p>then we get the result below:</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">o---o---o---o---o  master
-</span></span><span class="line"><span class="cl">    <span class="p">|</span>            <span class="se">\
-</span></span></span><span class="line"><span class="cl"><span class="se"></span>    <span class="p">|</span>             o<span class="s1">&#39;--o&#39;</span>--o<span class="err">&#39;</span>  topic
-</span></span><span class="line"><span class="cl">     <span class="se">\
-</span></span></span><span class="line"><span class="cl"><span class="se"></span>      o---o---o---o---o  next</span></span></code></pre></td></tr></table>
-</div>
-</div><p>Another example:
-A range of commits could also be removed with rebase. If we have the following situation:</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">E---F---G---H---I---J  topicA</span></span></code></pre></td></tr></table>
-</div>
-</div><p>then the command</p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git rebase --onto topicA~5 topicA~3 topicA</span></span></code></pre></td></tr></table>
-</div>
-</div><p>would result in the removal of commits F and G:</p>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">E---H<span class="s1">&#39;---I&#39;</span>---J<span class="err">&#39;</span>  topicA</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p><strong>用法三:<code>git rebase -i &lt;commit_id&gt; &lt;commit_id&gt;</code></strong> $\mathbb{\rightarrow}$ 将多个commit合并为一个。</p>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 执行git log，得到以下commit_ids</span>
-</span></span><span class="line"><span class="cl">&gt;&gt;&gt;21fd585
-</span></span><span class="line"><span class="cl">&gt;&gt;&gt;45j3483
-</span></span><span class="line"><span class="cl">&gt;&gt;&gt;9i8975d
-</span></span><span class="line"><span class="cl">&gt;&gt;&gt;73c20ec</span></span></code></pre></td></tr></table>
-</div>
-</div><p>目标: 将<strong>21fd585</strong>、<strong>45j3483</strong>、<strong>9i8975d</strong> rebase 到 <strong>73c20ec</strong></p>
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git rebase -i 73c20ec  21fd585</span></span></code></pre></td></tr></table>
-</div>
-</div><p>得到:</p>
-<div class="highlight" id="id-14"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">pick
-</span></span><span class="line"><span class="cl">pick
-</span></span><span class="line"><span class="cl">pick
-</span></span><span class="line"><span class="cl">pick</span></span></code></pre></td></tr></table>
-</div>
-</div><p>改为</p>
-<div class="highlight" id="id-15"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">pick
-</span></span><span class="line"><span class="cl">squash
-</span></span><span class="line"><span class="cl">squash
-</span></span><span class="line"><span class="cl">squash</span></span></code></pre></td></tr></table>
-</div>
-</div><p>最后，编辑commit内容，
-得到</p>
-<div class="highlight" id="id-16"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">&gt;&gt;&gt;b8bec33 <span class="c1"># 此处为新的commit</span>
-</span></span><span class="line"><span class="cl">&gt;&gt;&gt;73c20ec</span></span></code></pre></td></tr></table>
-</div>
-</div><p>推送到remote:</p>
-<div class="highlight" id="id-17"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git push -f origin master</span></span></code></pre></td></tr></table>
-</div>
-</div><p>ref:</p>
-<ol>
-<li><a href="https://www.bilibili.com/video/BV15h411f74h/"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV15h411f74h/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="https://blog.csdn.net/weixin_45953517/article/details/114362752"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/weixin_45953517/article/details/114362752<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="https://blog.csdn.net/weixin_44691608/article/details/118740059#t7"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/weixin_44691608/article/details/118740059#t7<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ol>
-<blockquote>
-<p>遇到detached HEAD的解决办法</p>
-</blockquote>
-<div class="highlight" id="id-18"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git branch b1
-</span></span><span class="line"><span class="cl">git checkout master
-</span></span><span class="line"><span class="cl">git merge b1
-</span></span><span class="line"><span class="cl">git push origin master
-</span></span><span class="line"><span class="cl">git branch -d b1</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="2-font-colorredgit-cherrypickfont">2. <strong><font color=red>git cherrypick</font></strong></h3>
-<ul>
-<li>将指定的提交用于其他分支
-例如:
-<div class="highlight" id="id-19"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">a - b - c - d   Master
-</span></span><span class="line"><span class="cl">     <span class="se">\
-</span></span></span><span class="line"><span class="cl"><span class="se"></span>      e - f - g Feature</span></span></code></pre></td></tr></table>
-</div>
-</div>run the command below and apply commit(f) to master
-<div class="highlight" id="id-20"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git checkout master
-</span></span><span class="line"><span class="cl">git cherry-pick f</span></span></code></pre></td></tr></table>
-</div>
-</div>get the result
-<div class="highlight" id="id-21"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">a - b - c - d - f   Master
-</span></span><span class="line"><span class="cl">     <span class="se">\
-</span></span></span><span class="line"><span class="cl"><span class="se"></span>      e - f - g Feature</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>转移多个提交
-<div class="highlight" id="id-22"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 将 A 和 B 两个提交应用到当前分支</span>
-</span></span><span class="line"><span class="cl">git cherry-pick &lt;HashA&gt; &lt;HashB&gt;</span></span></code></pre></td></tr></table>
-</div>
-</div>或者
-<div class="highlight" id="id-23"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 该命令可以转移从 A 到 B 的所有提交,它们必须按照正确的顺序放置：提交 A 必须早于提交 B，否则命令将失败，但不会报错。</span>
-</span></span><span class="line"><span class="cl">git cherry-pick A..B</span></span></code></pre></td></tr></table>
-</div>
-</div><div class="highlight" id="id-24"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 使用上面的命令，提交 A 将不会包含在 Cherry pick 中， 如果要包含提交 A，可以使用下面的语法。</span>
-</span></span><span class="line"><span class="cl">git cherry-pick A^..B</span></span></code></pre></td></tr></table>
-</div>
-</div>ref:https://www.ruanyifeng.com/blog/2020/04/git-cherry-pick.html</li>
-</ul>
-<h3 id="3-font-colorredgit-submodulefont">3. <strong><font color=red>git submodule</font></strong></h3>
-<ul>
-<li>将一个repo添加为submodule
-<div class="highlight" id="id-25"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git submodule add https://github.com/chaconinc/DbConnector</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>克隆含有子模块的项目
-<div class="highlight" id="id-26"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git clone https://github.com/chaconinc/MainProject <span class="c1">#此时包含子模块目录，但是其中没有任何文件</span>
-</span></span><span class="line"><span class="cl"><span class="nb">cd</span> MainProject
-</span></span><span class="line"><span class="cl"><span class="nb">cd</span> DbConnector/
-</span></span><span class="line"><span class="cl"><span class="c1"># 此时有DbConnector目录，但是文件夹是空的</span>
-</span></span><span class="line"><span class="cl">git submodule init <span class="c1"># 用来初始化本地配置文件</span>
-</span></span><span class="line"><span class="cl">git submodule update <span class="c1"># 从该项目中抓取并检出父项目中列出的合适的提交</span></span></span></code></pre></td></tr></table>
-</div>
-</div>或者
-<div class="highlight" id="id-27"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git clone --recurse-submodules https://github.com/chaconinc/MainProject</span></span></code></pre></td></tr></table>
-</div>
-</div>或者已经克隆了项目，但是忘记<code>--recurse-submodule</code>, 则使用
-<div class="highlight" id="id-28"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git submodule update --init --recursive</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="4-font-colorred拉取远程分支到本地font">4. <strong><font color=red>拉取远程分支到本地</font></strong></h3>
-<ul>
-<li>
-<p>拉取某一个远程的分支，并在创建相应的本地分支名称</p>
-<div class="highlight" id="id-29"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git fetch origin remote-branch-name
-</span></span><span class="line"><span class="cl">git checkout -b local-branch-name origin/remote-branch-name</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="5-font-colorredgit-tagfont">5. <strong><font color=red>git tag</font></strong></h3>
-<ul>
-<li>用git tag打标签
-<div class="highlight" id="id-30"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git tag -a v1.0
-</span></span><span class="line"><span class="cl">git tag -a v0 85fc7e7 <span class="c1">#追加标签</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>git clone 按照tag拉取代码
-<div class="highlight" id="id-31"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># git clone --branch [tags标签] [git地址]</span>
-</span></span><span class="line"><span class="cl">git clone -b v5.2.0 --depth<span class="o">=</span><span class="m">1</span> http://gitlab地址</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="6-font-colorredgit-stashfont">6. <strong><font color=red>git stash</font></strong></h3>
-<ul>
-<li><code>git stash</code>:隐藏修改
-<div class="highlight" id="id-32"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git stash <span class="c1"># 隐藏修改</span>
-</span></span><span class="line"><span class="cl">git stash save <span class="s2">&#34;stash-name&#34;</span> <span class="c1">#给每一个stash取名字</span>
-</span></span><span class="line"><span class="cl">git stash pop <span class="c1"># 恢复隐藏的修改</span>
-</span></span><span class="line"><span class="cl">git stash list <span class="c1"># 列出所有的隐藏</span>
-</span></span><span class="line"><span class="cl">git stash apply <span class="o">[</span>number<span class="o">]</span> <span class="c1"># 指定恢复使用哪一个隐藏修改</span>
-</span></span><span class="line"><span class="cl">git stash drop <span class="c1"># 移除某一项修改</span>
-</span></span><span class="line"><span class="cl">git stash clear <span class="c1"># 删除所有隐藏的修改</span>
-</span></span><span class="line"><span class="cl">git stash show <span class="c1"># 查看隐藏的修改</span>
-</span></span><span class="line"><span class="cl">git stash show -p
-</span></span><span class="line"><span class="cl">git stash show --patch <span class="c1"># 查看特定的stash的diff</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="7-font-colorred代码回退-git-resetgit-revertfont">7. <strong><font color=red>代码回退: git reset/git revert</font></strong></h3>
-<ul>
-<li>
-<p>ref:https://blog.csdn.net/weixin_35082950/article/details/113629326</p>
-</li>
-<li>
-<p>本地分支版本回退的方法</p>
-<div class="highlight" id="id-33"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git reflog <span class="c1"># 找回要回退的版本的commit_id</span>
-</span></span><span class="line"><span class="cl">git reset --hard &lt;commit_id&gt;</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p>自己的远程分支版本回退的方法</p>
-<div class="highlight" id="id-34"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 如果你的错误提交已经推送到自己的远程分支了，那么就需要回滚远程分支了。</span>
-</span></span><span class="line"><span class="cl"><span class="c1"># 1. 首先要回退本地分支：</span>
-</span></span><span class="line"><span class="cl">git reflog
-</span></span><span class="line"><span class="cl">git reset --hard &lt;commit_id&gt;
-</span></span><span class="line"><span class="cl"><span class="c1"># 2. 强制推送到远程分支</span>
-</span></span><span class="line"><span class="cl">git push -f</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p>公共远程分支版本回退的问题</p>
-<blockquote>
-<p>一个显而易见的问题：如果你回退公共远程分支，把别人的提交给丢掉了怎么办？</p>
-</blockquote>
-<p>假设你的远程master分支情况是这样的:</p>
-<div class="highlight" id="id-35"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">A1–A2–B1 <span class="c1">#</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>其中A、B分别代表两个人，A1、A2、B1代表各自的提交。并且所有人的本地分支都已经更新到最新版本，和远程分支一致。</p>
-<p>这个时候你发现A2这次提交有错误，你用reset回滚远程分支master到A1，那么理想状态是你的队友一拉代码git pull，他们的master分支也回滚了，然而现实却是，你的队友会看到下面的提示：</p>
-<div class="highlight" id="id-36"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ git status
-</span></span><span class="line"><span class="cl">   On branch master
-</span></span><span class="line"><span class="cl">   Your branch is ahead of <span class="s1">&#39;origin/master&#39;</span> by <span class="m">2</span> commits.
-</span></span><span class="line"><span class="cl">   <span class="o">(</span>use <span class="s2">&#34;git push&#34;</span> to publish your <span class="nb">local</span> commits<span class="o">)</span>
-</span></span><span class="line"><span class="cl">   nothing to commit, working directory clean</span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p>也就是说，你的队友的分支并没有主动回退，而是比远程分支超前了两次提交，因为远程分支回退了嘛。</p>
-</blockquote>
-<div class="highlight" id="id-37"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git revert HEAD <span class="c1">#撤销最近一次提交</span>
-</span></span><span class="line"><span class="cl">git revert HEAD~1 <span class="c1">#撤销上上次的提交，注意：数字从0开始</span>
-</span></span><span class="line"><span class="cl">git revert 0ffaacc  <span class="c1">#撤销0ffaacc这次提交</span></span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p>git revert 命令意思是撤销某次提交。它会产生一个新的提交，虽然代码回退了，但是版本依然是向前的，所以，当你用revert回退之后，所有人pull之后，他们的代码也自动的回退了。
-但是，要注意以下几点：</p>
-<blockquote>
-<p>1、revert 是撤销一次提交，所以后面的commit id是你需要回滚到的版本的前一次提交。
-2、使用revert HEAD是撤销最近的一次提交，如果你最近一次提交是用revert命令产生的，那么你再执行一次，就相当于撤销了上次的撤销操作，换句话说，你连续执行两次revert HEAD命令，就跟没执行是一样的。
-3、使用revert HEAD~1 表示撤销最近2次提交，这个数字是从0开始的，如果你之前撤销过产生了commi id，那么也会计算在内的。
-4、如果使用 revert 撤销的不是最近一次提交，那么一定会有代码冲突，需要你合并代码，合并代码只需要把当前的代码全部去掉，保留之前版本的代码就可以了。</p>
-</blockquote>
-</blockquote>
-</li>
-</ul>
-<blockquote>
-<p>git revert 命令的好处就是不会丢掉别人的提交，即使你撤销后覆盖了别人的提交，他更新代码后，可以在本地用 reset 向前回滚，找到自己的代码，然后拉一下分支，再回来合并上去就可以找回被你覆盖的提交了。</p>
-</blockquote>
-<p><strong>revert 合并代码，解决冲突</strong>
-使用revert命令，如果不是撤销的最近一次提交，那么一定会有冲突，如下所示：</p>
-<div class="highlight" id="id-38"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">全部清空
-</span></span><span class="line"><span class="cl">第一次提交</span></span></code></pre></td></tr></table>
-</div>
-</div><p>解决冲突很简单，因为我们只想回到某次提交，因此需要把当前最新的代码去掉即可，也就是HEAD标记的代码:</p>
-<div class="highlight" id="id-39"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="o">&lt;&lt;&lt;&lt;&lt;&lt;</span>&lt; HEAD
-</span></span><span class="line"><span class="cl">全部清空
-</span></span><span class="line"><span class="cl">第一次提交
-</span></span><span class="line"><span class="cl"><span class="o">=======</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>把上面部分代码去掉就可以了，然后再提交一次代码就可以解决冲突了。</p>
-<h3 id="8-font-colorredgit-branchfont">8. <strong><font color=red>git branch</font></strong></h3>
-<ul>
-<li>将本地分支与远程分支关联:
-<div class="highlight" id="id-40"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git branch --set-upstream<span class="o">=</span>origin/remote_branch your_branch</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="9-font-colorredgit-commitfont">9. <strong><font color=red>git commit</font></strong></h3>
-<ul>
-<li><code>git commit --amend</code>: 提交小修改但是不增加<code>commit_id</code>:
-<div class="highlight" id="id-41"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git add .
-</span></span><span class="line"><span class="cl">git commmit --amend <span class="c1"># 此除可以修改commit message</span>
-</span></span><span class="line"><span class="cl">git push origin master</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="10-font-colorredgit-pullfont">10. <strong><font color=red>git pull</font></strong></h3>
-<ul>
-<li>示例:
-<div class="highlight" id="id-42"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git pull &lt;远程主机名&gt; &lt;远程分支名&gt;:&lt;本地分支名&gt;</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li><strong>Examples</strong>：
-<ul>
-<li>取回origin主机的next分支，与本地的master分支合并
-<div class="highlight" id="id-43"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git pull origin next:master</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>远程分支(next)要与当前分支合并，则冒号后面的部分可以省略。
-<div class="highlight" id="id-44"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git pull origin next</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>如果当前分支与远程分支存在追踪关系，git pull就可以省略远程分支名
-<div class="highlight" id="id-45"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git pull origin</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>如果当前分支只有一个追踪分支，连远程主机名都可以省略
-<div class="highlight" id="id-46"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git pull</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-</li>
-</ul>
-<h3 id="11-font-colorredgit-clonefont">11. <strong><font color=red>git clone</font></strong></h3>
-]]></description></item></channel></rss>
+</ul>]]></description></item></channel></rss>
