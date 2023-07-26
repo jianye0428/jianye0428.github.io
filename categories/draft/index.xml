@@ -1,4 +1,358 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 24 Jul 2023 13:15:53 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>Effective STL [6] | 警惕C++最令人恼怒的解析</title><link>https://jianye0428.github.io/posts/clause_6/</link><pubDate>Mon, 24 Jul 2023 13:15:53 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_6/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 26 Jul 2023 10:03:45 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>生成对抗网络</title><link>https://jianye0428.github.io/posts/gan_1/</link><pubDate>Wed, 26 Jul 2023 10:03:45 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/gan_1/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="一gan的引入">一、GAN的引入</h2>
+<p></p>
+<p>GAN（Generative Adversarial Networks）是一种无监督的深度学习模型，提出于2014年，被誉为“近年来复杂分布上无监督学习最具前景的方法之一”。</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p>Yann Lecun对其的评价是：对抗式训练是迄今为止最酷的一件事情。</p>
+<p>Adversarial training is the coolest thing since sliced bread.</p>
+</div>
+    </div>
+  </div>
+<p>我们来看下原文的标题：</p>
+<ul>
+<li>Generative：我们知道机器学习模型有两大类，第一个是分辨模型：对于一个数据去分辨它的类别，或者是预测一个实数值；另一类是生成模型，意思是怎么样生成这个数据本身。显然GAN是属于生成模型。</li>
+<li>Adversarial：对抗的，这里指的是GAN提出的这种 framework 采用对抗训练的方式来work。</li>
+<li>Nets：Network的简写。</li>
+</ul>
+<h2 id="二gan的应用举例">二、GAN的应用举例</h2>
+<ul>
+<li>数据生成：生成一些假的图像数据，比如海报中的人脸、文本生成图像等；</br></li>
+<li>数据增强：从分割图生成假的真实街景，比如可以方便训练无人汽车等；</br></li>
+<li>风格化和艺术的图像创造：比如转换图像风格、AI换脸、修补图像等；</br></li>
+<li>声音的转换：比如一个人的声音转为另一个的声音、去除噪声等；</br></li>
+<li>&hellip;&hellip;</br></li>
+</ul>
+<h2 id="三gan的快速概述">三、GAN的快速概述</h2>
+<p>比如人脸检测、图像识别、语音识别等，<strong>机器总是在现有事物的基础上，做出描述和判断</strong>。能不能创造这个世界不存在的东西？</p>
+<p>GAN就是为此而来，它包含三个部分：<strong>生成</strong>、<strong>判别</strong>、<strong>对抗</strong>。其中 <u>生成</u> 和 <u>判别</u> 是它的结构组成，<u>对抗</u>则是它的训练过程。</p>
+<ul>
+<li>生成：<strong>生成</strong> 和 <strong>判别</strong> 指的是两个独立的模型，生成器会根据随机向量产生假数据，这些假数据既可以是图片、也可以是文本，并<strong>试图</strong><font color=red>欺骗判别网络</font>；</li>
+<li>判别：<strong>判别器</strong>负责判断接受到的数据是否是真实的，即对生成数据进行<font color=red>真伪鉴别</font>，试图正确识别所有假数据，它其实是一个二分类问题，会给出一个概率，代表着内容的真实程度；两者使用哪种网络并没有明确的规定，所以原文中作者称其为framework。比如可以使用擅长处理图片的CNN、常见的全连接等等，只要能够完成相应的功能就可以了。</li>
+<li>对抗：这指的是 GAN 的交替训练过程。以图片生成为例，先让<font color=green><strong>生成器</strong></font>产生一些假图片，和收集到的真图片一起交给辨别器，让它学习区分两者，给真的高分，给假的低分，当判别器能够熟练判断现有数据后；再让 <font color=green><strong>生成器</strong></font> 以从 <font color=green><strong>判别器</strong></font> 处获得高分为目标，不断生成更好的假图片，直到能骗过判别器，重复进行这个过程，直到辨别器对任何图片的预测概率都接近0.5，也就是无法分辨图片的真假，就停止训练。</li>
+</ul>
+<p>也就是说在训练迭代的过程中，两个网络持续地进化和对抗，直到到达一个平衡状态，即判别网络无法识别真假。虽说是对抗，但是生成器和辨别器的关系更像是朋友，最初大家都是“无名之辈”，随着不断的训练“切磋”，共同成为“一代高手”。</p>
+<p>我们<font color=red><strong>训练GAN的最终目标</strong></font>是获得好用的生成器，也就是生成足够以假乱真的内容，能完成类似功能的还有波尔斯曼机、变分自编码器等，它们被称为生成模型。</p>
+<h2 id="四原文的摘要">四、原文的摘要</h2>
+<p></p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">到底什么是GAN？</div>
+    </div>
+  </div>
+<p>首先作者提出一个新的framework，通过一个<strong>对抗过程</strong>来估计一个生成模型。</p>
+<p>同时会训练两个模型：</p>
+<ul>
+<li>第一个模型叫做 <mark><strong>生成模型G</strong></mark>，用来捕获整个数据的分布，其实就是通过 <font color=red>生成器</font> 去拟合和逼近真实的数据分布；</li>
+<li>第二个是 <mark><strong>辨别模型D</strong></mark>，它是用来估计一个样本是来自真正的数据、还是来自于<strong>G</strong>生成的。</li>
+</ul>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">这里稍微解释一下：生成模型 它就是对整个数据的分布进行建模，使得能够生成各种分布。这里“分布”是一个很一般化的词，比如生成图片、生成文本、生成视频等。在统计学眼里，整个世界是通过采样不同的分布来得到的，所以想要生成东西，目的就是要抓住整个数据的一个分布。</div>
+    </div>
+  </div>
+<p>生成模型的任务是尽量的想<strong>让辨别模型犯错</strong>，这个过程是一个<strong>最大最小的博弈</strong>。在任何函数空间的<strong>G</strong>和<strong>D</strong>里面，存在一个独一无二的解，这个解是代表：<strong>G</strong>能够找出训练数据的真实分布（生成的数据分布趋向于真实数据分布），此时辨别器就判别不出来了，所以概率值为1/2。</p>
+<p>如果<strong>G</strong>和<strong>D</strong>是一个MLP的话，那么整个系统就可以通过误差反向传播来进行训练。作者说这里不需要使用任何的马尔科夫链，或者说是对一个近似的推理过程展开（说白了意思好像就是和别人的方法比比较简单一点），最后就是说实验的效果非常好。</p>
+<h2 id="五原文的例子">五、原文的例子</h2>
+<p></p>
+<p>在对抗网络的框架里有两类模型：一个是<mark><strong>生成模型</strong></mark>、一个是<mark><strong>判别模型</strong></mark>：</p>
+<ul>
+<li>生成模型比喻成造假的人，它要去产生假币；</li>
+<li>判别模型比喻成警察，警察的任务就是很好的鉴别假币和真币；</li>
+</ul>
+<p>造假者和警察会不断的学习，造假者会提升自己的造假技能，警察也会提升自己判别真币和假币的性能。最后希望造假者能够赢，就是说造的假钱和真钱一模一样，然后警察没有能力去区分真币和假币，那么这个时候就可以使用生成器生成和真实数据一样的数据了。</p>
+<h2 id="gan模型结构--训练gan的目的">GAN模型结构 &amp; 训练GAN的目的</h2>
+<p>摘要说的已经很清楚了，GAN由两部分组成：</p>
+<ul>
+<li>生成器G（Generator）；</li>
+<li>判别器D（Discriminator）；</li>
+</ul>
+<p>我们的最终目的是希望生成器<strong>G</strong>，能够<font color=purple>学习到样本的真实分布$P_{\text{data}}(x)$</font>，那么就能生成之前不存在的、但是却又很真实的样本。</p>
+<p>那再啰嗦的说明白一点就是：</p>
+<ul>
+<li>我们把随机向量（随机噪声）定义为 $z$，$z \in F$，可以是任意分布，比如正态分布、均匀分布。</li>
+<li>将随机噪声输入到 <strong>生成器G</strong> 中，<strong>G</strong>其实看成一个函数就可以，它可以是任意的一个神经网络，因为神经网络可以逼近任何形式的函数。</li>
+<li>随机噪声 $z$ 经过<strong>生成器G</strong>后会产生一个 $G(z)$，生成的这个新的向量 $G(z)$，它可以记为服从$P_G(x)$。但是$P_G(x)$这个分布不是我们想要的，我们想要的是<strong>生成器G</strong>生成一个满足于真实分布$P_{\text{data}}(x)$的数据。</li>
+<li>通过不断的训练迭代，更新调整生成器G的参数，使得$P_G(x)$近似于 $P_{\text{data}}(x)$。</li>
+</ul>
+<p>通过调整 <strong>生成器G</strong> 的参数，使得<font color=violet>它生成的分布和真实的分布尽可能的像</font>，这个就是最终要达到的目的，可以通过 生成器G 生成一些满足真实分布，但又不是真实存在的数据。</p>
+<p>我们以手写数字识别为例，图例如下：</p>
+<p></p>
+<p>GAN模型结构图如下示例：</p>
+<p></p>
+<ul>
+<li>我们将随机噪声输入到<strong>生成器G</strong>中，产生 $G(z)$，我们把它叫做$x_{\text{fake}}$，$x_{\text{fake}}$为生成的图片，就是假的图片；</li>
+<li>我们还有满足于真实分布$P_{\text{data}}(x)$的数据，记为$x_{\text{real}}$；</li>
+<li>我们把 $x_{\text{real}}$ 和 $x_{\text{fake}}$ 同时送到<strong>判别器D</strong>中去训练，做一个二分类任务，判断是真还是假；</li>
+</ul>
+<h2 id="七举例理解gan的原理">七、举例理解GAN的原理</h2>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">因为原文举的例子比较敏感，我们以李宏毅老师的例子（中央电视台鉴宝节目：一槌定音）来进行GAN原理的阐述。</div>
+    </div>
+  </div>
+<p></p>
+<p>假设现在有一个人，我们称它为小王，小王是一个收藏家，它的收藏室里收藏了很多“国宝”。但是小王不想只做一个收藏家，他还想高仿这些“国宝”，我们这里将高仿的赝品定义为“工艺品”。</p>
+<p>基于GAN的目标，我们知道：</p>
+<ul>
+<li>小王最终想成为一个水平很高的“工艺品大师”；</li>
+</ul>
+<p>但是如果想成为一个“工艺品”方面的专家，小王自己在家闭门造车肯定是行不通的，因为我们的总目标是想让小王成为一个高水平的、可以以假乱真的工艺品大师。为了达到这个目标，首先需要一个高水平的鉴赏专家（高水平的对手），其次小王本身就要是个高水平的工艺品大师。所以小王还需要找一个水平很高的国宝鉴赏专家。鉴赏专家负责辨别出真的“国宝”和小王的“工艺品”，小王负责高仿生产“工艺品”。</p>
+<p></p>
+<p>概述来说：<strong>小王需要先有一个高水平的专家，然后才可能成为一个高水平的大师。高水平的专家可以看成一种手段，成为高水平的大师才是我们的目标。</strong></p>
+<h2 id="八数学描述">八、数学描述</h2>
+<h3 id="81-相关符号">8.1 相关符号</h3>
+<p>基于上述鉴宝例子，我们来看一下GAN的数学描述，首先需要强调的是：</p>
+<ul>
+<li>工艺品经过鉴赏专家判断后，是会受到一个 feedback 的；</li>
+<li>对于鉴赏专家而言，它也会从工艺品受到一个 feedback ，当然这是潜在的；</li>
+</ul>
+<p>我们就来看一下，这个例子如何用数学符号去表示：</p>
+<ul>
+<li>
+<p>&ldquo;国宝&quot;是静态的，它相当于我们的真实样本 ${x_{\text{real}<em>i}}^N</em>{i=1}$ ，这里我们以 $P_{data}$ 表示；</p>
+</li>
+<li>
+<p>工艺品也是从一个概率分布里抽样出来的，我们将工艺品记作 ${x_{\text{fake}<em>i}}^N</em>{i=1}$ ，我们把这个概率分布称作 $P_g(x;\theta_{g})$，g就代表Generator的意思；</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">注意我们并不直接对 $P_g$ 建模，即不直接对生成模型本身进行建模，我们用一个神经网络去逼近这个分布，纯粹的神经网络它是不具备随机性的，所以我们会假设它有一个 $z$，就是前面提到的随机噪声，是来自于一个简单的分布，比如高斯分布： $z \sim P_Z(z)$ ；</div>
+    </div>
+  </div>
+</li>
+<li>
+<p>原始的GAN里，神经网络就用NN表示，它本身就是一个确定性变换，即是一个复杂函数，表示为 $G(z;\theta_{g})$；</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">$\theta_g$ 在NN里就是表示权重参数，在 $P_g$ 里就是代表概率分布参数。</div>
+    </div>
+  </div>
+</li>
+<li>
+<p>鉴赏专家也可以看成一个概率分布，我们也用一个NN来描述它：$D(x; \theta_{d})$，代表 $x$ 是国宝的概率</p>
+</li>
+</ul>
+<p></p>
+<p>对于鉴赏专家 <strong>(判别器D)</strong> 接收到的来说：</p>
+<ul>
+<li>可以是来自国宝、也可以是来自于工艺品，是无所谓的，重要的是本身是代表是国宝的概率。</li>
+</ul>
+<p>对于判别器D的输出来说：</p>
+<ul>
+<li>$D(x)$ 的值越趋近于1，说明它是国宝的概率就越大；越趋近于0，说明它是工艺品的概率就越大。</li>
+</ul>
+<p>上图又可简化为：</p>
+<p></p>
+<p>一方面是从 $P_{data}$ 里来，一方面是 $z$ 输入到生成器后的输出，$z$ 为噪声。</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">换句话说, $z$ 是从简单分布中采样，经过生成器后变成 $x$，此时生成的由的先验分布和生成器共同决定。</div>
+    </div>
+  </div>
+<h3 id="82高专家的目标函数">8.2、“高专家”的目标函数</h3>
+<p>符号描述表述清楚后，我们看一下GAN的目标函数，首先回顾一下GAN的目标：<u>成为一个高水平的、可以以假乱真的大师</u>。为了达到这个目标，我们又可以分为一个手段和一个目标：</p>
+<ul>
+<li>手段：<strong>需要一个高水平的鉴别专家</strong>；</li>
+<li>目标：<strong>成为高水平的工艺品大师</strong>。</li>
+</ul>
+<p>也就是说我们需要<u>先成就一个高水平的专家，才有可能成就一个高水平的大师</u>，所以它们的关系是：(高大师(高专家))。</p>
+<p>首先看高专家，高专家水平高体现在：国宝判别为真、工艺品判别为假：</p>
+<p>$$
+高专家：
+\begin{equation}
+\left{
+\begin{aligned}
+%\nonumber
+if \ x \ is \ from \ P_{data}, \ then D(x) \uparrow\
+if \ x \ is \ from \ P_{g}, \ then D(x) \downarrow\
+(z \ is \ from \ P_{z}) \
+\end{aligned}
+\right.
+\end{equation}
+$$</p>
+<p>为了将式子统一起来，我们改写为：</p>
+<p>$$
+高专家：
+\begin{equation}
+\left{
+\begin{aligned}
+%\nonumber
+if \ x \ is \ from \ P_{data}, \ then D(x) \uparrow\
+if \ x \ is \ from \ P_{g}, \ then \ 1-D(x) \downarrow\
+(z \ is \ from \ P_{z}) \
+\end{aligned}
+\right.
+\end{equation}
+$$</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">因为 $D(x)$ 是一个概率值分布，范围是0~1， $D(x)$ 偏小， $1-D(x)$ 则相应的就偏大。</div>
+    </div>
+  </div>
+<p>对于工艺品，$x$ 是从<strong>生成器G</strong>来的，所以可以表示成 $G(z)$：</p>
+<p>$$
+高专家：
+\begin{equation}
+\left{
+\begin{aligned}
+%\nonumber
+if \ x \ is \ from \ P_{data}, \ then D(x) \uparrow\
+if \ x \ is \ from \ P_{g}, \ then \ 1 - D(G(z)) \uparrow\
+(z \ is \ from \ P_{z}) \
+\end{aligned}
+\right.
+\end{equation}
+$$</p>
+<p>为了使目标函数更容易表达，或者说计算更加方便，我们加上，所以进一步表达为：
+$$
+高专家：
+\begin{equation}
+\left{
+\begin{aligned}
+%\nonumber
+if \ x \ is \ from \ P_{data}, \ then \ \log{D(x)} \uparrow\
+if \ x \ is \ from \ P_{g}, \ then \ \log{(1 - D(G(z)))} \uparrow\
+(z \ is \ from \ P_{z}) \
+\end{aligned}
+\right.
+\end{equation}
+$$</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">$\log$ 为增函数，$\log(x)$ 与 $x$ 的增减性保持一致，在极大化参数的时候，与原始求解是一样的。</div>
+    </div>
+  </div>
+<p>所以对于成就一个高专家来说，目标函数如下：</p>
+<p>$$\max_{D} E_{x \sim P_{data}}[\log{D(x)}] + E_{z \sim P_{z}}[\log (1 - D(G(z)))]$$</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p>可能有同学不明白为什么原文这里用期望，其实很简单，我们假设数据分布总共有个样本，那么它的期望可以表示为：</p>
+<p>$$E_{x \sim P_{data}}[\log(D(x))] = \frac{1}{N} \sum_{i=1}^{N} \log(D(x_i)), x_i \sim P_{data}$$</p>
+</div>
+    </div>
+  </div>
+<h3 id="83高大师的目标函数">8.3、“高大师”的目标函数</h3>
+<p>我们再来看高大师的目标函数，<strong>高大师是建立在高专家的水平之上</strong>，对于高大师来讲，希望高专家将所有的工艺品都判断为真：</p>
+<p>$$高大师: if \ x \ from \ P_g,\ then \ D(G(z)) \uparrow $$</p>
+<p>为了统一起来，我们改写为:</p>
+<p>$$高大师: if \ x \ from \ P_g,\ then \ (1 - D(G(z))) \downarrow $$</p>
+<p>所以对于高大师来讲，目标函数为:</p>
+<p>$$\min_{G} E_{z \sim P_z}[\log (1 - D(G(z)))]$$</p>
+<h3 id="84总目标函数">8.4、总目标函数</h3>
+<p>本着<strong>先成就 高专家, 再成就 高大师</strong>的原则，GAN的目标函数为：</p>
+<p>$$\min_{G} \max_{D} V(D, G) = \mathbb{E_{x\sim p_{data}(x)}}[\log(D(x))] + \mathbb{E_{z\sim p_{z}(z)}}[\log(1 - D(G(z)))]$$</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">通过目标函数我们也能看出，GAN模型的复杂度，不在于模型的定义，而在于模型的traning，也就是D和G的学习。</div>
+    </div>
+  </div>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">还有一点需要强调的是，自始至终我们都没有去直接面对 $P_g$，我们实际上使用一个可微神经网络 $G(z)$ 去逼近这个 $P_g$ ，而且是从采样的角度去逼近，换句话说，对于生成网络 $P_g$，GAN是绕过了它，并没有直接去解决 $P_g$，而是从采样的角度去逼近它。所以GAN又被称做：Implicit Density Model.</div>
+    </div>
+  </div>
+<p>公式比较多，所以对目标函数再啰嗦的介绍下：</p>
+<p>我们可以得出，它实际上就要对价值函数 $V(D, G)$ 进行min、max的博弈，还有需要注意的是：$D(x)$ 是判别器的输出，它要做二分类，所以经过sigmoid之后 $D(x) \in [0, 1]$；</p>
+<p>我们来看一下它是怎么工作的：</p>
+<ul>
+<li>首先固定住G不动，通过调整D的参数，来最大化价值函数 $V(D, G)$：
+<ul>
+<li>要想最大化 $V$ ，左边的 $D(x)$ 要趋近于1（这样才能保证log的值尽可能大），同时要让右边的 $D(G(z))$ 趋近于0（这样才能保证 $log(1-D(G(z)))$ 尽可能大）；</li>
+<li>$\max V(D, G)$ 其实就是把真实数据和假数据区分的一个过程.
+$$\min_{G} \max_{D} V(D, G) = \mathbb{E_{x\sim p_{data}(x)}}[\log(D(x))] + \mathbb{E_{z\sim p_{z}(z)}}[\log(1 - D(G(z)))]$$</li>
+</ul>
+</li>
+<li>然后固定住D不动，此时公式的左部分已经是个定值了，我们<strong>调整G的参数</strong>，来最小化价值函数 $V(D, G)$：
+<ul>
+<li>要让 $V(D, G)$ 最小，那么就要让 $D(G(z))$ 趋近于1，只有 $V(G(z))$ 趋近于1的时候，定义域里的值才能趋近于0，也就是log会变得越来越小，达到最小化 $V$ 的过程；</li>
+<li>这个过程就是想让 $D(G(z))$ 趋近于1，z满足生成数据的分布，它是假的，那么 $min_G$ 的过程就是想要调整生成器，来骗过判别器，从而<strong>使得假数据被判别为真</strong>。
+$$\min_{G} \max_{D} V(D, G) = \mathbb{E_{x\sim p_{data}(x)}}[\log(D(x))] + \mathbb{E_{z\sim p_{z}(z)}}[\log(1 - D(G(z)))]$$</li>
+</ul>
+</li>
+</ul>
+<p>总结如下：</p>
+<ul>
+<li>固定G, 调整D, 最大化 $V(D, G)$, 导致 $D(x) \rightarrow 1, D(G(z)) \rightarrow 0$</li>
+<li>固定D, 调整G, 最小化 $\max_{D}V(D, G)$, 导致 $D(G(z)) \rightarrow 1$</li>
+</ul>
+<p>想必肯定有同学会发现这里出现的一个矛盾：上面的趋近于0，下面的趋近于1，这个矛盾、冲突，就理解为GAN中的<strong>对抗</strong>的意思。</p>
+<h2 id="九全局最优解推导">九、全局最优解推导</h2>
+<p>因为公式多、篇幅长，所以在推导最优解之前，我们先回顾一下GAN里的三个角色：</p>
+<ul>
+<li>真实样本分布$P_{data}$；</li>
+<li><strong>生成器 Generator</strong> 对应概率分布为:$P_g$，即代表生成器生成数据的概率分布；</li>
+<li><strong>判别器 Discriminator</strong> 对应的条件概率分布是离散的，就是0-1分布（伯努利分布），给定x的情况下，1代表正品、0代表工艺品（赝品）；</li>
+</ul>
+<p>我们的最终目标，就<strong>是想让生成器生成的样本的概率分布$P_g$无限的接近于$P_{data}$</strong>，即：$P_g \rightarrow P_{data}$；</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p>我们常规的生成模型（不是GAN），是直接对$P_g$进行建模: $P_g \rightarrow \theta_{g}$, 极大似然估计表示如下：</p>
+<p>$$\theta_g = \argmax_{\theta_g} \sum_{i=1}^N \log{P_g}(x_i) = \argmin KL(P_{data} || P_g)$$</p>
+<p>从距离的角度讲，是最小化KL散度，最终想让$P_{data} = P_g$，这就是原先如何把参数求出来的策略。</p>
+</div>
+    </div>
+  </div>
+<h3 id="91关于-d-的最大值">9.1、关于 D 的最大值</h3>
+<p>GAN从<strong>对抗学习</strong>的角度去构造目标函数，我们上面构造的目标函数，只是从逻辑上觉得它没有问题，那么我们可能会考虑：</p>
+<ul>
+<li>这个最大最小问题，它的最优解存在不存在？</li>
+<li>如果最优解 $P_g$（就是G）存在，那么全局最优的情况下，$P_g$是否等于$P_{data}$？</li>
+</ul>
+<p>如果这个不成立的话，那么其实这个目标函数是没有意义的，我们来看一下，方便记作，直接用论文中的符号来描述：</p>
+<p></p>
+<p>我们记：</p>
+<p>$$V(D, G) = E$$</p>
+<p>ref:</br>
+[1]. <a href="https://arxiv.org/abs/1406.2661"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/1406.2661<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://www.bilibili.com/video/BV1eE411g7xc"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1eE411g7xc<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3]. <a href="https://www.bilibili.com/video/BV1rb4y187vD"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1rb4y187vD<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[4]. <a href="https://www.bilibili.com/video/BV1HD4y1S7Pe"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1HD4y1S7Pe<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective STL [6] | 警惕C++最令人恼怒的解析</title><link>https://jianye0428.github.io/posts/clause_6/</link><pubDate>Mon, 24 Jul 2023 13:15:53 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_6/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
