@@ -257,13 +257,22 @@ $$
 使用蒙特卡洛方法，对 $f(z)$ 在 $q_{\phi}$ 上的期望，对 $\phi$ 求导数，表示如下：
 
 $$
-\begin{align}
+\begin{aligned}
+&max=2*x1+3*x2;\\
+&x1+2*x2<=8;\\
+&4*x1<=16;\\
+&s4*x2<=12;
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
 \eta &= \triangle_{\phi} E_{q_{\phi}(z)}[f(z)]\\
      &= \triangle_{\phi} \int {q_{\phi}(z)}f(z) \mathrm{d}z\\
      &= \int \triangle_{\phi}{q_{\phi}(z)}f(z) \mathrm{d}z\\
      &= \int {q_{\phi}(z)}f(z)\triangle_{\phi} \log {q_{\phi}(z)}\mathrm{d}z\\
      &= E_{q_{\phi}(z)}[f(z)\triangle_{\phi} \log {q_{\phi}(z)}]\\
-\end{align}
+\end{aligned}
 $$
 
 - $line 1 \sim 2:$ 根据期望的定义展开，因为我们假设 $f(z)$ 和 $\phi$ 没有关系，所以可以将导数符号拿进来；
@@ -292,14 +301,34 @@ $$
 我们把它打开来看：
 
 $$
-\begin{align}
+\begin{aligned}
 \triangle_{\phi}E_{q_{\phi}}[f(z)] &= \triangle_{\phi}\int q_{\phi}(z)f(z) \mathrm{d}z \\
-&= \int \triangle_{\phi}[q_{\phi}(z)f(z)] \mathrm{d}z\\
-&= \int f(z) \triangle_{\phi}q_{\phi}(z) \mathrm{d}z + \int q_{\phi}(z)\triangle_{\phi}f(z) \mathrm{d}z\\
-&= \underbrace{\int f(z) \triangle_{\phi}q_{\phi}(z) \mathrm{d}z}_{what \ about \ this \ ?} + E_{q_{\phi}(z)}[\triangle_{\phi}f(z)]
-\end{align}
+% &= \int \triangle_{\phi}[q_{\phi}(z)f(z)] \mathrm{d}z\\
+% &= \int f(z) \triangle_{\phi}q_{\phi}(z) \mathrm{d}z + \int q_{\phi}(z)\triangle_{\phi}f(z) \mathrm{d}z\\
+% &= \underbrace{\int f(z) \triangle_{\phi}q_{\phi}(z) \mathrm{d}z}_{what \ about \ this \ ?} + E_{q_{\phi}(z)}[\triangle_{\phi}f(z)]
+\end{aligned}
 $$
 
+https://www.luogu.com.cn/blog/over-knee-socks/latex-gong-shi-tai-quan-fixed
+https://kissingfire123.github.io/2022/02/18_%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8Fkatex%E5%B8%B8%E7%94%A8%E8%AF%AD%E6%B3%95%E6%80%BB%E7%BB%93/
+$$
+\begin{aligned}
+   a&=b+c \cr
+   d+e&=f
+\end{aligned}
+$$
+$$
+\begin{gathered}
+   a=b \cr
+   e=b+c
+\end{gathered}
+$$
+$$
+\begin{alignedat}{2}
+   10&x+ &3&y = 2 \cr
+   3&x+&13&y = 4
+\end{alignedat}
+$$
 分别求导之后，后面一项可以写成期望的形式，但是前面这一项就无法处理了，为了解决这个问题，作者使用了**重参数化技巧（Reparameterization Trick）**。
 
 核心思想就是引入一个辅助的随机变量 $\epsilon$，$\epsilon \in p(\epsilon)$，这个随机变量和其它变量没有关系，它是一个独立的随机变量，用来表示产生 $z$ 的过程中所有的随机性。也就是说抽样产生 $z$ 的过程中，所有的随机性都是由这个 $\epsilon \in p(\epsilon)$ 产生的。
