@@ -309,26 +309,6 @@ $$
 \end{aligned}
 $$
 
-https://www.luogu.com.cn/blog/over-knee-socks/latex-gong-shi-tai-quan-fixed
-https://kissingfire123.github.io/2022/02/18_%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8Fkatex%E5%B8%B8%E7%94%A8%E8%AF%AD%E6%B3%95%E6%80%BB%E7%BB%93/
-$$
-\begin{aligned}
-   a&=b+c \cr
-   &=f
-\end{aligned}
-$$
-$$
-\begin{gathered}
-   a=b \cr
-   e=b+c
-\end{gathered}
-$$
-$$
-\begin{alignedat}{2}
-   10&x+ &3&y = 2 \cr
-   3&x+&13&y = 4
-\end{alignedat}
-$$
 分别求导之后，后面一项可以写成期望的形式，但是前面这一项就无法处理了，为了解决这个问题，作者使用了**重参数化技巧（Reparameterization Trick）**。
 
 核心思想就是引入一个辅助的随机变量 $\epsilon$，$\epsilon \in p(\epsilon)$，这个随机变量和其它变量没有关系，它是一个独立的随机变量，用来表示产生 $z$ 的过程中所有的随机性。也就是说抽样产生 $z$ 的过程中，所有的随机性都是由这个 $\epsilon \in p(\epsilon)$ 产生的。
@@ -336,12 +316,6 @@ $$
 这样我们就可以把 $z$ 写成这种形式： $z = g_{\phi}(\epsilon, x)$，从而可以把 $q_{\phi}(z)$ 这个概率分布转移到 $p_{\epsilon}$ 上，而 $\epsilon$ 有一个非常好的特性，那就是和 $\phi$ 是没有关系的。
 
 这种 trick 就是重参数化，得到新的变形后重新对 $\phi$ 求导：
-$$
-\begin{aligned}
-   a&=b+c \cr
-   &=f
-\end{aligned}
-$$
 
 $$
 \begin{aligned}
