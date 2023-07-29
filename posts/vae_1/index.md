@@ -192,11 +192,11 @@ $\phi$ 为 encoder 的参数。
 
 $$
 \begin{align}
-D_{\text{KL}}(q_{\phi}(z|x) || p_{\theta}(z|x)) &= \sum_{z} q_{\phi}(z | x) \log (\frac{q_{\phi}(z | x)}{p_{\theta}(z | x)}) \\
-    &= - \sum_{z} q_{\phi}(z | x) \log (\frac{p_{\theta}(z | x)}{q_{\phi}(z | x)})\\
-    &= - \sum_{z} q_{\phi}(z | x) \log (\frac{\frac{p_{\theta}(z,x)}{p_{\theta}(x)}}{q_{\phi}(z | x)})\\
-    &= - \sum_{z} q_{\phi}(z | x) [\log({\frac{p_{\theta}(x, z)}{p_{\theta}(x)}}) - \log({q_{\phi}(z | x)})]\\
-    &= - \sum_{z} q_{\phi}(z | x) [\log({\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}}) - \log({p_{\theta}(x)})]\\
+D_{\text{KL}}(q_{\phi}(z|x) || p_{\theta}(z|x)) &= \sum_{z} q_{\phi}(z | x) \log (\frac{q_{\phi}(z | x)}{p_{\theta}(z | x)}) \cr
+    &= - \sum_{z} q_{\phi}(z | x) \log (\frac{p_{\theta}(z | x)}{q_{\phi}(z | x)})\cr
+    &= - \sum_{z} q_{\phi}(z | x) \log (\frac{\frac{p_{\theta}(z,x)}{p_{\theta}(x)}}{q_{\phi}(z | x)})\cr
+    &= - \sum_{z} q_{\phi}(z | x) [\log({\frac{p_{\theta}(x, z)}{p_{\theta}(x)}}) - \log({q_{\phi}(z | x)})]\cr
+    &= - \sum_{z} q_{\phi}(z | x) [\log({\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}}) - \log({p_{\theta}(x)})]\cr
 \end{align}
 $$
 
@@ -212,7 +212,7 @@ $p_{\theta}(z | x)$ 是根据条件概率公式拆开的。
 
 $$
 \begin{align}
-\log(p_{\theta}(x)) &= D_{KL}(q_{\phi}(z|x) || p_{\theta}(z|x)) + \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}) \\
+\log(p_{\theta}(x)) &= D_{KL}(q_{\phi}(z|x) || p_{\theta}(z|x)) + \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}) \cr
 &= D_{KL}(q_{\phi}(z|x) || p_{\theta}(z|x)) + L(\theta, \phi; x)
 \end{align}
 $$
@@ -226,10 +226,10 @@ $$
 现在我们只要想办法将这个 lower bound 提升就可以了，那么这个 lower bound 就可以作为我们的 loss function：
 $$
 \begin{align}
-L(\theta, \phi; x) &= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}) \\
-&= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x|z) p_{\theta}(z)}{q_{\phi}(z|x)}) \\
-&= \sum_{z}q_{\phi}(z|x)[\log(p_{\theta}(x|z)) + \log(\frac{p_{\theta}(z)}{q_{\phi}(z | x)})] \\
-&= {E}_{q_{\phi}(z|x)}[\log(p_{\theta}(x|z))] - D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))\\
+L(\theta, \phi; x) &= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}) \cr
+&= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x|z) p_{\theta}(z)}{q_{\phi}(z|x)}) \cr
+&= \sum_{z}q_{\phi}(z|x)[\log(p_{\theta}(x|z)) + \log(\frac{p_{\theta}(z)}{q_{\phi}(z | x)})] \cr
+&= {E}_{q_{\phi}(z|x)}[\log(p_{\theta}(x|z))] - D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))\cr
 \end{align}
 $$
 上述等式，我们将 lower bound 再展开，将 $p_{\theta}(x, z)$ 展成条件概率，然后再将log拆分。
@@ -267,11 +267,11 @@ $$
 
 $$
 \begin{aligned}
-\eta &= \triangle_{\phi} E_{q_{\phi}(z)}[f(z)]\\
-     &= \triangle_{\phi} \int {q_{\phi}(z)}f(z) \mathrm{d}z\\
-     &= \int \triangle_{\phi}{q_{\phi}(z)}f(z) \mathrm{d}z\\
-     &= \int {q_{\phi}(z)}f(z)\triangle_{\phi} \log {q_{\phi}(z)}\mathrm{d}z\\
-     &= E_{q_{\phi}(z)}[f(z)\triangle_{\phi} \log {q_{\phi}(z)}]\\
+\eta &= \triangle_{\phi} E_{q_{\phi}(z)}[f(z)]\cr
+     &= \triangle_{\phi} \int {q_{\phi}(z)}f(z) \mathrm{d}z\cr
+     &= \int \triangle_{\phi}{q_{\phi}(z)}f(z) \mathrm{d}z\cr
+     &= \int {q_{\phi}(z)}f(z)\triangle_{\phi} \log {q_{\phi}(z)}\mathrm{d}z\cr
+     &= E_{q_{\phi}(z)}[f(z)\triangle_{\phi} \log {q_{\phi}(z)}]\cr
 \end{aligned}
 $$
 
@@ -398,7 +398,7 @@ $$L(\theta, \phi, x^{(i)}) = -D_{KL}(q_{\phi}(z|x^{(i)})||p_{\theta}(z)) + E_{q_
 
 $$
 \begin{cases}
-D_{KL}(P||Q) = E_{x \sim P}[\log(\frac{P(x)}{Q(x)})]\\
+D_{KL}(P||Q) = E_{x \sim P}[\log(\frac{P(x)}{Q(x)})]\cr
 E_{x\sim P(x)} = \int P(x)Q(x)\mathrm{d}x
 \end{cases}
 $$
@@ -428,18 +428,17 @@ $$
 。在这个基础上我们使用期望的性质 $E[z^2] = E[z]^2 + variance(z)$，即 $z^2$ 的期望等于期望的平方加上 $z$ 的方差；
 - 那么对于一个 normal distribution 来说它的期望和方差是显而易见的：$\mu$ 和 $\sigma$，对于 $z$ 里的每个元素（脚标是 $j$）都加起来就好了，这样最开始的积分就可以简化成最后的形式。
 
-
 我们再来看 $\int q_{\phi}(z|x)\log q_{\phi}(z|x)\mathrm{d}z$:
 
 $$
-\begin{align}
-\int q_{\phi}(z|x)\log q_{\phi}(z|x)\mathrm{d}z &=\int N(z; \mu, \sigma^2)\log N(z;\mu,\sigma^2)\mathrm{d}z\\
-&= \int N(z; \mu, \sigma^2)(-\frac{1}{2}(\frac{z - \mu}{\sigma})^2- \frac{1}{2}\log (2 \pi) - \frac{1}{2}\log(\sigma^2))\mathrm{d}z\\
-&=-\frac{1}{2}\int N(z;\mu,\sigma^{2})(\frac{z-\mu}{\sigma})^{2}\mathrm{d}z-\frac{J}{2}log(2\pi)-\frac{1}{2}\sum_{j=1}^{J}log(\sigma_{j}^{2}) \\
-&=-\frac J2log(2\pi)-\frac12\sum_{j=1}^{J}log(\sigma_{j}^{2})-\frac12E_{z\sim N(z;\mu,\sigma^{2})}[(\frac{z-\mu}\sigma)^{2}] \\
-&=-\frac{J}{2}log(2\pi)-\frac{1}{2}\sum_{j=1}^{J}log(\sigma_{j}^{2})-\frac{1}{2}(E_{z\sim N(z;\mu,\sigma^{2})}[\frac{z-\mu}{\sigma}]^{2}+Var(\frac{z-\mu}{\sigma})) \\
+\begin{aligned}
+\int q_{\phi}(z|x)\log q_{\phi}(z|x)\mathrm{d}z &=\int N(z; \mu, \sigma^2)\log N(z;\mu,\sigma^2)\mathrm{d}z\cr
+&= \int N(z; \mu, \sigma^2)(-\frac{1}{2}(\frac{z - \mu}{\sigma})^2- \frac{1}{2}\log (2 \pi) - \frac{1}{2}\log(\sigma^2))\mathrm{d}z\cr
+&=-\frac{1}{2}\int N(z;\mu,\sigma^{2})(\frac{z-\mu}{\sigma})^{2}\mathrm{d}z-\frac{J}{2}log(2\pi)-\frac{1}{2}\sum_{j=1}^{J}log(\sigma_{j}^{2}) \cr
+&=-\frac J2log(2\pi)-\frac12\sum_{j=1}^{J}log(\sigma_{j}^{2})-\frac12E_{z\sim N(z;\mu,\sigma^{2})}[(\frac{z-\mu}\sigma)^{2}] \cr
+&=-\frac{J}{2}log(2\pi)-\frac{1}{2}\sum_{j=1}^{J}log(\sigma_{j}^{2})-\frac{1}{2}(E_{z\sim N(z;\mu,\sigma^{2})}[\frac{z-\mu}{\sigma}]^{2}+Var(\frac{z-\mu}{\sigma})) \cr
 &=-\frac{J}{2}log(2\pi)-\frac{1}{2}\sum_{j=1}^{J}(1+log(\sigma_j^2))
-\end{align}
+\end{aligned}
 $$
 
 同样的还是把它的PDF带进来，展成上面相似的形式，但是这个地方的常数项和变量要显得复杂一点，相似的是我们一样可以把常数部分拿到积分外面去，然后对于前面这项积分也把它理解成期望的形式，同样利用期望的性质将平方化简，就可以得到最后的结果。
@@ -447,7 +446,7 @@ $$
 随后我们把 KL散度 这两项给合并起来：
 $$
 \begin{aligned}
--D_{KL}(q_{\phi}(z\mid x)\mid\mid p_{\theta}(z))& =\int q_\phi(z\mid x)(logp_\theta(z))-logq_\phi(z\mid x))\mathrm{d}z  \\
+-D_{KL}(q_{\phi}(z\mid x)\mid\mid p_{\theta}(z))& =\int q_\phi(z\mid x)(logp_\theta(z))-logq_\phi(z\mid x))\mathrm{d}z  \cr
 &=\frac12\sum_{j=1}^J(1+log((\sigma_j)^2)-(\mu_j)^2-(\sigma_j)^2)
 \end{aligned}
 $$
