@@ -302,10 +302,10 @@ $$
 
 $$
 \begin{aligned}
-\triangle_{\phi}E_{q_{\phi}}[f(z)] &= \triangle_{\phi}\int q_{\phi}(z)f(z) \mathrm{d}z \\
-% &= \int \triangle_{\phi}[q_{\phi}(z)f(z)] \mathrm{d}z\\
-% &= \int f(z) \triangle_{\phi}q_{\phi}(z) \mathrm{d}z + \int q_{\phi}(z)\triangle_{\phi}f(z) \mathrm{d}z\\
-% &= \underbrace{\int f(z) \triangle_{\phi}q_{\phi}(z) \mathrm{d}z}_{what \ about \ this \ ?} + E_{q_{\phi}(z)}[\triangle_{\phi}f(z)]
+\triangle_{\phi}E_{q_{\phi}}[f(z)] &= \triangle_{\phi}\int q_{\phi}(z)f(z) \mathrm{d}z \cr
+&= \int \triangle_{\phi}[q_{\phi}(z)f(z)] \mathrm{d}z\cr
+&= \int f(z) \triangle_{\phi}q_{\phi}(z) \mathrm{d}z + \int q_{\phi}(z)\triangle_{\phi}f(z) \mathrm{d}z\cr
+&= \underbrace{\int f(z) \triangle_{\phi}q_{\phi}(z) \mathrm{d}z}_{what \ about \ this \ ?} + E_{q_{\phi}(z)}[\triangle_{\phi}f(z)]
 \end{aligned}
 $$
 
@@ -314,7 +314,7 @@ https://kissingfire123.github.io/2022/02/18_%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8F
 $$
 \begin{aligned}
    a&=b+c \cr
-   d+e&=f
+   &=f
 \end{aligned}
 $$
 $$
