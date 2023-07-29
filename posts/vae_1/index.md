@@ -224,14 +224,16 @@ $$
 
 ### 4.3、Loss Function
 现在我们只要想办法将这个 lower bound 提升就可以了，那么这个 lower bound 就可以作为我们的 loss function：
+
 $$
-\begin{align}
+\begin{aligned}
 L(\theta, \phi; x) &= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}) \cr
 &= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x|z) p_{\theta}(z)}{q_{\phi}(z|x)}) \cr
 &= \sum_{z}q_{\phi}(z|x)[\log(p_{\theta}(x|z)) + \log(\frac{p_{\theta}(z)}{q_{\phi}(z | x)})] \cr
 &= {E}_{q_{\phi}(z|x)}[\log(p_{\theta}(x|z))] - D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))\cr
-\end{align}
+\end{aligned}
 $$
+
 上述等式，我们将 lower bound 再展开，将 $p_{\theta}(x, z)$ 展成条件概率，然后再将log拆分。
 
 第三行中括号内，左边的可以写成期望的形式，右边的因为都有 $q_{\phi}$ 和 $p_{\theta}$ 所以符合KL divergence的公式。

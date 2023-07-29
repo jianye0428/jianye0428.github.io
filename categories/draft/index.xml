@@ -1,4 +1,267 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 24 Jul 2023 13:15:53 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>Effective STL [6] | 警惕C++最令人恼怒的解析</title><link>https://jianye0428.github.io/posts/clause_6/</link><pubDate>Mon, 24 Jul 2023 13:15:53 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_6/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 28 Jul 2023 07:59:27 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>Effective STL [9] | 在删除选项中仔细选择</title><link>https://jianye0428.github.io/posts/clause_9/</link><pubDate>Fri, 28 Jul 2023 07:59:27 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_9/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="删除指定值对象">删除指定值对象</h2>
+<p>假定你有一个容纳<code>int</code>标准STL容器:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Container</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>而你想把c中所有值为2023的对象都去掉。</p>
+<p>令人吃惊的是，完成这项任务的方法因不同的容器类型而不同：没有一种方法是通用的。</p>
+<ul>
+<li>当c是连续内存容器（vector、deque或string），最好的方法是erase-remove惯用法</li>
+</ul>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">2023</span><span class="p">),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 当c是vector、string或deque时，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// erase-remove惯用法是去除特定值的元素的最佳方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition Note">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><ul>
+<li>STL 和 vector中的remove的作用是<strong>将等于value的元素放到vector的尾部</strong>，但并不减少vector的size；</li>
+<li>vector中erase的作用是删除掉某个位置position或一段区域(begin, end)中的元素，减少其size，返回被删除元素下一个元素的位置。</li>
+</ul>
+</div>
+    </div>
+  </div>
+<ul>
+<li>这方法也适合于<code>list</code>，但是<code>list</code>的成员函数<code>remove</code>更高效：</li>
+</ul>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 当c是list时，remove成员函数是去除特定值的元素的最佳方法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">1963</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>当c是标准关联容器（即<code>set</code>、<code>multiset</code>、<code>map</code>或<code>multimap</code>）时，使用任何叫做<code>remove</code>的东西都是完全错误的。这样的容器没有叫做remove的成员函数，而且使用remove算法可能覆盖容器值，潜在地破坏容器。对于关联容器，解决问题的适当方法是调用erase：</li>
+</ul>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 当c是标准关联容器时,erase成员函数是去除特定值的元素的最佳方法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="mi">2023</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这很高效，只花费对数时间，<strong>序列容器的基于删除的技术需要线性时间</strong>。并且，关联容器的<code>erase</code>成员函数有基于等价而不是相等的优势。</p>
+<h2 id="消除判断式">消除判断式</h2>
+<p>消除下面判断式，返回真的每个对象:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">badValue</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">);</span> <span class="c1">// 返回x是否是“bad”
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>对于序列容器（<code>vector</code>、<code>string</code>、<code>deque</code>和<code>list</code>），把每个<code>remove</code>替换为<code>remove_if</code>：</li>
+</ul>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove_if</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">badValue</span><span class="p">),</span> <span class="c1">// 当c是vector、string或deque时
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 这是去掉badValue返回真的对象的最佳方法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">remove_if</span><span class="p">(</span><span class="n">badValue</span><span class="p">);</span> <span class="c1">// 当c是list时这是去掉badValue返回真的对象的最佳方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>对于标准关联容器，有两种方法处理该问题，一个更容易编码，另一个更高效。</li>
+</ul>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span> <span class="c1">// c现在是一种标准关联容器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">goodValues</span><span class="p">;</span> <span class="c1">// 用于容纳不删除的值的临时容器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">remove_copy_if</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">inserter</span><span class="p">(</span><span class="n">goodValues</span><span class="p">,</span> <span class="n">goodValues</span><span class="p">.</span><span class="n">end</span><span class="p">()),</span> <span class="n">badValue</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">swap</span><span class="p">(</span><span class="n">goodValues</span><span class="p">);</span> <span class="c1">// 交换c和goodValues的内容
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>对这种方法的<strong>缺点</strong>是它拷贝了所有不删除的元素。</p>
+<p>因为关联容器没有提供类似<code>remove_if</code>的成员函数，所以必须写一个循环来迭代c中的元素，和原来一样删除元素。不幸的是，那些正确工作的代码很少是跃出脑海的代码。例如，这是很多程序员首先想到的：</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span><span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>  <span class="c1">// 清晰，直截了当而漏洞百出的,用于删除c中badValue返回真的每个元素的代码
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="c1">// 不要这么做！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这有未定义的行为。当容器的一个元素被删时，<strong>指向那个元素的所有迭代器都失效了</strong>。</p>
+<p>当<code>c.erase(i)</code>返回时，<code>i</code>已经失效。那对于这个循环是个坏消息，因为在<code>erase</code>返回后，<code>i</code>通过for循环的<code>++i</code>部分自增。为了避免这个问题，我们必须保证在调用<code>erase</code>之前就得到了c中下一元素的迭代器。最容易的方法是当我们调用时在i上使用后置递增：</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();</span><span class="cm">/*nothing*/</span> <span class="p">){</span><span class="c1">// for循环的第三部分是空的；i现在在下面自增
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="o">++</span><span class="p">);</span> <span class="c1">// 对于坏的值，把当前的i传给erase，然后作为副作用增加i；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="o">++</span><span class="n">i</span><span class="p">;</span> <span class="c1">// 对于好的值，只增加i
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>精髓的地方在于：这种调用<code>erase</code>的解决方法可以工作，因为表达式i++的值是i的旧值，但作为副作用，i增加了。</p>
+<p>因此，我们把i的旧值（没增加的）传给<code>erase</code>，但在<code>erase</code>开始执行前i已经自增了。</p>
+<p>现在不仅删除<code>badValue</code>返回真的每个元素，而且每当一个元素被删掉时，我们也想把一条消息写到日志文件中。</p>
+<ul>
+<li>可以通过<strong>直接从原容器删除元素来避开拷贝</strong>。</li>
+<li>“更容易但效率较低”的解决方案用<code>remove_copy_if</code><strong>把需要的值拷贝到一个新容器中，然后把原容器的内容和新的交换</strong>：</li>
+</ul>
+<p>对于<strong>关联容器</strong>，这说多容易就有多容易，因为只需要对刚才开发的循环做一个微不足道的修改就行了：</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ofstream</span> <span class="n">logFile</span><span class="p">;</span> <span class="c1">// 要写入的日志文件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span><span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();){</span><span class="c1">// 循环条件和前面一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">)){</span>
+</span></span><span class="line"><span class="cl">        <span class="n">logFile</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;Erasing &#34;</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">i</span> <span class="o">&lt;&lt;</span><span class="sc">&#39;\n&#39;</span><span class="p">;</span> <span class="c1">// 写日志文件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="o">++</span><span class="p">);</span> <span class="c1">// 删除元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="o">++</span><span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在是<code>vector</code>、<code>string</code>和<code>deque</code>不能再使用<code>erase-remove</code>惯用法，因为没有办法让<code>erase</code>或<code>remove</code>写日志文件。</p>
+<p>而且，我们不能使用刚刚为关联容器开发的循环，因为它为<code>vector</code>、<code>string</code>和<code>deque</code>产生未定义的行为！</p>
+<p>要记得对于那样的容器，<strong>调用<code>erase</code>不仅使所有指向被删元素的迭代器失效，也使被删元素之后的所有迭代器失效</strong>。</p>
+<p>包括所有i之后的迭代器。我们写<code>i++</code>，<code>++i</code>或你能想起的其它任何东西都没有用，因为没有能导致迭代器有效的。必须利用erase的返回值。那个返回值正是我们需要的：<strong>一旦删除完成，它就是指向紧接在被删元素之后的元素的有效迭代器。</strong></p>
+<p>我们这么写：</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">SeqContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();){</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">)){</span>
+</span></span><span class="line"><span class="cl">        <span class="n">logFile</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;Erasing &#34;</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">i</span> <span class="o">&lt;&lt;</span> <span class="sc">&#39;\n&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="p">);</span> <span class="c1">// 通过把erase的返回值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span> <span class="c1">// 赋给i来保持i有效
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">       <span class="o">++</span><span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong><font color=blue>这可以很好地工作，但只用于标准序列容器</font></strong>。</p>
+<p>标准关联容器的<code>erase</code>的返回类型是<code>void</code>。对于那些容器，你必须使用“<strong>后置递增你要传给erase的迭代器</strong>”技术。为了避免你奇怪<code>list</code>的适当方法是什么，事实表明对于迭代和删除，你可以像<code>vector/string/deque</code>一样或像关联容器一样对待list；两种方法都可以为list工作。</p>
+<h2 id="结论">结论</h2>
+<ol>
+<li><strong>去除一个容器中有特定值的所有对象</strong>：</li>
+</ol>
+<ul>
+<li>如果容器是<code>vector</code>、<code>string</code>或<code>deque</code>，使用<code>erase-remove</code>惯用法</li>
+<li>如果容器是<code>list</code>，使用<code>list::remove</code></li>
+<li>如果容器是标准关联容器，使用它的<code>erase</code>成员函数</li>
+</ul>
+<ol start="2">
+<li><strong>去除一个容器中满足一个特定判定式的所有对象</strong>：</li>
+</ol>
+<ul>
+<li>如果容器是<code>vector</code>、<code>string</code>或<code>deque</code>，使用<code>erase-remove_if</code>惯用法</li>
+<li>如果容器是<code>list</code>，使用<code>list::remove_if</code></li>
+<li>如果容器是标准关联容器，使用<code>remove_copy_if</code>和<code>swap</code>，或写一个循环来遍历容器元素，当你把迭代器传给<code>erase</code>时记得后置递增它</li>
+</ul>
+<ol start="3">
+<li><strong>在循环内做某些事情（除了删除对象之外）</strong>：</li>
+</ol>
+<ul>
+<li>如果容器是标准<strong>序列容器</strong>，写一个循环来遍历容器元素，<strong>每当调用<code>erase</code>时记得都用它的返回值更新你的迭代器</strong>。</li>
+<li>如果容器是标准<strong>关联容器</strong>，写一个循环来遍历容器元素，当<strong>你把迭代器传给<code>erase</code>时记得后置递增它</strong>。</li>
+</ul>
+<p>如你所见，与仅仅调用erase相比，有效地删除容器元素有更多的东西。</p>
+<p><strong>解决问题的最好方法取决于你是怎样鉴别出哪个对象是要被去掉的，储存它们的容器的类型，和当你删除它们的时候你还想要做什么（如果有的话）。</strong></p>
+<p>这仅对带有迭代器实参的<code>erase</code>形式是正确的。关联容器也提供一个带有一个值的实参的<code>erase</code>形式，而那种形式返回被删掉的元素个数。但这里，我们只关心通过迭代器删除东西。</p>]]></description></item><item><title>Effective STL [6] | 警惕C++最令人恼怒的解析</title><link>https://jianye0428.github.io/posts/clause_6/</link><pubDate>Mon, 24 Jul 2023 13:15:53 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_6/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>

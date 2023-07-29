@@ -1,4 +1,423 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/stl/</link><description>STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 24 Jul 2023 09:11:28 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [3] | 使容器里对象的拷贝操作轻量而正确</title><link>https://jianye0428.github.io/posts/clause_3/</link><pubDate>Mon, 24 Jul 2023 09:11:28 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_3/</guid><description><![CDATA[<h2 id="拷贝对象是stl的方式">拷贝对象是STL的方式</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/stl/</link><description>STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 27 Jul 2023 07:45:11 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [8] | 永不建立auto_ptr的容器</title><link>https://jianye0428.github.io/posts/clause_8/</link><pubDate>Thu, 27 Jul 2023 07:45:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_8/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="拷贝一个auto_ptr将改变它的值">拷贝一个auto_ptr将改变它的值</h2>
+<p>当你拷贝一个<code>auto_ptr</code>时，<code>auto_ptr</code>所指向对象的所有权被转移到拷贝的<code>auto_ptr</code>，而被拷贝的<code>auto_ptr</code>被设为<code>NULL</code>。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">explicit</span> <span class="n">Widget</span><span class="p">(</span><span class="kt">int</span> <span class="n">in</span><span class="p">)</span> <span class="o">:</span> <span class="n">randy</span><span class="p">(</span><span class="n">in</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="n">Widget</span><span class="o">&amp;</span> <span class="n">in</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">randy</span> <span class="o">&lt;</span> <span class="n">in</span><span class="p">.</span><span class="n">randy</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">randy</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw1</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span> <span class="c1">// pw1指向一个Widget
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw2</span><span class="p">(</span><span class="n">pw1</span><span class="p">);</span> <span class="c1">// pw2指向pw1的Widget; pw1被设为NULL。（Widget的所有权从pw1转移到pw2。）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pw1</span> <span class="o">=</span> <span class="n">pw2</span><span class="p">;</span> <span class="c1">// pw1现在再次指向Widget； pw2被设为NULL
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>有意思的是，如果你建立一个<code>auto_ptr&lt;Widget&gt;</code>的<code>vector</code>，然后使用一个指向的<code>Widget</code>的值的函数对它进行排序：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">widgetAPCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">return</span> <span class="o">*</span><span class="n">lhs</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">rhs</span><span class="p">;</span> <span class="c1">// 假设Widget 存在operator&lt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">w1</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">(</span><span class="mi">3</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">w2</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="n">widgets</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">w1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">widgets</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">w2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">widgets</span><span class="p">;</span> <span class="c1">// 建立一个vector，然后用Widget的auto_ptr填充它；
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 记住这将不能编译！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">widgets</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">widgetAPCompare</span><span class="p">);</span><span class="c1">// 排序这个vector
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段代码将不能编译</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">warning: ‘template&lt;class&gt; class std::auto_ptr’ is deprecated <span class="o">[</span>-Wdeprecated-declarations<span class="o">]</span>
+</span></span><span class="line"><span class="cl">   <span class="m">30</span> <span class="p">|</span>   std::vector&lt;auto_ptr&lt;Widget&gt; &gt;
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>               ^~~~~~~~
+</span></span><span class="line"><span class="cl">In file included from /usr/include/c++/9/memory:80,
+</span></span><span class="line"><span class="cl">                 from temp.cpp:10:
+</span></span><span class="line"><span class="cl">/usr/include/c++/9/bits/unique_ptr.h:53:28: note: declared here
+</span></span><span class="line"><span class="cl">   <span class="m">53</span> <span class="p">|</span>   template&lt;typename&gt; class auto_ptr<span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>                            ^~~~~~~~
+</span></span><span class="line"><span class="cl">temp.cpp:33:3: warning: ‘template&lt;class&gt; class std::auto_ptr’ is deprecated <span class="o">[</span>-Wdeprecated-declarations<span class="o">]</span>
+</span></span><span class="line"><span class="cl">   <span class="m">33</span> <span class="p">|</span>   auto_ptr&lt;Widget&gt; w1<span class="o">(</span>new Widget<span class="o">(</span>3<span class="o">))</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>   ^~~~~~~~</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从概念上看所有东西也都很合理，但结果却完全不合理。例如，在排序过程中widgets中的一个或多个auto_ptr可能已经被设为NULL。</p>
+<p>排序这个vector的行为可能已经改变了它的内容！</p>
+<h2 id="剖析">剖析</h2>
+<p>实现<code>sort</code>的方法是使用了<strong>快速排序算法</strong>的某种变体。</p>
+<p>排序一个容器的<strong>基本思想</strong>是，选择容器的某个元素作为“主元”，然后对大于和小于或等于主元的值进行递归排序。</p>
+<p>在sort内部，这样的方法看起来像这样：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">RandomAccessIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Compare</span><span class="o">&gt;</span><span class="c1">// 这个sort的声明直接来自于标准
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="n">sort</span><span class="p">(</span><span class="n">RandomAccessIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomAccessIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Compare</span> <span class="n">comp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 这个typedef在下面解释
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">typedef</span> <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span> <span class="n">ElementType</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">RandomAccessIterator</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// 让i指向主元
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">ElementType</span> <span class="n">pivotValue</span><span class="p">(</span><span class="o">*</span><span class="p">);</span> <span class="c1">// 把主元拷贝到一个局部临时变量中；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">...</span> <span class="c1">// wor
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>源码为：</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_RandomAccessIterator</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Compare</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="kr">inline</span> <span class="kt">void</span>
+</span></span><span class="line"><span class="cl"><span class="n">sort</span><span class="p">(</span><span class="n">_RandomAccessIterator</span> <span class="n">__first</span><span class="p">,</span> <span class="n">_RandomAccessIterator</span> <span class="n">__last</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="n">_Compare</span> <span class="n">__comp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// concept requirements
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">__glibcxx_function_requires</span><span class="p">(</span><span class="n">_Mutable_RandomAccessIteratorConcept</span><span class="o">&lt;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">_RandomAccessIterator</span><span class="o">&gt;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_function_requires</span><span class="p">(</span><span class="n">_BinaryPredicateConcept</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span><span class="o">&gt;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_requires_valid_range</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_requires_irreflexive_pred</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span> <span class="n">__comp</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">__sort</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__ops</span><span class="o">::</span><span class="n">__iter_comp_iter</span><span class="p">(</span><span class="n">__comp</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 上面 __gnu_cxx::__ops::__iter_comp_iter(__comp) 的实现如下
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Compare</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Iterator</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">inline</span> <span class="n">_Iter_comp_to_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span> <span class="n">_Iterator</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__iter_comp_iter</span><span class="p">(</span><span class="n">_Iter_comp_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="o">&gt;</span> <span class="n">__comp</span><span class="p">,</span> <span class="n">_Iterator</span> <span class="n">__it</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">_Iter_comp_to_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span> <span class="n">_Iterator</span><span class="o">&gt;</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">   <span class="n">_GLIBCXX_MOVE</span><span class="p">(</span><span class="n">__comp</span><span class="p">.</span><span class="n">_M_comp</span><span class="p">),</span> <span class="n">__it</span><span class="p">);</span> <span class="c1">// 这里有move
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当涉及<code>iterator_traits&lt;RandomAccessIterator&gt;::value_type</code>时，必须在它前面写上<code>typename</code>，因为它是一个<strong>依赖于模板参数类型的名字</strong>，在这里是<code>RandomAccessIterator</code>。</p>
+<p>上面代码中棘手的是这一行:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ElementType</span> <span class="nf">pivotValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为它把一个元素从保存的区间拷贝到局部临时对象中。</p>
+<p>在例子里，这个元素是一个<code>auto_ptr&lt;Widget&gt;</code>，所以这个拷贝操作默默地把被拷贝的<code>auto_ptr——vector</code>中的那个——设为<code>NULL</code>。</p>
+<p>另外，当<code>pivotValue</code>出了生存期，它会自动删除指向的<code>Widget</code>。这时sort调用返回了，<code>vector</code>的内容已经改变了，而且至少一个<code>Widget</code>已经被删除了。</p>
+<p>也可能有几个<code>vector</code>元素已经被设为<code>NULL</code>，而且几个<code>widget</code>已经被删除，因为快速排序是一种递归算法，递归的每一层都会拷贝一个主元。</p>
+<h2 id="结论">结论</h2>
+<p>智能指针的容器是很好的， 但是<code>auto_ptr</code><font color=red>完全不是那样的智能指针</font>。</p>]]></description></item><item><title>Effective STL [7] | 当使用new得指针的容器时，记得在销毁容器前delete那些指针</title><link>https://jianye0428.github.io/posts/clause_7/</link><pubDate>Wed, 26 Jul 2023 18:18:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_7/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="stl容器能够做的事情">STL容器能够做的事情</h2>
+<ul>
+<li>
+<p>提供了前向和逆向遍历的迭代器（通过<code>begin</code>、<code>end</code>、<code>rbegin</code>等）；</p>
+</li>
+<li>
+<p>能告诉你所容纳的对象类型（通过<code>value_type</code>的<code>ttypedef</code>）；</p>
+</li>
+<li>
+<p>在插入和删除中，负责任何需要的内存管理；</p>
+</li>
+<li>
+<p>报告容纳了多少对象和最多可能容纳的数量（分别通过<code>size</code>和<code>max_size</code>）；</p>
+</li>
+<li>
+<p>当容器自己被销毁时会自动销毁容纳的每个对象。</p>
+</li>
+</ul>
+<h2 id="容器内包含指针">容器内包含指针</h2>
+<p>虽然STL容器被销毁时，能够自动销毁容纳的每个对象，但是如果这些对象是通过new分配的对象的指针时，它不会调用<code>delete</code>，销毁指针所指向的对象。</p>
+<p><strong>Example</strong></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;</span> <span class="n">vwp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SOME_MAGIC_NUMBER</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vwp</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// Widgets在这里泄漏！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段代码将直接导致内存泄露。</p>
+<p>当<code>vwp</code>结束其生命周期后，<code>vwp</code>的每个元素都被销毁，但不会<code>delete</code>每个<code>new</code>得到的对象。</p>
+<p>那样的删除是你的职责，而不是vector的。这是一个特性。只有你知道一个指针是否应该被删除。</p>
+<p>可以很简单地实现：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;</span> <span class="n">vwp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">vwp</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">i</span> <span class="o">!=</span> <span class="n">vwp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="o">*</span><span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段销毁的代码，仍然有2个问题：</p>
+<ul>
+<li>新的for循环代码比for_each多得多，没有使用for_each来的清楚</li>
+<li>这段代码不是异常安全的。如果在用指针填充了vwp的时候和你要删除它们之间抛出了一个异常，你会再次资源泄漏。</li>
+</ul>
+<p><strong>for_each删除对象</strong></p>
+<p>要把你的类似for_each的循环转化为真正使用for_each，你需要把delete转入一个函数对象中。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">DeleteObject</span> <span class="o">:</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span> <span class="c1">// 这里有这个继承
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">void</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">ptr</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="n">ptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在可以这么删除对象</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">HappyWork</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">for_each</span><span class="p">(</span><span class="n">vwp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vwp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DeleteObject</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>问题</strong></p>
+<p>如果有人编写了一个类，该类继承了 string</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecialString</span><span class="o">:</span> <span class="k">public</span> <span class="n">string</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这是很危险的行为，因为string，就像所有的标准STL容器，<strong>缺少虚析构函数</strong>，而从没有虚析构函数的类公有继承是一个大的C++禁忌。</p>
+<p>当他删除 SpecialString 时就会资源泄露</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">deque</span><span class="o">&lt;</span><span class="n">SpecialString</span><span class="o">*&gt;</span> <span class="n">dssp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="n">for_each</span><span class="p">(</span><span class="n">dssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">dssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="c1">// 行为未定义！通过没有
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">DeleteObject</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">());</span> <span class="c1">// 虚析构函数的基类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// 指针来删除派生对象
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>解决</strong></p>
+<p>可以通过编译器推断传给<code>DeleteObject::operator()</code>的指针的类型来消除这个错误（也减少DeleteObject的用户需要的击键次数）。</p>
+<p><strong>把模板化从DeleteObject移到它的operator()</strong>：</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">DeleteObject</span> <span class="p">{</span> <span class="c1">// 删除这里的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 模板化和基类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="c1">// 模板化加在这里
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">ptr</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="n">ptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过传给<code>DeleteObject::operator()</code>的指针的类型，自动实例化一个<code>operator()</code>。这种类型演绎下降让我们放弃使<code>DeleteObject</code>可适配的能力</p>
+<p>现在删除 SpecialString 就会正常了</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">deque</span><span class="o">&lt;</span><span class="n">SpecialString</span><span class="o">*&gt;</span> <span class="n">dssp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="n">for_each</span><span class="p">(</span><span class="n">dssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">dssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DeleteObject</span><span class="p">());</span> <span class="c1">// good！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><font color=red>现在仍不是异常安全的。</font></p>
+<p>果在SpecialString被new但在调用for_each之前抛出一个异常，就会发生泄漏。</p>
+<p>这个问题可以以多种方式被解决，但最简单的可能是用<strong>智能指针的容器来代替指针的容器，典型的是引用计数指针</strong>。</p>
+<h2 id="boost库中的shared_ptr">Boost库中的shared_ptr</h2>
+<p>利用Boost的shared_ptr，本条款的原始例子可以重写为这样：</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typedef</span> <span class="n">boost</span><span class="o">::</span><span class="n">shared_</span> <span class="n">ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">SPW</span><span class="p">;</span> <span class="c1">//SPW = &#34;shared_ptr to Widget&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">vector</span><span class="o">&lt;</span><span class="n">SPW</span><span class="o">&gt;</span> <span class="n">vwp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SOME_MAGIC_NUMBER</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="n">vwp</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">SPW</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">));</span> <span class="c1">// 从一个Widget建立SPW,然后进行一次push_back
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">...</span> <span class="c1">// work
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// 这里没有Widget泄漏，甚至在上面代码中抛出异常
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="结论">结论</h2>
+<p>STL容器很智能，但它们没有智能到知道是否应该删除它们所包含的指针。</p>
+<p>当你要删除指针的容器时要避免资源泄漏，你必须<strong>用智能引用计数指针对象</strong>（比如<code>Boost</code>的<code>shared_ptr</code>）来代替指针，或者你<strong>必须在容器销毁前手动删除容器中的每个指针</strong>。</p>]]></description></item><item><title>Effective STL [3] | 使容器里对象的拷贝操作轻量而正确</title><link>https://jianye0428.github.io/posts/clause_3/</link><pubDate>Mon, 24 Jul 2023 09:11:28 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_3/</guid><description><![CDATA[<h2 id="拷贝对象是stl的方式">拷贝对象是STL的方式</h2>
 <ul>
 <li>
 <p>当一个对象进入一个容器，它已经不是你添加（<code>insert</code>或<code>push_back</code>等）的那个对象了，进入容器的是你指定的对象的拷贝；</p>

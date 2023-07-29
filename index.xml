@@ -1,4 +1,267 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 27 Jul 2023 10:53:41 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>变分自编码器 VAE 详解</title><link>https://jianye0428.github.io/posts/vae_1/</link><pubDate>Thu, 27 Jul 2023 10:53:41 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/vae_1/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 28 Jul 2023 07:59:27 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [9] | 在删除选项中仔细选择</title><link>https://jianye0428.github.io/posts/clause_9/</link><pubDate>Fri, 28 Jul 2023 07:59:27 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_9/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="删除指定值对象">删除指定值对象</h2>
+<p>假定你有一个容纳<code>int</code>标准STL容器:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Container</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>而你想把c中所有值为2023的对象都去掉。</p>
+<p>令人吃惊的是，完成这项任务的方法因不同的容器类型而不同：没有一种方法是通用的。</p>
+<ul>
+<li>当c是连续内存容器（vector、deque或string），最好的方法是erase-remove惯用法</li>
+</ul>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">2023</span><span class="p">),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 当c是vector、string或deque时，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// erase-remove惯用法是去除特定值的元素的最佳方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition Note">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><ul>
+<li>STL 和 vector中的remove的作用是<strong>将等于value的元素放到vector的尾部</strong>，但并不减少vector的size；</li>
+<li>vector中erase的作用是删除掉某个位置position或一段区域(begin, end)中的元素，减少其size，返回被删除元素下一个元素的位置。</li>
+</ul>
+</div>
+    </div>
+  </div>
+<ul>
+<li>这方法也适合于<code>list</code>，但是<code>list</code>的成员函数<code>remove</code>更高效：</li>
+</ul>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 当c是list时，remove成员函数是去除特定值的元素的最佳方法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">1963</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>当c是标准关联容器（即<code>set</code>、<code>multiset</code>、<code>map</code>或<code>multimap</code>）时，使用任何叫做<code>remove</code>的东西都是完全错误的。这样的容器没有叫做remove的成员函数，而且使用remove算法可能覆盖容器值，潜在地破坏容器。对于关联容器，解决问题的适当方法是调用erase：</li>
+</ul>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 当c是标准关联容器时,erase成员函数是去除特定值的元素的最佳方法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="mi">2023</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这很高效，只花费对数时间，<strong>序列容器的基于删除的技术需要线性时间</strong>。并且，关联容器的<code>erase</code>成员函数有基于等价而不是相等的优势。</p>
+<h2 id="消除判断式">消除判断式</h2>
+<p>消除下面判断式，返回真的每个对象:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">badValue</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">);</span> <span class="c1">// 返回x是否是“bad”
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>对于序列容器（<code>vector</code>、<code>string</code>、<code>deque</code>和<code>list</code>），把每个<code>remove</code>替换为<code>remove_if</code>：</li>
+</ul>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove_if</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">badValue</span><span class="p">),</span> <span class="c1">// 当c是vector、string或deque时
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 这是去掉badValue返回真的对象的最佳方法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">remove_if</span><span class="p">(</span><span class="n">badValue</span><span class="p">);</span> <span class="c1">// 当c是list时这是去掉badValue返回真的对象的最佳方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>对于标准关联容器，有两种方法处理该问题，一个更容易编码，另一个更高效。</li>
+</ul>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span> <span class="c1">// c现在是一种标准关联容器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">goodValues</span><span class="p">;</span> <span class="c1">// 用于容纳不删除的值的临时容器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">remove_copy_if</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">inserter</span><span class="p">(</span><span class="n">goodValues</span><span class="p">,</span> <span class="n">goodValues</span><span class="p">.</span><span class="n">end</span><span class="p">()),</span> <span class="n">badValue</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">swap</span><span class="p">(</span><span class="n">goodValues</span><span class="p">);</span> <span class="c1">// 交换c和goodValues的内容
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>对这种方法的<strong>缺点</strong>是它拷贝了所有不删除的元素。</p>
+<p>因为关联容器没有提供类似<code>remove_if</code>的成员函数，所以必须写一个循环来迭代c中的元素，和原来一样删除元素。不幸的是，那些正确工作的代码很少是跃出脑海的代码。例如，这是很多程序员首先想到的：</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span><span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>  <span class="c1">// 清晰，直截了当而漏洞百出的,用于删除c中badValue返回真的每个元素的代码
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="c1">// 不要这么做！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这有未定义的行为。当容器的一个元素被删时，<strong>指向那个元素的所有迭代器都失效了</strong>。</p>
+<p>当<code>c.erase(i)</code>返回时，<code>i</code>已经失效。那对于这个循环是个坏消息，因为在<code>erase</code>返回后，<code>i</code>通过for循环的<code>++i</code>部分自增。为了避免这个问题，我们必须保证在调用<code>erase</code>之前就得到了c中下一元素的迭代器。最容易的方法是当我们调用时在i上使用后置递增：</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();</span><span class="cm">/*nothing*/</span> <span class="p">){</span><span class="c1">// for循环的第三部分是空的；i现在在下面自增
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="o">++</span><span class="p">);</span> <span class="c1">// 对于坏的值，把当前的i传给erase，然后作为副作用增加i；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="o">++</span><span class="n">i</span><span class="p">;</span> <span class="c1">// 对于好的值，只增加i
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>精髓的地方在于：这种调用<code>erase</code>的解决方法可以工作，因为表达式i++的值是i的旧值，但作为副作用，i增加了。</p>
+<p>因此，我们把i的旧值（没增加的）传给<code>erase</code>，但在<code>erase</code>开始执行前i已经自增了。</p>
+<p>现在不仅删除<code>badValue</code>返回真的每个元素，而且每当一个元素被删掉时，我们也想把一条消息写到日志文件中。</p>
+<ul>
+<li>可以通过<strong>直接从原容器删除元素来避开拷贝</strong>。</li>
+<li>“更容易但效率较低”的解决方案用<code>remove_copy_if</code><strong>把需要的值拷贝到一个新容器中，然后把原容器的内容和新的交换</strong>：</li>
+</ul>
+<p>对于<strong>关联容器</strong>，这说多容易就有多容易，因为只需要对刚才开发的循环做一个微不足道的修改就行了：</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ofstream</span> <span class="n">logFile</span><span class="p">;</span> <span class="c1">// 要写入的日志文件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span><span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();){</span><span class="c1">// 循环条件和前面一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">)){</span>
+</span></span><span class="line"><span class="cl">        <span class="n">logFile</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;Erasing &#34;</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">i</span> <span class="o">&lt;&lt;</span><span class="sc">&#39;\n&#39;</span><span class="p">;</span> <span class="c1">// 写日志文件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="o">++</span><span class="p">);</span> <span class="c1">// 删除元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="o">++</span><span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在是<code>vector</code>、<code>string</code>和<code>deque</code>不能再使用<code>erase-remove</code>惯用法，因为没有办法让<code>erase</code>或<code>remove</code>写日志文件。</p>
+<p>而且，我们不能使用刚刚为关联容器开发的循环，因为它为<code>vector</code>、<code>string</code>和<code>deque</code>产生未定义的行为！</p>
+<p>要记得对于那样的容器，<strong>调用<code>erase</code>不仅使所有指向被删元素的迭代器失效，也使被删元素之后的所有迭代器失效</strong>。</p>
+<p>包括所有i之后的迭代器。我们写<code>i++</code>，<code>++i</code>或你能想起的其它任何东西都没有用，因为没有能导致迭代器有效的。必须利用erase的返回值。那个返回值正是我们需要的：<strong>一旦删除完成，它就是指向紧接在被删元素之后的元素的有效迭代器。</strong></p>
+<p>我们这么写：</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">SeqContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();){</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">)){</span>
+</span></span><span class="line"><span class="cl">        <span class="n">logFile</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;Erasing &#34;</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">i</span> <span class="o">&lt;&lt;</span> <span class="sc">&#39;\n&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="p">);</span> <span class="c1">// 通过把erase的返回值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span> <span class="c1">// 赋给i来保持i有效
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">       <span class="o">++</span><span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong><font color=blue>这可以很好地工作，但只用于标准序列容器</font></strong>。</p>
+<p>标准关联容器的<code>erase</code>的返回类型是<code>void</code>。对于那些容器，你必须使用“<strong>后置递增你要传给erase的迭代器</strong>”技术。为了避免你奇怪<code>list</code>的适当方法是什么，事实表明对于迭代和删除，你可以像<code>vector/string/deque</code>一样或像关联容器一样对待list；两种方法都可以为list工作。</p>
+<h2 id="结论">结论</h2>
+<ol>
+<li><strong>去除一个容器中有特定值的所有对象</strong>：</li>
+</ol>
+<ul>
+<li>如果容器是<code>vector</code>、<code>string</code>或<code>deque</code>，使用<code>erase-remove</code>惯用法</li>
+<li>如果容器是<code>list</code>，使用<code>list::remove</code></li>
+<li>如果容器是标准关联容器，使用它的<code>erase</code>成员函数</li>
+</ul>
+<ol start="2">
+<li><strong>去除一个容器中满足一个特定判定式的所有对象</strong>：</li>
+</ol>
+<ul>
+<li>如果容器是<code>vector</code>、<code>string</code>或<code>deque</code>，使用<code>erase-remove_if</code>惯用法</li>
+<li>如果容器是<code>list</code>，使用<code>list::remove_if</code></li>
+<li>如果容器是标准关联容器，使用<code>remove_copy_if</code>和<code>swap</code>，或写一个循环来遍历容器元素，当你把迭代器传给<code>erase</code>时记得后置递增它</li>
+</ul>
+<ol start="3">
+<li><strong>在循环内做某些事情（除了删除对象之外）</strong>：</li>
+</ol>
+<ul>
+<li>如果容器是标准<strong>序列容器</strong>，写一个循环来遍历容器元素，<strong>每当调用<code>erase</code>时记得都用它的返回值更新你的迭代器</strong>。</li>
+<li>如果容器是标准<strong>关联容器</strong>，写一个循环来遍历容器元素，当<strong>你把迭代器传给<code>erase</code>时记得后置递增它</strong>。</li>
+</ul>
+<p>如你所见，与仅仅调用erase相比，有效地删除容器元素有更多的东西。</p>
+<p><strong>解决问题的最好方法取决于你是怎样鉴别出哪个对象是要被去掉的，储存它们的容器的类型，和当你删除它们的时候你还想要做什么（如果有的话）。</strong></p>
+<p>这仅对带有迭代器实参的<code>erase</code>形式是正确的。关联容器也提供一个带有一个值的实参的<code>erase</code>形式，而那种形式返回被删掉的元素个数。但这里，我们只关心通过迭代器删除东西。</p>]]></description></item><item><title>变分自编码器 VAE 详解</title><link>https://jianye0428.github.io/posts/vae_1/</link><pubDate>Thu, 27 Jul 2023 10:53:41 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/vae_1/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
@@ -191,16 +454,16 @@ $$</p>
 <p>我们将 $\sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)})$ 写成 $L(\theta, \phi; x)$ ，等式左边是一个const，也就是说不管 $x$ 的分布是什么样，它对 $\theta$ 来说没什么影响。等式右边，KL divergence是一个非负的，所以我们只要把 $L(\theta, \phi; x)$ 的值尽可能的拉大，那么KL divergence的值就会随之缩小。</p>
 <p><strong>想要最大化的$L(\theta, \phi; x)$，就被称为变分下界（Variational lower bound）。</strong></p>
 <h3 id="43loss-function">4.3、Loss Function</h3>
-<p>现在我们只要想办法将这个 lower bound 提升就可以了，那么这个 lower bound 就可以作为我们的 loss function：
-$$
-\begin{align}
+<p>现在我们只要想办法将这个 lower bound 提升就可以了，那么这个 lower bound 就可以作为我们的 loss function：</p>
+<p>$$
+\begin{aligned}
 L(\theta, \phi; x) &amp;= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}) \cr
 &amp;= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x|z) p_{\theta}(z)}{q_{\phi}(z|x)}) \cr
 &amp;= \sum_{z}q_{\phi}(z|x)[\log(p_{\theta}(x|z)) + \log(\frac{p_{\theta}(z)}{q_{\phi}(z | x)})] \cr
 &amp;= {E}<em>{q</em>{\phi}(z|x)}[\log(p_{\theta}(x|z))] - D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))\cr
-\end{align}
-$$
-上述等式，我们将 lower bound 再展开，将 $p_{\theta}(x, z)$ 展成条件概率，然后再将log拆分。</p>
+\end{aligned}
+$$</p>
+<p>上述等式，我们将 lower bound 再展开，将 $p_{\theta}(x, z)$ 展成条件概率，然后再将log拆分。</p>
 <p>第三行中括号内，左边的可以写成期望的形式，右边的因为都有 $q_{\phi}$ 和 $p_{\theta}$ 所以符合KL divergence的公式。</p>
 <ul>
 <li>我们将 ${E}<em>{q</em>{\phi}(z|x)}[\log(p_{\theta}(x|z))]$ 称为<strong>Reconstruction Loss</strong>，</li>
@@ -414,7 +677,426 @@ $$</p>
 [5]. <a href="https://www.bilibili.com/video/av15889450/?p=33"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/av15889450/?p=33<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [6]. <a href="https://gregorygundersen.com/blog/2018/04/29/reparameterization/"target="_blank" rel="external nofollow noopener noreferrer">https://gregorygundersen.com/blog/2018/04/29/reparameterization/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 </br>
-[7]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486014&amp;idx=1&amp;sn=2ff34f72c869907408ed1b08bec1a238&amp;chksm=c337b7a7f4403eb14a1b5cdc3e1a1b11dca6f957591957cc29a4c270f0ace0a4674a7ae33214&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486014&idx=1&sn=2ff34f72c869907408ed1b08bec1a238&chksm=c337b7a7f4403eb14a1b5cdc3e1a1b11dca6f957591957cc29a4c270f0ace0a4674a7ae33214&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>]]></description></item><item><title>生成对抗网络GAN</title><link>https://jianye0428.github.io/posts/gan_1/</link><pubDate>Wed, 26 Jul 2023 10:03:45 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/gan_1/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+[7]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486014&amp;idx=1&amp;sn=2ff34f72c869907408ed1b08bec1a238&amp;chksm=c337b7a7f4403eb14a1b5cdc3e1a1b11dca6f957591957cc29a4c270f0ace0a4674a7ae33214&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486014&idx=1&sn=2ff34f72c869907408ed1b08bec1a238&chksm=c337b7a7f4403eb14a1b5cdc3e1a1b11dca6f957591957cc29a4c270f0ace0a4674a7ae33214&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>]]></description></item><item><title>Effective STL [8] | 永不建立auto_ptr的容器</title><link>https://jianye0428.github.io/posts/clause_8/</link><pubDate>Thu, 27 Jul 2023 07:45:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_8/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="拷贝一个auto_ptr将改变它的值">拷贝一个auto_ptr将改变它的值</h2>
+<p>当你拷贝一个<code>auto_ptr</code>时，<code>auto_ptr</code>所指向对象的所有权被转移到拷贝的<code>auto_ptr</code>，而被拷贝的<code>auto_ptr</code>被设为<code>NULL</code>。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">explicit</span> <span class="n">Widget</span><span class="p">(</span><span class="kt">int</span> <span class="n">in</span><span class="p">)</span> <span class="o">:</span> <span class="n">randy</span><span class="p">(</span><span class="n">in</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="n">Widget</span><span class="o">&amp;</span> <span class="n">in</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">randy</span> <span class="o">&lt;</span> <span class="n">in</span><span class="p">.</span><span class="n">randy</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">randy</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw1</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span> <span class="c1">// pw1指向一个Widget
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw2</span><span class="p">(</span><span class="n">pw1</span><span class="p">);</span> <span class="c1">// pw2指向pw1的Widget; pw1被设为NULL。（Widget的所有权从pw1转移到pw2。）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pw1</span> <span class="o">=</span> <span class="n">pw2</span><span class="p">;</span> <span class="c1">// pw1现在再次指向Widget； pw2被设为NULL
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>有意思的是，如果你建立一个<code>auto_ptr&lt;Widget&gt;</code>的<code>vector</code>，然后使用一个指向的<code>Widget</code>的值的函数对它进行排序：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">widgetAPCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">return</span> <span class="o">*</span><span class="n">lhs</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">rhs</span><span class="p">;</span> <span class="c1">// 假设Widget 存在operator&lt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">w1</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">(</span><span class="mi">3</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">w2</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="n">widgets</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">w1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">widgets</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">w2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">widgets</span><span class="p">;</span> <span class="c1">// 建立一个vector，然后用Widget的auto_ptr填充它；
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 记住这将不能编译！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">widgets</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">widgetAPCompare</span><span class="p">);</span><span class="c1">// 排序这个vector
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段代码将不能编译</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">warning: ‘template&lt;class&gt; class std::auto_ptr’ is deprecated <span class="o">[</span>-Wdeprecated-declarations<span class="o">]</span>
+</span></span><span class="line"><span class="cl">   <span class="m">30</span> <span class="p">|</span>   std::vector&lt;auto_ptr&lt;Widget&gt; &gt;
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>               ^~~~~~~~
+</span></span><span class="line"><span class="cl">In file included from /usr/include/c++/9/memory:80,
+</span></span><span class="line"><span class="cl">                 from temp.cpp:10:
+</span></span><span class="line"><span class="cl">/usr/include/c++/9/bits/unique_ptr.h:53:28: note: declared here
+</span></span><span class="line"><span class="cl">   <span class="m">53</span> <span class="p">|</span>   template&lt;typename&gt; class auto_ptr<span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>                            ^~~~~~~~
+</span></span><span class="line"><span class="cl">temp.cpp:33:3: warning: ‘template&lt;class&gt; class std::auto_ptr’ is deprecated <span class="o">[</span>-Wdeprecated-declarations<span class="o">]</span>
+</span></span><span class="line"><span class="cl">   <span class="m">33</span> <span class="p">|</span>   auto_ptr&lt;Widget&gt; w1<span class="o">(</span>new Widget<span class="o">(</span>3<span class="o">))</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>   ^~~~~~~~</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从概念上看所有东西也都很合理，但结果却完全不合理。例如，在排序过程中widgets中的一个或多个auto_ptr可能已经被设为NULL。</p>
+<p>排序这个vector的行为可能已经改变了它的内容！</p>
+<h2 id="剖析">剖析</h2>
+<p>实现<code>sort</code>的方法是使用了<strong>快速排序算法</strong>的某种变体。</p>
+<p>排序一个容器的<strong>基本思想</strong>是，选择容器的某个元素作为“主元”，然后对大于和小于或等于主元的值进行递归排序。</p>
+<p>在sort内部，这样的方法看起来像这样：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">RandomAccessIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Compare</span><span class="o">&gt;</span><span class="c1">// 这个sort的声明直接来自于标准
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="n">sort</span><span class="p">(</span><span class="n">RandomAccessIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomAccessIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Compare</span> <span class="n">comp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 这个typedef在下面解释
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">typedef</span> <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span> <span class="n">ElementType</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">RandomAccessIterator</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// 让i指向主元
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">ElementType</span> <span class="n">pivotValue</span><span class="p">(</span><span class="o">*</span><span class="p">);</span> <span class="c1">// 把主元拷贝到一个局部临时变量中；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">...</span> <span class="c1">// wor
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>源码为：</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_RandomAccessIterator</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Compare</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="kr">inline</span> <span class="kt">void</span>
+</span></span><span class="line"><span class="cl"><span class="n">sort</span><span class="p">(</span><span class="n">_RandomAccessIterator</span> <span class="n">__first</span><span class="p">,</span> <span class="n">_RandomAccessIterator</span> <span class="n">__last</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="n">_Compare</span> <span class="n">__comp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// concept requirements
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">__glibcxx_function_requires</span><span class="p">(</span><span class="n">_Mutable_RandomAccessIteratorConcept</span><span class="o">&lt;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">_RandomAccessIterator</span><span class="o">&gt;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_function_requires</span><span class="p">(</span><span class="n">_BinaryPredicateConcept</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span><span class="o">&gt;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_requires_valid_range</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_requires_irreflexive_pred</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span> <span class="n">__comp</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">__sort</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__ops</span><span class="o">::</span><span class="n">__iter_comp_iter</span><span class="p">(</span><span class="n">__comp</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 上面 __gnu_cxx::__ops::__iter_comp_iter(__comp) 的实现如下
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Compare</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Iterator</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">inline</span> <span class="n">_Iter_comp_to_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span> <span class="n">_Iterator</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__iter_comp_iter</span><span class="p">(</span><span class="n">_Iter_comp_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="o">&gt;</span> <span class="n">__comp</span><span class="p">,</span> <span class="n">_Iterator</span> <span class="n">__it</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">_Iter_comp_to_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span> <span class="n">_Iterator</span><span class="o">&gt;</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">   <span class="n">_GLIBCXX_MOVE</span><span class="p">(</span><span class="n">__comp</span><span class="p">.</span><span class="n">_M_comp</span><span class="p">),</span> <span class="n">__it</span><span class="p">);</span> <span class="c1">// 这里有move
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当涉及<code>iterator_traits&lt;RandomAccessIterator&gt;::value_type</code>时，必须在它前面写上<code>typename</code>，因为它是一个<strong>依赖于模板参数类型的名字</strong>，在这里是<code>RandomAccessIterator</code>。</p>
+<p>上面代码中棘手的是这一行:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ElementType</span> <span class="nf">pivotValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为它把一个元素从保存的区间拷贝到局部临时对象中。</p>
+<p>在例子里，这个元素是一个<code>auto_ptr&lt;Widget&gt;</code>，所以这个拷贝操作默默地把被拷贝的<code>auto_ptr——vector</code>中的那个——设为<code>NULL</code>。</p>
+<p>另外，当<code>pivotValue</code>出了生存期，它会自动删除指向的<code>Widget</code>。这时sort调用返回了，<code>vector</code>的内容已经改变了，而且至少一个<code>Widget</code>已经被删除了。</p>
+<p>也可能有几个<code>vector</code>元素已经被设为<code>NULL</code>，而且几个<code>widget</code>已经被删除，因为快速排序是一种递归算法，递归的每一层都会拷贝一个主元。</p>
+<h2 id="结论">结论</h2>
+<p>智能指针的容器是很好的， 但是<code>auto_ptr</code><font color=red>完全不是那样的智能指针</font>。</p>]]></description></item><item><title>Effective STL [7] | 当使用new得指针的容器时，记得在销毁容器前delete那些指针</title><link>https://jianye0428.github.io/posts/clause_7/</link><pubDate>Wed, 26 Jul 2023 18:18:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_7/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="stl容器能够做的事情">STL容器能够做的事情</h2>
+<ul>
+<li>
+<p>提供了前向和逆向遍历的迭代器（通过<code>begin</code>、<code>end</code>、<code>rbegin</code>等）；</p>
+</li>
+<li>
+<p>能告诉你所容纳的对象类型（通过<code>value_type</code>的<code>ttypedef</code>）；</p>
+</li>
+<li>
+<p>在插入和删除中，负责任何需要的内存管理；</p>
+</li>
+<li>
+<p>报告容纳了多少对象和最多可能容纳的数量（分别通过<code>size</code>和<code>max_size</code>）；</p>
+</li>
+<li>
+<p>当容器自己被销毁时会自动销毁容纳的每个对象。</p>
+</li>
+</ul>
+<h2 id="容器内包含指针">容器内包含指针</h2>
+<p>虽然STL容器被销毁时，能够自动销毁容纳的每个对象，但是如果这些对象是通过new分配的对象的指针时，它不会调用<code>delete</code>，销毁指针所指向的对象。</p>
+<p><strong>Example</strong></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;</span> <span class="n">vwp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SOME_MAGIC_NUMBER</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vwp</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// Widgets在这里泄漏！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段代码将直接导致内存泄露。</p>
+<p>当<code>vwp</code>结束其生命周期后，<code>vwp</code>的每个元素都被销毁，但不会<code>delete</code>每个<code>new</code>得到的对象。</p>
+<p>那样的删除是你的职责，而不是vector的。这是一个特性。只有你知道一个指针是否应该被删除。</p>
+<p>可以很简单地实现：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;</span> <span class="n">vwp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">vwp</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">i</span> <span class="o">!=</span> <span class="n">vwp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="o">*</span><span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段销毁的代码，仍然有2个问题：</p>
+<ul>
+<li>新的for循环代码比for_each多得多，没有使用for_each来的清楚</li>
+<li>这段代码不是异常安全的。如果在用指针填充了vwp的时候和你要删除它们之间抛出了一个异常，你会再次资源泄漏。</li>
+</ul>
+<p><strong>for_each删除对象</strong></p>
+<p>要把你的类似for_each的循环转化为真正使用for_each，你需要把delete转入一个函数对象中。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">DeleteObject</span> <span class="o">:</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span> <span class="c1">// 这里有这个继承
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">void</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">ptr</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="n">ptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在可以这么删除对象</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">HappyWork</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">for_each</span><span class="p">(</span><span class="n">vwp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vwp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DeleteObject</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>问题</strong></p>
+<p>如果有人编写了一个类，该类继承了 string</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecialString</span><span class="o">:</span> <span class="k">public</span> <span class="n">string</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这是很危险的行为，因为string，就像所有的标准STL容器，<strong>缺少虚析构函数</strong>，而从没有虚析构函数的类公有继承是一个大的C++禁忌。</p>
+<p>当他删除 SpecialString 时就会资源泄露</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">deque</span><span class="o">&lt;</span><span class="n">SpecialString</span><span class="o">*&gt;</span> <span class="n">dssp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="n">for_each</span><span class="p">(</span><span class="n">dssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">dssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="c1">// 行为未定义！通过没有
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">DeleteObject</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">());</span> <span class="c1">// 虚析构函数的基类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// 指针来删除派生对象
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>解决</strong></p>
+<p>可以通过编译器推断传给<code>DeleteObject::operator()</code>的指针的类型来消除这个错误（也减少DeleteObject的用户需要的击键次数）。</p>
+<p><strong>把模板化从DeleteObject移到它的operator()</strong>：</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">DeleteObject</span> <span class="p">{</span> <span class="c1">// 删除这里的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 模板化和基类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="c1">// 模板化加在这里
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">ptr</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="n">ptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过传给<code>DeleteObject::operator()</code>的指针的类型，自动实例化一个<code>operator()</code>。这种类型演绎下降让我们放弃使<code>DeleteObject</code>可适配的能力</p>
+<p>现在删除 SpecialString 就会正常了</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">deque</span><span class="o">&lt;</span><span class="n">SpecialString</span><span class="o">*&gt;</span> <span class="n">dssp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="n">for_each</span><span class="p">(</span><span class="n">dssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">dssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DeleteObject</span><span class="p">());</span> <span class="c1">// good！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><font color=red>现在仍不是异常安全的。</font></p>
+<p>果在SpecialString被new但在调用for_each之前抛出一个异常，就会发生泄漏。</p>
+<p>这个问题可以以多种方式被解决，但最简单的可能是用<strong>智能指针的容器来代替指针的容器，典型的是引用计数指针</strong>。</p>
+<h2 id="boost库中的shared_ptr">Boost库中的shared_ptr</h2>
+<p>利用Boost的shared_ptr，本条款的原始例子可以重写为这样：</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typedef</span> <span class="n">boost</span><span class="o">::</span><span class="n">shared_</span> <span class="n">ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">SPW</span><span class="p">;</span> <span class="c1">//SPW = &#34;shared_ptr to Widget&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">vector</span><span class="o">&lt;</span><span class="n">SPW</span><span class="o">&gt;</span> <span class="n">vwp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SOME_MAGIC_NUMBER</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="n">vwp</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">SPW</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">));</span> <span class="c1">// 从一个Widget建立SPW,然后进行一次push_back
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">...</span> <span class="c1">// work
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// 这里没有Widget泄漏，甚至在上面代码中抛出异常
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="结论">结论</h2>
+<p>STL容器很智能，但它们没有智能到知道是否应该删除它们所包含的指针。</p>
+<p>当你要删除指针的容器时要避免资源泄漏，你必须<strong>用智能引用计数指针对象</strong>（比如<code>Boost</code>的<code>shared_ptr</code>）来代替指针，或者你<strong>必须在容器销毁前手动删除容器中的每个指针</strong>。</p>]]></description></item><item><title>生成对抗网络GAN</title><link>https://jianye0428.github.io/posts/gan_1/</link><pubDate>Wed, 26 Jul 2023 10:03:45 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/gan_1/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
@@ -3656,566 +4338,4 @@ template &lt;class T1, class T2&gt; struct pair;</p>
 </span></span><span class="line"><span class="cl">    <span class="n">swap</span><span class="p">(</span><span class="n">nums</span><span class="p">[</span><span class="n">mid</span><span class="p">],</span> <span class="n">nums</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item><item><title>KnapSack Problem</title><link>https://jianye0428.github.io/posts/knapsack/</link><pubDate>Sun, 16 Jul 2023 13:42:09 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/knapsack/</guid><description><![CDATA[<p>ref:</br>
-<code>dp:</code> <a href="https://juejin.cn/post/6844903993429196813"target="_blank" rel="external nofollow noopener noreferrer">https://juejin.cn/post/6844903993429196813<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-<code>knapsack problem:</code> <a href="https://blog.csdn.net/qq_38410730/article/details/81667885"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_38410730/article/details/81667885<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-<code>完全背包问题:</code> <a href="https://www.cnblogs.com/darkerg/p/15464987.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/darkerg/p/15464987.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
-<h3 id="knapsack-背包问题">KnapSack 背包问题</h3>
-<h4 id="definiton-定义">Definiton 定义</h4>
-<p><u>背包问题</u>是一种组合优化的NP完全问题:有N个物品和容量为W的背包，每个物品都有自己的体积w和价值v， 求拿哪些物品可以使得背包所装下的物品的总价值最大。如果限定每种物品只能选择0个或者1个，则称问题为<u>0-1背包问题</u>;如果不限定每种物品的数量，则问题称为<u>无界背包问题和或者完全背包问题</u>。</p>
-<h4 id="0-1-背包问题">0-1 背包问题</h4>
-<p>以 0-1 背包问题为例。我们可以定义一个二维数组 <code>dp</code> 存储最大价值，其中<u> <code>dp[i][j]</code> 表示前 <code>i</code> 件物品体积不超过 <code>j</code> 的情况下能达到的最大价值</u>。在我们遍历到第 <code>i</code> 件物品时，在当前背包总容量为 <code>j</code> 的情况下，如果我们不将物品 <code>i</code> 放入背包，那么 <code>dp[i][j] = dp[i-1][j]</code>，即前 <code>i</code> 个物品的最大价值等于只取前 <code>i-1</code> 个物品时的最大价值；如果我们将物品 <code>i</code> 放入背包，假设第 <code>i</code> 件物品体积为 <code>w</code>，价值为 <code>v</code>，那么我们得到 <code>dp[i][j] = dp[i-1][j-w] + v</code>。我们只需在遍历过程中对这两种情况取最大值即可，总时间复杂度和空间复杂度都为 <code>O(NW)</code>。</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">knapsack</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="p">(</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="p">(</span><span class="n">W</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">w</span> <span class="o">=</span> <span class="n">weight</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;=</span> <span class="n">W</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">j</span> <span class="o">&gt;=</span> <span class="n">w</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">                <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="n">w</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">                <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">            <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">dp</span><span class="p">[</span><span class="n">N</span><span class="p">][</span><span class="n">W</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>空间压缩:</strong></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">knapsack</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">dp</span><span class="p">(</span><span class="n">W</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">w</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="o">=</span> <span class="n">W</span><span class="p">;</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="n">w</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="n">w</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">dp</span><span class="p">[</span><span class="n">W</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h4 id="完全背包问题">完全背包问题</h4>
-<p><u>完全背包问题</u>中，一个物品可以拿多次。对于拿多个物品的情况，我们只需考虑 <code>dp[2][3]</code> 即可，即 <code>dp[2][5] = max(dp[1][5], dp[2][3] + 3)</code>。这样，我们
-就得到了完全背包问题的状态转移方程：<code>dp[i][j] = max(dp[i-1][j], dp[i][j-w] + v)</code>，其与 <code>0-1背包问题</code>的差别仅仅是把状态转移方程中的第二个 <code>i-1</code> 变成了 <code>i</code>。</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">knapsack</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="p">(</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">W</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">w</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;=</span> <span class="n">W</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="n">j</span> <span class="o">&gt;=</span> <span class="n">w</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">                <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="n">w</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">                <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">dp</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">            <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">dp</span><span class="p">[</span><span class="n">N</span><span class="p">][</span><span class="n">W</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>空间压缩:</strong></p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">knapsack</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">W</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">dp</span><span class="p">(</span><span class="n">W</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">w</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">w</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;=</span> <span class="n">W</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">dp</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="n">w</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">dp</span><span class="p">[</span><span class="n">W</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item><item><title>详解最大似然估计(MLE)、最大后验概率估计(MAP)，以及贝叶斯公式的理解</title><link>https://jianye0428.github.io/posts/mleandmap/</link><pubDate>Sun, 16 Jul 2023 13:28:44 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/mleandmap/</guid><description><![CDATA[<p>最大似然估计（Maximum likelihood estimation, 简称MLE）和最大后验概率估计（Maximum a posteriori estimation, 简称MAP）是很常用的两种参数估计方法，如果不理解这两种方法的思路，很容易弄混它们。下文将详细说明MLE和MAP的思路与区别。</p>
-<p>但别急，我们先从概率和统计的区别讲起。</p>
-<h1 id="概率和统计是一个东西吗">概率和统计是一个东西吗？</h1>
-<p>概率(probabilty)和统计(statistics)看似两个相近的概念，其实研究的问题刚好相反。</p>
-<p>概率研究的问题是，已知一个模型和参数，怎么去预测这个模型产生的结果的特性(例如均值，方差，协方差等等)。 举个例子，我想研究怎么养猪(模型是猪)，我选好了想养的品种、喂养方式、猪棚的设计等等(选择参数)，我想知道我养出来的猪大概能有多肥，肉质怎么样(预测结果)。</p>
-<p>统计研究的问题则相反。统计是，有一堆数据，要利用这堆数据去预测模型和参数。仍以猪为例。现在我买到了一堆肉，通过观察和判断，我确定这是猪肉(这就确定了模型。在实际研究中，也是通过观察数据推测模型是／像高斯分布的、指数分布的、拉普拉斯分布的等等)，然后，可以进一步研究，判定这猪的品种、这是圈养猪还是跑山猪还是网易猪，等等(推测模型参数)。</p>
-<p>一句话总结：<strong>概率是已知模型和参数，推数据。统计是已知数据，推模型和参数。</strong></p>
-<p>显然，本文解释的MLE和MAP都是统计领域的问题。它们都是用来推测参数的方法。为什么会存在着两种不同方法呢？ 这需要理解贝叶斯思想。我们来看看贝叶斯公式。</p>
-<h1 id="贝叶斯公式到底在说什么">贝叶斯公式到底在说什么？</h1>
-<p>学习机器学习和模式识别的人一定都听过贝叶斯公式(Bayes’ Theorem)：
-式[1]
-$P(A|B)=\frac{P(B|A)P(A)}{P(B)}$</p>
-<p>贝叶斯公式看起来很简单，无非是倒了倒条件概率和联合概率的公式。</p>
-<p>把B展开，可以写成:
-式[2]
-$P(A|B)=\frac{P(B|A)P(A)}{P(B|A)P(A) + P(B|\sim A)P(\sim A)}$</p>
-<p>这个式子就很有意思了。</p>
-<p>想想这个情况。一辆汽车(或者电瓶车)的警报响了，你通常是什么反应？有小偷？撞车了？ 不。。 你通常什么反应都没有。因为汽车警报响一响实在是太正常了！每天都要发生好多次。本来，汽车警报设置的功能是，出现了异常情况，需要人关注。然而，由于虚警实在是太多，人们渐渐不相信警报的功能了。</p>
-<p><strong>贝叶斯公式就是在描述，你有多大把握能相信一件证据？（how much you can trust the evidence）</strong></p>
-<p>我们假设响警报的目的就是想说汽车被砸了。把$A$计作“汽车被砸了”，$B$计作“警报响了”，带进贝叶斯公式里看。我们想求等式左边发生$A∣B$的概率，这是在说警报响了，汽车也确实被砸了。汽车被砸**引起(trigger)**警报响，即B∣A。但是，也有可能是汽车被小孩子皮球踢了一下、被行人碰了一下等其他原因(统统计作$\sim A$)，其他原因引起汽车警报响了，即 $B|\sim A$。那么，现在突然听见警报响了，这时汽车已经被砸了的概率是多少呢(这即是说，警报响这个证据有了，多大把握能相信它确实是在报警说汽车被砸了)想一想，应当这样来计算。用警报响起、汽车也被砸了这事件的数量，除以响警报事件的数量(这即[式1])。进一步展开，即警报响起、汽车也被砸了的事件的数量，除以警报响起、汽车被砸了的事件数量加上警报响起、汽车没被砸的事件数量(这即[式2])。</p>
-<p>再思考[式2]。想让$P(A∣B)=1$，即警报响了，汽车一定被砸了，该怎么做呢？让$P(B|\sim A)P(\sim A) = 0$即 可 。很容易想清楚，假若让$P(\sim A)=0$,即杜绝了汽车被球踢、被行人碰到等等其他所有情况，那自然，警报响了，只剩下一种可能——汽车被砸了。这即是提高了响警报这个证据的说服力。</p>
-<p>**从这个角度总结贝叶斯公式：做判断的时候，要考虑所有的因素。**老板骂你，不一定是你把什么工作搞砸了，可能只是他今天出门前和太太吵了一架。</p>
-<p>再思考[式2]。观察【式2】右边的分子，$P(B∣A)$为汽车被砸后响警报的概率。姑且认为这是1吧。但是，若$P(A)$很小，即汽车被砸的概率本身就很小，则$P(B∣A)P(A)$仍然很小，即【式2】右边分子仍然很小，$P(A|B)$还是大不起来。 这里，$​P(A)$ 即是常说的先验概率，如果A的先验概率很小，就算$P(B∣A)$较大，可能A的后验概率$P(A∣B)$还是不会大(假设$P(B∣\sim A)P(\sim A)$不变的情况下)。</p>
-<p><strong>从这个角度思考贝叶斯公式：一个本来就难以发生的事情，就算出现某个证据和他强烈相关，也要谨慎。证据很可能来自别的虽然不是很相关，但发生概率较高的事情。</strong></p>
-<h1 id="似然函数">似然函数</h1>
-<p>似然(likelihood)这个词其实和概率(probability)是差不多的意思，Colins字典这么解释:The likelihood of something happening is how likely it is to happen. 你把likelihood换成probability，这解释也读得通。但是在统计里面，似然函数和概率函数却是两个不同的概念(其实也很相近就是了)。</p>
-<p>对于这个函数:</p>
-<p>$$P(x|\theta)$$</p>
-<p>输入有两个: $x$表示某一个具体的数据；$\theta$表示模型的参数。</p>
-<p>如果$\theta$是已知确定的，$x$是变量，这个函数叫做<font color=red>概率函数(probability function)</font>，它描述对于不同的样本点x，其出现概率是多少。</p>
-<p>如果$x$是已知确定的，$\theta$是变量，这个函数叫做<font color=red>似然函数(likelihood function)</font>, 它描述对于不同的模型参数，出现$x$这个样本点的概率是多少。</p>
-<h1 id="最大似然估计mle">最大似然估计(MLE)</h1>
-<p>假设有一个造币厂生产某种硬币，现在我们拿到了一枚这种硬币，想试试这硬币是不是均匀的。即想知道抛这枚硬币，正反面出现的概率（记为$\theta$）各是多少？</p>
-<p>这是一个统计问题，回想一下，解决统计问题需要什么？ 数据！</p>
-<p>于是我们拿这枚硬币抛了10次，得到的数据($x_0$)是：反正正正正反正正正反。我们想求的正面概率$\theta$是模型参数，而抛硬币模型我们可以假设是二项分布。</p>
-<p>那么，出现实验结果$x_0$(即反正正正正反正正正反)的似然函数是多少呢？</p>
-<p>$$f(x_0 ,\theta) = (1-\theta)\times\theta\times\theta\times\theta\times\theta\times(1-\theta)\times\theta\times\theta\times\theta\times(1-\theta) = \theta ^ 7(1 - \theta)^3 = f(\theta)$$
-​
-注意，这是个只关于$\theta$的函数。而最大似然估计，顾名思义，就是要最大化这个函数。我们可以画出$f(\theta)$的图像：</p>
-<p></p>
-<p>可以看出，在$\theta = 0.7$时，似然函数取得最大值。</p>
-<p>这样，我们已经完成了对$\theta$的最大似然估计。即，抛10次硬币，发现7次硬币正面向上，最大似然估计认为正面向上的概率是0.7。（ummm…这非常直观合理，对吧？）</p>
-<p>且慢，一些人可能会说，硬币一般都是均匀的啊！ 就算你做实验发现结果是“反正正正正反正正正反”，我也不信$\theta = 0.7$。</p>
-<p>这里就包含了贝叶斯学派的思想了——要考虑先验概率。 为此，引入了最大后验概率估计。</p>
-<h1 id="最大后验概率估计map">最大后验概率估计(MAP)</h1>
-<p>最大似然估计是求参数$\theta$, 使似然函数$P(x_0 | \theta)$最 大 。 最大后验概率估计则是想求$\theta$使$P(x_0|\theta)$ 最大。求得的$\theta$不单单让似然函数大，不单单让似然函数大，$\theta$自己出现的先验概率也得大。(这有点像正则化里加惩罚项的思想，不过正则化里是利用加法，而MAP里是利用乘法).</p>
-<p>MAP其实是在最大化$P(\theta|x_0) = \frac{P(x_0|\theta)P(\theta)}{P(x_0)}$，不过因为$x_0$是确定的(即投出的“反正正正正反正正正反”)，$P(x_0)$是一个已知值，所以去掉了分母$P(x_0)$(假设“投10次硬币”是一次实验，实验做了1000次，“反正正正正反正正正反”出现了n次，则$P(x_0) = n/1000$)。总之，这是一个可以由数据集得到的值）。最大化$P(\theta | x_0)$的意义也很明确，$x_0$已经出现了，要求$\theta$取什么值使$P(\theta | x_0)$最大。顺带一提，$P(\theta | x_0)$, ​即后验概率，这就是“最大后验概率估计”名字的由来。</p>
-<p>对于投硬币的例子来看，我们认为（”先验地知道“$\theta$取0.5的概率很大，取其他值的概率小一些。我们用一个高斯分布来具体描述我们掌握的这个先验知识，例如假设$P(\theta)$为均值0.5，方差0.1的高斯函数，如下图：</p>
-<p></p>
-<p>则$P(x_0 | \theta)$的函数图像为：</p>
-<p></p>
-<p>注意，此时函数取最大值时，θ \thetaθ取值已向左偏移，不再是0.7。实际上，在$\theta = 0.558$时函数取得了最大值。即，用最大后验概率估计，得到$\theta = 0.558$</p>
-<p>最后，那要怎样才能说服一个贝叶斯派相信$\theta = 0.7$呢？你得多做点实验。。</p>
-<p>如果做了1000次实验，其中700次都是正面向上，这时似然函数为:</p>
-<p></p>
-<p>如果仍然假设$P(\theta)$为均值0.5，方差0.1的高斯函数，$P(x_0 | \theta) P(\theta)$的函数图像为:</p>
-<p></p>
-<p>在$\theta = 0.696$处，$P(x_0 | \theta) P(\theta)$取得最大值。</p>
-<p>这样，就算一个考虑了先验概率的贝叶斯派，也不得不承认得把θ \thetaθ估计在0.7附近了。</p>
-<p>PS. 要是遇上了顽固的贝叶斯派，认为$P(\theta = 0.5) = 1$，那就没得玩了。。 无论怎么做实验，使用MAP估计出来都是$\theta = 0.5$。这也说明，一个合理的先验概率假设是很重要的。（通常，先验概率能从数据中直接分析得到）</p>
-<h1 id="最大似然估计和最大后验概率估计的区别">最大似然估计和最大后验概率估计的区别</h1>
-<p>相信读完上文，MLE和MAP的区别应该是很清楚的了。MAP就是多个作为因子的先验概率$P(\theta)$。或者，也可以反过来，认为MLE是把先验概率$P(\theta)$认为等于1，即认为$\theta$是均匀分布。</p>
-<p>ref：https://blog.csdn.net/u011508640/article/details/72815981</p>
-]]></description></item><item><title>Linux Filesystem</title><link>https://jianye0428.github.io/posts/filesystem/</link><pubDate>Sun, 16 Jul 2023 10:53:54 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/filesystem/</guid><description><![CDATA[<h1 id="linux系统各系统文件夹下的区别">Linux系统各系统文件夹下的区别</h1>
-<p>首先，usr 指 Unix System Resource，而不是User。
-通常，</p>
-<ul>
-<li>
-<p><strong>/usr/bin</strong>下面的都是系统预装的可执行程序，会随着系统升级而改变。</p>
-</li>
-<li>
-<p><strong>/usr/local/bin</strong>目录是给用户放置自己的可执行程序的地方，推荐放在这里，不会被系统升级而覆盖同名文件。</p>
-</li>
-</ul>
-<p>如果两个目录下有相同的可执行程序，谁优先执行受到PATH环境变量的影响，比如我的一台服务器的PATH变量为。</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$PATH</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>这里<u>/usr/local/bin</u>优先于<u>/usr/bin</u>, 一般都是如此。</p>
-<p><strong>/lib</strong>是内核级的, <strong>/usr/lib</strong>是系统级的, <strong>/usr/local/lib</strong>是用户级的.</p>
-<ul>
-<li>
-<p><strong>/</strong> - 对你的电脑来说, 有且只有一个根目录。所有的东西都是从这里开始。举个例子: 当你在终端里输入&quot;/home&quot;，你其实是在告诉电脑，先从/(根目录)开始，再进入到home目录。</p>
-</li>
-<li>
-<p><strong>/lib/</strong> — 包含许多被/bin/和/sbin/中的程序使用的库文件。目录/usr/lib/中含有更多用于用户程序的库文件。/lib目录下放置的是/bin和/sbin目录下程序所需的库文件。/lib目录下的文件的名称遵循下面的格式：</p>
-<blockquote>
-<ul>
-<li>libc.so.*</li>
-<li>ld*</li>
-<li>仅仅被/usr目录下的程序所使用的共享库不必放到/lib目录下。只有/bin和/sbin下的程序所需要的库有必要放到/lib目录下。实际上，libm.so.*类型的库文件如果被是/bin和/sbin所需要的，也可以放到/usr/lib下。</li>
-</ul>
-</blockquote>
-</li>
-<li>
-<p><strong>/bin/</strong> — 用来贮存用户命令。目录 /usr/bin 也被用来贮存用户命令。</p>
-</li>
-<li>
-<p><strong>/sbin/</strong> — 许多系统命令(例如 shutdown)的贮存位置。目录/usr/sbin中也包括了许多系统命令。</p>
-</li>
-<li>
-<p><strong>/root/</strong> — 根用户(超级用户)的主目录。</p>
-</li>
-<li>
-<p><strong>/mnt/</strong> — 该目录中通常包括系统引导后被挂载的文件系统的挂载点。譬如，默认的光盘挂载点是/mnt/cdrom/.</p>
-</li>
-<li>
-<p><strong>/boot/</strong> — 包括内核和其它系统启动期间使用的文件。</p>
-</li>
-<li>
-<p><strong>/lost+found/</strong> — 被fsck用来放置零散文件(没有名称的文件)。</p>
-</li>
-<li>
-<p><strong>/lib/</strong> — 包含许多被/bin/和/sbin/中的程序使用的库文件。目录/usr/lib/中含有更多用于用户程序的库文件。</p>
-</li>
-<li>
-<p><strong>/dev/</strong> — 贮存设备文件。</p>
-</li>
-<li>
-<p><strong>/etc/</strong> — 包含许多配置文件和目录。<strong>系统主要的设定档几乎都放置在这个目录内</strong>，例如人员的帐号密码档、各种服务的启始档等等。 一般来说，这个目录下的各档案属性是可以让一般使用者查阅的，但是只有root有权力修改。</p>
-</li>
-<li>
-<p><strong>/var/</strong> — 用于贮存variable(或不断改变的)文件，例如日志文件和打印机假脱机文件。</p>
-</li>
-<li>
-<p><strong>/usr/</strong> — 包括与系统用户直接有关的文件和目录，例如应用程序及支持它们的库文件。在这个目录下，你可以找到那些不适合放在/bin或/etc目录下的额外的工具。比如像游戏阿，一些打印工具拉等等。/usr目录包含了许多子目录： <strong>/usr/bin</strong>目录用于存放程序; <strong>/usr/share</strong>用于存放一些共享的数据，比如音乐文件或者图标等等;/usr/lib目录用于存放那些不能直接运行的，但却是许多程序运行所必需的一些函数库文件。</p>
-</li>
-<li>
-<p><strong>/proc/</strong> — 一个虚拟的文件系统(不是实际贮存在磁盘上的)，它包括被某些程序使用的系统信息。</p>
-</li>
-<li>
-<p><strong>/initrd/</strong> — 用来在计算机启动时挂载 initrd.img 映像文件的目录以及载入所需设备模块的目录。</p>
-<ul>
-<li><strong>警告</strong>:
-<blockquote>
-<p>不要删除/initrd/目录。如果你删除了该目录后再重新引导Red Hat Linux时，你将无法引导你的计算机。</p>
-</blockquote>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>/tmp/</strong> — 用户和程序的临时目录。/tmp给予所有系统用户读写权。**这是让一般使用者或者是正在执行的程序暂时放置档案的地方。**这个目录是任何人都能够存取的，所以你需要定期的清理一下。当然，重要资料不可放置在此目录啊。 因为FHS甚至建议在开机时，应该要将/tmp下的资料都删除。</p>
-</li>
-<li>
-<p><strong>/home/</strong> — 用户主目录的默认位置。</p>
-</li>
-<li>
-<p><strong>/opt/</strong> — 可选文件和程序的贮存目录。该目录主要被第三方开发者用来简易地安装和卸装他们的软件包。这里主要存放那些可选的程序。你想尝试最新的firefox测试版吗?那就装到/opt目录下吧，这样，当你尝试完，想删掉firefox的时候，你就可 以直接删除它，而不影响系统其他任何设置。安装到/opt目录下的程序，它所有的数据、库文件等等都是放在同个目录下面。</p>
-</li>
-<li>
-<p><strong>/usr/local/</strong> - 这里主要存放那些手动安装的软件，即apt或者apt-get安装的软件。它和/usr目录具有相类似的目录结构。让软件包管理器来管理/usr目录，而把自定义的脚本(scripts)放到/usr/local目录下面，我想这应该是个不错的主意。</p>
-</li>
-<li>
-<p><strong>/media/</strong> - 有些linux的发行版使用这个目录来挂载那些usb接口的移动硬盘(包括U盘)、CD/DVD驱动器等等。</p>
-</li>
-</ul>
-<p></p>
-<h2 id="usrlocal-和-usrshare-区别">/usr/local/ 和 /usr/share/ 区别</h2>
-<ul>
-<li>
-<p><strong>/usr/local</strong> - 这个目录一般是用来存放用户自编译安装软件的存放目录; 一般是通过源码包安装的软件，如果没有特别指定安装目录的话，一般是安装在这个目录中。这个目录下面有子目录。</p>
-</li>
-<li>
-<p><strong>/usr/share</strong> - 系统共用的东西存放地，比如/usr/share/fonts是字体目录，/usr/share/doc和/usr/share/man帮助文件。</p>
-</li>
-<li>
-<p><strong>/var/log</strong> - 系统日志存放，分析日志要看这个目录的东西;</p>
-</li>
-<li>
-<p><strong>/var/spool</strong> -  打印机、邮件、代理服务器等脱机目录。</p>
-</li>
-</ul>
-<h1 id="linux-command-notes">Linux Command Notes</h1>
-<h2 id="查找文件的命令findlocatewhereiswhichtypegrep">查找文件的命令:<code>find</code>/<code>locate</code>/<code>whereis</code>/<code>which</code>/<code>type</code>/<code>grep</code></h2>
-<h3 id="find">find</h3>
-<p><code>find</code>命令准确，但速度非常慢，它可以查找任何类型的文件</p>
-<ul>
-<li>
-<p>使用格式</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">find <span class="o">[</span>指定目录<span class="o">]</span> <span class="o">[</span>指定条件<span class="o">]</span> <span class="o">[</span>指定动作<span class="o">]</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>参数说明:</p>
-<ul>
-<li>[指定目录]： 所要搜索的目录及其所有子目录。默认为当前目录</li>
-<li>[指定条件]： 所要搜索的文件的特征
-<ul>
-<li>-name：按文件名来查找文件</li>
-<li>-user：按照文件的属主来查找文件</li>
-<li>-group：按照文件所属的组来查找文件</li>
-<li>-perm：按照文件权限来查找文件</li>
-<li>-prune：不在当前指定目录中查找</li>
-</ul>
-</li>
-<li>[指定动作]： 对搜索结果进行特定的处理
-<ul>
-<li>-print：将匹配的文件输出到标准输出</li>
-<li>-exec：对匹配的文件执行该参数所给出的shell命令</li>
-<li>-ok：和-exec的作用相同，在执行每一个命令之前，让用户来确定是否执行</li>
-</ul>
-</li>
-</ul>
-<blockquote>
-<p><code>find</code>命令不加任何参数时，表示搜索路径为当前目录及其子目录，默认的动作为-print，即不过滤任何结果，也就是说输出所有的文件</p>
-</blockquote>
-<p>使用示例:
-- 递归搜索当前目录中，所有以<code>file</code>开头的文件
-<code>shell find . -name 'file*' </code>
-- 递归搜索当前目录中，所有以<code>file</code>开头的文件，并显示它们的详细信息
-<code>shell find . -name 'file*' -ls </code></p>
-</li>
-</ul>
-<h3 id="locate">locate</h3>
-<p><code>locate</code>命令可以说是<code>find -name</code>的另一种写法，但是要比后者快得多，原因在于它不搜索具体目录，而是搜索一个数据库/var/lib/locatedb，这个数据库中含有本地所有文件信息.</p>
-<p>Linux自动创建这个数据库，并且每天自动更新一次，所以使用locate命令查不到最新变动过的文件。为了避免这种情况，可以在使用<code>locate</code>之前，先使用<code>updatedb</code>命令，手动更新数据库.</p>
-<ul>
-<li>
-<p>使用格式:</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">locate <span class="o">[</span>参数<span class="o">]</span> &lt;文件名&gt;</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p>使用示例:</p>
-<ul>
-<li>搜索<code>etc</code>目录下所有以<code>file</code>开头的文件
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">locate /etc/file</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>搜索用户主目录下，所有以f开头的文件，并且忽略大小写
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">locate -i ~/f</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-</li>
-</ul>
-<h3 id="whereis">whereis</h3>
-<p><code>whereis</code>命令只能搜索特定格式的文件</p>
-<ul>
-<li>使用格式
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">whereis <span class="o">[</span>参数<span class="o">]</span> &lt;文件名&gt;</span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>可搜索文集类型
-<ul>
-<li>二进制文件(-b)</li>
-<li>源代码文件(-s)</li>
-<li>说明文件(-m)</li>
-</ul>
-</li>
-</ul>
-<blockquote>
-<p>如果省略参数，则返回所有信息</p>
-</blockquote>
-</li>
-<li>使用示例:
-<ul>
-<li>找出名为<code>find</code>的文件位置
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">whereis find</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-</li>
-</ul>
-<h3 id="which">which</h3>
-<p><code>which</code>命令的作用是，在<code>PATH</code>变量指定的路径中，搜索某个系统命令的位置，并且返回第一个搜索结果, 也就是说，使用which命令，就可以看到某个系统命令是否存在，以及执行的到底是哪一个位置的命令。</p>
-<ul>
-<li>使用格式
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">which &lt;命令&gt;</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>使用实例:
-<ul>
-<li>查找find命令的位置
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">which find</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-</li>
-</ul>
-<h3 id="type">type</h3>
-<p><code>type</code>命令其实不能算查找命令，它是用来区分某个命令到底是由shell自带的，还是由shell外部的独立二进制文件提供的; 如果一个命令是外部命令，那么使用<code>-p</code>参数，会显示该命令的路径，相当于which命令。</p>
-<ul>
-<li>使用格式
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">type</span> &lt;命令&gt;</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>使用实例:
-<ul>
-<li>查看cd命令是否为shell自带的命令
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">type</span> cd</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>查看grep是否为外部命令
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nb">type</span> grep</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-</li>
-</ul>
-<h3 id="grep">grep</h3>
-<p><code>grep</code>命令用于查找拥有特殊字段的文件。</p>
-<ul>
-<li>
-<p>语法</p>
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">grep <span class="o">[</span>-abcEFGhHilLnqrsvVwxy<span class="o">][</span>-A&lt;显示行数&gt;<span class="o">][</span>-B&lt;显示列数&gt;<span class="o">][</span>-C&lt;显示列数&gt;<span class="o">][</span>-d&lt;进行动作&gt;<span class="o">][</span>-e&lt;范本样式&gt;<span class="o">][</span>-f&lt;范本文件&gt;<span class="o">][</span>--help<span class="o">][</span>范本样式<span class="o">][</span>文件或目录...<span class="o">]</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>参数:</p>
-<ul>
-<li>-a 或 &ndash;text : 不要忽略二进制的数据。</li>
-<li>-A&lt;显示行数&gt; 或 &ndash;after-context=&lt;显示行数&gt; : 除了显示符合范本样式的那一列之外，并显示该行之后的内容。</li>
-<li>-b 或 &ndash;byte-offset : 在显示符合样式的那一行之前，标示出该行第一个字符的编号。</li>
-<li>-B&lt;显示行数&gt; 或 &ndash;before-context=&lt;显示行数&gt; : 除了显示符合样式的那一行之外，并显示该行之前的内容。</li>
-<li>-c 或 &ndash;count : 计算符合样式的列数。</li>
-<li>-C&lt;显示行数&gt; 或 &ndash;context=&lt;显示行数&gt;或-&lt;显示行数&gt; : 除了显示符合样式的那一行之外，并显示该行之前后的内容。</li>
-<li>-d &lt;动作&gt; 或 &ndash;directories=&lt;动作&gt; : 当指定要查找的是目录而非文件时，必须使用这项参数，否则grep指令将回报信息并停止动作。</li>
-<li>-e&lt;范本样式&gt; 或 &ndash;regexp=&lt;范本样式&gt; : 指定字符串做为查找文件内容的样式。</li>
-<li>-E 或 &ndash;extended-regexp : 将样式为延伸的正则表达式来使用。</li>
-<li>-f&lt;规则文件&gt; 或 &ndash;file=&lt;规则文件&gt; : 指定规则文件，其内容含有一个或多个规则样式，让grep查找符合规则条件的文件内容，格式为每行一个规则样式。</li>
-<li>-F 或 &ndash;fixed-regexp : 将样式视为固定字符串的列表。</li>
-<li>-G 或 &ndash;basic-regexp : 将样式视为普通的表示法来使用。</li>
-<li>-h 或 &ndash;no-filename : 在显示符合样式的那一行之前，不标示该行所属的文件名称。</li>
-<li>-H 或 &ndash;with-filename : 在显示符合样式的那一行之前，表示该行所属的文件名称。</li>
-<li>-i 或 &ndash;ignore-case : 忽略字符大小写的差别。</li>
-<li>-l 或 &ndash;file-with-matches : 列出文件内容符合指定的样式的文件名称。</li>
-<li>-L 或 &ndash;files-without-match : 列出文件内容不符合指定的样式的文件名称。</li>
-<li>-n 或 &ndash;line-number : 在显示符合样式的那一行之前，标示出该行的列数编号。</li>
-<li>-o 或 &ndash;only-matching : 只显示匹配PATTERN 部分。</li>
-<li>-q 或 &ndash;quiet或&ndash;silent : 不显示任何信息。</li>
-<li>-r 或 &ndash;recursive : 此参数的效果和指定&quot;-d recurse&quot;参数相同。</li>
-<li>-s 或 &ndash;no-messages : 不显示错误信息。</li>
-<li>-v 或 &ndash;invert-match : 显示不包含匹配文本的所有行。</li>
-<li>-V 或 &ndash;version : 显示版本信息。</li>
-<li>-w 或 &ndash;word-regexp : 只显示全字符合的列。</li>
-<li>-x &ndash;line-regexp : 只显示全列符合的列。</li>
-<li>-y : 此参数的效果和指定&quot;-i&quot;参数相同。</li>
-</ul>
-</li>
-<li>
-<p>示例:</p>
-<div class="highlight" id="id-14"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 查找指定目录/etc/acpi 及其子目录（如果存在子目录的话）下所有文件中包含字符串&#34;update&#34;的文件，并打印出该字符串所在行的内容</span>
-</span></span><span class="line"><span class="cl">grep -r update /etc/acpi</span></span></code></pre></td></tr></table>
-</div>
-</div><div class="highlight" id="id-15"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 查看符合条件的日志条目。</span>
-</span></span><span class="line"><span class="cl">grep -n <span class="s1">&#39;2019-10-24 00:01:11&#39;</span> *.log</span></span></code></pre></td></tr></table>
-</div>
-</div><div class="highlight" id="id-16"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># 只匹配文本文件，不匹配二进制文件的命令</span>
-</span></span><span class="line"><span class="cl">grep -srn <span class="s2">&#34;parameter&#34;</span> .  --binary-files<span class="o">=</span>without-match</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-]]></description></item></channel></rss>
+</div>]]></description></item></channel></rss>
