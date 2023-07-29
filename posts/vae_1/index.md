@@ -281,10 +281,10 @@ $$
 套用蒙特卡洛公式，最终表示如下：
 
 $$
-\begin{align}
-\triangle_{\phi}E_{q_{\phi}(z)}[f(z)] &= E_{q_{\phi}(z)}[f(z) \triangle_{q_{\phi}(z)} \log{q_{\phi}(z)}] \\
+\begin{aligned}
+\triangle_{\phi}E_{q_{\phi}(z)}[f(z)] &= E_{q_{\phi}(z)}[f(z) \triangle_{q_{\phi}(z)} \log{q_{\phi}(z)}] \cr
 &\cong \frac{1}{L}\sum_{l=1}^{L} f(z) \triangle_{q_{\phi}(z^{(l)})} \log{q_{\phi}(z^{(l)})}, where z^{(l)} \sim q_{\phi}(z|x^{(i)})
-\end{align}
+\end{aligned}
 $$
 
 但是作者实验发现使用这个 estimator 是有很高的 variance 的，就是直观上来说会导致训练很不稳定。
@@ -336,14 +336,20 @@ $$
 这样我们就可以把 $z$ 写成这种形式： $z = g_{\phi}(\epsilon, x)$，从而可以把 $q_{\phi}(z)$ 这个概率分布转移到 $p_{\epsilon}$ 上，而 $\epsilon$ 有一个非常好的特性，那就是和 $\phi$ 是没有关系的。
 
 这种 trick 就是重参数化，得到新的变形后重新对 $\phi$ 求导：
+$$
+\begin{aligned}
+   a&=b+c \cr
+   &=f
+\end{aligned}
+$$
 
 $$
-\begin{align}
-E_{q_{\phi(z)}}[f(z^{(i)})] &= E_{p(\epsilon)}[f(g_{\phi}(\epsilon, x^i))] \\
-\triangle_{\phi}E_{q_{\phi(z)}}[f(z^{(i)})] &= \triangle_{\phi}E_{p(\epsilon)}[f(g_{\phi}(\epsilon, x^i)]\\
-&=E_{p(\epsilon)}[\triangle_{\phi}f(g_{\phi}(\epsilon, x^i)]\\
-&\approx \frac{1}{L} \sum_{l=1}^{L} \triangle_{\phi}f(g_{\phi}(\epsilon^{(l)}, x^{(i)}))\\
-\end{align}
+\begin{aligned}
+E_{q_{\phi(z)}}[f(z^{(i)})] &= E_{p(\epsilon)}[f(g_{\phi}(\epsilon, x^i))] \cr
+\triangle_{\phi}E_{q_{\phi(z)}}[f(z^{(i)})] &= \triangle_{\phi}E_{p(\epsilon)}[f(g_{\phi}(\epsilon, x^i)]\cr
+&=E_{p(\epsilon)}[\triangle_{\phi}f(g_{\phi}(\epsilon, x^i)]\cr
+&\approx \frac{1}{L} \sum_{l=1}^{L} \triangle_{\phi}f(g_{\phi}(\epsilon^{(l)}, x^{(i)}))
+\end{aligned}
 $$
 
 估计这个期望也是采样然后求平均得到最后的式子，这样就可以把loss的梯度给估计出来了。
@@ -355,14 +361,13 @@ $$
 - 左图为原来的形式，我们使用 $\phi$ 和 $x$ 产生一个distribution，然后在这个distribution中抽样产生一个z，然后再得到最终的 $f$ 。但是在传递梯度的时候，怎么把梯度通过抽样这个过程传递回来呢？这个是没法传递梯度的。
 在使用了重参数化trick后，随机性移动到了 $\epsilon$ 上，之前所有抽样的过程包括的随机性，都让 $\epsilon$ 包括了，这样就可以顺利地将梯度通过 $z$ 传递到 $\phi$，这是一个非常巧妙的方法.
 
-
 {{<admonition Note "Note">}}
 可以理解成用多余参数逼近抽样的过程。
 {{</admonition>}}
 
 ### 4.6 Generic SGVB
 
-简单说完重参数化，我们回到SGVB：
+简单说完重参数化，我们回到SGVB:
 ![](images/VAE_14.png)
 
 这里是想求这一串期望，它就是我们的 $f(z)$ ，根据之前的 Reparameterization Trick，我们把 $z$ 写成这样的形式：
@@ -406,10 +411,10 @@ $$-D_{KL}(q_{\phi}(z|x)||p_{\theta}(z)) = \int q_{\phi}(z|x)(\log p_{\theta}(z))
 
 $$
 \begin{align}
-\int q_{\phi}(z|x)\log p_{\theta}(z) \mathrm{d}z &= \int N(z; \mu, \sigma^2) \log N(z; 0, 1)\mathrm{d}z\\
-&= \int N(z; \mu, \sigma^2) (-\frac{1}{2}z^2 - \frac{1}{2}\log(2\pi))\mathrm{d}z\\
-&= -\frac{1}{2} \int N(z; \mu, \sigma^2) z^2\mathrm{d}z - \frac{J}{2}\log(2\pi) \\
-&= -\frac{J}{2} \log (2\pi) - \frac{1}{2}(E_{z \sim N(z;\mu, \sigma^2)}[z]^2 + Var(z))\\
+\int q_{\phi}(z|x)\log p_{\theta}(z) \mathrm{d}z &= \int N(z; \mu, \sigma^2) \log N(z; 0, 1)\mathrm{d}z\cr
+&= \int N(z; \mu, \sigma^2) (-\frac{1}{2}z^2 - \frac{1}{2}\log(2\pi))\mathrm{d}z\cr
+&= -\frac{1}{2} \int N(z; \mu, \sigma^2) z^2\mathrm{d}z - \frac{J}{2}\log(2\pi) \cr
+&= -\frac{J}{2} \log (2\pi) - \frac{1}{2}(E_{z \sim N(z;\mu, \sigma^2)}[z]^2 + Var(z))\cr
 &= -\frac{J}{2} \log (2\pi) - \frac{1}{2}\sum_{J}^{j=1}(\mu^2 + \sigma_j^2)
 \end{align}
 $$

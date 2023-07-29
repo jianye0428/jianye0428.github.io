@@ -250,10 +250,10 @@ $$</p>
 </ul>
 <p>套用蒙特卡洛公式，最终表示如下：</p>
 <p>$$
-\begin{align}
-\triangle_{\phi}E_{q_{\phi}(z)}[f(z)] &amp;= E_{q_{\phi}(z)}[f(z) \triangle_{q_{\phi}(z)} \log{q_{\phi}(z)}] \
+\begin{aligned}
+\triangle_{\phi}E_{q_{\phi}(z)}[f(z)] &amp;= E_{q_{\phi}(z)}[f(z) \triangle_{q_{\phi}(z)} \log{q_{\phi}(z)}] \cr
 &amp;\cong \frac{1}{L}\sum_{l=1}^{L} f(z) \triangle_{q_{\phi}(z^{(l)})} \log{q_{\phi}(z^{(l)})}, where z^{(l)} \sim q_{\phi}(z|x^{(i)})
-\end{align}
+\end{aligned}
 $$</p>
 <p>但是作者实验发现使用这个 estimator 是有很高的 variance 的，就是直观上来说会导致训练很不稳定。</p>
 <p>在此基础上作者提出了 Generic Stochastic Gradient Variational Bayes (<strong>SGVB</strong>) estimator，并使用**重参数化（Reparameterization）**trick，我们先来说下重参数化。</p>
@@ -293,14 +293,20 @@ $$
 分别求导之后，后面一项可以写成期望的形式，但是前面这一项就无法处理了，为了解决这个问题，作者使用了<strong>重参数化技巧（Reparameterization Trick）</strong>。</p>
 <p>核心思想就是引入一个辅助的随机变量 $\epsilon$，$\epsilon \in p(\epsilon)$，这个随机变量和其它变量没有关系，它是一个独立的随机变量，用来表示产生 $z$ 的过程中所有的随机性。也就是说抽样产生 $z$ 的过程中，所有的随机性都是由这个 $\epsilon \in p(\epsilon)$ 产生的。</p>
 <p>这样我们就可以把 $z$ 写成这种形式： $z = g_{\phi}(\epsilon, x)$，从而可以把 $q_{\phi}(z)$ 这个概率分布转移到 $p_{\epsilon}$ 上，而 $\epsilon$ 有一个非常好的特性，那就是和 $\phi$ 是没有关系的。</p>
-<p>这种 trick 就是重参数化，得到新的变形后重新对 $\phi$ 求导：</p>
+<p>这种 trick 就是重参数化，得到新的变形后重新对 $\phi$ 求导：
+$$
+\begin{aligned}
+a&amp;=b+c \cr
+&amp;=f
+\end{aligned}
+$$</p>
 <p>$$
-\begin{align}
-E_{q_{\phi(z)}}[f(z^{(i)})] &amp;= E_{p(\epsilon)}[f(g_{\phi}(\epsilon, x^i))] \
-\triangle_{\phi}E_{q_{\phi(z)}}[f(z^{(i)})] &amp;= \triangle_{\phi}E_{p(\epsilon)}[f(g_{\phi}(\epsilon, x^i)]\
-&amp;=E_{p(\epsilon)}[\triangle_{\phi}f(g_{\phi}(\epsilon, x^i)]\
-&amp;\approx \frac{1}{L} \sum_{l=1}^{L} \triangle_{\phi}f(g_{\phi}(\epsilon^{(l)}, x^{(i)}))\
-\end{align}
+\begin{aligned}
+E_{q_{\phi(z)}}[f(z^{(i)})] &amp;= E_{p(\epsilon)}[f(g_{\phi}(\epsilon, x^i))] \cr
+\triangle_{\phi}E_{q_{\phi(z)}}[f(z^{(i)})] &amp;= \triangle_{\phi}E_{p(\epsilon)}[f(g_{\phi}(\epsilon, x^i)]\cr
+&amp;=E_{p(\epsilon)}[\triangle_{\phi}f(g_{\phi}(\epsilon, x^i)]\cr
+&amp;\approx \frac{1}{L} \sum_{l=1}^{L} \triangle_{\phi}f(g_{\phi}(\epsilon^{(l)}, x^{(i)}))
+\end{aligned}
 $$</p>
 <p>估计这个期望也是采样然后求平均得到最后的式子，这样就可以把loss的梯度给估计出来了。</p>
 <p>以上是从数学角度来分析的重参数化技巧，这里作者给出了一个更加直观的表达：</p>
@@ -318,7 +324,7 @@ $$</p>
     </div>
   </div>
 <h3 id="46-generic-sgvb">4.6 Generic SGVB</h3>
-<p>简单说完重参数化，我们回到SGVB：
+<p>简单说完重参数化，我们回到SGVB:
 </p>
 <p>这里是想求这一串期望，它就是我们的 $f(z)$ ，根据之前的 Reparameterization Trick，我们把 $z$ 写成这样的形式：</p>
 <p>$$z^{(i, l)} = g_{\phi} (\epsilon^{(i,l)}, x^{(i)}) \ and \ \epsilon^{(l)} \sim p(\epsilon)$$</p>
@@ -350,10 +356,10 @@ $$</p>
 <p>我们先来看 $\int q_{\phi}(z|x)\log p_{\theta}(z) \mathrm{d}z$:</p>
 <p>$$
 \begin{align}
-\int q_{\phi}(z|x)\log p_{\theta}(z) \mathrm{d}z &amp;= \int N(z; \mu, \sigma^2) \log N(z; 0, 1)\mathrm{d}z\
-&amp;= \int N(z; \mu, \sigma^2) (-\frac{1}{2}z^2 - \frac{1}{2}\log(2\pi))\mathrm{d}z\
-&amp;= -\frac{1}{2} \int N(z; \mu, \sigma^2) z^2\mathrm{d}z - \frac{J}{2}\log(2\pi) \
-&amp;= -\frac{J}{2} \log (2\pi) - \frac{1}{2}(E_{z \sim N(z;\mu, \sigma^2)}[z]^2 + Var(z))\
+\int q_{\phi}(z|x)\log p_{\theta}(z) \mathrm{d}z &amp;= \int N(z; \mu, \sigma^2) \log N(z; 0, 1)\mathrm{d}z\cr
+&amp;= \int N(z; \mu, \sigma^2) (-\frac{1}{2}z^2 - \frac{1}{2}\log(2\pi))\mathrm{d}z\cr
+&amp;= -\frac{1}{2} \int N(z; \mu, \sigma^2) z^2\mathrm{d}z - \frac{J}{2}\log(2\pi) \cr
+&amp;= -\frac{J}{2} \log (2\pi) - \frac{1}{2}(E_{z \sim N(z;\mu, \sigma^2)}[z]^2 + Var(z))\cr
 &amp;= -\frac{J}{2} \log (2\pi) - \frac{1}{2}\sum_{J}^{j=1}(\mu^2 + \sigma_j^2)
 \end{align}
 $$</p>
