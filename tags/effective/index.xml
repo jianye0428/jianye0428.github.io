@@ -1,0 +1,641 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective/</link><description>Effective - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 29 Jul 2023 18:51:19 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective/" rel="self" type="application/rss+xml"/><item><title>Effective C++ (第3版) 精读总结 [1]</title><link>https://jianye0428.github.io/posts/partone/</link><pubDate>Sat, 29 Jul 2023 18:51:19 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partone/</guid><description><![CDATA[<h1 id="序言">序言</h1>
+<p>这本C++的经典之作，作者是大佬<code>Scott Meyers</code>👉<a href="https://www.aristeia.com/books.html"target="_blank" rel="external nofollow noopener noreferrer">大佬主页<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，还写过其他几本影响深远的C++经典，例如<code>《Effective STL》</code>,<code>《More Effective C++》</code>,<code>《Effective Mordern C++》</code>,<code>《Overview of the New C++(C++11/14)》</code>等等。本人看的是中文版，侯捷老师翻译的，精读分析并实践推敲后，整理成博客记录下来。</p>
+<blockquote>
+<p>(Effective-C++总结系列分为四部分，本文为第一部分，涉及原书第1~2章，内容范围Rule01~12。为方便书写，Rule01简写为R01)。</p>
+</blockquote>
+<div class="details admonition Note">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Effective-C++系列List<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">本博客站点系列内容如下：</br>
+💡 <a href="https://jianye0428.github.io/posts/partone/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(一)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 Effective C++(第3版)精读总结(二)</br>
+💡 Effective C++(第3版)精读总结(三)</br>
+💡 Effective C++(第3版)精读总结(四)</br></div>
+    </div>
+  </div>
+<h2 id="ch1让自己习惯c">CH1.让自己习惯C++</h2>
+<h3 id="r01-视c为一个语言联邦">R01 视C++为一个语言联邦</h3>
+<p>如今的C++已经是个多重范式(multiparadigm)语言，同时支持面向过程形式、面向对象形式、函数形式、泛型形式、元编程形式。 要理解这么多特性，可以简单的归结为<code>四种次语言</code>(sublanguage)组成：</p>
+<ul>
+<li><strong>C语言：</strong><code>C++仍以C为基础</code>。C++是C的超集，区块 、语句、预处理、内置数据类型、数组、指针等全部来自于C语言；
+<ul>
+<li>说到底 C++ 仍然以 C 为基础。区块、语句、预处理器、内置数据类型 、数组、指针等统统来自C，许多时候C++对问题的解决其实不过就是较高级的 C 解法，但当你C++内的 C 成分工作时，高效编程守则映照出 C 语言的局限：没有模板(template) ，没有异常(exceptions)，没有重载(overloading)……</li>
+</ul>
+</li>
+<li><strong>Object-Oriented C++:</strong> 面向对象特性。这部分也就是 C with classes 所诉求的：classes(包括构造函数和析构函数)，封装(encapsulation)、继承(inheritance)、多态(polymorhpism)、virtual函数(动态绑定)……等等，这一部分是面向对象设计之古典守则在C++ 上的直接实施。</li>
+<li>**Template C++:**C++的泛型(generic)编程的部分，也带来了黑魔法-模板元编程(TMP,Metaprogramming)；</li>
+<li>**STL：**STL(Standard Temlate Library)即标准模板库，它是template程序库。封装了各类容器(container)、配置器(allocator)、迭代器(iterator)、算法以及常用对象。</li>
+</ul>
+<p><strong>总结:</strong>
+C++高效编程守则视状况而变化，取决于你使用C++的哪一部分</p>
+<h3 id="r02-尽量以constenuminline替换define">R02 尽量以<code>const</code>,<code>enum</code>,<code>inline</code>替换<code>#define</code></h3>
+<ul>
+<li><strong>对于宏定义的常量，建议用const常量或者枚举enum替换</strong>
+这样做的好处是方便调试，因为宏报错就是个常数值，没有符号表；并且宏不具有封装性(宏的作用域是在编译时是其定义之事)。
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 举例：MAX_DATA_COUNT在预处理阶段就会被替换，编译器不会见到它，所以一旦有相关报错，给的是100这个值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#define MAX_DATA_COUNT   100
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="k">const</span>  <span class="kt">int</span> <span class="n">MAX_DATA_COUNT</span> <span class="o">=</span> <span class="mi">100</span> <span class="p">;</span><span class="c1">//常量只有一份，宏会导致多份常量值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Buffer</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span><span class="c1">//...类其他部分省略
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">static</span> <span class="k">const</span> <span class="kt">double</span> <span class="n">factor_</span> <span class="p">;</span><span class="c1">//static常量,类内声明
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span>  <span class="n">times_</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span><span class="c1">// int类型允许类内初始化,规范上还是建议拿到类外
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">static</span> <span class="k">const</span>  <span class="kt">int</span> <span class="n">ArrLength</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">arr</span><span class="p">[</span><span class="n">ArrLength</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="kt">double</span> <span class="n">Buffer</span><span class="o">::</span><span class="n">factor_</span>  <span class="o">=</span> <span class="mf">0.1</span><span class="p">;</span><span class="c1">//类外初始化,一般写在实现文件*.cpp,*.cc中
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div>如果编译器不允许声明时&quot;in-class初值设定&quot;,如果是整形常量，可以让枚举值来替代，而且<font color=red><code>枚举值不能被取地址</code></font>。</li>
+<li><strong>对于宏定义的函数，建议用内联inline函数替换</strong>
+宏函数没办法单行debug调试，而内联函数可以；
+宏的写法即使小心翼翼的加好了括号，也可能造成意想不到的<font color=red><code>宏函数重复计算</code></font>的问题。
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#define  GET_MAX(a,b)   ((a)&gt;(b) ? (a) :(b))
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">GET_MAX</span><span class="p">(</span><span class="o">++</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">);</span>    <span class="c1">// a累加二次
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">GET_MAX</span><span class="p">(</span><span class="o">++</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">+</span><span class="mi">10</span><span class="p">);</span> <span class="c1">// a累加一次
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 定义个inline函数就不会有这个问题,(a,b)作为函数入参就只会计算一次
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p>上述情况，从纯C语言角度，想避免“宏函数重复计算”，其实还有个方法，就是使用GNU C 扩展的 typeof 或 GCC 的 <code>__auto_type</code> 关键字，详细可参考GCC官方文档页面。2者都适用于GCC和Clang，都不适用MSVC），示例如下：</p>
+<div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="cp">#define  GET_MAX_ONCE(a,b) \
+</span></span></span><span class="line"><span class="cl"><span class="cp">      ( {typeof(a) _a = (a);   \
+</span></span></span><span class="line"><span class="cl"><span class="cp">         typeof(b) _b = (b);   \
+</span></span></span><span class="line"><span class="cl"><span class="cp">         (_a) &gt; (_b) ? (_a) : (_b); } )</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>测试代码如下：</p>
+<div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C" data-lang="C"><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="nf">GET_MAX</span><span class="p">(</span><span class="o">++</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="o">++</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;a = &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">a</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;, b = &#34;</span><span class="o">&lt;&lt;</span> <span class="n">b</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;, c = &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">c</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">a</span> <span class="o">=</span> <span class="mi">10</span> <span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">c</span> <span class="o">=</span> <span class="nf">GET_MAX_ONCE</span><span class="p">(</span><span class="o">++</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="o">++</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;a = &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">a</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;, b = &#34;</span><span class="o">&lt;&lt;</span> <span class="n">b</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;, c = &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">c</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>测试代码输出：</p>
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nv">a</span> <span class="o">=</span> 11, <span class="nv">b</span> <span class="o">=</span> 22, <span class="nv">c</span> <span class="o">=</span> <span class="m">21</span>
+</span></span><span class="line"><span class="cl"><span class="nv">a</span> <span class="o">=</span> 11, <span class="nv">b</span> <span class="o">=</span> 21, <span class="nv">c</span> <span class="o">=</span> <span class="m">20</span></span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p>🤔 <code>使用 __auto_type</code> 来取代时要赋初值，关键的 typeof 那行用法改为<code>__auto_type _a = (a);</code> 。
+__auto_type 比 typeof 的优势之处在于面对变长数组(VLA)，只解析1次；以及面对嵌套宏定义时也是只严格解析一次。</p>
+</blockquote>
+</div>
+    </div>
+  </div></li>
+</ul>
+<h3 id="r03-尽可能用const">R03 尽可能用const</h3>
+<p>说起const，先复习个面试高频题😁</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//类型char在哪里没关系，关键看const和*的相对位置：
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">//const在*左边，指针所指物为常量;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">//const在*右边，指针为常量；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">p</span><span class="p">;</span> <span class="c1">// 指针p所指的字符串为常量，但是p可以修改
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">char</span><span class="o">*</span> <span class="k">const</span> <span class="n">p</span><span class="p">;</span> <span class="c1">// 指针p是常量，指向的字符串可修改
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>const修饰函数返回值时的防御性
+const修饰函数的返回值，可以避免一些错误，如下：
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">const</span> <span class="n">Rational</span> <span class="k">operator</span><span class="o">*</span> <span class="p">(</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//存在Rational a,b,c;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span><span class="p">(</span><span class="n">a</span><span class="o">*</span><span class="n">b</span> <span class="o">=</span> <span class="n">c</span><span class="p">)</span> <span class="c1">//例如手误 &#34;==&#34;打成了&#34;=&#34;，编译器会直接报错
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>const成员函数的限制
+const成员函数有2个好处：(1). 明确理解函数是否修改对象内容；(2). 使“操作const对象”成为可能。
+可以通过const特性让对象自动调用正确的版本：
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">TextBlock</span><span class="p">{</span><span class="c1">//...类其他部分省略
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">const</span> <span class="kt">char</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">index</span><span class="p">)</span> <span class="k">const</span><span class="p">{</span> <span class="k">return</span> <span class="n">text</span><span class="p">[</span><span class="n">index</span><span class="p">];}</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">char</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">index</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">text</span><span class="p">[</span><span class="n">index</span><span class="p">];}</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">text</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">print</span><span class="p">(</span><span class="k">const</span> <span class="n">TextBlock</span><span class="o">&amp;</span> <span class="n">ctb</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">ctb</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">;</span><span class="c1">//根据const特性，调用 const TextBlock::operator[]
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div>思考：const成员函数不修改成员对象，那么，如果成员对象为指针<code>char *p</code>，仅修改<code>p</code>指向的内容，那它还是<code>const</code>成员函数吗？
+实测：const成员函数是允许<code>p[2]= 'x'</code>这一操作的，但是不允许p++；
+<ul>
+<li><code>bitwise-constness</code>(又称为physical constness)理念认为不是，不能更改任何对象内的任何一个bit。这种说法也有纰漏，const函数返回一个引用就失控了,外部可改；</li>
+<li><code>logical-constness</code>理念则允许const成员函数修改成员变量的bits，但只有在客户端侦测不出的情况下;</li>
+<li><code>const成员函数</code>如果一定要修改成员变量，成员变量使用 <code>mutable</code> 修饰即可.</li>
+</ul>
+</li>
+<li>const与non-const的成员函数实现完全相同时
+这种情况，如何去除代码冗余是个问题。不要封装出一个private函数然后一起调用，多了层调用。
+正确做法👉 <code>使用转型,让non-const调用const成员函数</code>，如下为示例：</li>
+</ul>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Rawdata</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Rawdata</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">src</span><span class="p">)</span><span class="o">:</span><span class="n">p_</span><span class="p">(</span><span class="n">src</span><span class="p">),</span><span class="n">length_</span><span class="p">(</span><span class="n">strlen</span><span class="p">(</span><span class="n">src</span><span class="p">))</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">GetLength</span><span class="p">()</span><span class="k">const</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">p_</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;a&#39;</span><span class="p">;</span><span class="c1">//为求简便,不作检查了。p_内容修改编译器是允许的.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span> <span class="n">length_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="nf">GetLength</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="k">const_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&amp;&gt;</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">Rawdata</span><span class="o">&amp;&gt;</span><span class="p">(</span><span class="o">*</span><span class="k">this</span><span class="p">)).</span><span class="n">GetLength</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="o">*</span><span class="n">p_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">length_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="r04-确定对象使用前先初始化">R04 确定对象使用前先初始化</h3>
+<p>分清&quot;赋值&quot;和&quot;初始化&quot;，在类的构造函数体内使用等号&quot;=&ldquo;赋值并非&quot;初始化”。成员变量的初始化是在构造函数的<u>成员初始化列表</u>实现，效率更高。</p>
+<p><code>C++初始化的次序:</code></p>
+<ol>
+<li>Base class总是早于Derived Class被初始化；</li>
+<li>Class内的成员变量总是以声明次序被初始化；
+举例: 下图中的代码初始化顺序为声明顺序&quot;age_$\rightarrow$name_$\rightarrow$gender_ $\rightarrow$isVip_&rdquo;
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"> <span class="k">class</span> <span class="nc">Customer</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span> <span class="c1">//这里只是为了验证，如果是实际工程代码，建议初值列表尽量和声明顺序保持一致
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>     <span class="n">Customer</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">gender</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">age</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">isVip</span> <span class="o">=</span> <span class="nb">false</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="o">:</span><span class="n">isVip_</span><span class="p">(</span><span class="n">isVip</span><span class="p">),</span> <span class="n">gender_</span><span class="p">(</span><span class="n">gender</span><span class="p">),</span> <span class="n">name_</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">age_</span><span class="p">(</span><span class="n">age</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">     <span class="kt">uint8_t</span> <span class="n">age_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">gender_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">     <span class="kt">bool</span> <span class="n">isVip_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> <span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><pre><code>💡：任何一个成员变量a的初始化流程：类内声明赋初值(C++11)-&gt;构造函数初始化列表-&gt;构造函数体内赋值.
+</code></pre>
+</div>
+    </div>
+  </div></li>
+<li>函数体外static变量称为<code>non-local static</code>变量，这种变量可以在各自的编译单元正常工作，但C++无法保证初始化次序，当编译单元之间需要共享变量时，而该变量依赖non-local static，就可能会出问题。
+<strong>解决办法</strong>是将这样的变量放回函数体内，成为local static，因为C++确保在函数被调用时一定会初始化这个static变量。</li>
+</ol>
+<h2 id="ch2构造析构赋值运算">CH2.构造/析构/赋值运算</h2>
+<h3 id="r05-了解c默认编写并调用哪些函数">R05 了解C++默认编写并调用哪些函数</h3>
+<p>编译器可以暗自为Class创建<code>default构造函数</code>，<code>copy构造函数(复制构造)</code>，<code>copy assigment(赋值构造)操作符</code>，以及<code>default析构函数</code>。</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">EmptyClass</span><span class="p">{};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>等价于:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">EmptyClass</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">EmptyClass</span><span class="p">()</span> <span class="p">{}</span>        <span class="c1">// default构造函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">EmptyClass</span><span class="p">(</span><span class="k">const</span> <span class="n">EmptyClass</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{}</span><span class="c1">//copy构造函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="o">~</span><span class="n">EmptyClass</span><span class="p">()</span> <span class="p">{}</span><span class="c1">//default析构函数，注意是non-virtual
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">EmptyClass</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">EmptyClass</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{}</span><span class="c1">//copy assignment操作符
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>
+<p>如果一个非空Class自行声明了构造函数，编译器就不再为它创建default构造函数;</p>
+</li>
+<li>
+<p>如果一个Class内有引用变量或const变量，编译器不会为其生成copy-assignment函数，需要自己实现.</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">NameObject</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NameObject</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">value</span><span class="p">)</span> <span class="o">:</span><span class="n">nameValue_</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">objectVal_</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">nameValue_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="kt">int</span> <span class="n">objectVal_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span><span class="c1">//考虑以下应用代码
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">(</span><span class="s">&#34;Mike&#34;</span><span class="p">),</span> <span class="n">name2</span><span class="p">(</span><span class="s">&#34;Nicky&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">NameObject</span> <span class="nf">nObj</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="mi">22</span><span class="p">),</span> <span class="n">nObj2</span><span class="p">(</span><span class="n">name2</span><span class="p">,</span><span class="mi">33</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">nObj2</span> <span class="o">=</span> <span class="n">nObj</span><span class="p">;</span><span class="c1">//这一句会导致编译失败，因为引用不能指向2个对象，且const不可改
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="r06-不想编译器的自动生成的函数明确拒绝">R06 不想编译器的自动生成的函数,明确拒绝</h3>
+<p>某些场景，类对象本身是认为独一无二的，比如描述人物性格的类Personality(可能不恰当)，不同的人性格不同，肯定是不希望能复制/赋值的。
+如果不想编译器自动生成那几个函数，比如不想要复制构造或赋值构造，就明确在代码中禁止，也防止外部用户使用。</p>
+<ul>
+<li>技巧1：可以声明为private函数但是不给出实现，让编译器报错；</li>
+<li>技巧2：可以设立基类Base，让复制构造和赋值构造都为private函数，让目标类继承于Base类。</li>
+</ul>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p>C++11针对此类情况，给予了delete关键字一个新功能，在成员函数后面新增&quot;=delete&quot;，即可显式地拒绝这个函数的生成和调用.举例如下:</p>
+<div class="highlight" id="id-20"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">A</span><span class="p">(</span><span class="k">const</span> <span class="n">A</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span> <span class="c1">// 拷贝构造
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">A</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">A</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span> <span class="c1">// 拷贝赋值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div></div>
+    </div>
+  </div>
+<h3 id="r07-为多态基类声明virtual析构函数">R07 为多态基类声明<code>virtual</code>析构函数</h3>
+<ul>
+<li>针对<code>Base* pBase= new DerivedObj()</code>，释放pBase时，如果Base基类的析构函数<code>None-Virtual</code>，则会导致Derived的析构函数不会被调用，造成<code>内存不完全释放</code>，即内存泄漏；</li>
+<li>Non-Virtual的Class不要做基类；</li>
+<li>如果不做基类，就不要声明析构函数为virtual函数，避免虚表为其分配vptr造成浪费；</li>
+<li>如果想要抽象类，又暂时没有合适接口，可以让先虚析构成为纯虚函数，例如
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">RawData</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="o">~</span><span class="n">RawData</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 这里特殊的是，需要为这个纯虚函数提供定义
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">~</span><span class="n">RawData</span><span class="o">::</span><span class="n">RawData</span><span class="p">(){}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="r08-别让异常逃离析构函数">R08 别让异常逃离析构函数</h3>
+<ul>
+<li>
+<p>析构函数最好不要吐出异常</br>
+对于某个Widget类，如果析构函数抛出异常，那么<code>vector&lt;widget&gt;</code>析构时可能连续抛出多个异常以至于无法处理，直接导致提前程序结束或者未定义行为。</p>
+</li>
+<li>
+<p>如果有某个函数可能会抛出异常，并需要对异常做出反应，应该提供一个非析构的函数来处理</br>
+注意，在析构中抛异常并吞下(catch后go-on-execute)，会掩盖错误，也不是个好办法;抛异常后catch住并std::abort()反而可以提前终结『未定义行为』。</p>
+</li>
+</ul>
+<h3 id="r09-绝不在构造和析构过程中调用virtual函数">R09 绝不在构造和析构过程中调用<code>virtual</code>函数</h3>
+<ul>
+<li>在Derived-Class的Base-Class构造期间，对象的类型是Base-Class，而非Derived，即使<code>dynamic_cast</code>也是这样认为的，因为此时virtual函数不会下降到Derived-Class的阶层；换句话说==&gt; “<code>在Base-Class构造期间，virtual函数不是virtual函数</code>”；</li>
+<li>在析构的时候也是类似道理，也不要在析构函数中调用virtual函数，间接调用也不行(比如non-Virtual-&gt;virtual)；</li>
+<li>那么替代方案是？</br>
+如果有这样一种情况，希望在子类构造时能调用父类的foo函数(下方logTransaction函数)，那么将foo改为non-Virtual函数，并且子类构造时调用父类构造函数，有参数时一并传过去；</li>
+</ul>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Transaction</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">explict</span> <span class="n">Transaction</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">,</span><span class="kt">int</span> <span class="n">id</span><span class="p">)</span><span class="o">:</span><span class="n">id_</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="p">{</span> <span class="n">logTransaction</span><span class="p">(</span><span class="n">info</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">logTransaction</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">info</span><span class="p">.</span><span class="n">c_str</span><span class="p">();</span> <span class="p">}</span><span class="c1">//non-Virtual函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">id_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BuyTransaction</span> <span class="o">:</span><span class="k">public</span> <span class="n">Transaction</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>  <span class="c1">//将log信息传递给 基类Transaction构造函数； 并初始化了基类成员
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">BuyTransaction</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">,</span> <span class="kt">int</span> <span class="n">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">:</span><span class="n">Transaction</span><span class="p">(</span><span class="n">info</span><span class="p">,</span><span class="n">id</span><span class="p">)</span> <span class="p">{</span><span class="cm">/**/</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p>上述代码中，如果有几个Base构造函数，就得写几个Derived构造函数传参。为了简化这一步骤， 在现代C++11，推出了继承构造函数(Inheriting Constructor)，子类可以一个都不用写，直接写一句using声明即可，使用<code>using BaseClass::BaseClass</code>的形式，如下👇</p>
+<div class="highlight" id="id-21"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BuyTransaction</span> <span class="o">:</span><span class="k">public</span> <span class="n">Transaction</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">using</span> <span class="n">Transaction</span><span class="o">::</span><span class="n">Transaction</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">//其他
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div></div>
+    </div>
+  </div>
+<h3 id="r10-令operator返回一个reference-to-this">R10 令<code>operator=</code>返回一个reference to *this</h3>
+<ul>
+<li>关于赋值操作符<code>operator=</code>，主流做法是:
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Widget</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span> <span class="o">&amp;</span><span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">//... do some thing
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div>上述做法不局限于operator=，还有<code>operator += ,-=,*=,/=</code>等其他赋值运算符。</br>
+该主流协议/做法不是强制性的，只是个建议，因为这样可以允许<strong>连续赋值</strong>($x=y=z$的形式)。</br>
+该协议被内置类型，以及STL的类型(如string,vector,complex,shared_ptr)共同遵守。</br></li>
+</ul>
+<h2 id="r11-在operator中处理自我赋值">R11 在<code>operator=</code>中处理&quot;自我赋值&quot;</h2>
+<p>一个对象赋值给自己，这种看起来有点傻的做法，有时候会比较难以发觉。比如：<code>a[i] = a[j]</code>，如果 $i$ 和 $j$ 相等，就是“自我赋值”的经典场景了。
+所以，我们需要一个尽量完备的赋值操作符函数🤔。
+考虑如下类<code>MapWidget</code>，内有数据裸指针<code>BitMap *pb_</code>，在赋值时同时考虑<strong>异常安全</strong>和 <strong>“自我赋值”</strong> 安全(认同测试保障自我赋值安全)，是一个相对不错的实现。但是，认同测试会降低运行效率，根据实际工程实践情况(自我赋值概率极低 )可以酌情去掉。</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BitMap</span> <span class="p">{</span><span class="cm">/*省略类声明&amp;实现*/</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MapWidget</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">BitMap</span> <span class="o">*</span> <span class="n">pb_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">explicit</span> <span class="n">MapWidget</span><span class="p">(</span><span class="n">BitMap</span> <span class="o">*</span><span class="n">pb</span><span class="p">)</span> <span class="o">:</span><span class="n">pb_</span><span class="p">(</span><span class="n">pb</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">MapWidget</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">MapWidget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="k">this</span> <span class="o">==</span> <span class="o">&amp;</span><span class="n">rhs</span><span class="p">)</span> <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span> <span class="c1">//这一句为认同测试(identity test)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">BitMap</span> <span class="o">*</span><span class="n">pOrig</span> <span class="o">=</span> <span class="n">pb_</span><span class="p">;</span><span class="c1">//不要一上来就delete，而是保存this-&gt;pb_
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">pb_</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BitMap</span><span class="p">(</span><span class="o">*</span><span class="n">rhs</span><span class="p">.</span><span class="n">pb_</span><span class="p">);</span><span class="c1">//因为这一句可能抛异常
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">delete</span> <span class="n">pOrig</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>Copy and Swap技术 上文中保障<strong>异常安全</strong>和 **“自我赋值”**安全的技术手段，另外一个办法，就是Copy and Swap技术。这个技术的关键在于“修改对象数据的副本，然后在一个不抛异常的函数中将修改的数据和原件置换 ”。
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">MapWidget</span><span class="o">::</span><span class="n">Swap</span><span class="p">(</span><span class="n">MapWidget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">){</span><span class="n">std</span><span class="o">::</span><span class="n">swap</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">pb_</span><span class="p">,</span><span class="n">pb_</span><span class="p">);}</span>
+</span></span><span class="line"><span class="cl"><span class="n">MapWidget</span><span class="o">&amp;</span> <span class="n">MapWidget</span><span class="o">::</span><span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">MapWidget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">MapWidget</span> <span class="nf">temp</span><span class="p">(</span><span class="n">rhs</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Swap</span><span class="p">(</span><span class="n">temp</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="r12-复制对象时别忘记其每一个成分">R12 复制对象时别忘记其每一个成分</h3>
+<ul>
+<li>
+<p>编写类的Copying函数时需要做到2点
+这里的Copying函数是指有copy属性的特殊函数==&gt; copy构造函数和copy赋值操作符。</p>
+<ol>
+<li>复制所有Local成员变量
+如果成员复制的时候有遗漏，编译器并不会有怨言，这就埋下了隐患。如果新增了成员，要对应修改Copying函数。</li>
+<li>调用所有Base-Class内部的适当的Copy函数
+具体代码的推荐实现 如下👇：</li>
+</ol>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Customer</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Customer</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">,</span> <span class="kt">float</span> <span class="n">money</span><span class="p">)</span><span class="o">:</span><span class="n">name_</span><span class="p">(</span><span class="n">name</span><span class="p">),</span><span class="n">money_</span><span class="p">(</span><span class="n">money</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">float</span> <span class="n">money_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">VipCustomer</span> <span class="o">:</span><span class="k">public</span> <span class="n">Customer</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>  <span class="c1">//注意：派生类要复制基类那部分的成员变量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">using</span> <span class="n">Customer</span><span class="o">::</span><span class="n">Customer</span><span class="p">;</span> <span class="c1">//参考R09
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">VipCustomer</span><span class="p">(</span><span class="k">const</span> <span class="n">VipCustomer</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">:</span><span class="n">priority_</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">priority_</span><span class="p">),</span><span class="n">Customer</span><span class="p">(</span><span class="n">rhs</span><span class="p">){}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">VipCustomer</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">VipCustomer</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">        <span class="n">Customer</span><span class="o">::</span><span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="n">rhs</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">priority_</span> <span class="o">=</span> <span class="n">rhs</span><span class="p">.</span><span class="n">priority_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">setPriority</span><span class="p">(</span><span class="kt">int</span> <span class="n">priority</span><span class="p">)</span> <span class="p">{</span> <span class="n">priority_</span> <span class="o">=</span> <span class="n">priority</span><span class="p">;</span> <span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">priority_</span><span class="p">;</span><span class="c1">//子类独有成员可以单独set函数赋值，或者构造函数初始化列表赋值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>不要用一个Copying函数去实现另一个
+令copy-assignment操作符调用copy构造函数是不合理的；反之，后者调用前者也是无意义的。 如果2者有大量的代码是相同的，可以剥离一个类内private类型的<code>init</code>函数出来，提供给上述2者调用。</p>
+</li>
+</ul>
+<p>ref:</br>
+[1]. <a href="https://blog.csdn.net/cltcj/category_12098441.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/cltcj/category_12098441.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item></channel></rss>
