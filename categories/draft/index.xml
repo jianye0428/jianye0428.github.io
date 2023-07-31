@@ -1,4 +1,94 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 30 Jul 2023 09:21:58 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>Effective STL [11] | 理解自定义分配器的正确用法</title><link>https://jianye0428.github.io/posts/clause_11/</link><pubDate>Sun, 30 Jul 2023 09:21:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_11/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 31 Jul 2023 15:57:07 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>Diffusion 扩散模型（DDPM）</title><link>https://jianye0428.github.io/posts/ddpm/</link><pubDate>Mon, 31 Jul 2023 15:57:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ddpm/</guid><description><![CDATA[<!--
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="一引入">一、引入</h2>
+<p></p>
+<p>近年AIGC的爆火离不开人工智能在图像生成、文本生成以及多模态等领域的不断累积，其中<strong>生成模型</strong>的发展占据了很大功劳，如：生成对抗网络 GAN 及其一系列变体、变分自编码器 VAE 及其一系列变体、自回归模型 AR、流模型 flow ，以及近年大火的<strong>扩散模型 Diffusion Model</strong> 等。</p>
+<p>扩散模型的大火并非横空出世，早在2015年就有人提出了类似的想法，直到2020年才提出了经典的 <strong>Denoising Diffusion Probabilistic Models（DDPM）</strong>，像OpenAI、NovelAI、NVIDIA和Google成功的训练了大规模模型之后，它们吸引了很多人注意，后续有了很多基于扩散模型的变体，比如有：GLIDE、DALLE-2、Imagen和年底爆火的完全开源的稳定扩散模型（Stable Diffusion）。</p>
+<p>扩散模型与之前所有的生成方法有着本质的区别：</p>
+<p></p>
+<p>直观的说它是<mark>将图像生成过程（采样）分解为许多小的去噪步骤</mark>，其实 Diffusion 的含义本质上就是一个迭代过程，实线箭头用于扩散步骤中添加随机噪声，虚线箭头代表的是通过学习逆向扩散过程<mark>从噪声中重构所需的数据样本</mark>。<strong>引入噪声导致了信息的衰减，再通过噪声尝试还原原始数据，多次迭代最小化损失后，能够使模型在给定噪声输入的情况下学习生成新图像。</strong></p>
+<p>所以Diffusion模型和其它生成模型的区别是，它不是直接的图像-&gt;潜变量、潜变量-&gt;图像的一步到位，它是一步一步的<mark>逐渐分解、逐渐去噪</mark>的过程。</p>
+<p>当然有关Diffusion的理解和变体有很多，但是扩散模型从本质上讲就是DDPM，所以本文主要对DDPM的原理进行讲解，并给出DDPM的扩散过程、去噪过程、训练损失的详细推导，对于掌握Diffusion算法原理只需要抓住以下四点即可：</p>
+<ul>
+<li>前向过程（扩散）；</li>
+<li>反向过程（去噪、采样）；</li>
+<li>如何训练；</li>
+<li>如何推断。</li>
+</ul>
+<h2 id="二扩散原理阐述">二、扩散原理阐述</h2>
+<p>扩散模型包括 <strong>前向扩散过程</strong> 和 <strong>反向去噪过程(采样)</strong>，前向阶段对图像逐步施加噪声，直至图像被破坏变成完全的高斯噪声，然后在反向阶段学习从高斯噪声还原为原始图像的过程。</p>
+<h3 id="21直观理解">2.1、直观理解</h3>
+<ul>
+<li>散模型的目的是什么？
+学习从纯噪声生成图片的方法。</li>
+<li>扩散模型是怎么做的？
+训练一个UNet，接受一系列加了噪声的图片，学习预测所加的噪声。</li>
+<li>前向过程在干什么？
+<ul>
+<li>逐步向真实图片添加噪声最终得到一个纯噪声；</li>
+<li>对于训练集中的每张图片，都能生成一系列的噪声程度不同的加噪图片；</li>
+<li>在训练时，这些 【不同程度的噪声图片 + 生成它们所用的噪声】 是实际的训练样本。</li>
+</ul>
+</li>
+<li>反向过程在干什么？
+训练好模型后，采样、生成图片。</li>
+</ul>
+<h3 id="22前向过程扩散">2.2、前向过程（扩散）</h3>
+<p></p>
+<p>前向过程在原始输入图像$x_0$上逐步添加随机噪声，这个噪声服从高斯分布$N(0, 1)$，每一步得到的图像$x_t$只和上一步的加噪结果$x_{t-1}$相关，逐步添加噪声至$T$步，可以得到趋向于纯粹噪声的图像，如下图所示：
+</p>
+<blockquote>
+<p>后面有详细的推导，公式比较多，这里先提前把主要的列一下方便阐述。</p>
+</blockquote>
+<p>对于将一张图片，从$x_{t-1}\rightarrow x_{t}$的逐步加噪破坏的公式为：</p>
+<p>$$x_t=\sqrt{\alpha_t}\left.x_{t-1}+\sqrt{1-\alpha_t}\right.\varepsilon_t\quad\quad\quad\quad\quad\quad(1)$$</p>
+<p>其中:</p>
+<ul>
+<li>$x_t$表示第$t$步的图像；</li>
+<li>$\varepsilon$ 是一个满足正态分布的随机噪声，$\varepsilon \sim N(0, 1)$；</li>
+<li>$\sqrt{\alpha_{t}}$ 是图片的权重，$\sqrt{1 - \alpha_{t}}$ 是噪声的权重；</li>
+</ul>
+<p>定义：</p>
+<ul>
+<li>$\alpha_t=1-\beta_t$</li>
+<li>$\overline{\alpha}=\prod_{s=1}^t\alpha_s$</li>
+</ul>
+<p>随着$t$的增加，<strong>噪声的占比会越来越大</strong>，所以添加的<strong>噪声强度也会越来越大</strong>，也就是说图片的权重要越来越小，噪声的权重要越来越大。因为随着扩散过程的增加，图像中噪声的占比也会越来越大，我们想要进一步破坏它的结构，就需要添加更多的噪声。</p>
+<blockquote>
+<p>换句话说，一开始图像比较清晰，这个时候添加的噪声小一些，随着图像的噪声越来越多，这个时候再加一点噪声的话，对原来的图像就没什么影响了，因为它本身就有好多噪声了，所以随着图像的噪声越来越多，后面的步骤就要加更多的噪声。</p>
+</blockquote>
+<p>实际训练过程中会比较大（DDPM原文中为1000），所以会有从$x_0$递推到$x_t$的公式：</p>
+<p>$$x_t=\sqrt{\overline{\alpha}_t}\left.x_0+\sqrt{1-\overline{\alpha}_t}\right.\varepsilon\quad\quad\quad\quad(2)$$</p>
+<p>其中：</p>
+<ul>
+<li>$\alpha_t$、$\beta_t$ 有一个固定的已知函数，是可以直接进行计算的；</li>
+<li>$\varepsilon$ 为随机产生的噪声；</li>
+</ul>
+<p>所以整个式子是已知的，式 $(1)$、$(2)$ 就可以描述前向过程了，$(1)$ 用于将一张图片的逐步破坏，$(2)$ 用于一步到位的破坏。</p>
+<h3 id="23反向过程去噪">2.3、反向过程（去噪）</h3>
+<p>反向过程则是不断去除噪声的过程，给定一个噪声图片 $x_T$，对它一步步的去噪还原，直至最终将原始图像 $x_0$ 给恢复出来，如下图所示：</p>
+<p></p>
+<p>去噪的过程，$x_t$、$\alpha_t$、$\beta_t$ 都是已知的，只有公式 $(2)$ 中的真实噪声是未知的，因为它是随机采样的。所以需要一个神经网络把 $\varepsilon$ 给学出来，也就是说训练一个由 $x_t$ 和 $t$ 估测噪声的模型：</p>
+<p>$$x_{t-1}=\frac{1}{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\varepsilon</em>\theta(x_t,t))$$</p>
+<p>其中 $\theta$ 就是模型的参数，通常使用UNet作为预估噪声的模型。</p>
+<h3 id="24模型训练">2.4、模型训练</h3>
+<p>所以说反向过程其实就是<strong>训练网络去学习分解过程每一步的噪声</strong>，当网络训练好之后，输入一张噪声图片，通过网络就能把加的噪声给求出来，噪声有了代入公式，就能把 $x_{t-1}$ 步的比较清晰的图给求出来了，一步步往前迭代就行了。</p>
+<p>采用L2距离刻画相近程度就可以，DDPM的关键是训练 $\varepsilon_{\theta}(x_t, t)$，目的就是使预测的噪声与真实用于破坏的噪声相近：</p>
+<p>$$Loss=\mid\mid\varepsilon-\varepsilon_\theta(x_t,t)\mid\mid^2=\mid\mid\varepsilon-\varepsilon_\theta(\sqrt{\overline{\alpha}_t}~x_0+\sqrt{1-\overline{\alpha}_t}~\varepsilon_t,t)\mid\mid^2$$</p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [4]</title><link>https://jianye0428.github.io/posts/partfour/</link><pubDate>Mon, 31 Jul 2023 07:26:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partfour/</guid><description><![CDATA[<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div>]]></description></item><item><title>Effective STL [11] | 理解自定义分配器的正确用法</title><link>https://jianye0428.github.io/posts/clause_11/</link><pubDate>Sun, 30 Jul 2023 09:21:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_11/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>

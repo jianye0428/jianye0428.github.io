@@ -18,27 +18,26 @@ note abstract info tip success question warning failure danger bug example quote
 
 - V：变分推断，它的意思来自于概率图模型，本文会给出变分下界的详细推导；
 - AE：Auto-Encoder，自编码器；
-- VAE：Variational Auto-Encoder，变分自编码器，将概率图模型和神经网络相结合的模型；
+- VAE：Variational Auto-Encoder，**变分自编码器**，将概率图模型和神经网络相结合的模型；
 
 ## 一、AE
 ![](images/VAE_1.png)
-
 
 先来介绍一下自编码器（Auto-Encoder），它是一种无监督学习方法，如上图所示，原理可概述为：
 
 - 将高维原始数据（如图片）送入 Encoder，利用 Encoder 将高维数据映射到一个低维空间，将n维压缩到m维($m<<n$)，我们用隐变量来表示；
 - 然后将低维空间的特征送入 Decoder 进行解码，以此来重建原始输入数据。
 
-{{<admonition Note "Note" false>}}
+{{<admonition Note "Note">}}
 Encoder、Decoder网络可以为普通的全连接、也可以为CNN、或者类似于Unet都可以，没有固定的要求。
 {{</admonition>}}
 
-这里为和后文的推导联系起来，我们将 Encoder 网络的映射函数定义为 $q_{\phi}$ 、Decoder 网络定义为 $p_{\theta}$，$\phi$、$\theta$ 皆为网络参数。</br>
-那么对于输入 $x$，我们可以通过Encoder得到 Latent Variable：$z = q_{\phi}(x)$，然后Decoder可以从隐变量z中对原始数据进行重建：$x' = p_{\theta}(z) = p_{\theta}(q_{\phi}(x))$。
+这里为和后文的推导联系起来，我们将 Encoder 网络的映射函数定义为 $q_{\phi}$ 、Decoder 网络定义为 $p_{\theta}$，其中 $\phi$、$\theta$ 皆为网络参数。</br>
+那么对于输入 $x$，我们可以通过Encoder得到 `Latent Variable`：$z = q_{\phi}(x)$，然后Decoder可以从隐变量z中对原始数据进行重建：$x' = p_{\theta}(z) = p_{\theta}(q_{\phi}(x))$。
 
 我们希望重建的数据和原来的数据近似一致，即最小化输入和输出之间的重构误差，那么AE的训练损失可以采用简单的MSE：
 
-$$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - p_{\theta}(q_{\phi}(x^{(i)})))^2$$
+$$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - x'^{(i)})^2 =\frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - p_{\theta}(q_{\phi}(x^{(i)})))^2$$
 
 {{<admonition Note "Note" false>}}
 可以理解为比较输入和重构输入的像素点的误差。
@@ -46,10 +45,10 @@ $$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - p_{\theta}(
 
 ## 二、AE 存在的问题
 
-上面我们通过AE可以构建一个重构图像的模型，但是这个模型并不能满足要求，或者说它并不是真正意义上的生成模型。对于一个生成模型而言，它满足：
+上面我们通过AE可以<font color=lightseablue>**构建一个重构图像的模型**</font>，但是这个模型并不能满足要求，或者说它并不是真正意义上的生成模型。对于一个生成模型而言，它满足：
 
 - **Encoder 和 Decoder 可以独立拆分（类比 GAN 的 Generator 和 Discriminator）；**
-- **固定维度下任意采样出来的编码，都应该能通过 Decoder 产生一张清晰且逼真的图片。**
+- **固定维度下<font color=red>任意采样</font>出来的编码，都应该能通过 Decoder 产生一张清晰且逼真的图片。**
 
 当然对于第一点它是满足的，我们主要分析第二点，也就是AE存在的问题，从而引出VAE。
 
@@ -59,9 +58,9 @@ $$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - p_{\theta}(
 
 接下来，我们在 latent code 中任取一点，将其交给 Decoder 进行解码，直觉上我们会得到一张介于全月和半月之前的图片（比如阴影面积覆盖的样子）。然而<font color=red>实际上的输出图片不仅模糊而且还是乱码的</font>。
 
-对于这个现象，一个直观的解释就是AE的 Encoder 和 Decoder 都用了DNN，那么NN只会干一件事情：学习、记住、用记住的东西预测，我们从 latent space 中采样的点，编码器都没有学习过，怎么能够指望它生成希望的值呢。
+对于这个现象，一个直观的解释就是AE的 Encoder 和 Decoder 都用了DNN，那么NN只会干一件事情：学习、记住、用记住的东西预测，我们<u>从 latent space 中采样的点，编码器都没有学习过</u>，怎么能够指望它生成希望的值呢?
 
-换句话说，NN只记住了左边全月图片的隐向量和右边半月图片的隐向量，并不能泛化到中间就是$\frac{3}{4}$月亮的图片。
+换句话说，<font color=red>**NN只记住了左边全月图片的隐向量和右边半月图片的隐向量，并不能泛化到中间就是$\frac{3}{4}$月亮的图片**</font>。
 
 为了解决这个问题，一个最直接的思想就是**引入噪声**，扩大图片的编码区域，从而能够覆盖到失真的空白编码区，如下图所示：
 
@@ -73,19 +72,23 @@ $$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - p_{\theta}(
 
 虽然我们给输入的图片增加了一些噪声，使得 latent space 能够覆盖到比较多的区域，但是还有不少地方没有覆盖到，比如上图的黄色点位置。
 
-因此，我们是不是可以尝试利用更多的噪声，使得对于每一个输入样本，它的编码都能够覆盖到整个编码空间？只不过我们这里需要保证的是：对于编码附近的我们应该给定一个高的概率值，对于距离原编码点远的应该给定一个低的概率值。
+因此，我们是不是可以尝试利用更多的噪声，使得对于每一个输入样本，它的编码都能够覆盖到整个编码空间？只不过我们这里需要保证的是：<font color=red>对于编码附近的我们应该给定一个高的概率值，对于距离原编码点远的应该给定一个低的概率值</font>。
 
 这样总体来说，我们就是要将原先的一个单点拉伸到整个编码空间，即将离散的编码点拉伸为一条连续的接近正太分布的编码曲线，如下图所示：
 
 ![](images/VAE_4.png)
 
-这个其实就是VAE的思想，熟悉GMM的同学应该知道，它是K个高斯分布（Gaussian Distribution）的混合，其实**VAE可以说是无限个高斯分布的混合**。
+这个其实就是VAE的思想，熟悉GMM的同学应该知道，它是K个高斯分布（Gaussian Distribution）的混合，其实**<font color=green>VAE可以说是无限个高斯分布的混合</font>**。
 
 ## 三、VAE 结构预览
 
 ![](images/VAE_5.png)
 
 如上图所示VAE的结构，我们可以看到VAE里的编码器不是输出隐向量$z$，而是一个概率分布，分布的均值为$m$、方差为$\sigma$，$e$ 即为给编码添加的噪声，来自于正态分布。
+
+{{<admonition Note "tips">}}
+VAE的Encoder的输出不是隐向量，而是均值为$m$, 方差为$\sigma$的正态分布。
+{{</admonition>}}
 
 公式怎么得到的后面会给出推导，我们先来描述一下这个过程：
 
@@ -102,6 +105,10 @@ $$z_{i} = c_{i} = \exp(\sigma_i) * e_i + m_i$$
 **为什么要加这个辅助loss？**
 
  - 我们最小化了 reconstruction error，如果不加这个辅助loss的话，Encoder肯定希望噪声对自身生成的图片干扰越小越好，为了保证生成图片的质量，于是分配给噪声的权重也就是越低。如果不加这个约束的话，网络只需要将方差设置为接近负无穷大的值 $\exp ^ {-\infty} = 0$，即可消除噪声带来的影响，这样必然会过拟合导致鲁棒性不佳。
+
+{{<admonition Note "tips">}}
+添加辅助loss是为了防止过拟合，提高模型的鲁棒性。
+{{</admonition>}}
 
 **为什么加这个辅助loss有用？**
 
@@ -141,7 +148,7 @@ $$z_{i} = c_{i} = \exp(\sigma_i) * e_i + m_i$$
 - 根据条件分布 $p_{\theta}(x|z)$，用 $z^{(i)}$ 生成 $x^{(i)}$。
 
 
-我们希望找到一个参数 $\theta^*$ 来**最大化生成真实数据**的概率：
+我们希望找到一个参数 $\theta^*$ 来**最大化生成真实数据的概率**：
 
 $$\theta^*=\argmax_{\theta} \prod_{i=1}^{n}p_{\theta}(x^{(i)})$$
 
@@ -151,7 +158,7 @@ $$p_{\theta}(x^{(i)}) = \int_{z} p_{\theta}(x, z) \mathrm{d}{z} = \int_{z} p_{\t
 
 实际上我们要根据上述积分是不可能实现的，先验分布 $p_{\theta}(z)$ 是未知的，而且如果分布比较复杂且高维，对其穷举计算也是不现实的。
 
-变分推断引入后验概率来联合建模，即given $x$ 想要得到它的 $z$，根据贝叶斯公式表示为：
+**变分推断引入后验概率来联合建模**，即given $x$ 想要得到它的 $z$，根据贝叶斯公式表示为：
 
 $$p_{\theta}(z | x) = \frac{p_{\theta}(x|z) p_{\theta}(z)}{p_{\theta}(x)}$$
 
@@ -239,7 +246,7 @@ $$
 第三行中括号内，左边的可以写成期望的形式，右边的因为都有 $q_{\phi}$ 和 $p_{\theta}$ 所以符合KL divergence的公式。
 
 - 我们将 ${E}_{q_{\phi}(z|x)}[\log(p_{\theta}(x|z))]$ 称为**Reconstruction Loss**，
-- 将 $- D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))$ 称为 **Regularization Loss**。
+- 将 $-D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))$ 称为 **Regularization Loss**。
 
 所以我们只需要估计出这两项的梯度来，就可以对 lower bound 进行优化了。
 
@@ -257,15 +264,6 @@ $$
 {{</admonition>}}
 
 使用蒙特卡洛方法，对 $f(z)$ 在 $q_{\phi}$ 上的期望，对 $\phi$ 求导数，表示如下：
-
-$$
-\begin{aligned}
-&max=2*x1+3*x2;\\
-&x1+2*x2<=8;\\
-&4*x1<=16;\\
-&s4*x2<=12;
-\end{aligned}
-$$
 
 $$
 \begin{aligned}
@@ -291,7 +289,7 @@ $$
 
 但是作者实验发现使用这个 estimator 是有很高的 variance 的，就是直观上来说会导致训练很不稳定。
 
-在此基础上作者提出了 Generic Stochastic Gradient Variational Bayes (**SGVB**) estimator，并使用**重参数化（Reparameterization）**trick，我们先来说下重参数化。
+在此基础上作者提出了 Generic Stochastic Gradient Variational Bayes (**SGVB**) estimator，并使用**重参数化(Reparameterization)**trick，我们先来说下重参数化。
 
 ### 4.5、重参数化 Trick
 
@@ -442,9 +440,9 @@ $$
 总的来看 Variational Auto-Encoder 的model就是：
 
 - 输入一个 $x$，进了Encoder，这个 Encoder 是由参数来决定的，Encoder 会产生 $μ$和 $σ$；
-- $μ$和 $σ$首先被我们用来计算 KL divergence，作为辅助损失；
+- $μ$和 $σ$首先被我们用来计算 KL divergence，作为**辅助损失**；
 - 同时在 $μ$ 和 $σ$之后我们对它抽样产生一个 $z$，加上 $\epsilon$ 帮我们产生随机的项；
-- 得到隐变量 $z$后，放到 Dencoder 里，它是由参数 $\theta$ 来决定的；
+- 得到隐变量 $z$后，放到 Decoder 里，它是由参数 $\theta$ 来决定的；
 - 经过这个 Decoder 之后，我们重建出了一个 $x$；
 - 对比重建后的 $x$ 和输入 $x$ 之间的 MSE 就构成了loss的另一部分，
 - 两个loss加起来就是最终的loss。

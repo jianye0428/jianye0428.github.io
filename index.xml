@@ -1,4 +1,1497 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 30 Jul 2023 09:21:58 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [11] | 理解自定义分配器的正确用法</title><link>https://jianye0428.github.io/posts/clause_11/</link><pubDate>Sun, 30 Jul 2023 09:21:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_11/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 31 Jul 2023 15:57:07 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Diffusion 扩散模型（DDPM）</title><link>https://jianye0428.github.io/posts/ddpm/</link><pubDate>Mon, 31 Jul 2023 15:57:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ddpm/</guid><description><![CDATA[<!--
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h2 id="一引入">一、引入</h2>
+<p></p>
+<p>近年AIGC的爆火离不开人工智能在图像生成、文本生成以及多模态等领域的不断累积，其中<strong>生成模型</strong>的发展占据了很大功劳，如：生成对抗网络 GAN 及其一系列变体、变分自编码器 VAE 及其一系列变体、自回归模型 AR、流模型 flow ，以及近年大火的<strong>扩散模型 Diffusion Model</strong> 等。</p>
+<p>扩散模型的大火并非横空出世，早在2015年就有人提出了类似的想法，直到2020年才提出了经典的 <strong>Denoising Diffusion Probabilistic Models（DDPM）</strong>，像OpenAI、NovelAI、NVIDIA和Google成功的训练了大规模模型之后，它们吸引了很多人注意，后续有了很多基于扩散模型的变体，比如有：GLIDE、DALLE-2、Imagen和年底爆火的完全开源的稳定扩散模型（Stable Diffusion）。</p>
+<p>扩散模型与之前所有的生成方法有着本质的区别：</p>
+<p></p>
+<p>直观的说它是<mark>将图像生成过程（采样）分解为许多小的去噪步骤</mark>，其实 Diffusion 的含义本质上就是一个迭代过程，实线箭头用于扩散步骤中添加随机噪声，虚线箭头代表的是通过学习逆向扩散过程<mark>从噪声中重构所需的数据样本</mark>。<strong>引入噪声导致了信息的衰减，再通过噪声尝试还原原始数据，多次迭代最小化损失后，能够使模型在给定噪声输入的情况下学习生成新图像。</strong></p>
+<p>所以Diffusion模型和其它生成模型的区别是，它不是直接的图像-&gt;潜变量、潜变量-&gt;图像的一步到位，它是一步一步的<mark>逐渐分解、逐渐去噪</mark>的过程。</p>
+<p>当然有关Diffusion的理解和变体有很多，但是扩散模型从本质上讲就是DDPM，所以本文主要对DDPM的原理进行讲解，并给出DDPM的扩散过程、去噪过程、训练损失的详细推导，对于掌握Diffusion算法原理只需要抓住以下四点即可：</p>
+<ul>
+<li>前向过程（扩散）；</li>
+<li>反向过程（去噪、采样）；</li>
+<li>如何训练；</li>
+<li>如何推断。</li>
+</ul>
+<h2 id="二扩散原理阐述">二、扩散原理阐述</h2>
+<p>扩散模型包括 <strong>前向扩散过程</strong> 和 <strong>反向去噪过程(采样)</strong>，前向阶段对图像逐步施加噪声，直至图像被破坏变成完全的高斯噪声，然后在反向阶段学习从高斯噪声还原为原始图像的过程。</p>
+<h3 id="21直观理解">2.1、直观理解</h3>
+<ul>
+<li>散模型的目的是什么？
+学习从纯噪声生成图片的方法。</li>
+<li>扩散模型是怎么做的？
+训练一个UNet，接受一系列加了噪声的图片，学习预测所加的噪声。</li>
+<li>前向过程在干什么？
+<ul>
+<li>逐步向真实图片添加噪声最终得到一个纯噪声；</li>
+<li>对于训练集中的每张图片，都能生成一系列的噪声程度不同的加噪图片；</li>
+<li>在训练时，这些 【不同程度的噪声图片 + 生成它们所用的噪声】 是实际的训练样本。</li>
+</ul>
+</li>
+<li>反向过程在干什么？
+训练好模型后，采样、生成图片。</li>
+</ul>
+<h3 id="22前向过程扩散">2.2、前向过程（扩散）</h3>
+<p></p>
+<p>前向过程在原始输入图像$x_0$上逐步添加随机噪声，这个噪声服从高斯分布$N(0, 1)$，每一步得到的图像$x_t$只和上一步的加噪结果$x_{t-1}$相关，逐步添加噪声至$T$步，可以得到趋向于纯粹噪声的图像，如下图所示：
+</p>
+<blockquote>
+<p>后面有详细的推导，公式比较多，这里先提前把主要的列一下方便阐述。</p>
+</blockquote>
+<p>对于将一张图片，从$x_{t-1}\rightarrow x_{t}$的逐步加噪破坏的公式为：</p>
+<p>$$x_t=\sqrt{\alpha_t}\left.x_{t-1}+\sqrt{1-\alpha_t}\right.\varepsilon_t\quad\quad\quad\quad\quad\quad(1)$$</p>
+<p>其中:</p>
+<ul>
+<li>$x_t$表示第$t$步的图像；</li>
+<li>$\varepsilon$ 是一个满足正态分布的随机噪声，$\varepsilon \sim N(0, 1)$；</li>
+<li>$\sqrt{\alpha_{t}}$ 是图片的权重，$\sqrt{1 - \alpha_{t}}$ 是噪声的权重；</li>
+</ul>
+<p>定义：</p>
+<ul>
+<li>$\alpha_t=1-\beta_t$</li>
+<li>$\overline{\alpha}=\prod_{s=1}^t\alpha_s$</li>
+</ul>
+<p>随着$t$的增加，<strong>噪声的占比会越来越大</strong>，所以添加的<strong>噪声强度也会越来越大</strong>，也就是说图片的权重要越来越小，噪声的权重要越来越大。因为随着扩散过程的增加，图像中噪声的占比也会越来越大，我们想要进一步破坏它的结构，就需要添加更多的噪声。</p>
+<blockquote>
+<p>换句话说，一开始图像比较清晰，这个时候添加的噪声小一些，随着图像的噪声越来越多，这个时候再加一点噪声的话，对原来的图像就没什么影响了，因为它本身就有好多噪声了，所以随着图像的噪声越来越多，后面的步骤就要加更多的噪声。</p>
+</blockquote>
+<p>实际训练过程中会比较大（DDPM原文中为1000），所以会有从$x_0$递推到$x_t$的公式：</p>
+<p>$$x_t=\sqrt{\overline{\alpha}_t}\left.x_0+\sqrt{1-\overline{\alpha}_t}\right.\varepsilon\quad\quad\quad\quad(2)$$</p>
+<p>其中：</p>
+<ul>
+<li>$\alpha_t$、$\beta_t$ 有一个固定的已知函数，是可以直接进行计算的；</li>
+<li>$\varepsilon$ 为随机产生的噪声；</li>
+</ul>
+<p>所以整个式子是已知的，式 $(1)$、$(2)$ 就可以描述前向过程了，$(1)$ 用于将一张图片的逐步破坏，$(2)$ 用于一步到位的破坏。</p>
+<h3 id="23反向过程去噪">2.3、反向过程（去噪）</h3>
+<p>反向过程则是不断去除噪声的过程，给定一个噪声图片 $x_T$，对它一步步的去噪还原，直至最终将原始图像 $x_0$ 给恢复出来，如下图所示：</p>
+<p></p>
+<p>去噪的过程，$x_t$、$\alpha_t$、$\beta_t$ 都是已知的，只有公式 $(2)$ 中的真实噪声是未知的，因为它是随机采样的。所以需要一个神经网络把 $\varepsilon$ 给学出来，也就是说训练一个由 $x_t$ 和 $t$ 估测噪声的模型：</p>
+<p>$$x_{t-1}=\frac{1}{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\varepsilon</em>\theta(x_t,t))$$</p>
+<p>其中 $\theta$ 就是模型的参数，通常使用UNet作为预估噪声的模型。</p>
+<h3 id="24模型训练">2.4、模型训练</h3>
+<p>所以说反向过程其实就是<strong>训练网络去学习分解过程每一步的噪声</strong>，当网络训练好之后，输入一张噪声图片，通过网络就能把加的噪声给求出来，噪声有了代入公式，就能把 $x_{t-1}$ 步的比较清晰的图给求出来了，一步步往前迭代就行了。</p>
+<p>采用L2距离刻画相近程度就可以，DDPM的关键是训练 $\varepsilon_{\theta}(x_t, t)$，目的就是使预测的噪声与真实用于破坏的噪声相近：</p>
+<p>$$Loss=\mid\mid\varepsilon-\varepsilon_\theta(x_t,t)\mid\mid^2=\mid\mid\varepsilon-\varepsilon_\theta(\sqrt{\overline{\alpha}_t}~x_0+\sqrt{1-\overline{\alpha}_t}~\varepsilon_t,t)\mid\mid^2$$</p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [4]</title><link>https://jianye0428.github.io/posts/partfour/</link><pubDate>Mon, 31 Jul 2023 07:26:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partfour/</guid><description><![CDATA[<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [3]</title><link>https://jianye0428.github.io/posts/partthree/</link><pubDate>Mon, 31 Jul 2023 07:26:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partthree/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h1 id="前言">前言</h1>
+<blockquote>
+<p>Effective-C++总结系列分为四部分，本文为第二部分，涉及原书第3~4章，内容范围Rule13~25。为方便书写，Rule13简写为R13。</p>
+</blockquote>
+<div class="details admonition Note">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Effective-C++系列List<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">本博客站点系列内容如下：</br>
+💡 <a href="https://jianye0428.github.io/posts/partone/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(一)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/parttwo/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(二)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/partthree/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(三)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/partfour/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(四)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></div>
+    </div>
+  </div>
+<p>由于原书在C++11之前写成，有些现代C++特性不会提及，所以会根据本人<code>开发经验</code>新增一些个人感悟👉<code>By the way</code>环节。</p>
+<h2 id="ch5-实现">CH5. 实现</h2>
+<h3 id="r26-尽可能延后变量定义式的出现时间">R26 尽可能延后变量定义式的出现时间</h3>
+<ul>
+<li>尽可能延后变量定义式的出现，可增加程序清晰度和效率
+<ol>
+<li>定义后，在使用前就遭遇抛异常
+这种情况，如果是定义了对象<code>ObjectA a</code>，便白白地浪费了对象a的构造和析构成本。</li>
+<li>不只是延后变量定义到使用时，而是尽量延后到能给它初值时</li>
+</ol>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">encryptPassword</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">password</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">password</span><span class="p">.</span><span class="n">length</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">8</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">    <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">logic_error</span><span class="p">(</span><span class="s">&#34;Password is too short&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span><span class="c1">// 考虑1：在异常之后定义变量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">encrypted</span><span class="p">(</span><span class="n">password</span><span class="p">);</span><span class="c1">//考虑2：定义延后至变量能赋初值的时机
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">encrypt</span><span class="p">(</span><span class="n">encrypted</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">encrypted</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="3">
+<li>思考变量定义<strong>是否</strong>该在循环内</li>
+</ol>
+<ul>
+<li>方法A：定义于循环外
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="err"> </span> <span class="err"> </span> <span class="n">w</span> <span class="o">=</span> <span class="n">foo</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="err"> </span> <span class="err"> </span><span class="c1">// other...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>方法B：定义于循环内
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Widget</span> <span class="nf">w</span><span class="p">(</span><span class="n">foo</span><span class="p">(</span><span class="n">i</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// other...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+</ul>
+<p><strong>究竟是A还是B方法好</strong>，取决于 <code>一个赋值成本</code>和<code>一组构造+析构</code>成本，这2者之间，如果是赋值成本低，那么A更好，否则B更好。</p>
+<h3 id="r27-尽量少做转型动作">R27 尽量少做转型动作</h3>
+<p>通常的转型是可能会这样写：函数风格的<code>int(expression)</code>或者C风格的(int)<code>expression</code>，这都被成为“旧式转型”。</p>
+<ul>
+<li>
+<p>在C++中，有4种新式转型操作符：</p>
+<ol>
+<li><strong>const_cast (expression)</strong>
+作用是移除变量的常量性(cast away the constness)，是唯一有此能力的操作符。</li>
+<li><strong>dynamic_cast(expression)</strong>
+作用是“安全向下转型”(safe downcasting)，决定某个对象是否属于某继承体系。耗费重大运行成本（原因：需要查询RTTI信息，而且不同编译器实现的方法和效率有所不同）。</li>
+<li><strong>reinterpret_cast(expression)</strong>
+执行低级转型，实际结果取决于编译器，移植性差。（比如int* 转为int）要清楚自己在做什么，慎用。</li>
+<li><strong>static_cast(expression)</strong>
+强迫隐式类型转换，代替C风格的&quot;旧式转换&quot;。也可以给变量加上const特性。</li>
+</ol>
+<p>新式转换的好处：很容易在代码找到“类型系统在何处转变或破坏”；对const特性的严控，让类型系统更健壮。</p>
+</li>
+<li>
+<p>派生类里直接调用基类成员函数时，不要用转型</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecialWindow</span><span class="o">:</span><span class="k">public</span> <span class="n">Window</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">virtual</span> <span class="kt">void</span> <span class="n">onResize</span><span class="p">(){</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Window</span><span class="o">::</span><span class="n">onResize</span><span class="p">();</span><span class="c1">//不要使用 static_cast&lt;Window&gt;(*this).onResize();
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>关于dynamic_cast需要注意的</p>
+<ol>
+<li>如何替代和避免
+一般是持有一个<code>Base *pBase</code>，但是指向的是DerivedObj，于是转型为pDerived</li>
+</ol>
+<ul>
+<li>可以这样修改：
+修改设计，窄化类型，持有一个pDerived即可；或者将想做的事放到虚函数中，利用多态去完成。</li>
+</ul>
+<ol start="2">
+<li>避免串联
+避免下方这样的代码，一连串的dynamic_cast：</li>
+</ol>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Window</span><span class="p">{</span> <span class="p">...</span> <span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 定义子类 SpecialWindow1,SpecalWindow2,SpecialWindow3
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Window</span><span class="o">*</span> <span class="n">winPtr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 省略winPtr的其他操作 ...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span><span class="p">(</span><span class="n">SpecialWindow1</span> <span class="o">*</span><span class="n">psw1</span> <span class="o">=</span> <span class="k">dynamic_cast</span><span class="o">&lt;</span><span class="n">SpecialWindow1</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">winPtr</span><span class="p">)){</span> <span class="p">...</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span>  <span class="nf">if</span><span class="p">(</span><span class="n">SpecialWindow2</span> <span class="o">*</span><span class="n">psw2</span> <span class="o">=</span> <span class="k">dynamic_cast</span><span class="o">&lt;</span><span class="n">SpecialWindow2</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">winPtr</span><span class="p">)){</span> <span class="p">...</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span>  <span class="nf">if</span><span class="p">(</span><span class="n">SpecialWindow3</span> <span class="o">*</span><span class="n">psw3</span> <span class="o">=</span> <span class="k">dynamic_cast</span><span class="o">&lt;</span><span class="n">SpecialWindow3</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">winPtr</span><span class="p">)){</span> <span class="p">...</span> <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样的代码又大又慢，每次继承体系有所改变，代码就需要重新检阅判断。这样的代码应该用“基于virtual函数调用”取代它。</p>
+</li>
+</ul>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p>自 <strong>C++11</strong> 起，针对智能指针 shared_ptr 的转型，推出了另外 4 个模版函数：</p>
+<ul>
+<li><code>std::static_pointer_cast</code>
+函数的原型声明为：
+<div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span> <span class="k">class</span> <span class="nc">T</span><span class="p">,</span> <span class="k">class</span> <span class="nc">U</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">static_pointer_cast</span><span class="p">(</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">U</span><span class="o">&gt;&amp;</span> <span class="n">r</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div>含义以及应用场景与 <code>static_cast</code> 类似，比如子类型指针转为父类型：
+<div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">auto</span> <span class="n">basePtr</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">Base</span><span class="o">&gt;</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="k">auto</span> <span class="n">derivedPtr</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">Derived</span><span class="o">&gt;</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="n">basePtr</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">static_pointer_cast</span><span class="o">&lt;</span><span class="n">Base</span><span class="o">&gt;</span><span class="p">(</span><span class="n">derivedPtr</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div>或许我们会有疑问，是否有必要用这个函数进行转型呢，如下实现不是一样的吗?
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">basePtr</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Base</span><span class="o">&gt;</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">Base</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">derivedPtr</span><span class="p">.</span><span class="n">get</span><span class="p">()));</span></span></span></code></pre></td></tr></table>
+</div>
+</div>🤔 当然不一样，static_cast&lt;T*&gt;((U*)nullptr)是未定义行为，而且就语法描述上来看，哪个更简洁不言自明。
+另外，自 C++20 起支持右值引用，也就是如下形式：
+<div class="highlight" id="id-20"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span> <span class="k">class</span> <span class="nc">T</span><span class="p">,</span> <span class="k">class</span> <span class="nc">U</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">static_pointer_cast</span><span class="p">(</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">U</span><span class="o">&gt;&amp;&amp;</span> <span class="n">r</span> <span class="p">)</span> <span class="k">noexcept</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li><code>std::dynamic_pointer_cast</code>
+含义以及应用场景与 dynamic_cast 类似，用法传参与 std::static_pointer_cast 类似，且自 C++20 起支持右值引用，不赘述。</li>
+<li><code>std::const_pointer_cast：</code>与前 2 者类似，不赘述。</li>
+<li><code>std::reinterpret_pointer_cast：</code>与前 3 者类似，不赘述。</li>
+</ul>
+</div>
+    </div>
+  </div>
+<h3 id="r28-避免返回handles指向对象内部成分">R28 避免返回handles指向对象内部成分</h3>
+<p>这里的<strong>handles（号码牌）包括</strong>指向对象内部的<strong>指针</strong>、<strong>迭代器</strong>、<strong>引用</strong>。</p>
+<p>以下讲述当返回对象内部的handles时，存在的2个问题：</p>
+<ul>
+<li>可能会破坏封装性
+考虑一个场景：public函数返回一个private成员的非const引用，就让外界有了修改private的机会，破坏了封装性。
+此时，需要将非const引用改为const引用，只读属性。
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">Pixel</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">float</span> <span class="n">r</span><span class="p">,</span><span class="n">g</span><span class="p">,</span><span class="n">b</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Image</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>  <span class="c1">//注意：后面这const只保证成员变量vPixPtrs_不改
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Pixel</span><span class="o">&amp;</span> <span class="n">GetThePixel</span><span class="p">(</span><span class="kt">int</span> <span class="n">idx</span><span class="p">)</span> <span class="k">const</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span>  <span class="n">vPixPtrs_</span><span class="p">[</span><span class="n">i</span><span class="p">];}</span><span class="c1">//隐患：其实外部调用者仍能直接修改Pixel的rgb值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 上一句的返回值应该改为 &#34;const Pixel&amp;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Pixel</span><span class="o">&gt;&gt;</span> <span class="n">vPixPtrs_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>可能会引起“空悬handles”
+即使用const解决了封装性的问题，因为很容易出现**“handles比其所指对象更长寿”**，可能存在对象已析构，但handles还留存的问题。尤其是临时变量的析构，不太容易察觉。
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SceneGraph</span><span class="p">{</span> <span class="p">...</span> <span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="n">Image</span> <span class="nf">CaptureImage</span><span class="p">(</span><span class="k">const</span> <span class="n">SceneGraph</span><span class="o">&amp;</span> <span class="n">graph</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//那么调用方可能会这样使用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">SceneGraph</span> <span class="n">Grap</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//下面这句之后，Image临时对象被销毁，pPix指向一个不存在的对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">const</span> <span class="n">Pixel</span> <span class="o">*</span><span class="n">pPix</span> <span class="o">=</span> <span class="o">&amp;</span><span class="p">(</span><span class="n">CaptureImage</span><span class="p">(</span><span class="n">Grap</span><span class="p">).</span><span class="n">GetThePixel</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div>注意，CaptureImage的确能返回一个临时Image对象，能成功调用GetThePixel，但这句结束后，临时对象立马会被销毁，造成空悬现象，或叫虚吊(dangling) ！</li>
+</ul>
+<h3 id="r29-为异常安全而努力是值得的">R29 为“异常安全”而努力是值得的</h3>
+<p>“<strong>异常安全</strong>”是指，当异常抛出时，代码依然能做到如下2点：</p>
+<ol>
+<li>不泄露任何资源
+包括内存资源，锁资源。</li>
+<li>不允许数据败坏
+不会因为异常而导致空悬指针等未定义行为。</li>
+</ol>
+<p>考虑下方的示例代码，（如果<code>new Image</code>抛<code>std::bad_alloc</code>异常）则会同时违背了上述2条：</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">PrettyMenu</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Mutex</span> <span class="n">mutex_</span><span class="p">;</span> <span class="c1">//互斥器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Image</span><span class="o">*</span> <span class="n">bgImage_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">imageChangeCnt_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">void</span> <span class="n">PrettyMenu</span><span class="o">::</span><span class="n">changeBackground</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ifstream</span><span class="o">&amp;</span> <span class="n">imgSrc</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">        <span class="n">lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex_</span><span class="p">);</span><span class="c1">// 这个可以改为RAII的锁，来保证异常安全
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">delete</span> <span class="n">bgImage_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="o">++</span><span class="n">imageChangeCnt_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">//这里new Image抛异常，导致无法解锁；且bgImage_指向资源已经释放，空悬指针
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">bgImage_</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Image</span><span class="p">(</span><span class="n">imageSrc_</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex_</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="异常安全的3个等级">异常安全的3个等级</h4>
+<p>异常安全的函数，有<strong>3个等级</strong>的异常安全保证，会满足<strong>三者之一</strong>：</p>
+<ul>
+<li>
+<p><strong>基本承诺</strong>
+如果异常被抛出，程序内的任何事务仍然保持在有效状态下，也没有任何数据败坏。比如上例中如果抛异常，会另外添加实现，使bgImage_持有某个默认图像，或保持原值，让程序继续有效运行。</p>
+</li>
+<li>
+<p><strong>强烈保证</strong>
+如果异常被抛出，程序状态不改变。这样的函数要么成功，要么退回到执行前的状态。</p>
+<p>上述案例则应该会被修改成如下形式：</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">PrettyMenu</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Image</span><span class="o">&gt;</span> <span class="n">bgImage_</span><span class="p">;</span> <span class="c1">//RAII避免了异常发生时的资源泄漏和数据败坏
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">//... 省略其他成员
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">PrettyMenu</span><span class="o">::</span><span class="n">changeBackground</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ifstream</span><span class="o">&amp;</span> <span class="n">imgSrc</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">        <span class="n">CLock</span> <span class="nf">ml</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex_</span><span class="p">);</span><span class="c1">//RAII封装的Lock类，详细可参考 阅读总结(二)-Rule14
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">bgImage_</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">Image</span><span class="p">(</span><span class="n">imgSrc</span><span class="p">));</span><span class="c1">//若new失败，则不会reset
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="o">++</span><span class="n">imageChangeCnt_</span><span class="p">;</span><span class="c1">//把事情做完再++count
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p><strong>不抛异常</strong>
+在原书中，这个“No Throw”不是绝对不抛异常，而是一旦意外抛异常，就会调用unexpected函数进而abort（例如<code>int doSomething() throw();//空白的异常明细</code>）。</p>
+</li>
+</ul>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p>原书中例子的 <strong>throw()</strong> 在不同编译器表现不一致，现在已经 <strong>不推荐使用</strong>。</p>
+<p>更详细资料可参考<a href="http://gotw.ca/publications/mill22.htm"target="_blank" rel="external nofollow noopener noreferrer">A Pragmatic Look at Exception Specifications<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和<a href="https://stackoverflow.com/questions/88573/should-i-use-an-exception-specifier-in-c"target="_blank" rel="external nofollow noopener noreferrer">Should I use an exception specifier in C++<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>在C++11中，有了更可靠有效的关键字noexcept，使用也很简单，有操作符和异常提示符两种作用，下方展示简单用法：</p>
+<div class="highlight" id="id-21"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">f</span><span class="p">()</span> <span class="k">noexcept</span><span class="p">;</span> <span class="c1">// 函数 f() 不会抛出
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">fp</span><span class="p">)()</span> <span class="k">noexcept</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span> <span class="c1">// fp 指向可能会抛出的函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="nf">g</span><span class="p">(</span><span class="kt">void</span> <span class="n">pfa</span><span class="p">()</span> <span class="k">noexcept</span><span class="p">);</span>  <span class="c1">// g 接收指向不会抛出的函数的指针
+</span></span></span><span class="line"><span class="cl"><span class="c1">// typedef int (*pf)() noexcept; // 错误
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>更详细的<code>noexcept</code>介绍可以访问<a href="https://zh.cppreference.com/w/cpp/language/noexcept"target="_blank" rel="external nofollow noopener noreferrer">cppreference：noexcept操作符<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和<a href="https://zh.cppreference.com/w/cpp/language/noexcept_spec"target="_blank" rel="external nofollow noopener noreferrer">cppreference：noexcept异常说明符<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</div>
+    </div>
+  </div>
+<h4 id="使用copy-and-swap保障异常安全">使用copy-and-swap保障异常安全</h4>
+<p><code>copy-and-swap</code>技术：先拷贝一份想修改的对象，等修改彻底完成后（过程中不抛异常），再与原对象交换。</p>
+<p>为了更形象展示这一过程，使用pIml手法对bgImage_封装一下：</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">ImgPimpl</span><span class="p">{</span> <span class="c1">//选用struct而非Class：方便；最后被private成员形式使用，封装性不用担心
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Image</span><span class="o">&gt;</span> <span class="n">bgImage_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">   <span class="kt">int</span> <span class="n">imageChangeCnt_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>那么PrettyMenu类可以改为如下：</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">PrettyMenu</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Mutex</span> <span class="n">mutex_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">ImgPimpl</span><span class="o">&gt;</span> <span class="n">pImpl_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>  <span class="c1">//构造略
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="kt">void</span> <span class="n">PrettyMenu</span><span class="o">::</span><span class="n">changeBackground</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ifstream</span><span class="o">&amp;</span> <span class="n">imgSrc</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">        <span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">swap</span><span class="p">;</span>   <span class="c1">//参考 阅读总结(二)-Rule25
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">CLock</span> <span class="nf">ml</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mutex_</span><span class="p">);</span><span class="c1">//RAII封装的Lock类，详细可参考总结(二)-Rule14
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">ImgPimpl</span><span class="o">&gt;</span> <span class="n">pNewCopy</span><span class="p">(</span><span class="k">new</span> <span class="n">ImgPimpl</span><span class="p">(</span><span class="o">*</span><span class="n">pImpl_</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">        <span class="n">pNewCopy</span><span class="o">-&gt;</span><span class="n">bgImage_</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">Image</span><span class="p">(</span><span class="n">imgSrc</span><span class="p">));</span> <span class="c1">//修改副本
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="o">++</span><span class="n">pNewCopy</span><span class="o">-&gt;</span><span class="n">imageChangeCnt_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">swap</span><span class="p">(</span><span class="n">pImpl_</span><span class="p">,</span><span class="n">pNewCopy</span><span class="p">);</span><span class="c1">//改完之后swap
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="异常安全的连带影响side-effects">异常安全的连带影响(side effects)</h4>
+<p>函数提供的“异常安全保证等级”只<strong>取决于</strong>其调用的<strong>各个子函数的“最不安全者”</strong>。</p>
+<p>考虑以下函数SomeFunc代码：</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">SomeFunc</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// 对local状态做一份副本
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">f1</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">f2</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>  <span class="c1">//将修改后的状态置换过来
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong><code>分析</code></strong>：显然copy-and-swap在尽力强烈保证异常安全，但是，f1或者f2的异常安全如果比较低，那么可能需要单独对f1，f2进行copy-and-swap，来尝试保证“强烈异常安全”；即使如此，如果f1能成功做了修改，但是f2修改失败了并回退，那么<strong>f1、f2整体</strong>看起来还是“<strong>改了一部分</strong>”。</p>
+<p><strong><code>这也告诫我们</code></strong>，如果引入了异常不安全的旧代码，那么这种特性会波及其他代码。</p>
+<p>就设计者而言，只能根据实际情况，尽可能保证“异常安全”，选择3个异常安全等级之一实施。</p>
+<h3 id="r30-透彻了解inline的里里外外">R30 透彻了解inline的里里外外</h3>
+<p><code>inline</code>是C++的关键字，表示内联函数。<code>直接在对应位置展开代码</code>，免去函数调用的开销，难以避免 “<strong>代码膨胀</strong>”问题。</p>
+<p>使用inline时应该注意以下问题：</p>
+<ul>
+<li>
+<p><strong>inline只是对编译器的申请</strong>
+inline只是对编译器的申请/建议，不是强制命令，<strong>编译器有权利</strong> 对其认为不适合inline的函数<strong>拒绝</strong>inline。 （原书说：如果编译器拒绝，通常它会给出warning信息。实际本人实测VS2017没看到）
+inline有2种申请方式 ：</p>
+<ol>
+<li>在函数定义 时使用关键字inline<strong>显式强调</strong></li>
+<li>实现在Class内的成员函数或friend函数，属于<strong>隐式inline</strong></li>
+</ol>
+</li>
+<li>
+<p><strong>inline和Template没有任何必然联系</strong>
+虽然有不少简短的Template函数是带有inline（例如下方的std::max），但不是必然为之，<strong>两者没有因果关系</strong>。</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="kr">inline</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">b</span><span class="p">){</span> <span class="c1">//可以申请inline，但不是必须申请
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">return</span> <span class="n">a</span> <span class="o">&lt;</span> <span class="n">b</span> <span class="o">?</span> <span class="nl">b</span> <span class="p">:</span> <span class="n">a</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p><strong>编译器拒绝复杂函数进行inline</strong>
+复杂函数的inline会带来较严重的“代码膨胀”问题，并且可能会更慢，因为增加了运行时的“额外换页”行为，降低了指令cache命中率。</p>
+<ol>
+<li>inline函数内不要出现循环或递归</li>
+<li>虚函数也不适合做inline
+因为inline是编译期间决定的事，而虚函数是运行时决定的事，两者就不是同一个场景的。</li>
+<li>构造/析构函数也不适合做inline
+编译器可能会在构造/析构函数内部做精妙复杂的异常处理；以及在继承体系下，Base类函数体到处inline膨胀。</li>
+</ol>
+</li>
+<li>
+<p><strong>以函数指针形式的调用通常不能inline</strong>
+对绝大多数编译器而言，是否inline是compile阶段决定的事情，少数编译器放到了link阶段。</p>
+<p>讨论大多数情况：需要在编译时得知inline的本体，而函数指针办不到，示例代码如下：</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">f</span><span class="p">()</span> <span class="p">{...}</span> <span class="c1">//假设编译器有意愿inline “对f的调用”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span> <span class="n">pf</span><span class="p">)()</span> <span class="o">=</span> <span class="n">f</span><span class="p">;</span><span class="c1">//pf 执行f
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">f</span><span class="p">();</span>     <span class="c1">//这个调用将被inlined，因为是个正常调用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pf</span><span class="p">();</span>     <span class="c1">//这个很可能不被inlined
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p><strong>过度inline对调试和发布带来困难</strong>
+inline是代码嵌入与展开，而非函数调用，所以某些编译器不支持inline的单步Debug（就像宏展开一样不支持调试）；另外，inline只要已修改，涉及调用它的代码全都要编译，如果是non-inline则可能只需要重新link即可。</p>
+</li>
+</ul>
+<h3 id="r31-将文件间的编译依赖关系降至最低">R31 将文件间的编译依赖关系降至最低</h3>
+<p>C++的Class定义式包括了成员变量，假设某成员变量是类对象<code>ClassObjA a</code>，如果<code>ClassObjA</code>类的内部实现发生了改变（哪怕这个<code>ClassObjA.h</code>内只在某处加了一个空格 ），那么include了<code>ClassObjA.h</code>的所有<code>.h</code>文件<code>.cpp</code>文件都会<strong>重新编译</strong>。</p>
+<p>👆这就是由“<strong>编译依赖</strong>”关系带来的问题。</p>
+<p>使用 <code>PIMPL</code> 手法(pointer to implementation)可以很好地分离声明和定义：</p>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//Person.h文件  不需要include &#34;PersonImpl.h&#34;和&#34;BirthDay.h&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">PersonImpl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BirthDay</span><span class="p">;</span><span class="c1">// 前置声明代替include
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Person</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span><span class="c1">// 构造函数这里放实现无所谓，因为是函数指针，不需知道PersonImpl本体实现
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Person</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">PersonImpl</span><span class="o">&gt;&amp;</span> <span class="n">pImpl</span><span class="p">);</span><span class="c1">//构造函数的实现也放到cpp里去
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">const</span> <span class="n">BirthDay</span><span class="o">&amp;</span> <span class="n">GetBirthDay</span><span class="p">();</span><span class="c1">// 注意：这里只声明，把实现部分放到cpp里
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">GetName</span><span class="p">();</span><span class="c1">//实现细节由pImpl_转发实现
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">PersonImpl</span><span class="o">&gt;</span> <span class="n">pImpl_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//Person.cpp文件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#include</span> <span class="cpf">&#34;PersonImpl.h&#34; //在&#34;PersonImpl.h&#34;文件内include那个&#34;BirthDay.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;Person.h&#34;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意：Impl用法，相关的头文件里不要放置任何函数实现代码 。
+上述做法可以让使用Person类的客户不需要再关心PersonImpl以及BirthDay的实现细节了，做到了“接口与实现分离”，关键点在于把“定义的依赖性” 换成 $\Rightarrow$ “<strong>声明的依赖性</strong>”。
+这里突出了如何<strong>最小化编译依赖性</strong>的本质：<code>让头文件尽可能自我满足</code>，如果不行，也要依赖于其他文件的声明式而非定义式。</p>
+<p>具体到设计策略上，有以下几种做法：</p>
+<ul>
+<li>
+<p>如果能用object references 或 object pointers完成任务，就别用objects
+如果要定义某类型的objects，就要使用定义式，指针和应用则可以只用声明式。</p>
+</li>
+<li>
+<p>尽量以class声明式替换class定义式
+函数声明种的Class类型可以只用声明式，即使以by-object-value形式传值也是如此。</p>
+</li>
+<li>
+<p>为声明式和定义式提供不同的文件
+比如Date类，分为只包含声明式的&quot;Datefwd.h&quot;和包含定义式的&quot;Date.h&quot;，那么使用时用声明式头文件代替前置声明，在需要应用代码client.cpp里include定义式头文件。这种方式在标准库里采用较多，参考<iosfwd>和<sstream>,<fstream>,<streambuf>等。</p>
+</li>
+</ul>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><ul>
+<li>C/C++可以使用编译器预处理指令<font color=red><code>#pragma message</code></font>，打印出该文件是否参与此次编译，以及参与编译时被哪个文件所依赖。
+<div class="highlight" id="id-22"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//比如可以在 testEffective.h 文件内加上这句，就能在编译输出信息里看到打印信息，观察到依赖关系
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#pragma message(&#34;testEffective.h 参与重新编译&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="c1">//还可以用于测试某些宏是否真的生效，有时IDE的高亮显示不准确而令人生疑。
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>关于头文件include的其他编写规范，可以参考：<a href="https://zh-google-styleguide.readthedocs.io/en/latest/google-cpp-styleguide/headers/#"target="_blank" rel="external nofollow noopener noreferrer">Google-C++风格指南：1.头文件<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+</ul>
+</div>
+    </div>
+  </div>
+<p>使用 <font color><strong><code>Interface Class</code></strong></font> 也能做到接口和实现的真正分离：</p>
+<p>这种方式常见于输出动态库给到客户使用，客户能见到接口定义和使用，但无法看到内部实现。</p>
+<p>用法较为常见，不赘述，直接<strong>show-code</strong>：</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//VirtualPerson.h   //和 lib文件一起提供给到客户
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">VirtualPerson</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span> <span class="c1">//create的返回值还可以根据需求，换成RAII的智能指针
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">static</span> <span class="n">VirtualPerson</span> <span class="o">*</span> <span class="n">create</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="kt">int</span> <span class="n">salary</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="kt">int</span> <span class="nf">Level</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="kt">int</span> <span class="nf">Salary</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="o">~</span><span class="n">VirtualPerson</span><span class="p">();</span><span class="c1">// avoid memory leak
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//VirtualPerson.cpp  //源码不提供给客户，而是编译好的二进制 lib文件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">VirtualPerson</span><span class="o">*</span> <span class="n">VirtualPerson</span><span class="o">::</span><span class="n">create</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="kt">int</span> <span class="n">salary</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">level</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span> <span class="c1">//工厂方法，还可以生成其他子类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span> <span class="k">new</span> <span class="nf">Engineer</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">salary</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="k">nullptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">VirtualPerson</span><span class="o">::~</span><span class="n">VirtualPerson</span><span class="p">()</span> <span class="p">{</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// Engineer.h  //Engineer也是参与编译到 lib文件中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Engineer</span><span class="o">:</span> <span class="k">public</span> <span class="n">VirtualPerson</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Engineer</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">,</span><span class="kt">int</span> <span class="n">salary</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="kt">int</span> <span class="nf">Level</span><span class="p">()</span> <span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="kt">int</span> <span class="nf">Salary</span><span class="p">()</span> <span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">level_</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">salary_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="ch6-继承与面向对象设计">CH6. 继承与面向对象设计</h2>
+<h3 id="r32-确定你的public继承塑造出is-a关系">R32 确定你的public继承塑造出is-a关系</h3>
+<p>ref:</br>
+[1]. <a href="https://blog.csdn.net/cltcj/category_12098441.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/cltcj/category_12098441.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://kissingfire123.github.io/2022/02/14_effective-c-%E4%B9%8B%E9%98%85%E8%AF%BB%E6%80%BB%E7%BB%93%E4%B8%89/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2022/02/14_effective-c-%E4%B9%8B%E9%98%85%E8%AF%BB%E6%80%BB%E7%BB%93%E4%B8%89/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [2]</title><link>https://jianye0428.github.io/posts/parttwo/</link><pubDate>Sun, 30 Jul 2023 17:08:51 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/parttwo/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
+    </div>
+  </div> -->
+<h1 id="前言">前言</h1>
+<blockquote>
+<p>Effective-C++总结系列分为四部分，本文为第二部分，涉及原书第3~4章，内容范围Rule13~25。为方便书写，Rule13简写为R13。</p>
+</blockquote>
+<div class="details admonition Note">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Effective-C++系列List<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">本博客站点系列内容如下：</br>
+💡 <a href="https://jianye0428.github.io/posts/partone/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(一)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/parttwo/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(二)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 Effective C++(第3版)精读总结(三)</br>
+💡 Effective C++(第3版)精读总结(四)</br></div>
+    </div>
+  </div>
+<p>由于原书在C++11之前写成，有些现代C++特性不会提及，所以会根据本人<code>开发经验</code>新增一些个人感悟👉<code>By the way</code>环节。</p>
+<h2 id="ch3资源管理">CH3.资源管理</h2>
+<h3 id="r13-以对象管理资源">R13 以对象管理资源</h3>
+<ul>
+<li>
+<p>为防止资源泄露，尽量使用<code>RAII</code>对象(资源获取即初始化，Resource Acquisition Is Initialization)
+如果用老式的new-delete组合手动管理资源，可能会遇到这样的场景，处理代码中有多处return/break之类的分支语句，每处都手动添加delete回收资源难免会有遗漏风险。</p>
+<ol>
+<li>
+<p>auto_ptr
+本书提及的智能指针对象<code>std::auto_ptr</code>可以在资源A初始化化时接管对象A，对象脱离作用域，析构时释放接管的A。
+为避免重复删除资源，<code>std::auto_ptr特性:</code> 通过copy构造函数或copy-assignment操作符，操作它们，它们自身会失去资源所有权，变成NULL ！</p>
+</li>
+<li>
+<p>shared_ptr
+为解决上述问题，后来推出了引用计数管理资源，即<code>RCSP(Reference-counting smart poiner)</code>，std::shared_ptr 。(书中当时还是tr1::shared_ptr)特点是shared_ptr在使用copy构造函数或copy-assignment操作符时，不会失去资源所有权，而是自身引用计数加1。
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><ul>
+<li>
+<p>auto_ptr目前已经被弃用，转而使用 std::unique_ptr来指涉独占资源的智能指针，不可被复制和赋值。</p>
+</li>
+<li>
+<p>shared_ptr存在的问题是环形循环应用，互相持有对方，则无法释放，针对这一问题，需要引入std::weak_ptr来破局。</p>
+</li>
+<li>
+<p>这些智能指针的头文件支持：#include <memory></p>
+</li>
+</ul>
+</div>
+    </div>
+  </div></p>
+</li>
+</ol>
+</li>
+<li>
+<p>常用的RAII方式存在的问题
+上述的shared_ptr是<strong>不支持数组资源的释放</strong>的，在析构时默认调用delete，而不是delete[] 。如果要能释放，需要手动传入析构函数。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Investment</span><span class="o">&gt;</span> <span class="n">instSpMan</span><span class="p">(</span><span class="k">new</span> <span class="n">Investment</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="p">[](</span><span class="n">Investment</span><span class="o">*</span> <span class="n">p</span><span class="p">)</span> <span class="p">{</span><span class="k">delete</span><span class="p">[]</span> <span class="n">p</span><span class="p">;</span> <span class="p">});</span> <span class="c1">// 使用lamda函数，还可以传入普通函数指针
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Investment</span><span class="p">[]</span><span class="o">&gt;</span> <span class="n">instSp</span><span class="p">(</span><span class="k">new</span> <span class="n">Investment</span><span class="p">[</span><span class="mi">5</span><span class="p">]);</span><span class="c1">// shared_ptr重载了[]
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">[]</span><span class="o">&gt;</span> <span class="n">intUp</span><span class="p">(</span><span class="k">new</span> <span class="kt">int</span><span class="p">[</span><span class="mi">5</span><span class="p">]);</span> <span class="c1">// unique_ptr重载了[]
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>PS: 通常情况下，如果能用vector代替的场景，就不需要这样使用对象数组。</p>
+</li>
+</ul>
+<h3 id="r14-在资源管理类中小心coping行为">R14 在资源管理类中小心coping行为</h3>
+<p>并非所有资源都是堆上管理(heap-based)，所以也有智能指针不适合的场景，这时需要自己实现一个资源管理类。</p>
+<p>比如有个类CMutex ，只有2个函数lock和unlock，可以新建一个管理类CLock，来管理Mutex类，代码如下：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">CMutex</span> <span class="p">{</span><span class="cm">/*省略类实现*/</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">lock</span><span class="p">(</span><span class="n">CMutex</span> <span class="o">*</span><span class="n">mtx</span><span class="p">)</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;has lock...</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">;</span><span class="cm">/*other operation...*/</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">unlock</span><span class="p">(</span><span class="n">CMutex</span> <span class="o">*</span><span class="n">mtx</span><span class="p">)</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;release lock...</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">;</span><span class="cm">/*other operation...*/</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">CLock</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">explicit</span> <span class="n">CLock</span><span class="p">(</span><span class="n">CMutex</span> <span class="o">*</span><span class="n">mtx</span><span class="p">)</span> <span class="o">:</span><span class="n">mtx_</span><span class="p">(</span><span class="n">mtx</span><span class="p">)</span> <span class="p">{</span> <span class="n">lock</span><span class="p">(</span><span class="n">mtx_</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">~</span><span class="n">CLock</span><span class="p">()</span> <span class="p">{</span> <span class="n">unlock</span><span class="p">(</span><span class="n">mtx_</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span> <span class="n">CMutex</span> <span class="o">*</span><span class="n">mtx_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果涉及CLock的coping相关函数，那么有以下几种选择：</p>
+<ul>
+<li>禁止复制
+参考本书Part1-Rule06，禁止coping函数的生成。</li>
+<li>对底层资源使用“引用计数法”
+以shared_ptr<CMutex>代替裸指针，并且传入unlock函数作为该指针的“删除器”。</li>
+<li>复制底部资源
+即“深度拷贝”，复制资源管理对象时，同时复制其包裹的资源。</li>
+<li>转移底部资源所有权
+即浅复制，不拷贝包裹的资源，而是转移所有权，和前文提到的auto_ptr非常契合。</li>
+</ul>
+<h3 id="r15-在资源管理类中提供对原始资源的访问">R15 在资源管理类中提供对原始资源的访问</h3>
+<p>智能指针<code>auto_ptr</code>, <code>unique_ptr</code>, <code>shared_ptr</code>都提供了接口访问原始资源，方法名称为<code>get()</code>，对类A资源得到裸指针<code>A*</code>。</p>
+<p>智能指针也重载了操作符<code>operator -&gt;</code> 和 <code>operator *</code> ，访问类成员函数都可以像普通指针那样使用。</p>
+<p>如果自行设计资源管理类，也要像上述的智能指针那样，做到能够轻松访问原始资源。</p>
+<p>某些情况，也可以不使用get成员函数<strong>显式转换</strong>，转而使用<strong>隐式类型转换</strong>，方便客户调用:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Font</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">     <span class="c1">// 隐式转换
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">operator</span> <span class="n">FontHandle</span><span class="p">()</span> <span class="k">const</span><span class="p">{</span> <span class="k">return</span> <span class="n">f</span><span class="p">;}</span>
+</span></span><span class="line"><span class="cl">     <span class="c1">// 显式转换
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">FontHandle</span> <span class="nf">get</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">f</span><span class="p">;}</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">FontHandle</span> <span class="n">f</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="r16-成对使用new和delete时要采取相同形式">R16 成对使用new和delete时要采取相同形式</h3>
+<p>先看一段错误代码：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">*</span><span class="n">stringArray</span> <span class="o">=</span> <span class="k">new</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="k">delete</span> <span class="n">stringArray</span><span class="p">;</span><span class="c1">// undefined behavior,未定义行为；有可能只删除了第一个元素
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>注意<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><ul>
+<li>new 和 delete对应</li>
+<li>new[] 和 delete[]对应
+不可遗漏或者交叉错配！</li>
+</ul>
+</div>
+    </div>
+  </div>
+<p>简单探究 <code>delete[]</code>的原理：实际上，在编译器的实现中，对象数组的起始内存会存放“数组长度”这一变量，以便告知<code>delete[]</code>应该调用多少次析构，删除多少资源。</p>
+<p>👉 谨慎对数组使用typedef，容易产生new-delete的匹配误解，示例如下：</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">AddressLines</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">*</span><span class="n">pal</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AddressLines</span><span class="p">;</span><span class="c1">//注意：这里其实就是 new string[4]
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">delete</span> <span class="n">pal</span><span class="p">;</span>     <span class="c1">// 行为未定义！！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">delete</span> <span class="p">[]</span> <span class="n">pal</span><span class="p">;</span>  <span class="c1">// 正解！
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 这里建议的替代方法：vector&lt;string&gt;
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="r17-以独立语句将newed对象置入智能指针">R17 以独立语句将newed对象置入智能指针</h3>
+<p><strong>不要将申请资源的new语句直接当作函数入参</strong>，而是应该先以单独语句申请后传入。</p>
+<p>考虑下述问题代码：</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">priority</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">processWidget</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw</span><span class="p">,</span><span class="kt">int</span> <span class="n">pri</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//函数调用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">processWidget</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">),</span><span class="n">priority</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>上述代码第4行，在processWidget函数体执行之前，至少有3个步骤(并非严格次序)：</p>
+<ol>
+<li>执行&quot;new Widget&quot;</li>
+<li>调用std::shared_ptr的构造函数</li>
+<li>调用priority函数</li>
+</ol>
+<p>C++编译器能保证1-&gt;2的次序(2需要1做入参)，但是无法保证3的次序不在1，2之间，如果步骤3抛出异常，将会直接导致内存泄漏。正确示例如下：</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span>  <span class="n">pw</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">processWidget</span><span class="p">(</span><span class="n">pw</span><span class="p">,</span><span class="n">priority</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="ch4设计与声明">CH4.设计与声明</h2>
+<h3 id="r18-让接口容易被正确使用不易被误用">R18 让接口容易被正确使用，不易被误用</h3>
+<p>要想设计一个不容易误用的接口，<strong>就要先考虑使用者可能犯什么错误</strong>。</p>
+<ul>
+<li><code>避免“接口误用”，可以导入新类型进行限制</code>
+比如设计一个Date类，参数传递就可能出错，如下所示：
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Date</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Date</span><span class="p">(</span><span class="kt">int</span> <span class="n">month</span><span class="p">,</span><span class="kt">int</span> <span class="n">day</span><span class="p">,</span><span class="kt">int</span> <span class="n">year</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div>实际使用时，使用者可能写出<code>Date date(30,4,2021)</code>;这样的错误代码，如何防范呢？
+方法之一：封装出Month,Day,Year这3个Struct/Class，作为参数入参，并<strong>添加月份限制</strong>，代码：
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Month</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">static</span> <span class="n">Month</span> <span class="n">Jan</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="nf">Month</span><span class="p">(</span><span class="mi">1</span><span class="p">);}</span> <span class="c1">// ...省略其他11个月份
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">val</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">explicit</span> <span class="nf">Month</span><span class="p">(</span><span class="kt">int</span> <span class="n">m</span><span class="p">)</span><span class="o">:</span><span class="n">val</span><span class="p">(</span><span class="n">m</span><span class="p">){}</span> <span class="c1">//可被class-static调用，不能被外部调用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">Day</span> <span class="p">{</span><span class="k">explicit</span> <span class="nf">Day</span><span class="p">(</span><span class="kt">int</span> <span class="n">d</span><span class="p">)</span> <span class="o">:</span><span class="n">day</span><span class="p">(</span><span class="n">d</span><span class="p">){}</span>    <span class="kt">int</span> <span class="n">day</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>  <span class="c1">//省略 struct Year定义，和Day类似
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Date</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Date</span><span class="p">(</span><span class="k">const</span> <span class="n">Month</span><span class="o">&amp;</span> <span class="n">month</span><span class="p">,</span><span class="k">const</span> <span class="n">Day</span><span class="o">&amp;</span> <span class="n">day</span><span class="p">,</span><span class="k">const</span> <span class="n">Year</span><span class="o">&amp;</span> <span class="n">year</span><span class="p">){}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div>最终客户代码使用的情况如下：
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Date</span> <span class="nf">date</span><span class="p">(</span><span class="n">Month</span><span class="o">::</span><span class="n">Jan</span><span class="p">(),</span><span class="n">Day</span><span class="p">(</span><span class="mi">13</span><span class="p">),</span><span class="n">Year</span><span class="p">(</span><span class="mi">2022</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><pre><code>  C++11 支持对枚举的强化，即类型安全的`enum class`，它不能隐式地转换为整数；也无法与整数数值做比较。此处可以考虑定义一个MonthEm来代替Month：
+  ```c++
+  enum  class MonthEm {
+  Jan = 1,
+  Feb = 2, //... 省略其它的月份定义
+  };
+  // 修改Date的构造函数，MonthEm来代替Month
+  Date(const MonthEm&amp; monthEm, const Day&amp; day, const Year&amp; year) {}
+  // 构造对象
+  Date date2(MonthEm::Feb, Day(23), Year(2021));
+  ```
+</code></pre>
+</div>
+    </div>
+  </div></li>
+<li><code>限制类型内什么事是可不可做的</code>
+常见操作是加上const限制，比如“以const 修饰operator * 的返回类型”可以阻止这个错误：
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//本意是想做比较，写成了赋值，但是赋给const，报错！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="o">=</span> <span class="n">c</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li><code>智能指针传入删除器可避免&quot;Cross-dll-problem&quot;</code>
+std::shared_ptr管理资源时，传入删除器，可避免在A-Dll中new，结果在另一个B-Dll中delete的情况，这会导致Runtime-Error。</li>
+</ul>
+<h3 id="r19-设计class犹如设计type">R19 设计Class犹如设计Type</h3>
+<p>设计一个优秀的Class并不容易，很多C++书籍都像本书一样提到“Check-Table”，设计Class/Type前，问自己一些重要问题：</p>
+<ul>
+<li>新type的对象应该如何被创建和销毁？</li>
+<li>对象的初始化和赋值该有什么差别？</li>
+<li>新type的对象如果值传递(pass-by-value)，意味着什么？
+copy构造函数用来定义一个type的值传递具体实现。</li>
+<li>什么是新type的“合法值”？
+想清楚约束条件，特别是构造函数、赋值操作符以及<strong>setter</strong>函数，涉及的错误检查与非法值拦截。</li>
+<li>新type需要配合某个继承图谱吗？
+如果继承自某Base类，那么就会收到virtual,non-virtual函数的约束；如果要做后续类的基类，则该type就要注意<strong>虚析构</strong>的设计。</li>
+<li>新type涉及什么样的转换？
+与其他type之间如有转换需求，则需要自行实现相关函数，可参考<code>Rule15</code>。</li>
+<li>新type需要怎样的操作符和函数？
+确定哪些是member函数，哪些不是。参考<code>Rule23</code>，<code>Rule24</code>，<code>Rule26</code>。</li>
+<li>是否有需要立即驳回的标准函数？
+比如<strong>是否禁止</strong>copy构造，copy-assignment操作符等函数，可以声明为private；或者使用C++新特性&quot;=delete&quot;。参考<code>Rule6</code>。</li>
+<li>新type成员的访问属性控制？
+成员变量都应为private，考虑其他member函数该为private/public/protected。以及启用友元friend的考虑。</li>
+<li>什么是新type的“未声明接口”?
+参考<code>Rule29</code>。</li>
+<li>新type有多么一般化？
+如果是一般化的问题处理，该考虑是否该定义Class-Template。</li>
+<li>真的需要一个新type吗？</li>
+</ul>
+<h3 id="r20-以pass-by-reference-to-const代替pass-by-value">R20 以pass-by-reference-to-const代替pass-by-value</h3>
+<ul>
+<li>尽量以pass-by-reference-to-const代替pass-by-value
+前者通常更<strong>高效</strong>，并可<strong>避免“对象切割”问题</strong>。
+如果对象入参以值传递，就会在入参时创建临时对象，函数完成后临时对象析构，涉及构造函数和析构函数的调用，这些都可能是不小的开销！
+<code>如果是以const reference形式，则不会有任何构造/析构的开销</code>。const的作用是让使用者放心，不会改变入参的值。
+“对象切割&quot;问题：
+如果是值传递，Derived-Obj传递给Base-Param，会丢失Derived独有的特性，只保留Base的那部分。</li>
+<li>对于C++内置类型，值传递往往更高效
+从C++编译器的底层实现角度来看，references引用往往是以指针的形式实现。所以如果是内置数据类型，比如int类型 ，直接值传递反而效率更高。
+<blockquote>
+<p>此规则还适用于STL迭代器和函数对象。</p>
+</blockquote>
+</li>
+</ul>
+<h3 id="r21-必须返回对象时不要随意返回reference">R21 必须返回对象时，不要随意返回reference</h3>
+<p><strong>不要返回指针或引用指向以下对象</strong>:</p>
+<ul>
+<li>局部栈对象(local stack)
+函数内部新建的栈变量对象，出了函数就面临消亡，仍持有它的引用/指针，是典型的未定义行为。</li>
+<li>堆分配对象(heap allocated)
+内部new，然后return出去使用，一来会增加外部delete的负担，二来可能delete的机会都没有。代码如下：
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Rational</span> <span class="o">*</span><span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Rational</span><span class="p">(</span><span class="n">lhs</span><span class="p">.</span><span class="n">n</span> <span class="o">*</span> <span class="n">rhs</span><span class="p">.</span><span class="n">n</span><span class="p">,</span><span class="n">lhs</span><span class="p">.</span><span class="n">d</span> <span class="o">*</span> <span class="n">rhs</span><span class="p">.</span><span class="n">d</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="o">*</span><span class="n">result</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 如下使用连乘，则没有delete的机会
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Rational</span> <span class="n">w</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">w</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">y</span> <span class="o">*</span> <span class="n">z</span><span class="p">;</span> <span class="c1">// 内存泄漏！！！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div>上述代码返回的是引用，返回指针也是一样的负作用。</li>
+<li>局部static对象(local static)
+函数内部的static对象，只初始化一次，且只有一份，有记忆功能，可以被更新。那么下述代码就会出现问题：
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">  <span class="k">static</span> <span class="n">Rational</span> <span class="n">result</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="n">result</span> <span class="o">=</span> <span class="n">Rational</span><span class="p">(</span><span class="n">lhs</span><span class="p">.</span><span class="n">n</span> <span class="o">*</span> <span class="n">rhs</span><span class="p">.</span><span class="n">n</span><span class="p">,</span><span class="n">lhs</span><span class="p">.</span><span class="n">d</span> <span class="o">*</span> <span class="n">rhs</span><span class="p">.</span><span class="n">d</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">result</span><span class="p">;</span> <span class="c1">//在调用者看来，因为是引用，永远只看到独一份的result的“最新值 ”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 下方的比较永远都是true，永远走if分支  ！！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Rational</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">,</span><span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">((</span><span class="n">a</span><span class="o">*</span><span class="n">b</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">c</span><span class="o">*</span><span class="n">d</span><span class="p">)){</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">//乘积相等，走if分支
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span><span class="k">else</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">//乘积不相等，走else分支
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><blockquote>
+<p>那是不是永远不能以reference作为返回值呢 ？
+当然不是，*this可以返回其引用，参考Rule10；或者类成员作为返回值时，可以返回其引用，但最好是const。</p>
+</blockquote>
+</div>
+    </div>
+  </div>
+<h3 id="r22-将成员变量声明为private">R22 将成员变量声明为private</h3>
+<ul>
+<li>
+<p>成员变量为private获得的好处</p>
+<ol>
+<li>客户访问数据的一致性。都是用getter函数（需要加括号），而不是混用函数获取和直接访问；</li>
+<li>细化成员变量的访问权限。根据是否有getter、setter函数可以精准控制read/write/none这样的细化。</li>
+<li>保持实现弹性。比如获取某系统指标，可以在getter函数中修改各种灵活的策略和算法，而调用者感知不到。</li>
+<li>封装性。封装性是指☞ <code>越多函数可以访问该数据，封装性越低</code>。
+客户调用端感知不到class内部的实现，这些确实也是不必暴露的。并且，如果是要修改某个变量，使用setter函数也更方便调试，不至于被随意修改。</li>
+</ol>
+</li>
+<li>
+<p>protected和public差不多，都不具备封装性
+如果某个public/protected变量权限被取消（比如改为private），将会导致大面积的编译错误，能访问的变成unaccessible，需要对应修改许多代码。</p>
+</li>
+</ul>
+<h3 id="r23-宁可用non-membernon-friend代替member函数">R23 宁可用non-member,non-friend代替member函数</h3>
+<ul>
+<li>实际上，non-member/non-friend函数具有更大的封装性
+考虑下述一个类WebBrowser，member函数和non-member函数，实际上，<strong>member函数</strong>WebBrowser::clearEverything具有其他private数据的访问权限，<strong>封装性是更差的</strong>！
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">WebBrowser</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="n">clearCache</span><span class="p">()</span> <span class="p">{</span><span class="cm">/*to clear cache*/</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">clearHistory</span><span class="p">()</span> <span class="p">{</span><span class="cm">/*to clear history*/</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">removeCookies</span><span class="p">()</span> <span class="p">{</span><span class="cm">/*to clear cookies*/</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">clearEverything</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">clearCache</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="n">clearHistory</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="n">removeCookies</span><span class="p">();}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">clearBrowser</span><span class="p">(</span><span class="n">WebBrowser</span> <span class="o">&amp;</span><span class="n">wb</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">wb</span><span class="p">.</span><span class="n">clearCache</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">wb</span><span class="p">.</span><span class="n">clearHistory</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">wb</span><span class="p">.</span><span class="n">removeCookies</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>工程结构安排
+对于上述WebBrowser的例子，non-member函数放哪里呢，除了可以是其他class的member函数，更适用自然的答案是用<code>namespace包裹起来</code>。代码如下：
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">namespace</span> <span class="n">WebBrowserStuff</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">class</span> <span class="nc">WebBrowser</span> <span class="p">{};</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">clearBrowser</span><span class="p">(</span><span class="n">WebBrowser</span> <span class="o">&amp;</span><span class="n">wb</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div>注意：<code>namespace可以跨越多个源码文件，而class不能</code>。
+<strong>通常的组织方式</strong>：多个.h头文件都使用同一个namespace，管理不同的功能模块。除了让模块更清晰，还能降低不必要的编译依赖关系。</li>
+<li>对于private数据，member和friend函数具有相同的访问权限
+基于此，这里讨论的封装性不在于member与否，而是member和non-member ，non-friend函数之间。</li>
+</ul>
+<h3 id="r24-若所有参数皆需类型转换请采用non-member">R24 若所有参数皆需类型转换，请采用non-member</h3>
+<p>标题需明晰：所有参数，是指<strong>包含了被this指针所指向的那个隐含参数</strong>（non-explicit构造函数调用隐式类型转换时）。</p>
+<p><strong>应对具体场景</strong>：构造函数允许隐式类型转换，且需要这个构造好的对象立即调用某member函数foo(比如operator函数)，此时这个foo函数应该改为non-member的foo函数。</p>
+<p>考虑一个有理数类Rational，允许隐式类型转换构造（即non-explicit），如果<code>operator*</code>是member函数则会出现问题。Rational类实现代码示例如下：</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Rational</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Rational</span><span class="p">(</span><span class="kt">int</span> <span class="n">numerator</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">denominator</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="o">:</span><span class="n">numerator_</span><span class="p">(</span><span class="n">numerator</span><span class="p">),</span> <span class="n">denominator_</span><span class="p">(</span><span class="n">denominator</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="n">Rational</span> <span class="k">operator</span><span class="o">*</span> <span class="p">(</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span><span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nf">Rational</span><span class="p">(</span><span class="n">numerator_</span><span class="o">*</span><span class="n">rhs</span><span class="p">.</span><span class="n">numerator_</span><span class="p">,</span> <span class="n">denominator_</span><span class="o">*</span><span class="n">rhs</span><span class="p">.</span><span class="n">denominator_</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="nf">numerator</span><span class="p">()</span><span class="k">const</span>  <span class="p">{</span> <span class="k">return</span> <span class="n">numerator_</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="nf">denominator</span><span class="p">()</span><span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">denominator_</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">numerator_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">denominator_</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>上述代码存在一个问题，就是不能混合运算，举例如下：</p>
+<div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Rational</span> <span class="nf">rat</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">Rational</span> <span class="n">rat3Tm</span> <span class="o">=</span> <span class="n">rat</span> <span class="o">*</span> <span class="mi">3</span><span class="p">;</span>   <span class="c1">//能成功调用member-operator*
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Rational</span> <span class="n">rat3Tm2</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">rat</span><span class="p">;</span>  <span class="c1">//编译报错！！！ 本节的场景就在于此.
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果要让这种混合运算无障碍，把<code>operator*</code>函数改成non-member即可，注意要<strong>删掉原来member内的<code>operator*</code></strong>，不能同时存在这2个operator*。</p>
+<div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Rational</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">//... 注意，要删除类内的member函数operator*
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="n">Rational</span> <span class="k">operator</span><span class="o">*</span> <span class="p">(</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nf">Rational</span><span class="p">(</span><span class="n">lhs</span><span class="p">.</span><span class="n">numerator</span><span class="p">()</span> <span class="o">*</span> <span class="n">rhs</span><span class="p">.</span><span class="n">numerator</span><span class="p">(),</span> <span class="n">lhs</span><span class="p">.</span><span class="n">denominator</span><span class="p">()</span> <span class="o">*</span> <span class="n">rhs</span><span class="p">.</span><span class="n">denominator</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="r25-考虑写一个不抛异常的swap函数">R25 考虑写一个不抛异常的swap函数</h3>
+<ul>
+<li>当 std::swap对某个类型效率不高时，提供一个swap成员函数，且该swap不抛异常
+先看一下效率不高的std::swap实现：
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">namespace</span> <span class="n">std</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>  <span class="c1">//std::swap的典型实现
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="n">swap</span><span class="p">(</span><span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span><span class="n">T</span><span class="o">&amp;</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span> <span class="c1">//置换 a 和 b 的值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">T</span> <span class="nf">temp</span><span class="p">(</span><span class="n">a</span><span class="p">);</span>   <span class="c1">//若T是class，此处调用copy构造函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">a</span> <span class="o">=</span> <span class="n">b</span><span class="p">;</span>       <span class="c1">//若T是class，此处调用copy assignment操作符
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">b</span> <span class="o">=</span> <span class="n">temp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div>考虑这样的使用场景：需要swap一个&quot;pimpl手法”(pointer to implementation)实现的类，这种传统的std::swap必然是效率不高(深复制impl类的数据耗时较长)。
+<div class="highlight" id="id-20"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">WidgetSwImpl</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span> <span class="c1">//很大的vector,意味着复制时间很长
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">WidgetSw</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">WidgetSw</span><span class="p">(</span><span class="n">WidgetSwImpl</span><span class="o">*</span> <span class="n">pImpl</span><span class="p">)</span> <span class="o">:</span><span class="n">pImpl_</span><span class="p">(</span><span class="n">pImpl</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">WidgetSw</span><span class="p">(</span><span class="k">const</span> <span class="n">WidgetSw</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span><span class="cm">/*其他copy&amp;initial操作*/</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">WidgetSw</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">WidgetSw</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="o">*</span><span class="n">pImpl_</span> <span class="o">=</span> <span class="o">*</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">pImpl_</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">swap</span><span class="p">(</span><span class="n">WidgetSw</span><span class="o">&amp;</span> <span class="n">other</span><span class="p">)</span> <span class="p">{</span> <span class="c1">//public-member函数swap
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">swap</span><span class="p">;</span>   <span class="c1">//令std::swap在此函数可用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">swap</span><span class="p">(</span><span class="n">pImpl_</span><span class="p">,</span><span class="n">other</span><span class="p">.</span><span class="n">pImpl_</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">WidgetSwImpl</span><span class="o">*</span> <span class="n">pImpl_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div>调用时代码如下：
+<div class="highlight" id="id-21"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">WidgetSw</span> <span class="nf">wSw1</span><span class="p">(</span><span class="k">new</span> <span class="n">WidgetSwImpl</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">WidgetSw</span> <span class="nf">wSw2</span><span class="p">(</span><span class="k">new</span> <span class="n">WidgetSwImpl</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">wSw1</span><span class="p">.</span><span class="n">swap</span><span class="p">(</span><span class="n">wSw2</span><span class="p">);</span> <span class="c1">//成功运行
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>如果提供了member swap，需提供一个non-member的swap调用前者
+注意，其实上述swap成员函数使用起来不算直观和统一，可以全特化std::swap让使用更直观方便，代码如下：
+<div class="highlight" id="id-22"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">namespace</span> <span class="n">std</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">template</span><span class="o">&lt;&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">swap</span><span class="o">&lt;</span><span class="n">WidgetSw</span><span class="o">&gt;</span><span class="p">(</span><span class="n">WidgetSw</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="n">WidgetSw</span><span class="o">&amp;</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">a</span><span class="p">.</span><span class="n">swap</span><span class="p">(</span><span class="n">b</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 客户端应用代码可以如下调用
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 注意，不应该，也没必要加 std::，会限制编译器只使用std命名空间的swap
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">swap</span><span class="p">(</span><span class="n">wSw1</span><span class="p">,</span><span class="n">wSw2</span><span class="p">);</span><span class="c1">//编译器会优先挑中全特化版本的std::swap
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>如果是Class-Template，则不要特化std命名空间的swap，而是移到其它命名空间
+<div class="highlight" id="id-23"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">namespace</span> <span class="n">WidgetStuff</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">class</span> <span class="nc">WidgetSw</span><span class="p">{</span> <span class="cm">/*省略类定义*/</span><span class="p">}</span> <span class="c1">// 类内含有swap成员函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">swap</span><span class="p">(</span><span class="n">WidgetSw</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="n">WidgetSw</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">a</span><span class="p">.</span><span class="n">swap</span><span class="p">(</span><span class="n">b</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Notice<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><ul>
+<li>std命名空间的函数不要尝试重载，也不要增加任何新东西</li>
+<li>C++只允许对<code>Class-Template</code>直接偏特化，不能对<code>Function-Template</code>偏特化(函数模板可以通过重载间接实现“偏特化”的作用)</li>
+<li><strong>成员版swap绝对不要抛出异常</strong>，非成员swap可以(因为成员swap的一个最好应用就是提供异常安全性)</li>
+</ul>
+</div>
+    </div>
+  </div></li>
+</ul>
+<p>ref:</br>
+[1]. <a href="https://blog.csdn.net/cltcj/category_12098441.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/cltcj/category_12098441.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective STL [11] | 理解自定义分配器的正确用法</title><link>https://jianye0428.github.io/posts/clause_11/</link><pubDate>Sun, 30 Jul 2023 09:21:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_11/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
@@ -1111,7 +2604,7 @@ const成员函数有2个好处：(1). 明确理解函数是否修改对象内容
 <ul>
 <li>V：变分推断，它的意思来自于概率图模型，本文会给出变分下界的详细推导；</li>
 <li>AE：Auto-Encoder，自编码器；</li>
-<li>VAE：Variational Auto-Encoder，变分自编码器，将概率图模型和神经网络相结合的模型；</li>
+<li>VAE：Variational Auto-Encoder，<strong>变分自编码器</strong>，将概率图模型和神经网络相结合的模型；</li>
 </ul>
 <h2 id="一ae">一、AE</h2>
 <p></p>
@@ -1120,7 +2613,7 @@ const成员函数有2个好处：(1). 明确理解函数是否修改对象内容
 <li>将高维原始数据（如图片）送入 Encoder，利用 Encoder 将高维数据映射到一个低维空间，将n维压缩到m维($m&laquo;n$)，我们用隐变量来表示；</li>
 <li>然后将低维空间的特征送入 Decoder 进行解码，以此来重建原始输入数据。</li>
 </ul>
-<div class="details admonition Note">
+<div class="details admonition Note open">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
@@ -1128,10 +2621,10 @@ const成员函数有2个好处：(1). 明确理解函数是否修改对象内容
       <div class="admonition-content">Encoder、Decoder网络可以为普通的全连接、也可以为CNN、或者类似于Unet都可以，没有固定的要求。</div>
     </div>
   </div>
-<p>这里为和后文的推导联系起来，我们将 Encoder 网络的映射函数定义为 $q_{\phi}$ 、Decoder 网络定义为 $p_{\theta}$，$\phi$、$\theta$ 皆为网络参数。</br>
-那么对于输入 $x$，我们可以通过Encoder得到 Latent Variable：$z = q_{\phi}(x)$，然后Decoder可以从隐变量z中对原始数据进行重建：$x&rsquo; = p_{\theta}(z) = p_{\theta}(q_{\phi}(x))$。</p>
+<p>这里为和后文的推导联系起来，我们将 Encoder 网络的映射函数定义为 $q_{\phi}$ 、Decoder 网络定义为 $p_{\theta}$，其中 $\phi$、$\theta$ 皆为网络参数。</br>
+那么对于输入 $x$，我们可以通过Encoder得到 <code>Latent Variable</code>：$z = q_{\phi}(x)$，然后Decoder可以从隐变量z中对原始数据进行重建：$x&rsquo; = p_{\theta}(z) = p_{\theta}(q_{\phi}(x))$。</p>
 <p>我们希望重建的数据和原来的数据近似一致，即最小化输入和输出之间的重构误差，那么AE的训练损失可以采用简单的MSE：</p>
-<p>$$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - p_{\theta}(q_{\phi}(x^{(i)})))^2$$</p>
+<p>$$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - x&rsquo;^{(i)})^2 =\frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - p_{\theta}(q_{\phi}(x^{(i)})))^2$$</p>
 <div class="details admonition Note">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -1141,29 +2634,37 @@ const成员函数有2个好处：(1). 明确理解函数是否修改对象内容
     </div>
   </div>
 <h2 id="二ae-存在的问题">二、AE 存在的问题</h2>
-<p>上面我们通过AE可以构建一个重构图像的模型，但是这个模型并不能满足要求，或者说它并不是真正意义上的生成模型。对于一个生成模型而言，它满足：</p>
+<p>上面我们通过AE可以<font color=lightseablue><strong>构建一个重构图像的模型</strong></font>，但是这个模型并不能满足要求，或者说它并不是真正意义上的生成模型。对于一个生成模型而言，它满足：</p>
 <ul>
 <li><strong>Encoder 和 Decoder 可以独立拆分（类比 GAN 的 Generator 和 Discriminator）；</strong></li>
-<li><strong>固定维度下任意采样出来的编码，都应该能通过 Decoder 产生一张清晰且逼真的图片。</strong></li>
+<li><strong>固定维度下<font color=red>任意采样</font>出来的编码，都应该能通过 Decoder 产生一张清晰且逼真的图片。</strong></li>
 </ul>
 <p>当然对于第一点它是满足的，我们主要分析第二点，也就是AE存在的问题，从而引出VAE。</p>
 <p></p>
 <p>如上图所示，用一张全月图和一张半月图去训练一个AE，经过训练模型是能够很好的还原出这两张图片。</p>
 <p>接下来，我们在 latent code 中任取一点，将其交给 Decoder 进行解码，直觉上我们会得到一张介于全月和半月之前的图片（比如阴影面积覆盖的样子）。然而<font color=red>实际上的输出图片不仅模糊而且还是乱码的</font>。</p>
-<p>对于这个现象，一个直观的解释就是AE的 Encoder 和 Decoder 都用了DNN，那么NN只会干一件事情：学习、记住、用记住的东西预测，我们从 latent space 中采样的点，编码器都没有学习过，怎么能够指望它生成希望的值呢。</p>
-<p>换句话说，NN只记住了左边全月图片的隐向量和右边半月图片的隐向量，并不能泛化到中间就是$\frac{3}{4}$月亮的图片。</p>
+<p>对于这个现象，一个直观的解释就是AE的 Encoder 和 Decoder 都用了DNN，那么NN只会干一件事情：学习、记住、用记住的东西预测，我们<u>从 latent space 中采样的点，编码器都没有学习过</u>，怎么能够指望它生成希望的值呢?</p>
+<p>换句话说，<font color=red><strong>NN只记住了左边全月图片的隐向量和右边半月图片的隐向量，并不能泛化到中间就是$\frac{3}{4}$月亮的图片</strong></font>。</p>
 <p>为了解决这个问题，一个最直接的思想就是<strong>引入噪声</strong>，扩大图片的编码区域，从而能够覆盖到失真的空白编码区，如下图所示：</p>
 <p></p>
 <p>其实说白了就是<strong>通过增加输入的多样性从而增强输出的鲁棒性</strong>。</p>
 <p>当我们给输入图片进行编码之前引入一点噪声，使得每张图片的编码点出现在绿色箭头范围内，这样一来所得到的 latent space 就能覆盖到更多的编码点。此时我们再从中间点抽取还原便可以得到一个比较希望的输出。</p>
 <p>虽然我们给输入的图片增加了一些噪声，使得 latent space 能够覆盖到比较多的区域，但是还有不少地方没有覆盖到，比如上图的黄色点位置。</p>
-<p>因此，我们是不是可以尝试利用更多的噪声，使得对于每一个输入样本，它的编码都能够覆盖到整个编码空间？只不过我们这里需要保证的是：对于编码附近的我们应该给定一个高的概率值，对于距离原编码点远的应该给定一个低的概率值。</p>
+<p>因此，我们是不是可以尝试利用更多的噪声，使得对于每一个输入样本，它的编码都能够覆盖到整个编码空间？只不过我们这里需要保证的是：<font color=red>对于编码附近的我们应该给定一个高的概率值，对于距离原编码点远的应该给定一个低的概率值</font>。</p>
 <p>这样总体来说，我们就是要将原先的一个单点拉伸到整个编码空间，即将离散的编码点拉伸为一条连续的接近正太分布的编码曲线，如下图所示：</p>
 <p></p>
-<p>这个其实就是VAE的思想，熟悉GMM的同学应该知道，它是K个高斯分布（Gaussian Distribution）的混合，其实<strong>VAE可以说是无限个高斯分布的混合</strong>。</p>
+<p>这个其实就是VAE的思想，熟悉GMM的同学应该知道，它是K个高斯分布（Gaussian Distribution）的混合，其实**<font color=green>VAE可以说是无限个高斯分布的混合</font>**。</p>
 <h2 id="三vae-结构预览">三、VAE 结构预览</h2>
 <p></p>
 <p>如上图所示VAE的结构，我们可以看到VAE里的编码器不是输出隐向量$z$，而是一个概率分布，分布的均值为$m$、方差为$\sigma$，$e$ 即为给编码添加的噪声，来自于正态分布。</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">VAE的Encoder的输出不是隐向量，而是均值为$m$, 方差为$\sigma$的正态分布。</div>
+    </div>
+  </div>
 <p>公式怎么得到的后面会给出推导，我们先来描述一下这个过程：</p>
 <p>$$z_{i} = c_{i} = \exp(\sigma_i) * e_i + m_i$$</p>
 <ul>
@@ -1178,6 +2679,14 @@ $$c = (c_1, c_2, c_3) = \sum_{i=1}^{3} (e^{\sigma_i} - (1 + \sigma_i) + (m_i)^2)
 <ul>
 <li>我们最小化了 reconstruction error，如果不加这个辅助loss的话，Encoder肯定希望噪声对自身生成的图片干扰越小越好，为了保证生成图片的质量，于是分配给噪声的权重也就是越低。如果不加这个约束的话，网络只需要将方差设置为接近负无穷大的值 $\exp ^ {-\infty} = 0$，即可消除噪声带来的影响，这样必然会过拟合导致鲁棒性不佳。</li>
 </ul>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">添加辅助loss是为了防止过拟合，提高模型的鲁棒性。</div>
+    </div>
+  </div>
 <p><strong>为什么加这个辅助loss有用？</strong></p>
 <ul>
 <li>我们对 $\sigma$ 求导可得 $c = e^{\sigma} - 1$，令其等于0可求出 $\sigma = 0$ 时取得极小值，这样一来便可以约束方差不会一路走向负无穷，从而起到正则化约束的作用；</li>
@@ -1213,12 +2722,12 @@ $$c = (c_1, c_2, c_3) = \sum_{i=1}^{3} (e^{\sigma_i} - (1 + \sigma_i) + (m_i)^2)
 <li>从一个先验分布 $p_{\theta}(z)$ 中采样一个 $z^{(i)}$；</li>
 <li>根据条件分布 $p_{\theta}(x|z)$，用 $z^{(i)}$ 生成 $x^{(i)}$。</li>
 </ul>
-<p>我们希望找到一个参数 $\theta^*$ 来<strong>最大化生成真实数据</strong>的概率：</p>
+<p>我们希望找到一个参数 $\theta^*$ 来<strong>最大化生成真实数据的概率</strong>：</p>
 <p>$$\theta^*=\argmax_{\theta} \prod_{i=1}^{n}p_{\theta}(x^{(i)})$$</p>
 <p>这里 $p_{\theta}(x^{(i)})$ 可以通过对 $z$ 积分得到：</p>
 <p>$$p_{\theta}(x^{(i)}) = \int_{z} p_{\theta}(x, z) \mathrm{d}{z} = \int_{z} p_{\theta}(z) p_{\theta}(x^{(i)}|z)\mathrm{d}{z}$$</p>
 <p>实际上我们要根据上述积分是不可能实现的，先验分布 $p_{\theta}(z)$ 是未知的，而且如果分布比较复杂且高维，对其穷举计算也是不现实的。</p>
-<p>变分推断引入后验概率来联合建模，即given $x$ 想要得到它的 $z$，根据贝叶斯公式表示为：</p>
+<p><strong>变分推断引入后验概率来联合建模</strong>，即given $x$ 想要得到它的 $z$，根据贝叶斯公式表示为：</p>
 <p>$$p_{\theta}(z | x) = \frac{p_{\theta}(x|z) p_{\theta}(z)}{p_{\theta}(x)}$$</p>
 <p>我们又回到最上面的图：</p>
 <p></p>
@@ -1295,7 +2804,7 @@ $$</p>
 <p>第三行中括号内，左边的可以写成期望的形式，右边的因为都有 $q_{\phi}$ 和 $p_{\theta}$ 所以符合KL divergence的公式。</p>
 <ul>
 <li>我们将 ${E}<em>{q</em>{\phi}(z|x)}[\log(p_{\theta}(x|z))]$ 称为<strong>Reconstruction Loss</strong>，</li>
-<li>将 $- D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))$ 称为 <strong>Regularization Loss</strong>。</li>
+<li>将 $-D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))$ 称为 <strong>Regularization Loss</strong>。</li>
 </ul>
 <p>所以我们只需要估计出这两项的梯度来，就可以对 lower bound 进行优化了。</p>
 <div class="details admonition Note open">
@@ -1320,14 +2829,6 @@ $$</p>
 <p>使用蒙特卡洛方法，对 $f(z)$ 在 $q_{\phi}$ 上的期望，对 $\phi$ 求导数，表示如下：</p>
 <p>$$
 \begin{aligned}
-&amp;max=2<em>x1+3</em>x2;\
-&amp;x1+2<em>x2&lt;=8;\
-&amp;4</em>x1&lt;=16;\
-&amp;s4*x2&lt;=12;
-\end{aligned}
-$$</p>
-<p>$$
-\begin{aligned}
 \eta &amp;= \triangle_{\phi} E_{q_{\phi}(z)}[f(z)]\cr
 &amp;= \triangle_{\phi} \int {q_{\phi}(z)}f(z) \mathrm{d}z\cr
 &amp;= \int \triangle_{\phi}{q_{\phi}(z)}f(z) \mathrm{d}z\cr
@@ -1347,7 +2848,7 @@ $$</p>
 \end{aligned}
 $$</p>
 <p>但是作者实验发现使用这个 estimator 是有很高的 variance 的，就是直观上来说会导致训练很不稳定。</p>
-<p>在此基础上作者提出了 Generic Stochastic Gradient Variational Bayes (<strong>SGVB</strong>) estimator，并使用**重参数化（Reparameterization）**trick，我们先来说下重参数化。</p>
+<p>在此基础上作者提出了 Generic Stochastic Gradient Variational Bayes (<strong>SGVB</strong>) estimator，并使用**重参数化(Reparameterization)**trick，我们先来说下重参数化。</p>
 <h3 id="45重参数化-trick">4.5、重参数化 Trick</h3>
 <p>上面我们用蒙特卡洛的时候，有一个非常强的假设，那就是假设 $f(z)$ 和 $\phi$ 是没有关系的，但实际表达式中：
 </p>
@@ -1469,9 +2970,9 @@ $$</p>
 <p>总的来看 Variational Auto-Encoder 的model就是：</p>
 <ul>
 <li>输入一个 $x$，进了Encoder，这个 Encoder 是由参数来决定的，Encoder 会产生 $μ$和 $σ$；</li>
-<li>$μ$和 $σ$首先被我们用来计算 KL divergence，作为辅助损失；</li>
+<li>$μ$和 $σ$首先被我们用来计算 KL divergence，作为<strong>辅助损失</strong>；</li>
 <li>同时在 $μ$ 和 $σ$之后我们对它抽样产生一个 $z$，加上 $\epsilon$ 帮我们产生随机的项；</li>
-<li>得到隐变量 $z$后，放到 Dencoder 里，它是由参数 $\theta$ 来决定的；</li>
+<li>得到隐变量 $z$后，放到 Decoder 里，它是由参数 $\theta$ 来决定的；</li>
 <li>经过这个 Decoder 之后，我们重建出了一个 $x$；</li>
 <li>对比重建后的 $x$ 和输入 $x$ 之间的 MSE 就构成了loss的另一部分，</li>
 <li>两个loss加起来就是最终的loss。</li>
@@ -3901,558 +5402,4 @@ DenseTNT(右图)是通过密集地采点避免了定义anchor，同时也避免�
 <p>$$\mathcal{L}<em>{s1} = \mathcal{L}</em>{lane} + \mathcal{L}<em>{goal}+ \mathcal{L}</em>{completion}$$</p>
 <p>第二个stage主要负责goal set predictor的部分。</p>
 <p>$$\mathcal{L}<em>{s2} = \mathcal{L}</em>{head} + \mathcal{L}_{set}$$</p>
-]]></description></item><item><title>LaneGCN 论文解读</title><link>https://jianye0428.github.io/posts/lanegcn/</link><pubDate>Sun, 16 Jul 2023 15:53:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/lanegcn/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2007.13732"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2007.13732<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-<code>PPT:</code> <a href="https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="architechture">Architechture</h2>
-<p><strong><font color=red>Lane Graph + Actor Map:</font></strong></p>
-<ul>
-<li>
-<p>construct lane graph from vectorized map data to preserve the map structure and can avoid information loss 构建矢量化地图信息，避免地图信息丢失</p>
-</li>
-<li>
-<p>LaneGCN:</p>
-<ul>
-<li>
-<p>extends <strong>graph convolutions with multiple adjacency matrices</strong> and along-lane dilation</p>
-<ul>
-<li>to capture complex topology and long range dependencies of the lane graph.</li>
-</ul>
-</li>
-<li>
-<p>exploit a <strong>fusion network</strong> consisting of four types of interactions: <code>actor-to-lane</code>, <code>lane-to-actor</code>, <code>actor-to-actor</code>, <code>lane-to-lane</code>.</p>
-<ul>
-<li>present both actors and lanes as nodes in the graph and use a 1D CNN and LaneGCN to extract the features for the actor and lane nodes respectively, and then exploit spatial attention and another LaneGCN to model four types of interactions.</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<p></p>
-<p><strong><font color=red>Difference between VectorNet and LaneGCN:</font></strong></p>
-<ul>
-<li><u>VecotrNet</u> uses vanilla graph networks with undirected full connections; <u>LaneGCN</u> uses connected lane graph folllowing the map topology and propose task specific multi-type and dilated graph operators.</li>
-<li>VectorNet uses polyline-level nodes for interactions; LaneGCN uses polyline segments as map nodes to capture higher resolution.</li>
-</ul>
-<h2 id="lane-graph-representations-for-motion-forecasting">Lane Graph Representations for Motion Forecasting</h2>
-<p></p>
-<h3 id="font-colorredactornetfont-extracting-traffic-participant-representations"><font color=red>ActorNet</font>: Extracting Traffic Participant Representations</h3>
-<p>Each Trajctory is represented as a sequence of displacement ${ \bigtriangleup{p_{-(T-1)},&hellip;,\bigtriangleup{p_{-1}}, \bigtriangleup{p_0}}}$, where $\bigtriangleup{p_t}$ is the 2D displacement from time step $t-1$ to t, and T is the trajectory size.</p>
-<p>For trajectories with sizes smaller than $T$ , we pad them with zeros. We add a binary $1 × T$ mask to indicate if the element at each step is padded or not and concatenate it with the trajectory tensor, resulting in an input tensor of size $3 × T$.</p>
-<p>1D CNN is used to process the trajectory input for its effectiveness in extracting multi-scale features
-and efficiency in parallel computing. The output of ActorNet is a temporal feature map, whose element at $t = 0$ is used as the actor feature. The network has 3 groups/scales of 1D convolutions.</p>
-<p>Each group consists of 2 residual blocks, with the stride of the first block as 2. We then use a Feature Pyramid Network (FPN) to fuse the
-multi-scale features, and apply another residual block to obtain the output tensor. For all layers, the convolution kernel size is 3 and the number of output channels is 128. Layer normalization and the Rectified Linear Unit (ReLU) are used after each convolution.</p>
-<p></p>
-<h3 id="font-colorredmapnetfont-extracting-structured-map-representation"><font color=red>MapNet</font>: Extracting Structured Map Representation</h3>
-<p>General Architecture:</p>
-<ul>
-<li>part 1: building a lane graph from vectorized map data;</li>
-<li>part 2: applying our novel LaneGCN to the lane graph to output the map features.</li>
-</ul>
-<p><strong>Map Data:</strong></p>
-<p>In this paper, we adopt a simple form of vectorized map data as our representation of HD maps. Specifically, the map data is represented as a set of lanes and their connectivity. Each lane contains a centerline, i.e., a sequence of 2D BEV points, which are arranged following the lane direction (see Fig. 3, top). For any two lanes which are directly reachable, 4 types of connections are given: <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
-<p><strong>Lane Graph Construction:</strong></p>
-<p>first define a lane node as the straight line segment formed by any two consecutive points (grey circles in Fig. 3) of the centerline. The location of a lane node is the averaged coordinates of its two end points. Following the connections between lane centerlines, we also derive 4 connectivity types for the lane nodes, i.e., <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
-<p>We denote the lane nodes with $V ∈ \mathbb R^{N ×2}$ , where $N$ is the number of lane nodes and the $i$-th row of $V$ is the BEV coordinates of the $i$-th node. We represent the connectivity with 4 adjacency matrices ${\lbrace A_i \rbrace}_{i \in {pre,suc,left,right}}$ , with $A_i \in \mathbb R^{N ×N}$.</p>
-<p>We denote $A_{i,jk}$, as the element in the $j$-th row and $k$-th column of $A_i$. Then $A_{i,jk} = 1$ if node $k$ is an $i$-type neighbor of node $j$.</p>
-<p><strong>LaneConv Operator:</strong></p>
-<p><font color=green><em>Node Feature:</em></font>
-Each lane node corresponds to a straight line segment of a centerline. To encode all the lane node information, we need to take into account both the shape (size and orientation) and the location (the coordinates of the center) of the corresponding line segment. We parameterize the node feature as follows,</p>
-<p>$$x_i = MLP_{shape} (v_{i}^{end} - v_{i}^{start}) + MLP_{loc}(v_i) $$</p>
-<p>where $MLP$ indicates a multi-layer perceptron and the two subscripts refer to shape and location, respectively. $v_i$ is the location of the i-th lane node, i.e., the center between two end points, $v_i^{start}$ and $v_i^{end}$ are the BEV coordinates of the node $i’s$ starting and ending points, and $x_i$ is the $i$-th row of the node feature matrix $X$, denoting the input feature of the $i$-th lane node.</p>
-<p><font color=green><em>LaneConv:</em> </font>
-To aggregate the topology information of the lane graph at a larger scale, we design the following LaneConv operator:</p>
-<p>$$Y = XW_0 + \sum_{i\in{pre, suc, left, right}}A_iXW_i,\tag{2}$$</p>
-<p>where $A_i$ and $W_i$ are the adjacency and the weight matrices corresponding to the $i$-th connection type respectively. Since we order the lane nodes from the start to the end of the lane, $A_{suc}$ and $A_{pre}$ are matrices obtained by shifting the identity matrix (diagnal 1) one step towards upper right (non-zero superdiagonal) and lower left (non-zero subdiagonal). $A_{suc}$ and $A_{pre}$ can propagate information from the forward and backward neighbours whereas $A_{left}$ and $A_{right}$ allow information to flow from the cross-lane neighbours. It is not hard to see that our LaneConv builds on top of the general graph convolution and encodes more geometric (e.g., connection type/direction) information. As shown in our experiments this improves over the vanilla graph convolution.</p>
-<p><font color=green><em>Dilated LaneConv:</em></font></p>
-<p>Functionality: The model needs to capture the long range dependency along the lane direction for accurate prediction.</p>
-<p>the k-dilation LaneConv operator is defined as follows:</p>
-<p>$$Y = XW_0 + A_{pre}^k XW_{pre,k} + A_{suc}^k X W_{suc,k} \tag{3}$$</p>
-<p>where $A_{pre}^k$ is the $k$-th matrix power of $A_{pre}$. This allows us to directly propagate information along the lane for $k$ steps, with $k$ a hyperparameter. Since $A_{pre}^k$ is highly sparse, one can efficiently compute it using sparse matrix multiplication. Note that the dilated LaneConv is only used for predecessor and successor, as the long range dependency is mostly along the lane direction.</p>
-<p><font color=green><em>LaneGCN:</em></font></p>
-<p>With Eq.(2) and Eq.(3), we get a multi-scale LaneConv operator with C dilation size as follows:</p>
-<p>$$Y = XW_0 + \sum_{i\in \lbrace left, right \rbrace} A_i X W_i + \sum_{c=1}^C (A_{pre}^{k_c}XW_{pre, k_c} + A_{suc}^{k_c}XW_{suc, k_c})， \tag{4}$$</p>
-<p>where $k_c$ is the $c$-th dilation size. We denote $LaneConv(k_1 , · · · , k_C)$ this multi-scale layer.</p>
-<p></p>
-<h3 id="font-colorredfusion-netfont"><font color=red>Fusion Net</font></h3>
-<p>Four types fusion modules:</p>
-<ul>
-<li>A2L: introduces real-time traffic information to lane nodes, such as blockage or usage of the lanes.</li>
-<li>L2L: updates lane node features by propagating the traffic information over the lane graph. -&gt; LaneGCN</li>
-<li>L2A: fuses updated map features with real-time traffic information back to the actors.</li>
-<li>A2A: handles the interactions between actors and produces the output actor features, which are then used by the prediction header for motion forecasting.</li>
-</ul>
-<p>We implement L2L using another LaneGCN, which has the same architecture as the one used in our MapNet (see Section 3.2). In the following we describe the other three modules in detail. We exploit a spatial attention layer for A2L, L2A and A2A. The attention layer applies to each of the three modules in the same way. Taking A2L as an example, given an actor node i, we aggregate the features from its context lane nodes j as follows:</p>
-<p>$$y_i = x_i W_0 + \sum_j \phi (concat(x_i, \Delta_{i,j}, x_j)W_1)W_2, \tag{5}$$</p>
-<p>with $x_i$ the feature of the $i$-th node, $W$ a weight matrix, $\phi$ the compositon of layer notmalization and RelU, and $\Delta_{ij} = MLP(v_j - v_i)$, where $v$ denotes the node location.</p>
-<h3 id="font-colorredprediction-headerfont"><font color=red>Prediction Header</font></h3>
-<p>Take after-fusion actor features as input, a multi-modal prediction header outputs the final motion forecasting. For each actor, it predicts $K$ possible future trajectories and their confidence scores.</p>
-<p>The header has two branches, a regression branch to predict
-the trajectory of each mode and a classification branch to predict the confidence score of each mode.</p>
-<p>For the m-th actor, we apply a residual block and a linear layer in the
-regression branch to regress the K sequences of BEV coordinates:</p>
-<p>$$O_{m,reg} = \lbrace (p_{m,1}^k, p_{m,2}^k, &hellip;, p_{m,T}^k) \rbrace _{k\in[0,K-1]}$$</p>
-<p>where $p_{m,i}^k$ is the predicted $m$-th actor&rsquo;s BEV coordinates of the $k$-th mode at the $i$-th time step. For the classification branch, we apply an MLP to $p^k_{m,T} − p_{m,0}$ to get $K$ distance embeddings. We then concatenate each distance embedding with the actor feature, apply a residual block and a linear layer to output $K$ confidence scores, $O_{m,cls} = (c_{m,0}, c_{m,1}, &hellip;, c_{m,K−1})$.</p>
-<h3 id="font-colorredlearningfont"><font color=red>Learning</font></h3>
-<p>use the sum of classification and regreesion losses to train the model:</p>
-<p>$$ L = L_{cls} + \alpha L_{reg},$$</p>
-<p>where $\alpha = 1.0$.</p>
-<p>For classification, we use the max-margin loss:</p>
-<p>$$L_{cls} = \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k \neq \hat{k}} \max(0, c_{m,k} + \epsilon - c_{m, \hat{k}}) \tag{6}$$</p>
-<p>where $\epsilon$ is the margin and $M$ is the total number of actors. For regression, we apply the smooth $l1$ loss on all predicted time steps:</p>
-<p>$$L_{reg} = \frac{1}{MT} \sum_{m=1}^M \sum_{t=1}^T reg(p_{m,y}^{\hat{k}} - p_{m,t}^*) \tag{7}$$</p>
-<p>where $p_t^*$ is the ground truth BEV coordinates at time step $t$, $reg(x) = \sum\limits_i d(x_i)$, $x_i$ is the $i$-th element of $x$, and $d(x_i)$ is the smooth $\ell1$ loss defined as:</p>
-<p>$$d(x_i) = \begin{cases}
-0.5x_i^2 &amp;\text{if} ||x|| &lt; 1, \
-||x_i|| - 0.5 &amp; \text{otherwise,}
-\end{cases} \tag{8}$$</p>
-<p>where $||x_i||$ denotes the $\ell1$ norm of $x_i$.</p>
-<h3 id="font-colorred-neural-network-layoutfont"><font color=red> Neural Network Layout</font></h3>
-<p></p>
-<h3 id="font-colorreddata-process-and-network-constructionfont"><font color=red>Data Process And Network Construction</font></h3>
-<blockquote>
-<p>以官方的2645.csv数据集为例子</p>
-</blockquote>
-<p><strong>agent node:</strong></p>
-<ul>
-<li><code>data['city']:</code>城市名称</li>
-<li><code>data['trajs'] = [agt_traj] + ctx_trajs:</code>轨迹点，(agent + context vehicles)</li>
-<li><code>data['steps'] = [agt_step] + ctx_steps:</code>在原始数据中的位置</li>
-<li><code>data['feats'] = feats:</code> (13 X 20 X 3) 前20预测轨迹 + 一维是否存在点</li>
-<li><code>data['ctrs'] = ctrs:</code> (13 X 2) 中心点</li>
-<li><code>data['orig'] = orig:</code> AGENT 当前点坐标</li>
-<li><code>data['theta'] = theta:</code> AGENT 偏转角</li>
-<li><code>data['rot'] = rot:</code> (2 X 2) 旋转矩阵</li>
-<li><code>data['gt_preds'] = gt_preds:</code>(13 X 30 X 2) 后30帧真实轨迹</li>
-<li><code>data['has_preds'] = has_preds:</code> (13 X 30) 标识后30帧轨迹是否存在</li>
-</ul>
-<p><strong>lane node:</strong></p>
-<ul>
-<li><code>graph['ctrs'] = np.concatenate(ctrs, 0):</code> lane node的中心点坐标</li>
-<li><code>graph['num_nodes'] = num_nodes:</code> lane node的数量</li>
-<li><code>graph['feats'] = np.concatenate(feats, 0):</code> lane node 方向向量</li>
-<li><code>graph['turn'] = np.concatenate(turn, 0):</code> lane node 转向标识</li>
-<li><code>graph['control'] = np.concatenate(control, 0):</code> lane node 的 has_traffic_control 标识</li>
-<li><code>graph['intersect'] = np.concatenate(intersect, 0):</code> lane node 的 is_intersection 标识</li>
-<li><code>graph['pre'] = [pre]:</code> pre[&lsquo;u&rsquo;] 和 pre[&lsquo;v&rsquo;], v 是 u 的pre， 这里表述的是lane node之间的关系</li>
-<li><code>graph['suc'] = [suc]:</code> suc[&lsquo;u&rsquo;] 和 suc[&lsquo;v&rsquo;], v 是 u 的suc， 这里表述的是lane node之间的关系</li>
-<li><code>graph['lane_idcs'] = lane_idcs:</code> lane node index
-<ul>
-<li>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">0</span>
-</span></span><span class="line"><span class="cl"><span class="mi">1</span> <span class="mi">1</span> <span class="mi">1</span> <span class="o">...</span> <span class="mi">1</span>
-</span></span><span class="line"><span class="cl">    <span class="o">...</span>
-</span></span><span class="line"><span class="cl"><span class="mi">83</span> <span class="mi">83</span> <span class="mi">83</span> <span class="o">...</span> <span class="mi">83</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-</li>
-<li><code>graph['pre_pairs'] = pre_pairs:</code> pair 表述的是lane之间的关系</li>
-<li><code>graph['suc_pairs'] = suc_pairs:</code> pair 表述的是lane之间的关系</li>
-<li><code>graph['left_pairs'] = left_pairs:</code> pair 表述的是lane之间的关系</li>
-<li><code>graph['right_pairs'] = right_pairs:</code> pair 表述的是lane之间的关系
-<ul>
-<li>对于<code>pre['u']</code>和<code>pre['v']</code>, v 是 u 的 pre</li>
-<li>对于<code>suc['u']</code>和<code>suc['v']</code>, v 是 u 的 suc</li>
-<li>对于<code>left['u']</code>和<code>left['v']</code>, v 是 u 的 left</li>
-<li>对于<code>right['u']</code>和<code>right['v']</code>, v 是 u 的 right</li>
-</ul>
-</li>
-</ul>
-<p><strong>Net结构</strong></p>
-<ul>
-<li><strong>ActorNet</strong>
-<code>input:</code> M x 3 x 20
-<code>output:</code> M x 128 x 20</li>
-</ul>
-<p>解释:</p>
-<ul>
-<li>
-<p><strong>MapNet</strong>: 把 v 按照 u 加到center上
-<code>input:</code> N x 4
-<code>output:</code> N x 128</p>
-</li>
-<li>
-<p><strong>A2M</strong>
-<code>input:</code> N x 128
-<code>output:</code> N x 128</p>
-</li>
-<li>
-<p><strong>M2M</strong>
-<code>input:</code> N x 128
-<code>output:</code> N x 128</p>
-</li>
-<li>
-<p><strong>M2A</strong>
-<code>input:</code> N x 128
-<code>output:</code> M x 128</p>
-</li>
-<li>
-<p><strong>A2A</strong>
-<code>input:</code> N x 128
-<code>output:</code> N x 128</p>
-</li>
-<li>
-<p><strong>Prediction Header:</strong>
-<code>input</code> M x 128</p>
-<ul>
-<li>MLP Regression</li>
-<li>MLP Classification</li>
-</ul>
-</li>
-</ul>
-<p>ref link: <a href="https://zhuanlan.zhihu.com/p/447129428"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/447129428<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>Social_NCE 论文解读</title><link>https://jianye0428.github.io/posts/social_nce/</link><pubDate>Sun, 16 Jul 2023 15:53:27 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/social_nce/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2012.11717"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2012.11717<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-<code>论文解读参考:</code>
-[1] <a href="https://zhuanlan.zhihu.com/p/434650863"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/434650863<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2] <a href="https://www.gushiciku.cn/pl/amod"target="_blank" rel="external nofollow noopener noreferrer">https://www.gushiciku.cn/pl/amod<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="issue-to-solve-and-its-solution">Issue to solve and its Solution</h2>
-<p>Due to the ill-distributed training Data, it&rsquo;s <u><font color=red>difficult to capture the notion of the &ldquo;negative&rdquo; examples</font></u> like collision.</p>
-<p><strong>Solution:</strong></p>
-<p>Modeling the negative samples through self-supervision:</p>
-<ul>
-<li><font color=red>a social contrastive loss</font>: regularizes the extracted motion representation by discerning the ground-truth positive events from synthetic negative ones;</li>
-<li><font color=red>Construct negative samples</font> based on prior knowledge of rare but dangerous circumstances.
-<blockquote>
-<p>a social sampling strategy (informed): construct the positive event from the ground-truth location of the primary agent and the negative events from the regions of other neighbors. given that one location cannot be occupied by multiple agents at the same time.</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="method-font-colorredcontrastive-learning--social-ncefont">Method: <font color=red><em>Contrastive Learning + Social NCE</em></font></h2>
-<h3 id="contrastive-representation-learning">Contrastive Representation Learning</h3>
-<ul>
-<li>
-<p>Functionality:</p>
-<ul>
-<li>
-<p><code>Representation Learning:</code> to learn a parametric function that maps the raw data into a feature space to extract abstract and useful information for downstream tasks.</p>
-</li>
-<li>
-<p><code>NCE(Noise Contrastive Estimation):</code> to train encoder</p>
-</li>
-</ul>
-<p>$$\mathcal{L_{NCE}} = -\log \frac{\exp(sim(q,k^+)/\tau)}{\sum_{n=0}^N  \exp(sim(q,k_n)/ \tau)}$$</p>
-<p>where the encoded query $q$ is brought close to one positive key $k_0 = k^+$ and pushed apart from $N$ negative keys ${ k_1, k_2, &hellip; , k_N}$, $\tau$ is a temperature hyperparameter, and $sim(u,v) = u^{\mathsf{T}}v/(||u||||v||)$ is the cosine similarity between two feature vectors.</p>
-</li>
-</ul>
-<h3 id="social-nce">Social NCE</h3>
-<p><strong>Social NCE Description:</strong></p>
-<p>智能体 $i$ 在时刻 $t$ 上的位置记为 $s^i_t=(x^i_t,y^i_t)$ 。那么 $M$ 个智能体的联合状态记为 $s_t = { s_t^1, &hellip;, s^M_t}$ 。给定一个历史观测序列 ${s_1, s_2, &hellip;, s_t}$ ，任务是预测所有智能体未来直至 $T$ 时刻的轨迹 ${s_{t+1}, &hellip;, s_T}$，许多最近的预测模型被设计为编码器 - 解码器神经网络，其中运动编码器 $f(\cdot)$ 首先提取与 $i$ 相关的紧密表示 $h_t^i$ ，然后解码器 $g(\cdot)$ 随后推测出其未来的轨迹 $\hat{s}^i_{t+1,T}$ :</p>
-<p>$$h^i_t = f(s_{1:t}, i),  $$
-$$\hat{s}^i_{t+1:T} = g(h^i_t)$$</p>
-<p>为了多智能体之间的社交互动，$f(\cdot)$通常包含两个子模块：一个序列建模模块 $f_S(\cdot)$ 用于编码每个单独的序列，以及一个交互模块 $f_I(\cdot)$ 用于在多智能体之间共享信息：</p>
-<p>$$z^i_t = f_S(h^i_{t-1}, s^i_t),$$
-$$h^i_t = f_I(z_t, i)$$</p>
-<p>其中， $z^i_t$ 是给定智能体 $i$ 在时间 $t$ 观察其自身状态的潜在表示， $z_t = {z^1_t,&hellip;,z^M_t}$ 。很多方法已经探索了各种架构，并验证了其准确性。尽管如此，它们的鲁棒性仍然是一个悬而未决的问题。 最近的几项工作表明，现有模型预测的轨迹通常会输出社会不可接受的解决方案（例如，碰撞），表明缺乏关于社会准则的常识。</p>
-<p></p>
-<ul>
-<li>
-<p><code>query</code>: embedding of history observations $q = \psi(h^i_t)$, where $\psi(\cdot)$ is an MLP projection head;</p>
-</li>
-<li>
-<p><code>key</code>: embedding of a future event $k = \phi(s^i_{s+\delta t}, \delta t)$, where $\phi(\cdot)$ is an event encoder modeled by an MLP, $s_{t+\delta t}^i$ is a sampled spatial location and $\delta_t &gt; 0$ is the sampling horizon.</p>
-<blockquote>
-<p>tuning $\delta_t \in \Lambda$, e.g. $\Lambda = {1,&hellip;,4}$, then future events in the next few step can be taken in account simultaneously. Nevertheless, when $\delta_t$ is a fixed value, then $\phi(\cdot)$ can be simplified as a location encoder, i.e., $\phi(s^i_{t+\delta t})$.</p>
-</blockquote>
-</li>
-</ul>
-<p>给定一个场景，包括感兴趣的主智体（蓝色）和附近多个相邻智体（灰色），Social-NCE 损失鼓励在嵌入空间中提取的运动表示，接近未来的正样本事件，并远离可能导致碰撞或不适的合成负样本事件. Social NCE的损失函数如下:</p>
-<p>$$\mathcal{L_{SocialNCE}} = -\log\frac{\exp(\psi(h^i_t)\cdot\phi(s^{i,+}<em>{t+\delta t}, \delta t)/\tau)}{\sum</em>{\delta t\in\Lambda}\sum_{n=0}^{N}\exp(\psi(h^i_t)\cdot\phi(s^{i,n}_{t+\delta t}, \delta t)/\tau))}$$</p>
-<p>最终的训练损失函数为Social-NCE和传统任务损失项之和，即轨迹预测的mean squared error (MSE) 或者negative log-likelihood (NLL)：</p>
-<p>$$\mathcal{L}(f,g,\psi, \phi) = \mathcal{L}<em>{task}(f,g) + \lambda \mathcal{L}</em>{SocialNCE}(f, \psi, \phi)$$</p>
-<p>其中，$\lambda$ 为超参数，控制SocialNCE损失函数的重要程度。</p>
-<h3 id="sampling-strategy-in-multi-agent-context-采样策略">sampling strategy in multi-agent context 采样策略</h3>
-<p></p>
-<p>在其他智能体附近寻求更多信息的负样本:</p>
-<p>$$s^{i,n-}<em>{t+\delta t} = s^{j}</em>{t+\delta t} + \bigtriangleup{s_p} + \epsilon$$</p>
-<p>其中， $j\in{1,2,&hellip;,M} \backslash i$ 是其他agent的index, $\bigtriangleup{s_p}$ 是适合社交距离的局部位移。</p>
-<p>对于positive sample, 对该agent周围直接采样获得:</p>
-<p>$$s^{i,n-}<em>{t+\delta t} = s^{i}</em>{t+\delta t} +  \epsilon$$</p>
-]]></description></item><item><title>Social_STGCNN 论文解读</title><link>https://jianye0428.github.io/posts/social_stgcnn/</link><pubDate>Sun, 16 Jul 2023 15:53:17 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/social_stgcnn/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2002.11927?from=leiphonecolumn_paperreview0323"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2002.11927?from=leiphonecolumn_paperreview0323<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="网络结构">网络结构</h2>
-<p>特点: Social STGCNN不同于其他方法只是聚合各种学习的行人状态，而是对行人交互做图建模。其中提出一种kernel function把行人社交交互嵌入一个adjacency matrix。</p>
-<blockquote>
-<p>代码显示，图建模一般在数据前处理完成。</p>
-</blockquote>
-<h3 id="model-description">Model Description</h3>
-<p>两部分：时空图卷积神经网络ST-GCNN、时间外推器TXP-CNN。</p>
-<p>ST-GCNN对行人轨迹的图表示进行时空卷积操作以提取特征。这些特征是观察到的行人轨迹历史的紧凑表示。
-TXP-CNN将这些特征作为输入，并预测所有行人作为一个整体的未来轨迹。我们使用时间外推器的名字是因为TXP-CNN期望通过卷积运算外推未来的轨迹。</p>
-<p></p>
-<p>给定T帧，构造表示 $G=(V,A)$ 的时空图. 然后，$G$ 通过时空图卷积神经网络(ST-GCNNs)转发，创建一个时空嵌入。 之后，TXP-CNNs 预测了未来的轨迹。 $P$ 是行人位置的维数，$N$ 是行人的数目，$T$ 是时间步长, $\hat{P}$是来自ST-GCNN的嵌入的维数.</p>
-<p>(1) <font color=red>Graph Representation of Pedestrian Trajectories</font></p>
-<p>我们首先构造一组空间图 $G_t$，表示每个时间步长 $t$ 在场景中行人的相对位置，$G_t = (V_t, E_t)$ 。 $V_t$是图 $G_t$ 的顶点集，观察到的位置 $(x^i_t，y^i_t)$ 是顶点 $v^i_t$ 的属性; $E_t$ 是边集，如果顶点 $v^i_t$ 和顶点 $v^j_t$ 相连 $e^{ij}_t = 1$ ，否则 $=0$。</p>
-<p>为了建模两个节点之间相互影响的强度，我们附加了一个值$a^{ij}_t$, 它是由每个$ e^{ij}_t$ 的某种核函数计算得到。$a^{ij}_t$ 被组织为带权邻接矩阵$A_t$。</p>
-<p><strong>$a^{ij}_{sim,t}$是要在邻接矩阵$A_t$中使用的内核函数。</strong> 定义为:</p>
-<p>$$\begin{equation}
-a^{ij}_{sim,t}=
-\left
-{
-\begin{aligned}
-1/||v^i_t - v^j_t||_2 , ||v^i_t - v^j_t||_1\neq0 \
-0, Otherwise
-\end{aligned}
-\right.
-\end{equation}$$</p>
-<p>(2) <font color=red>Graph Convolution Neural Network</font></p>
-<p>对于在二维网格地图或特征地图上定义的卷积运算，定义如下:</p>
-<p>$$z^{(l+1)} = \sigma(\sum_{h=1}^{k}\sum_{\omega=1}^{k}(p(z^{(l)},h, \omega) \cdot \boldsymbol{W}^{(l)}(h, \omega))$$</p>
-<p>其中，$k$是内核大小，$p(.)$ 是采样函数，其聚集以$z$为中心的邻居的信息， $\sigma$ 是激活函数。${l}$表示神经网络层。</p>
-<p>图卷积定义如下:</p>
-<p>$$v^{i(l+1)} =\sigma (\frac{1}{\Omega}\sum_{v^{j(l)}\in B(v^{j(l)})}p(v^{i(l)}, v^{j(l)}) \cdot \boldsymbol{W}(v^{i(l)}, v^{j(l)}))$$</p>
-<p>其中$\frac{1}{\Omega}$ 是正则化项，$B(v^i) =  { v^j|d(v^i,v^j)≤D }$是顶点的邻居集，而$d(v^i,v^j)$表示连接$v^i$和$v^j$的最短距离， $\Omega$是邻居集的基数。</p>
-<p>(3) <font color=red>Spatio-Temporal Graph Convolution Neural Network(ST-GCNNs)</font></p>
-<p>通过定义一个新的图G，其属性是$G_t$属性的集合，ST-GCNN将<strong>空间图卷积</strong>扩展到<strong>时空图卷积</strong>。 $G$结合了行人轨迹的时空信息。值得注意的是，$G_1，…，G_T$的拓扑结构是相同的，而当t变化时，不同的属性被分配给$v^i_t$。</p>
-<p>因此，我们将$G$定义为$(V,E)$，其中$V={v_i|i\in { 1，…，N }}$ 和 $E={e_{ij}|i，j，{1，…，N}}$。 顶点$v_i$在G中的属性是$v^i_t$的集合，$∀t∈{0，…，T}$。 另外， 加权邻接矩阵A对应于$G$ 是${ A_1，…，A_T}$的集合。 我们将ST-GCNN产生的嵌入表示为 $\overline{V}$.</p>
-<p>(4) <font color=red>Time-Extrapolator Convolution Neural Network (TXP-CNN)</font></p>
-<p>ST-GCNN的功能是从输入图中<strong>提取时空节点嵌入</strong>。然而，我们的目标是预测行人未来的进一步位置。
-TXP-CNN直接作用于图嵌入 $\overline{V}$ 的时间维度，并将其扩展为预测的必要条件。 由于TXP-CNN依赖于特征空间的卷积运算，因此与递归单元相比，它的参数较小。需要注意的一个特性是， TXP-CNN层不是置换不变的，因为在TXP-CNN之前，图嵌入的变化会导致不同的结果。Other than this, if the order of pedestrians is permutated starting from the input to Social-STGCNN then the predictions are invariant.</p>
-<h3 id="modelsocial-stgcnn-implementation">model(Social STGCNN) Implementation</h3>
-<ol>
-<li>Adjacency Matrix Normalization</li>
-</ol>
-<p>$$ A_t = \Lambda_t^{-\frac{1}{2}}\hat{A}\Lambda_t^{-\frac{1}{2}}$$</p>
-<p>where $\hat{A_t} = A_t + I$ and $\Lambda_t$ is the diagonal node degree matric of $\hat{A_t}$. We use $\hat{A}$ and $\Lambda$ to denote the stack of $\hat{A_t}$ and $\Lambda_t$ repectively.</p>
-<p>The normalization of adjacency is essential for the graph CNN to work properly.</p>
-<ol start="2">
-<li>STGCNN Network Mechanism</li>
-</ol>
-<p>$$f(V^{l}, A) = \sigma(\Lambda_t^{-\frac{1}{2}}\hat{A}\Lambda_t^{-\frac{1}{2}}V^{(l)}W^{(l)})$$</p>
-<p>where, $V^{(l)}$ denotes the stack of $V^{(l)}_t$, and $W^{(l)}$ denotes the trainable parameters.</p>
-<h2 id="data-processing-数据处理以及图构建">Data Processing 数据处理以及图构建</h2>
-<p>obs_traj - <font color=red><em>前8帧观察轨迹(绝对坐标)</em></font>
-pred_traj_gt - <font color=red><em>后12帧预测轨迹(ground truth)(绝对坐标)</em></font>
-obs_traj_rel - <em><font color=red>前8帧观察轨迹(相对坐标)</em></font>
-pred_traj_gt_rel - <em><font color=red>后12帧预测轨迹(ground truth)(相对坐标)</em></font>
-non_linear_ped - <em><font color=red>非线性轨迹 (剔除)</em></font>
-loss_mask
-V_obs - <em><font color=red>graph nodes</em></font>
-A_obs - <em><font color=red>graph Adjacency Matrix</em></font>
-V_tr - <em><font color=red>预测轨迹 graph nodes</em></font>
-A_tr - <em><font color=red>预测轨迹 graph Adjacency Matrix</em></font></p>
-]]></description></item><item><title>C++ STL Containers</title><link>https://jianye0428.github.io/posts/datastructrue/</link><pubDate>Sun, 16 Jul 2023 15:03:55 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/datastructrue/</guid><description><![CDATA[<h2 id="c-stl-standard-template-library-总结">C++ STL (Standard Template Library) 总结</h2>
-<p>C++ STL 容器是使用频率超高的基础设施，只有了解各个容器的底层原理，才能得心应手地用好不同的容器，做到用最合适的容器干最合适的事情。</p>
-<p>本文旨在对 C++ 标准模板库的 <em>array</em>, <em>vector</em>, <em>deque</em>, <em>list</em>, <em>forward_list</em>, <em>queue</em>, <em>priority_queue</em>, <em>stack</em>, <em>map</em>, <em>multimap</em>, <em>set</em>, <em>multi_set</em>, <em>unordered_map</em>, <em>unordered_multimap</em>, <em>unordered_set</em>, <em>unordered_multiset</em> 共十六类容器进行系统的对比分析，重点关注各个容器的底层原理与性能特点。本文唯一参考资料为C++官方文档，若有其它参考则会指明出处。</p>
-<h3 id="1-array">1. array</h3>
-<blockquote>
-<p>Container properties: Sequence | Contiguous storage | Fixed-size aggregate
-容器属性：顺序容器（支持随机访问），连续内存空间，固定大小；//连续内存
-类模板头：template &lt; class T, size_t N &gt; class array;</p>
-</blockquote>
-<p>array 即数组，其大小固定，所有的元素严格按照内存地址线性排列，array 并不维护元素之外的任何多余数据，甚至也不会维护一个size这样的变量，这保证了它在存储性能上和C++语法中的数组符号[]无异。尽管其它大部分标准容器都可以通过 std::allocator 来动态的分配和回收内存空间，但 <strong>Array 并不支持这样做</strong>。</p>
-<p>Array 和其它标准容器一个很重要的不同是：<u>对两个 array 执行 swap 操作意味着真的会对相应 range 内的元素一一置换</u>，因此其时间花销正比于置换规模；但同时，对两个 array 执行 swap 操作不会改变两个容器各自的迭代器的依附属性，这是由 array 的 swap 操作不交换内存地址决定的。</p>
-<p>Array 的另一个特性是：不同于其它容器，<font color = red>array 可以被当作 std::tuple 使用</font>，因为 array 的头文件重载了get()以及tuple_size()和tuple_element()函数（注意这些函数非 array 的成员函数，而是外部函数）。</p>
-<p>最后需要注意，虽然 array 和 C++语法中的[]符号无限接近，但两者是两个存在，array 毕竟是标准模板库的一员，是一个class，因此支持
-<code>begin(), end(), front(), back(), at(), empty(), data(), fill(), swap(), ... </code> 等等标准接口，而[]是真正的最朴素的数组。</p>
-<h3 id="2-vector">2. vector</h3>
-<blockquote>
-<p>Container properties: Sequence | Dynamic array | Allocator-aware
-容器属性：<font color = red>顺序容器</font>（支持随机访问），动态调整大小，使用内存分配器动态管理内存；//连续内存
-类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class vector;</p>
-</blockquote>
-<p>一句话来说，<u>vector 就是能够动态调整大小的 array</u>。和 array 一样，vector 使用<font color=red>连续内存空间</font>来保存元素，这意味着其元素可以用普通指针的<code>++</code>和<code>--</code>操作来访问；不同于 array 的是，其<strong>存储空间可以自动调整</strong>。</p>
-<p>在底层上，vector 使用动态分配的 array，当现有空间无法满足增长需求时，会重新分配（reallocate）一个更大的 array 并把所有元素移动过去，因此，<font color=red>vector 的 reallocate 是一个很耗时的处理</font>。所以，每次 reallocate 时都会预留多余的空间，以满足潜在的增长需求，也就是说，vector的capacity()通常会大于size()。vector 什么时候做 reallocate，reallocate 多少多余空间，是有具体策略的，按下不表。总体来说，<u>vector 比 array 多了一些内存消耗，以换取更灵活的内存管理</u>。</p>
-<p>和其它的动态顺序容器（deque, list, forward_list）相比，<u>vector 在元素访问上效率最高，在尾部增删元素的效率也相对最高</u>。如果调用者有在尾部以外的地方增删元素的需求，vector 则不如其它容器，并且迭代器的一致性也较差（have less consistent iterators and references than lists and forward_lists）。</p>
-<h3 id="3-queue">3. queue</h3>
-<blockquote>
-<p>容器属性：<font color=red>容器适配器(adapter)</font>，先进先出型容器（FIFO）；//C++设计模式之适配器模式
-template &lt;class T, class Container = deque<T> &gt; class queue;</p>
-</blockquote>
-<p>queue（普通队列）是一个专为 FIFO 设计的容器适配器，也即只能从一端插入、从另一端删除；所谓容器适配器，是指它本身只是一个封装层，必须依赖指定的底层容器（通过模板参数中的class Container指定）才能实现具体功能。</p>
-<p>**容器适配器(Adapter)**实际上是C++设计模式的一种 &ndash; 称为 Adapter 模式（适配器模式），Adapter 模式的目的是将第三方库提供的接口做一个封装和转化，使其适配自己工程中预留的接口，或者适应自己工程的调用风格。换句话说，Adapter 模式的目的是将被调用类（如第三方库）的接口转化为希望的接口。</p>
-<p>回到正题，queue 可以接纳任何一个至少支持下列接口的容器作为底层容器：</p>
-<blockquote>
-<p>empty(); size(); front(); back(); push_back(); pop_front().</p>
-</blockquote>
-<p>在标准模板库容器中，deque 和 list 满足上述要求，当然用户也可以自定义一个满足上述要求的容器。通过模板参数可以看出，<font color=red>默认情况下，queue 使用 deque 作为底层容器</font>。</p>
-<h3 id="4-deque">4. deque</h3>
-<blockquote>
-<p>Container properties: Sequence | Dynamic array | Allocator-aware
-容器属性：<font color=red>顺序容器</font>（支持随机访问），动态调整大小，使用内存分配器动态管理内存；//分段连续内存
-类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class deque;</p>
-</blockquote>
-<p>deque（读作&quot;deck&quot;）是 double-ended queue 的缩写，是一个可以在首尾两端进行动态增删的顺序容器。</p>
-<p>不同的库对 deque 的实现可能不同，但大体上都是<font color=green>某种形式的动态 array</font>，且都支持随机访问。deque 的功能和 vector 比较接近，但 deque 额外支持在头部动态增删元素。和 vector 不一样的是，<font color = red><u>deque 不保证存储区域一定是连续的!</u></font> 因此用指向元素的普通指针做<code>++</code>和<code>--</code>操作是非常危险的行为。</p>
-<p>从底层机理上能更透彻地理解 deque 的特点：<font color = red>vector 使用的是单一的 array，deque 则会使用很多个离散的 array 来组织数据</font>「the elements of a deque can be scattered in different chunks of storage」！如果说 vector 是连续的，deque 则是分段连续。deque 会维护不同 array 之间的关联信息，使用户无需关心分段这个事实。这样做的好处是很明显的：deque 在 reallocate 时，只需新增/释放两端的 storage chunk 即可，无需移动已有数据（vector 的弊端），极大提升了效率，尤其在数据规模很大时，优势明显。</p>
-<p>相比于 vector 和 list，deque 并不适合遍历！因为每次访问元素时，deque 底层都要检查是否触达了内存片段的边界，造成了额外的开销！deque 的核心优势是在双端都支持高效的增删操作，程序员选择使用 deque 时需要有双端操作的明确理由。</p>
-<h3 id="5-priority_queue">5. priority_queue</h3>
-<blockquote>
-<p>容器属性：<font color=red>容器适配器</font>，严格弱序（Strict Weak Ordering），优先级队列；
-template &lt;class T, class Container = vector<T>,
-class Compare = less<typename Container::value_type> &gt; class priority_queue;</p>
-</blockquote>
-<p>和 queue 类似，priority_queue（术语叫作优先级队列）也只是一个容器适配器，需要指定底层容器才能实例化，参见模板参数中的class Container形参。priority_queue 的核心特点在于其严格弱序特性（strict weak ordering）：也即 priority_queue 保证容器中的第一个元素始终是所有元素中最大的！为此，用户在实例化一个 priority_queue 时，必须为元素类型（class T）重载&lt;运算符，以用于元素排序！</p>
-<p>priority_queue 的原理可以用一个大顶堆来解释：priority_queue 在内部维护一个基于二叉树的大顶堆数据结构，在这个数据结构中，最大的元素始终位于堆顶部，且只有堆顶部的元素（max heap element）才能被访问和获取，大顶堆的具体原理可参见任何一本数据结构书籍。</p>
-<p>为了支持这种工作原理，priority_queue 对底层容器也是有要求的，priority_queue 的底层容器必须支持随机访问和至少以下接口：</p>
-<blockquote>
-<p>empty(); size(); front(); push_back(); pop_back().</p>
-</blockquote>
-<p>标准模板库中的 vector 和 deque 能够满足上述需求，默认情况下，priority_queue 使用 vector 作为底层容器。</p>
-<p>某种程度上来说，priority_queue 默认在 vector 上使用堆算法将 vector 中元素构造成大顶堆的结构，因此 priority_queue 就是堆 ，所有需要用到堆的位置，都可以考虑使用 priority_queue。priority_queue 默认是大顶堆，用户也可以通过自定义模板参数中的 class Compare 来实现一个小顶堆。</p>
-<p>相比于 queue（普通队列）的先进先出FIFO，priority_queue 实现了最高优先级先出。</p>
-<h3 id="6-list">6. list</h3>
-<blockquote>
-<p>Container properties: Sequence | Doubly-linked list | Allocator-aware
-容器属性：<font color = red>顺序容器</font>（可顺序访问，但不支持随机访问），双链表，使用内存分配器动态管理内存；//离散内存
-类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class list;</p>
-</blockquote>
-<p>list 是一种支持在<strong>任意位置都可以快速地插入和删除</strong>元素的容器，且支持<strong>双向遍历</strong>。list 容器能够做到这些的原因在于<strong>其底层结构是双链表</strong>，双链表允许把各个元素都保存在彼此不相干的内存地址上，但每个元素都会与前后相邻元素关联。</p>
-<p>和其它的顺序容器（array, vector, deque）相比，<u>list 的最大优势在于支持在任意位置插入、删除和移动元素</u>，对 list 来说，在哪个位置进行操作并没有区别。list 在部分算法（如 sorting）中的效率可能优于其它顺序容器。</p>
-<p>list 的<strong>主要缺点</strong>是<u>不支持元素的随机访问</u>！如果我们想要访问某个元素，则必须从一个已知元素（如 begin 或 end）开始朝一个方向遍历，直至到达要访问的元素。此外，list 还要消耗更多的内存空间，用于保存各个元素的关联信息。</p>
-<p>[另说] <strong>list 对内存空间的使用效率并不高，一方面元素内存地址是离散的而非连续，另一方面，list 需要保存额外的关联信息。</strong></p>
-<h3 id="7-forward_list">7. forward_list</h3>
-<blockquote>
-<p>Container properties: Sequence | Linked list | Allocator-aware
-容器属性：<font color = red>顺序容器</font>（可顺序访问，但不支持随机访问），单链表，使用内存分配器动态管理内存；
-类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class list;</p>
-</blockquote>
-<p>forward_list 也是一种支持在任意位置快速插入和删除元素的容器，forward_list 相比于 list 的核心区别是它是一个单链表，因此, 每个元素只会与相邻的下一个元素关联！由于关联信息少了一半，因此 forward_list 占用的内存空间更小，且插入和删除的效率稍稍高于 list。作为代价，forward_list 只能单向遍历。</p>
-<p>相比于其它顺序容器（array, vector, deque），forward_list 的优缺点和 list 基本相同。</p>
-<p>既然已经有了 list，为什么 C++ STL 又设计了 forward_list 这一容器呢？设计 forward_list 的目的是为了达到不输于任何一个C风格<strong>手写链表的极值效率</strong>！为此，forward_list 是一个最小链表设计，它甚至没有size()接口，因为内部维护一个size变量会降低增删元素的效率。如果想要获取 forward_list 的 size，一个通常的做法是，用 std::distance 计算 begin 到 end 的距离得出 size。一句话总结：list 兼顾了接口丰富性牺牲了效率，而 forward_list 舍弃了不必要的接口只为追求极致效率。</p>
-<h3 id="8-stack">8. stack</h3>
-<blockquote>
-<p>容器属性：<font color = red>容器适配器</font>，后进先出型容器（LIFO）；
-template &lt;class T, class Container = deque<T> &gt; class stack;</p>
-</blockquote>
-<p>stack（栈）是一个专为 LIFO 设计的容器适配器，也即只能从一端插入和删除；作为适配器，需要指定底层容器才能实例化，参见模板参数中的<code>class Container</code>形参。</p>
-<p>stack 的特点是后进先出（一端进出），不允许遍历；任何时候外界只能访问 stack 顶部的元素；只有在移除 stack 顶部的元素后，才能访问下方的元素。stack 需要底层容器能够在一端增删元素，这一端也即 stack 的“栈顶”；stack 可以接纳任何一个至少支持下列接口的容器作为底层容器：</p>
-<blockquote>
-<p>empty(); size(); back(); push_back(); pop_back()</p>
-</blockquote>
-<p>在标准模板库容器中，vector、deque 和 list 满足上述要求，当然用户也可以自定义一个满足上述要求的容器。通过模板参数可以看出，默认情况下，<strong>stack 使用 deque 作为底层容器</strong>。</p>
-<p>stack 容器应用广泛，例如，编辑器中的 undo （撤销操作）机制就是用栈来记录连续的操作。stack 的设计场景和自助餐馆中堆叠的盘子、摞起来的一堆书类似。</p>
-<h3 id="9-map">9. map</h3>
-<blockquote>
-<p>Container properties: Associative | Ordered | Map | Unique keys | Allocator-aware
-容器属性：<font color = red>关联容器</font>，有序，元素类型&lt;key, value&gt;，key是唯一的，使用内存分配器动态管理内存 ；
-template &lt; class Key, // map::key_type
-class T, // map::mapped_type
-class Compare = less<Key>, // map::key_compare
-class Alloc = allocator&lt;pair&lt;const Key,T&gt; &gt; // map::allocator_type
-class map;</p>
-</blockquote>
-<p>map 是一个关联型容器，其元素类型是由 key 和 value 组成的 std::pair，实际上 map 中元素的数据类型正是 <code>typedef pair&lt;const Key, T&gt; value_type</code>;，这就看的很清楚了。</p>
-<p>所谓关联容器，是指<strong>对所有元素的检索都是通过元素的 key 进行的（而非元素的内存地址）</strong>，map 通过底层的「红黑树」数据结构来将所有的元素按照 key 的相对大小进行排序，所实现的排序效果也是严格弱序特性（strict weak ordering），为此，开发者需要重载 key 的&lt;运算符或者模板参数中的 class Compare。所提到的红黑树是一种自平衡二叉搜索树，它衍生自B树，这里推荐两篇文章（<a href="https://zhuanlan.zhihu.com/p/72505589"target="_blank" rel="external nofollow noopener noreferrer">记一次腾讯面试：有了二叉查找树、平衡树（AVL）为啥还需要红黑树？<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，<a href="https://zhuanlan.zhihu.com/p/273829162"target="_blank" rel="external nofollow noopener noreferrer">图解：什么是红黑树？<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>）作为更深入的参考。</p>
-<p>大体来说，map 访问元素的速度要稍慢于下文的 unordered_map，这是因为虽然都叫“map”，但两者的底层机制完全不一样。但是，相比于后者，map 支持在一个子集合上进行直接迭代器访问，原因在于 map 中的元素是被有序组织的。</p>
-<p>最后，map 也支持通过operator[]的方式来直接访问 value。</p>
-<h3 id="10-multimap">10. multimap</h3>
-<blockquote>
-<p>Container properties: Associative | Ordered | Map | Multiple equivalent keys | Allocator-aware
-容器属性: 关联容器，有序，元素类型&lt;key, value&gt;，允许不同元素key相同，使用内存分配器管理内存；
-template &lt; class Key, // map::key_type
-class T, // map::mapped_type
-class Compare = less<Key>, // map::key_compare
-class Alloc = allocator&lt;pair&lt;const Key,T&gt; &gt; // map::allocator_type
-class map;</p>
-</blockquote>
-<p><strong>map 中不允许出现 key 相同的两个元素，但 multimap 则可以这样做！</strong></p>
-<p>multimap 与 map 底层原理完全一样，都是使用「红黑树」对元素数据按 key 的比较关系，进行快速的插入、删除和检索操作；所不同的是 multimap 允许将具有相同 key 的不同元素插入容器（这个不同体现了 multimap 对红黑树的使用方式的差异）。在 multimap 容器中，元素的 key 与元素 value 的映射关系，是一对多的，因此，multimap 是多重映射容器。</p>
-<p>注意，在向 multimap 中新增元素时，multimap 只会判断 key 是否相同，而完全不会判断 value 是否相同！<font color=red>这意味着如果相同的 &lt;key, value&gt; 插入了多次，multimap 会对它们悉数保存！</font></p>
-<p>在使用中，我们可以通过迭代器配合 lower_bound() 和 upper_bound() 来访问一个 key 对应的所有 value，也可以使用equal_range()来访问一个 key 对应的所有 value，也可以通过find()配合count()来访问一个 key 对应的所有 value，个人认为前两种方法使用起来更方便一点。</p>
-<p>下文中将要提到的 multiset 之于 set 类似于这里的 multimap 之于 map。</p>
-<h3 id="11-set">11. set</h3>
-<blockquote>
-<p>Container properties: Associative | Ordered | Set | Unique keys | Allocator-aware
-容器属性：<font color=red>关联容器</font>，有序，元素自身即key，元素有唯一性，使用内存分配器动态管理内存；
-template &lt; class T, // set::key_type/value_type
-class Compare = less<T>, // set::key_compare/value_compare
-class Alloc = allocator<T> // set::allocator_type
-class set;</p>
-</blockquote>
-<p>set 是一个关联型容器，和 map 一样，它的底层结构是「红黑树」，但和 map 不一样的是，<strong>set 是直接保存 value 的</strong>，或者说，set 中的 value 就是 key。</p>
-<p><strong>set 中的元素必须是唯一的，不允许出现重复的元素</strong>，且元素不可更改，但可以自由插入或者删除。</p>
-<p>由于底层是红黑树，所以 set 中的元素也是严格弱序（strict weak ordering）排序的，因此<u>支持用迭代器做范围访问</u>（迭代器自加自减）。</p>
-<p>实际使用中，set 和 map 是近亲，性能相似，他们的差别是元素的 value 本身是否也作为 key 来标识自己。</p>
-<h3 id="12-multi_set">12. multi_set</h3>
-<blockquote>
-<p>Container properties: Associative | Ordered | Set | Multiple equivalent keys | Allocator-aware
-容器属性：<font color=red>关联容器</font>，有序，元素自身即key，允许不同元素值相同，使用内存分配器动态管理内存 ；
-template &lt; class T, // multiset::key_type/value_type
-class Compare = less<T>, // multiset::key_compare/value_compare
-class Alloc = allocator<T> &gt; // multiset::allocator_type
-class multiset;</p>
-</blockquote>
-<p>multiset 之于 set 就如同 multimap 之于 map：</p>
-<p>multiset 和 set 底层都是红黑树，multiset 相比于 set 支持保存多个相同的元素；</p>
-<p>multimap 和 map 底层都是红黑树，multimap 相比于 map 支持保存多个key相同的元素。</p>
-<p>鉴于以上近亲关系，multiset 的性能特点与其它三者相似，不再赘述。</p>
-<h3 id="13-unordered_map">13. unordered_map</h3>
-<blockquote>
-<p>Container properties: Associative | Unordered | Map | Unique keys | Allocator-aware
-容器属性：<font color = red>关联容器</font>，无序，元素类型&lt;key, value&gt;，key是唯一的，使用内存分配器动态管理内存 ； template &lt; class Key, // unordered_map::key_type
-class T, // unordered_map::mapped_type
-class Hash = hash<Key>, // unordered_map::hasher
-class Pred = equal_to<Key>, // unordered_map::key_equal
-class Alloc = allocator&lt; pair&lt;const Key,T&gt; &gt; // unordered_map::allocator_type
-class unordered_map;</p>
-</blockquote>
-<p>unordered_map 和 map 一样，都是关联容器，以键值对儿 &lt;key, value&gt; 作为元素进行存储；但是，除此之外，两者可以说是完全不一样！</p>
-<p>这是由底层的数据结构决定的，map 以红黑树作为底层结构组织数据，而 <strong>unordered_map 以哈希表(hash table)作为底层数据结构</strong>来组织数据，这造成了两点重要影响：
-1. unordered_map 不支持排序，<font color=red>在使用迭代器做范围访问时（迭代器自加自减）效率更低</font>；
-2. 但 unordered_map 直接访问元素的速度更快（尤其在规模很大时），因为它通过直接计算 key 的哈希值来访问元素，是O(1)复杂度！</p>
-<p>网络上有对 map VS unordered_map 效率对比的测试，通常 <strong>map 增删元素的效率更高，unordered_map 访问元素的效率更高</strong>，可以参见<a href="https://link.zhihu.com/?target=https%3A//blog.csdn.net/uniqsa/article/details/62442383"target="_blank" rel="external nofollow noopener noreferrer">这篇文章<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。另外，unordered_map 内存占用更高，因为底层的哈希表需要预分配足量的空间。</p>
-<p>综上，unordered_map 更适用于增删操作不多，但需要频繁访问，且内存资源充足的场合。</p>
-<blockquote>
-<p>比如在机器人领域的SLAM技术中，可以选择 unordered_map 来维护体素形式的 local map？ 当然 deque 应该也是不错的选择。</p>
-</blockquote>
-<h3 id="14-unordered_multimap">14. unordered_multimap</h3>
-<blockquote>
-<p>Container properties: Associative | Unordered | Map | Multiple equivalent keys | Allocator-aware
-容器属性：关联容器，无序，元素类型&lt;key, value&gt;，允许不同元素key相同，使用内存分配器管理内存 ；
-template &lt; class Key, // unordered_multimap::key_type
-class T, // unordered_multimap::mapped_type
-class Hash = hash<Key>, // unordered_multimap::hasher
-class Pred = equal_to<Key>, // unordered_multimap::key_equal
-class Alloc = allocator&lt; pair&lt;const Key,T&gt; &gt; // unordered_multimap::allocator_type
-class unordered_multimap;</p>
-</blockquote>
-<p>unordered_multimap 是对 unordered_map 的拓展，唯一区别在于 unordered_multimap 允许不同元素的 key 相同，但两者无论是在底层结构还是在容器特性上都是相通的，仅仅是对底层哈希表的使用方式稍有不同。</p>
-<p>在 unordered_multimap 中想要访问同一个 key 下对应的所有元素的话，可以使用equal_range()轻松做到；当然，也可以使用find()和count()配合的方式来访问。</p>
-<p>unordered_multimap 的容器特性参见 unordered_map，不再赘述。</p>
-<h3 id="15-unordered_set">15. unordered_set</h3>
-<blockquote>
-<p>Container properties: Associative | Unordered | Set | Unique keys | Allocator-aware
-容器属性：<font color=red>关联容器</font>，无序，元素自身即key，元素有唯一性，使用内存分配器动态管理内存 ；
-template &lt; class Key, // unordered_set::key_type/value_type
-class Hash = hash<Key>, // unordered_set::hasher
-class Pred = equal_to<Key>, // unordered_set::key_equal
-class Alloc = allocator<Key> // unordered_set::allocator_type
-class unordered_set;</p>
-</blockquote>
-<p>所有unordered_XXX类容器的特点都是以哈希表作为底层结构；所有 XXX_set 类容器的特点都是「元素自身也作为key」来标识自己。我们在把两类特性叠加到一起，就得到了 unordered_set。</p>
-<p>在 unordered_set 中，元素自身同时也作为 key 使用；既然是作为 key 使用，那么元素就不能被更改，也即 unordered_set 中的元素都是 constant 的，但我们可以自由的插入和删除元素，这也是所有XXX_set类容器的性质。既然底层结构是哈希表，意味着 unordered_set 中的元素是无序的，不能按照大小排序，这也是所有unordered_XXX类容器的性质。</p>
-<p>和所有的unordered_XXX类容器一样：
-1. unordered_set 直接用迭代器做范围访问时（迭代器自加自减）效率更低，低于 set；
-2. 但 unordered_set 直接访问元素的速度更快（尤其在规模很大时），因为它通过直接计算 key 的哈希值来访问元素，是O(1)复杂度！</p>
-<h3 id="16-unordered_multiset">16. unordered_multiset</h3>
-<blockquote>
-<p>Container properties: Associative | Unordered | Set | Multiple equivalent keys | Allocator-aware
-容器属性：<font color=red>关联容器</font>，无序，元素自身即key，允许不同元素值相同，使用内存分配器动态管理内存 ；
-template &lt; class Key, // unordered_multiset::key_type/value_type
-class Hash = hash<Key>, // unordered_multiset::hasher
-class Pred = equal_to<Key>, // unordered_multiset::key_equal
-class Alloc = allocator<Key> // unordered_multiset::allocator_type
-class unordered_multiset;</p>
-</blockquote>
-<p>unordered_multiset，顾名思义，就是集齐了“哈希表为底层结构”，“元素自身即key”，“允许不同元素值相同”这三个特性的容器，是对 unordered_set 的简单拓展。</p>
-<p>unordered_multiset 的效率特性与所有基于哈希表的容器相似，参见 unordered_set，不再赘述。</p>
-<h3 id="17-pair--tuple">17. pair &amp;&amp; tuple</h3>
-<blockquote>
-<p>template &lt;class&hellip; Types&gt; class tuple;
-template &lt;class T1, class T2&gt; struct pair;</p>
-</blockquote>
-<p><code>std::pair</code> 和 <code>std::tuple</code> 并不是stl容器库中的容器，不过鉴于经常用到，就顺便整理一下。先从 tuple 说起，pair 相当于 tuple 的特例。</p>
-<p>tuple 叫作元组，它可以把一组类型相同或不同的元素组合到一起，且元素的数量不限。tuple 的底层原理与 stl 中的容器完全不同，但在功能上，tuple 是对容器的有效补充，因为所有的容器都只能组合相同类型的元素，但tuple 可以组合任意不同类型的元素。在使用上，可以用std::make_tuple()来构造 tuple 对象，可以用std::get<index>()来获取 tuple 对象的某个元素，注意std::get<index>()返回的是 tuple 对象中某个元素的索引，因此是可以用作左值的！此外，也可以用std::tie()打包一组变量来作为左值接受 tuple 对象的赋值。</p>
-<p>tuple 的底层原理大概是一个层层继承的类，详情可以参考<a href="https://zhuanlan.zhihu.com/p/356954012"target="_blank" rel="external nofollow noopener noreferrer">这篇文章<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，写的非常透彻。</p>
-<p>pair 可以看作是把 tuple 的 size 限制为 2 的一个特例，pair 只能把一对儿元素组合到一起。在使用上，可以用std::make_pair()来直接构建 pair 对象，可以用std::get&lt;0&gt;()和std::get&lt;1&gt;()来分别获取 pair 对象的两个元素，但更方便的做法是直接访问 pair 类型的两个数据成员pair对象.first和pair对象.second来访问元素</p>
-<p>reference:
-[1]. <a href="https://zhuanlan.zhihu.com/p/542115773"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/542115773<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item></channel></rss>
