@@ -410,18 +410,547 @@ private:
 
 ### R32 确定你的public继承塑造出is-a关系
 
+原书标题：**Make sure public inheritance models “is-a”**. 侯捷老师翻译为“塑模”，我个人更愿意称为“塑造”。
+
+- **“public继承”意味着is-a**
+  is-a，即“是一种”，就是说，适用于Base Class身上的每一件事，也一定适用于Derived Class身上。
+
+{{<admonition Note "By the way">}}
+面向设计对象的设计有著名的5大原则， SOLID 原则，每个字母分别代表一种原则：
+- S–单一责任原则(SRP) –Single Responsibility Principle
+- O–开放封闭原则(OCP)– Open-Closed Principle
+- L–里式替换原则(LSP)– Liskov Substitution Principle
+- I –- 接口分离原则(ISP)–Interface Segregation Principle
+- D–-依赖倒置原则(DIP)– Dependency Inversion Principle
+
+更详细的叙述可以参考：[腾讯云：SOLID原则](https://cloud.tencent.com/developer/article/1503629)
+{{</admonition>}}
+
+本节条款的中心思想即里氏替换原则：**一个对象出现的地方都可以由其子类代替并且不会出错。**
+
+继承关系有时候听起来很好理解，比如 `Class Student: public Person`理所应当，但有时也会导致误解。比如企鹅属于鸟类，但企鹅不会飞，那么基类`Bird::Fly`方法又当如何处理，下方满足设计意图：
+
+```c++
+class Bird{   //... 不声明Fly()方法
+};
+class FylingBird:public Bird{
+public: virtual void Fly();
+};
+class Penguin: public Bird{ //... 不声明Fly()方法
+};
+// 注：如果Bird类以及子类都不考虑Fly()方法，那么Penguin直接继承于Bird即可
+```
+
+还有另一种场景，父类和子类对于同一个方法的数据修改规则不同，导致了继承体系的缺陷。
+比如`Class Square:public Rectangle` $\rightarrow$ 正方形继承于长方形，但是考虑这样一个**类外方法**:
+
+```c++
+void makeBigger(Rectangle& r){  //普通非成员函数
+    int oldHeight = r.height();
+    r.setWidth(r.width() + 10);//如果r是Squqre，可能内部自动就长宽一起变了
+    assert(r.height() == oldHeight);//这个assert对于正方形就不合适了,贸然去除又违背设计本意
+}
+```
+
+应对上述这样的情况，就需要修改设计或修改继承体系了。
+
+### R33 避免遮掩由继承得来的名称
+首先，什么是名称的遮掩，通俗地说，是指由于作用域不同带来的变量名覆盖。考虑下方代码：
+```c++
+int x = 10;
+void someFunc(){
+    double x = 0.1;
+    std::cout<<"x is" << x << std::endl; // local作用域找到了x，直接覆盖全局的x，输出0.1
+}
+```
+那么如果将继承体系考虑进来呢：**Derived的作用域会覆盖Base的作用域**，包括virtual和non-virtual。考虑下方代码：
+
+```c++
+class Base {
+public:
+    virtual void mf1() = 0;
+    virtual void mf1(int x) { std::cout << "Base::mf1():x =" << x << std::endl; }
+    virtual void mf2() { std::cout << "Base::mf2()\n"; }
+    void mf3() { std::cout << "Base::mf3()\n"; }
+    void mf3(int x) { std::cout << "Base::mf3():x =" << x << std::endl; }
+    virtual ~Base() {}
+};
+class Derived :public Base {
+public:
+    virtual void mf1() { std::cout << "Derived::mf1()\n"; }
+    void mf3(){ std::cout << "Derived::mf3()\n"; }
+};
+```
+很明显存在名称遮掩的问题，Derived的mf1，mf3会遮掩子类的所有同名函数，测试结果如下：
+```c++
+Derived d;
+d.mf1();      //OK，输出: Derived::mf1()
+//d.mf1(100);  编译报错，因为名称被遮掩
+d.mf2();      //OK，输出: Base::mf2()
+d.mf3();      //OK，输出: Derived::mf3()
+//d.mf3(300);  编译报错，同理
+d.Base::mf3(300); //OK，输出: Base::mf3():x =300 . 但是不太建议这么写，丑！！
+```
+
+- 为解决上述问题，可以采用using声明式或转发函数
+  1. using 声明式
+     可以使用using声明式，让Derived可以忽略名称遮掩，看到Base作用域内的函数。可以让上方代码的“编译报错”消失，正常调用d.mf1(100)和d.mf3(300)。
+     ```c++
+      class Derived :public Base {
+      public: //修改本节内容中上方代码的Derived类的声明
+          using Base::mf1;
+          using Base::mf3; //这2个using使得Base类作用域内所有mf1,mf3函数都可见
+          // ... 其他，略
+      }
+     ```
+  2. 转发函数(forwarding function)
+    应用场景: 在private继承下，强调的是继承实现而非继承接口，如果想在子类的成员中调用父类函数，此时可以通过函数转发来实现。
+    ```c++
+    class Derived: private Base{ //改写本节上方代码，注意，是私有继承
+    public:
+        virtual void mf1(){
+            Base::mf1(); //拿到了父类的函数实现
+            // ... 该函数其他部分
+        }
+    };
+    // 应用代码
+    Derived d;
+    d.mf1();    //调用成功，Derived::mf1
+    d.mf1(100);  //编译失败
+    ```
+    当然，public继承也能使用转发函数，写出`d.Base::mf3(300)`; 这样的代码。但是，一来public继承理应遵循"is-a"规则，using声明拿到所有被遮掩的接口；二来明显代码不美观。
+
+### R34 区分接口继承和实现继承
+
+当一个子类Derived继承于父类Base，那么要时刻清楚，对于类中的成员函数，是想继承父类的接口，还是想继承父类的实现。
+
+- **对于Public继承，接口总是会被继承**
+  基于“**is-a**”的关系，作用于父类的任何事情也一定要适用于子类。
+- **声明纯虚函数(pure-virtual)的目的是让子类只继承函数接口**
+  对于纯虚函数，子类必须重新实现该接口。注意，`父类可以选择性给出纯虚函数的实现`，但是一般不会给。
+- **隐患：从非纯虚函数(impure-virtual)同时继承接口和缺省实现**
+  非纯虚函数，可以让子类选择是否重新实现该接口。那么，如果子类是有必要重写，但是**忘记写了**却默默用父类版本，便事与愿违了。
+  举例：父类Airplane有子类PlaneModelA、PlaneModelB、PlaneModelC，其中C型飞机不同于AB型，是新式飞机：
+  ```c++
+  class Airport {...};//机场类，实现略
+  class Airplane{
+  public:
+      virtual void fly(const Airport& destination);//父类还会给出默认的fly实现
+  };
+  class PlaneModelA: public Airplane{ ... }; // 不重写fly，继承父类的fly实现
+  class PlaneModelB: public Airplane{ ... }; // B和A一样
+  class PlaneModelC: public Airplane{ ... }; //新型飞机，本来要重写fly，结果忘了
+  ```
+  那么这个`隐患该如何解决`呢，也就是说，在实现C型飞机类时别忘了fly方法？
+  核心思想是“**切断virtual函数接口和其默认实现之间的连接**”。
+  1. 方法1：设置fly为纯虚函数，并新增一个defaultyFly方法
+      注意细节：defaultFly方法要设置为protected属性的non-virtual函数，代码如下：
+      ```c++
+      class Airplane{
+      public:
+          virtual void fly(const Airport& destination) = 0;// 父类不给出实现
+      protected:
+          void defaultFly(const Airport& destination){ ... }//默认的fly实现
+      };
+      class PlaneModelA: public Airplane{
+      public:   //纯虚接口,子类必须给出实现
+          virtual void fly(const Airport& destination){
+              defaultFly(destination); //调用父类的缺省实现
+          }
+      };//PlaneModelB 和 PlaneModelA 类似,略
+      class PlaneModelC: public Airplane{ ...};// 重写fly方法
+      ```
+      这样写还有个好处：fly()和defaultFly()享有不同的保护级别。
+  2. 方法2： 父类的默认实现塞到纯虚接口fly中
+      这样就不需要定义defaultFly方法了，因为子类必须实现fly方法，对于A 型、B型飞机，子类fly()转发一次父类的fly()即可，C类飞机实现新式的fly()。缺点是让原本在defaultFly内的实现内容暴露在外了(指public属性)。
+      {{<admonition Note "Note">}}
+      个人认为，这方法2还有个缺点：它让虚基类的纯虚接口承载了接口实现，不够纯粹(比如需要输出给到客户，应该只继承接口)。
+      {{</admonition>}}
+
+- **non-virtual函数具体指定接口继承和强制性实现继承**
+  如果成员函数是non-virtual，表示它不打算在子类中有不同的行为，或者说，不变性凌驾于特异性。对应地，绝不应该在子类中重写non-virtual函数。
+
+### R35 考虑virtual函数的替代选择
+
+假设这样一个场景：设计一款游戏，不同人物以不同方式计算生命值，那么$\Longrightarrow$ 设计继承体系，子类共同继承父类的public-virtual方法healthValue()，子类各自重新实现healthValue()接口。
+
+😄很好，中规中矩，那么，有没有其他方式呢？
+
+- **`NVI手法(non-virtual interface)实现Template Method模式`**
+  思路就是父类定义个non-virtual的public方法healthValue()，调用virtual的private方法healthValueImpl。子类直接重写healthValueImpl，达到类似模版方法设计模式的效果。
+  父类`GameCharacter`设计如下：
+  ```c++
+  class GameCharacter{//构造函数和虚析构均略去
+  public:
+      int healthValue()const{ //ps:方便展示，而写在了头文件里，成了inline
+          std::cout<< "Do prepare works...\n";//事前，如加锁,写log,验证条件等
+          int retVal = healthValueImpl();
+          std::cout<< "\nDo post works...\n";//事后,如解锁,更新数据
+          return retVal;
+      }
+  private:
+      virtual int healthValueImpl() const{
+          int val=0;
+          std::cout << "default caculate process... GetValue:" << val;//随后进行计算，过程略
+          return val;
+      }
+  };
+  ```
+  子类`GoodGuy`和`BadGuy`设计如下：
+  ```c++
+  class GoodGuy:public GameCharacter{
+  private:
+      virtual int healthValueImpl() const{
+          int val = 60;
+          std::cout << "goodGuy caculate ... GetValue: " << val << " ";//过程略
+          return val;
+      }
+  };
+  class BadGuy:public GameCharacter{
+  private:
+      virtual int healthValueImpl() const{
+          int val = 80;
+          std::cout << "badGuy caculate ... GetValue: " << val << " ";//过程略
+          return val;
+      }
+  };
+  ```
+  应用端代码如下：
+  ```c++
+  std::shared_ptr<GameCharacter> pGood = std::make_shared<GoodGuy>();
+  pGood->healthValue(); //得到60
+  std::shared_ptr<GameCharacter> pBad = std::make_shared<BadGuy>();
+  pBad->healthValue();//得到80
+  ```
+- **`用函数指针实现Strategy模式`**
+  主体思想是添加一个函数指针为private成员变量pFunc，这个函数通过外部传入，从而实现不同的行为。
+  ```c++
+  class GameCharacter;//forward declaration
+  int defaultHealthCalc(const GameCharacter& gc);//默认算法实现
+  class GameCharacter{
+  public:
+    typedef int (*HealthCalcFunc)(const GameCharacter& gc);
+    explicit GameCharacter(HealthCalcFunc hcf = defaultHealthCalc):calcFunc_(hcf){}//传入函数指针,自定义实现
+    int healthValue()const{
+      return calcFunc_(*this);
+    }
+  private:
+    HealthCalcFunc calcFunc_ = nullptr;
+  };
+  ```
+  这个设计有2个有趣的**设计弹性**：
+    1. 即使同一个人物类型的不同实体，允许拥有不同的生命值计算方法；
+    2. 某个人物对象的生命值计算方法，在其生命期内可以任意修改，只要添加一个set方法即可；
+- **`用std::function实现Strategy模式`**
+  private成员变量由上文的函数指针替换成std::function对象，相当于是`指向函数的泛化指针`。就`更具设计弹性`了。std::function可以传入函数指针、仿函数、std::bind函数对象。GameCharacter的类实现修改为：
+  ```c++
+  class GameCharacter{
+  public:
+      typedef std::function<int (const GameCharacter&)>  healthCalcFunc;
+      explicit GameCharacter(healthCalcFunc hcf = defaultHealthCalc):healthValueImpl_(hcf){}
+      int healthValue()const{
+          std::cout<< "Do prepare works...\n";
+          int retVal = healthValueImpl_(*this); // 这里改了
+          std::cout<< "\nDo post works...\n";
+          return retVal;
+      }
+  private:
+      healthCalcFunc healthValueImpl_ = nullptr;
+  };
+  ```
+  1. 传入函数指针
+    ```c++
+     gameChashort quickHurtHealthCalc(const GameCharacter2& gc);//返回值不是int,可隐式转换;实现略去
+    //应用端代码如下：
+    GameCharacter quickGuy(quickHurtHealthCalc);
+    quickGuy.healthValue();//内部调用quickHurtHealthCalc
+    ```
+
+  2. 传入仿函数
+    仿函数：即函数对象，而且重载了operator() 。
+    ```c++
+    struct HealthCalculator{//
+      int operator()(const GameCharacter2& gc) const{
+        return 180;//省略实现
+      }
+    };
+    //应用端代码如下：
+    GameCharacter functorGuy( (HealthCalculator()) );//用括号将仿函数括起来
+    functorGuy.healthValue();
+    ```
+  3. 传入`std::bind`函数对象
+    std::bind是函数对象模板，接收一个函数指针f和若干函数入参得到fObj，调用fObj等同于调用带参数的f。本例代码如下：
+    ```c++
+    class GameLevel{
+    public: //用类内函数作为函数指针f
+        float health(const GameCharacter& gc) const{
+            return -20.3;
+        }
+    };
+    //应用端代码如下：
+    GameLevel  curLevel;
+    GameCharacter levelGuy(std::bind(&GameLevel::health, curLevel,std::placeholders::_1));
+    levelGuy.healthValue();//内部调用等价于curLevel.health(leveGuy);
+    ```
+    {{<admonition Note "By the way">}}
+    其实这里传入C++11新增的Lambda表达式作为std::function也是可以的，而且更方便，示例代码如下：
+    ```c++
+    GameCharacter  lamGuy([&](const GameCharacter& gc){
+     std::cout<< "value is " << 75 << std::endl;//具体计算略
+	   return 75;
+	   });
+    lamGuy.healthValue();
+    ```
+    关于Strategy设计模式更多参考：
+      - [Strategy设计模式-原理讲解](https://refactoringguru.cn/design-patterns/strategy)
+      - [Strategy设计模式-C++代码参考](https://refactoringguru.cn/design-patterns/strategy/cpp/example)
+    {{</admonition>}}
 
 
+### R36 绝不重新定义继承而来的non-virtual函数
 
+- 由于名称遮掩，不要重新定义继承而来的non-virtual函数
+  看个反例：
+  ```c++
+  class B{
+  public:
+      void mf(){
+        std::cout << "B::mf()";
+      }
+  }
+  class D: public B{
+  public:
+      void mf(){//重新定义mf()，违反了Rule33
+          std::cout << "D::mf()";
+      }
+  };
+  ```
+  那么看这样的应用代码：
+  ```c++
+  D d;
+  D* pD = &d;
+  B* pB = &d;
+  d.mf();    // 输出 D::mf()
+  pD -> mf();// 输出 D::mf()
+  pB -> mf();// 输出 B::mf()
+  ```
+  这就很诡异了！都通过对象d调用成员函数mf，调用结果应该相同。
 
+  另外一点，出于public继承的“**is-a**”特性，这样重新定义non-virtual函数也是**对"is-a"的严重违背**。
 
+### R37 绝不重新定义继承而来的缺省入参值
 
+这里说的缺省入参，指的是函数入参的默认值，在重写带有缺省入参的virtual函数时，不要修改那个默认参数的默认值。
 
+原因：virtual函数为`动态绑定`特性，而缺省参数值是`静态绑定`特性。修改后会造成一些令人费解的现象。
 
+请看下方反面教材：
+```c++
+enum class Color {
+    RED = 0,GREEN ,BLUE
+};
+class Shape {
+public:  // ：父类默认入参是RED
+    virtual void draw(Color col = Color::RED) {
+      std::cout << "Shape:col is " << int(col) << std::endl;
+    }
+};
+class Rectangle : public Shape{ // ：子类类修改默认入参为GREEN
+    virtual void draw(Color col = Color::GREEN) {
+      std::cout << "Rectangle:col is " << int(col) << std::endl;
+    }
+};
+```
+那么当出现典型应用场景`Base* pB=new Derived`时，就会造成“父类子类各出一半力”的情形：
+```c++
+Shape *pRec = new Rectangle();
+pRec->draw(); // 输出：Rectangle:col is 0  （0是RED）
+```
 
+结果确实调用子类draw，但是默认入参取的是基类的 RED，而非子类的GREEN。
+那怎么修改合适呢，都带默认参数，且子类父类相同？带来一个**耦合问题**，如果父类改了，所有子类都得改。
+正如Rule35提到的NVI(non-virtual interface)手法，此处便是绝佳的应用场景$\Longrightarrow$ draw方法改为默认参数的non-virtual，把virtual函数放到private里去，代码修改如下：
 
+```c++
+class Shape {
+public:   //子类继承该默认入参的non-virtual接口，别重写
+    void draw(Color col = Color::RED) {
+        drawImpl(col);
+    }
+private: //纯虚函数是强制子类重写，看具体情况，impure-virtual也行
+    virtual void drawImpl(Color col) = 0;//子类重写这个drawImpl
+};
+```
 
+### R38 通过复合塑造出has-a或"根据某物实现出”
 
+原书标题：`Model “has-a” or “is-implemented-in-terms-of” through composition`，同Rule32，侯捷老师翻译为“塑模”。
+
+复合关系（composition）是一种常见的类关系，当某种类型的对象内含有它种类型的对象时，便是此种关系。
+
+复合关系分为2种：`"has-a"` 和 `“is-implemented-in-terms-of"`。
+
+- “`has-a`”关系：
+  指的是**应用域**部分，不参与内的具体各项实现。是一种单纯的完备对象的包含关系，比如Person类有Address、PhoneNumber、Job等类型的成员变量，又或是Image类有Buffer、Mutexx、SearchTree等类型的成员。
+- “`is-implemented-in-terms-of`“关系：
+  指的是**实现域**部分，参与类的各类实现，比如数据结构的设计中，想用现有的 std::list来实现Set类，这样可能效率不高(通常更具效率的实现是采用平衡查找树 )，但是可行。
+  📌：此处不能让Set以public继承于std::list，因为list允许重复元素，而Set不行，不满足“is-a”关系。
+  正确实现部分代码示例如下：
+  ```c++
+  template<class T>
+  class Set {
+  public:
+    bool contains(const T& item)const{
+        return std::find(rep_.begin(),rep_.end(),item) != rep_.end();
+    }
+    void insert(const T& item){
+        if(!contains(item)) rep_.push_back(item);
+    }
+    void remove(const T& item);// 实现略
+    std::size_t size() const;  // 实现略
+  private:
+    std::list<T> rep_; //用来表述Set的数据
+  };
+  ```
+
+### R39 明智而审慎地使用private继承
+
+“明智而审慎”的意思是👉当考虑了其他方案对比后，仍然觉得private继承是最合适的，才使用它。
+
+首先明确private继承的2个特性：
+  1. 编译器不会自动将一个derived-class对象隐式转换为base-class对象(函数入参时)；
+  2. 继承而来的成员，在derived-class中都会变成private属性；
+
+private继承的意义：意味着**implemented-in-terms-of**，在类关系设计上没有太大意义，只看重软件实现。
+
+考虑以下使用private的2个应用场景：
+
+- **derived-class想继承base-class的某public接口实现，但又想隐藏此接口**
+  考虑如下应用场景：对于一个已知的类Widget，想用另一个已知的计时类Timer辅助性能分析，在尽量小改动已有代码的情况下，如何启用Timer？
+  private继承做法：让Widget类private继承于Timer，重写父类Timer的onTick函数。
+  具体代码如下：
+  ```c++
+  class Timer{
+  public:
+    explicit Timer(int tickFrequency);
+    virtual void onTick() const;//定时器滴答一次，自动被调用一次
+  };
+  class Widget:private Timer{
+  private: // private继承而来的所有成员都是private属性
+    virtual void onTick() const;//查看并记录Widget数据，资源等
+  };
+  ```
+  该问题除了上方的private继承，能不能用其他方案替代private继承呢？
+  👉👉“public继承+复合”替代private继承：在Widget内部嵌套定义private属性的新类WidgetTimer:private Timer，即可同样启用Timer且隐藏了Timer。代码如下：
+  ```c++
+  class Widget{
+  private:
+    class WidgetTimer:public Timer{// 类内嵌套定义
+    public:
+        virtual void onTick() const;
+    };
+    WidgetTimer wTimer_;
+  };
+  ```
+  ⭐⭐ WidgetTimer也可以不定义在Widget类内,类内只放WidgetTimer* 和WidgetTimer的前置声明，完全解耦合，**降低编译依赖性**。而这样的设计自由度是单纯的private继承不具备的。
+
+- **空白基类最优化(EBO,empty base optimization)**
+  ⚡值得一提：空类(Empty Class)是指不含non-static数据成员和virtual-func的类。
+  空类的size会被C++强制要求至少为1，通常是用1个char占位。如果让Empty-Class作为数据成员，因为内存对齐而导致Derived-Class浪费内存。
+  示例代码 👇：
+  ```c++
+  class Empty { // 空类，1字节. 不含non-static数据，不含virtual
+    void privteFoo() { std::cout << "private non-virtual.";}
+  public:
+    typedef char*  pChar;
+    typedef void(*pFuncReadData)(std::string url);
+    enum class clolr {
+        red,green,blue
+    };
+    void foo() { std::cout << "public non-virtual!"; }
+    static int count ;//static 数据也不属于class实体
+  };
+  class HoldsIntsAndEmpty { //内存对齐后12字节
+    int x_;   // 4字节
+    Empty e_; // 1字节
+    int y_;   // 4字节
+  };
+  class HoldsInts:private Empty {//使用EBO,类大小8字节
+    int x_;//4字节
+    int y_;//4字节
+  };
+  ```
+  EBO优化可以减少Derived-Class的内存大小，注意EBO只适用于单继承。
+
+### R40 明智而审慎地使用多重继承
+
+多重继承(multiple inheritance)是指继承一个以上的父类。但是这些父类应该避免拥有共同的祖父类，会形成比较麻烦的“菱形继承”(或者叫钻石继承)。
+
+- **多重继承的成本以及副作用**
+  上面说“菱形继承”比较麻烦，主要原因是如果祖父类如果拥有某个成员变量x，那么2个父类分别public形式继承了x，到了目标子类就有了2份x。
+  解决问题的办法是**虚继承**(virtual inheritance)，如此，上述子类只有一份x。为保证虚继承的正确性，编译器在背后需要付出更多代价，可能造成子类内存更大或运行速度更慢。
+  👉如果存在菱形继承，那么祖父类尽量不要持有数据成员。
+  虚继承示例代码如下：
+  ```c++
+  class File{...};  //祖父类最好不要持有non-static数据成员
+  class InputFile: virtual public File{...};
+  class OutputFile: virtual public File{...};
+  class IOFile:public InputFile,public OutputFile{...};
+  ```
+- **应用场景：public继承接口+private继承实现**
+  思考这样的应用场景，PersonBase类是虚基类，RealPerson是目标子类（需要继承接口），但是获取name和birthDate信息的函数在另一个PersonInfo类都有了现成的实现（只需要简单修改该实现）。
+
+  两者结合后，即让RealPerson类public继承于PersonBase，private继承于PersonInfo。
+  ```c++
+  class PersonBase {
+  public:
+      virtual ~PersonBase(){}
+      virtual std::string name() const = 0;
+      virtual std::string birthDate() const = 0;
+  };
+  class PersonInfo {
+  public:
+      virtual  ~PersonInfo() {}
+      explicit PersonInfo(int pID):id_(pID) {}
+      virtual const char* theName() const{
+          static char value[1024];
+          static const char* exampleName = "Luka";// 计算过程略,用固定字符串替代
+          std::strcpy(value, valueDelimLeft());   // 获取左界定符
+          std::strcat(value, exampleName);
+          std::strcat(value, valueDelimRight());// 获取右界定符
+          return value;
+      }
+      virtual const char* theBirthDate() const { return "1990-1-1"; }
+      virtual const char* valueDelimLeft() const { return "["; };
+      virtual const char* valueDelimRight() const { return "]"; };
+  private:
+      int id_ = 0;
+  };
+  ```
+  多重继承的代码为👇:
+  ```c++
+  class RealPerson : public PersonBase, private PersonInfo {//多重继承
+  public:
+      explicit RealPerson(int pID) :PersonInfo(pID) {} // 委托构造
+      virtual std::string name() const{ //实现必要的虚基类Person的pure-virtual成员函数
+          return PersonInfo::theName();
+      }
+      virtual std::string birthDate() const {
+          return PersonInfo::theBirthDate();
+      }
+  private:
+      virtual const char* valueDelimLeft() const { return ""; };//重写界定符函数
+      virtual const char* valueDelimRight() const { return ""; };
+  };
+  ```
+  最后应用端代码：
+  ```c++
+  RealPerson rPerson(613);
+  std::cout << rPerson.name(); //输出Luka ,而不是[Luka]
+  ```
+  可以看到，多重继承体系完美解决该问题。
+
+回到本节开头，明智和审慎的意思是👉即使多重继承可以用单继承方案替代解决，思考后，如果多重继承依然是最简洁、最易维护、最合理的做法，那就选择它。
 
 
 ref:</br>
