@@ -11,16 +11,16 @@
 <p>但是，即使他们做得很好，「<strong>大部分负担仍在你肩上，而理解为什么会这样是很重要的</strong>」。</p>
 <p>在STL容器（和大多数厂商的愿望）里对多线程支持的黄金规则已经由SGI定义，并且在它们的STL网站上发布：</p>
 <ul>
-<li><strong>「多个读取者是安全的」</strong>。多线程可能同时读取一个容器的内容，在读取时「不能有任何写入者操作这个容器」。</li>
-<li><strong>「对不同容器的多个写入者是安全的」</strong>。多线程可以同时写不同的容器。对同一个容器同时多线程写入是不安全的。</li>
+<li>「<strong>多个读取者是安全的</strong>」。多线程可能同时读取一个容器的内容，在读取时「不能有任何写入者操作这个容器」。</li>
+<li>「<strong>对不同容器的多个写入者是安全的</strong>」。多线程可以同时写不同的容器。对同一个容器同时多线程写入是不安全的。</li>
 </ul>
 <h2 id="完全线程安全">完全线程安全？</h2>
 <p>很多程序员希望STL实现是完全线程安全，这非常难以实现。</p>
 <p>一个库可能试图以下列方式实现这样完全线程安全的容器：</p>
 <ul>
 <li>每次调用容器的成员函数期间都要锁定该容器」</li>
-<li>在**「每个容器返回的迭代器(例如通过调用begin或end)的生存期之内都要锁定该容器」**</li>
-<li>在**「每个在容器上调用的算法执行期间锁定该容器」**。（这事实上没有意义，因为算法没有办法识别出它们正在操作的容器）</li>
+<li>在「<strong>每个容器返回的迭代器(例如通过调用begin或end)的生存期之内都要锁定该容器</strong>」</li>
+<li>在「<strong>每个在容器上调用的算法执行期间锁定该容器</strong>」。（这事实上没有意义，因为算法没有办法识别出它们正在操作的容器）</li>
 </ul>
 <h2 id="example-多线程修改">Example 多线程修改</h2>
 <p>搜寻一个vector<int>中第一次出现3这个值的地方，如果它找到了，就把这个值改为2。</p>
@@ -226,7 +226,233 @@
 <h3 id="24模型训练">2.4、模型训练</h3>
 <p>所以说反向过程其实就是<strong>训练网络去学习分解过程每一步的噪声</strong>，当网络训练好之后，输入一张噪声图片，通过网络就能把加的噪声给求出来，噪声有了代入公式，就能把 $x_{t-1}$ 步的比较清晰的图给求出来了，一步步往前迭代就行了。</p>
 <p>采用L2距离刻画相近程度就可以，DDPM的关键是训练 $\varepsilon_{\theta}(x_t, t)$，目的就是使预测的噪声与真实用于破坏的噪声相近：</p>
-<p>$$Loss=\mid\mid\varepsilon-\varepsilon_\theta(x_t,t)\mid\mid^2=\mid\mid\varepsilon-\varepsilon_\theta(\sqrt{\overline{\alpha}_t}~x_0+\sqrt{1-\overline{\alpha}_t}~\varepsilon_t,t)\mid\mid^2$$</p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [4]</title><link>https://jianye0428.github.io/posts/partfour/</link><pubDate>Mon, 31 Jul 2023 07:26:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partfour/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+<p>$$Loss=\mid\mid\varepsilon-\varepsilon_\theta(x_t,t)\mid\mid^2=\mid\mid\varepsilon-\varepsilon_\theta(\sqrt{\overline{\alpha}_t}~x_0+\sqrt{1-\overline{\alpha}_t}~\varepsilon_t,t)\mid\mid^2$$</p>
+<p></p>
+<p>模型训练完后，只要给定随机高斯噪声，就可以生成一张从未见过的图像。</p>
+<p>UNet本文不做介绍，结构图为：</p>
+<p></p>
+<blockquote>
+<p>额外强调的是：Unet里有一个位置编码，是关于时间步的，每个时间步是有一个线性调度器的，每个时间添加的噪声的方差是不一样的，所以将时间步作为编码嵌入的话，可以将模型预测的噪声更加的准确。</p>
+</blockquote>
+<h2 id="三算法流程概述">三、算法流程概述</h2>
+<p></p>
+<p>再次总结，扩散模型两个步骤如下：</p>
+<ul>
+<li>一个固定的（预先定义好的）前向扩散过程 $q(x_t | x_{t-1})$：逐步向图片增加噪声直到最终得到一张纯粹的噪声图；</li>
+<li>一个学习得到的去噪过程 $p_{\theta}(x_{t-1} | x_t)$：训练一个神经网络去逐渐的从一张纯噪声中消除噪声，直到得到一张真正的图片。</li>
+</ul>
+<p></p>
+<p>算法1 为训练流程：</p>
+<ul>
+<li>line2：从数据中采样 $x_0$，$q(x_0)$ 的意思是给 $x_0$ 加上噪声；</li>
+<li>line3：随机选取 time step $t$；
+<ul>
+<li>真实训练过程中我们不可能一步步的从 $t$ 到 $T$，因为会很大，这就意味着每输入一张图片 $x$，就会产生张噪声图像，也就是一张图像的网络要训练 $T$ 个噪声样本，非常耗时。</li>
+<li>所以对 $T$ 进行了采样，$t$ 就是从 $T$ 里采集若干个的意思。</li>
+<li>举个例子：假设采集 $t$ 的分别为100、20、3，对应的 $x$ 为 $x_{100}$、$x_{20}$、$x_{3}$，对应噪声为 $\varepsilon_{100}$、$\varepsilon_{20}$、$\varepsilon_{3}$，对于的预测噪声为 $\hat{\varepsilon}<em>{100}$、$\hat{\varepsilon}</em>{20}$、$\hat{\varepsilon}_{3}$, 只需要将 $\varepsilon$ 和 $\hat{\varepsilon}$ 代入MSE公式即可（相减、平方、最小化）。</li>
+</ul>
+</li>
+<li>line 4：生成随机高斯噪声；</li>
+<li>line 5：调用模型估计 $\varepsilon_{\theta}(\sqrt{\overline{\alpha}_t}~x_0+\sqrt{1-\overline{\alpha}_t}~\varepsilon_t,t)$ ，计算真实噪声与估计噪声之间的MSE Loss，反向传播更新模型。
+<ul>
+<li>网络的作用是预测噪声，随着的增加，噪声强度会越来越大，因此预测的噪声是和迭代是直接相关的，所以要把作为参数送入到网络当中。</li>
+</ul>
+</li>
+<li>直到收敛。</li>
+</ul>
+<p>算法2 为采样流程：</p>
+<ul>
+<li>line 1：从高斯分布采样 $x_T$；</li>
+<li>line 2：按照 $T, &hellip;, 1$ 的顺序进行迭代；</li>
+<li>line 3：如果 $t = 1$ 令 $z = 0$；如果 $t &gt; 1$ ，从高斯分布中采样；</li>
+<li>line 4：利用公式求出均值和方差，进而求得 $x_{t-1}$；</li>
+<li>经过上述迭代，恢复 $x_0$。</li>
+</ul>
+<h2 id="四数学描述">四、数学描述</h2>
+<p>我们来推导如何从原始图像直接到第t时刻的图像 $(X_0 - X_t)$。</p>
+<p>首先回顾 2.1小节 的两个定义：</p>
+<ul>
+<li>$\alpha_t = 1 - \beta_{t}$, $\beta_t$ 要越大越好，论文中从0.0001到0.02;</li>
+<li>$\overline{\alpha}=\prod_{s=1}^t\alpha_s$累乘，下面会用到；</li>
+<li>$x_t=\sqrt{\alpha_t}x_{t-1}+\sqrt{1-\alpha_t}\varepsilon_t\text{,}\varepsilon_t\sim N(0,1)$ 每一时刻添加的噪声均独立；</li>
+</ul>
+<p>我们要求$x_t$时刻的图像，它需要一步步的加噪迭代，这样太慢了。因为每一步添加的噪声独立且服从正太分布，我们可以做如下推导：</p>
+<blockquote>
+<p>为了不混淆，只需要记住：<strong>下标越小，噪声越小</strong>，即 $x_{t-1}$ 的噪声是小于 $x_t$ 的。</p>
+</blockquote>
+<p>$$
+\begin{aligned}
+q(x_{t}\mid x_{t-1})&amp; =N(x_t;\sqrt{\alpha_t}x_{t-1},(1-\alpha_t)I)  \cr
+&amp;=\underbrace{\sqrt{\alpha_t}x_{t-1}}<em>{x</em>{t-2}\text{来表示}x_{t-1}}+\sqrt{1-\alpha_t}\varepsilon_t \cr
+&amp;=\sqrt{\alpha_t}\left(\sqrt{\alpha_{t-1}}\right.x_{t-2}+\sqrt{1-\alpha_{t-1}}\left.\varepsilon_{t-1}\right)+\sqrt{1-\alpha_t}\left.\varepsilon_t\right. \cr
+&amp;=\sqrt{\alpha_t\alpha_{t-1}}x_{t-2}+\underbrace{\sqrt{\alpha_t-\alpha_t\alpha_{t-1}}\varepsilon_{t-1}+\sqrt{1-\alpha_t}\varepsilon_t}<em>{\text{两个独立正太分布相加}} \cr
+&amp;=\sqrt{\alpha_t\alpha</em>{t-1}}\left.x_{t-2}+\sqrt{1-\alpha_t\alpha_{t-1}}\right.\varepsilon  \cr
+&amp;\text{&hellip;} \
+&amp;=\sqrt{\overline{\alpha}_t}\left.x_0+\sqrt{1-\overline{\alpha}_t}\right.\varepsilon  \cr
+&amp;\therefore q(x_t\mid x_0)=N(x_t;\sqrt{\overline{\alpha}_t}x_0,\sqrt{1-\overline{\alpha}_t}I)
+\end{aligned}
+$$</p>
+<blockquote>
+<p>上述用的就是重参数化技巧。</p>
+</blockquote>
+<p>方差参数 $\beta_{t}$ 可以固定为一个常数，也可以选择作为 $T$ 时间段的一个时间表。事实上，人们可以定义一个方差表，它可以是线性的、二次的、余弦的等等。最初的DDPM作者利用了一个从 $\beta_1 = 10^{-4}$ 到$\beta_T = 0.02$增加的线性时间表。Nichol等人2021年的研究表明，采用余弦时间表效果更好。</p>
+<p></p>
+<h3 id="42反向过程去噪">4.2、反向过程（去噪）</h3>
+<p>接下来是反向过程的推导：
+$$p(x_{t-1}\mid x_t)=N(x_{t-1};\underbrace{\mu_\theta(x_t,t)}<em>\text{要反预测这个},\overbrace{\Sigma</em>\theta(x_t,t)}^{fixed})$$</p>
+<p>给定$x_t$要预测 $x_{t-1}$，它是一个高斯分布，$x_t$和$t$的方差是固定的，论文作者使用原始的噪声调度器作为方差，也就是说噪声调度器一旦确立，方差的大小也就固定了。所以我们只需要预测这个均值就好了，下面给出具体的推导过程：</p>
+<p>我们先看整个损失函数，是个<strong>负对数似然</strong>：</p>
+<p>$$-\log{p_{\theta}(x_0)}$$</p>
+<p>希望神经网络的参数 $\theta$，可以使得生成 $x_0$的概率越大越好。</p>
+<p>但问题在于 $x_0$ 的概率不好计算，因为它依赖于 $x_0$ 之前的所有步长，从 $x_T$ 开始。作为一种解决方案，我们可以计算这个目标的<strong>变分下界</strong>，并得到一个更易于计算的公式：</p>
+<p>$$-log(p_\theta(x_0))\leq-log(p_\theta(x_0))+D_{KL}(q(x_{1:T}\mid x_0)\parallel p_\theta(x_{1:T}\mid x_0))$$</p>
+<p>其中：</p>
+<ul>
+<li>$x_{1:T}$ 指的是 $x_1, &hellip;, x_T$ 整个序列。</li>
+</ul>
+<p>现在依然无法计算，我们继续推导：</p>
+<p>$$
+\begin{gathered}
+-log(p_\theta(x_0)) \leq-log(p_\theta(x_0))+D_{KL}(q(x_{1:T}\mid x_0)\mid\mid p_\theta(x_{1:T}\mid x_0)) \cr
+\leq-log(p_\theta(x_0))+log(\frac{q(x_{1:T}\mid x_0)}{p_\theta(x_{1:T}\mid x_0)})
+\end{gathered}
+$$</p>
+<p>我们将 KL divergence 改写后，再利用贝叶斯公式进行变形，即分母可以改写为：</p>
+<p>$$
+\begin{aligned}
+p_\theta(x_{1:T}\mid x_0) &amp;=\frac{p_\theta(x_0\mid x_{1:T})\mathrm{~}p_\theta(x_{1:T})}{p_\theta(x_0)} \cr
+&amp;=\frac{p_\theta(x_0,x_{1:T})}{p_\theta(x_0)} \cr
+&amp;=\frac{p_\theta(x_{0:T})}{p_\theta(x_0)}
+\end{aligned}
+$$</p>
+<p>将其代回原式：</p>
+<p>$$
+\begin{aligned}
+log(\frac{q(x_{1:T}\mid x_0)}{p_\theta(x_{1:T}\mid x_0)})&amp; =log(\frac{q(x_{1:T}\mid x_0)}{\frac{p_\theta(x_{0:T})}{p_\theta(x_0)}})  \cr
+&amp;=log(\frac{q(x_{1:T}\mid x_0)}{p_\theta(x_{0:T})})+log(p_\theta(x_0))
+\end{aligned}
+$$</p>
+<p>所以原式可简化为：</p>
+<p>$$-log(p_\theta(x_0))\leq\underbrace{log(\frac{q(x_{1:T}\mid x_0)}{p_\theta(x_{0:T})})}_{\text{变分下界,可以优化它}}$$</p>
+<ul>
+<li>
+<p>分子，就是前向过程，它是固定的，从 $x_0$ 到 $x_{1:T}$ 的采样，换句话说就是从我们数据中的一些图像开始；</p>
+</li>
+<li>
+<p>分母，$p_\theta(x_{0:T})=p(x_T)\prod_{t=1}^Tp_\theta(x_{t-1}\mid x_t)$；</p>
+<ul>
+<li>将 $p(x_T)$ 提出来，是因为 $p(x_T)$ 是指当前图像，它是不依赖于网络参数 $\theta$ 的.</li>
+</ul>
+<p>$$
+\begin{aligned}
+log(\frac{q(x_{1:T}\mid x_0)}{p_{\theta}(x_{0:T})})&amp; =log(\frac{\prod_{t=1}^Tq(x_t\mid x_{t-1})}{p(x_T)\prod_{t=1}^Tp_\theta(x_{t-1}\mid x_t)})  \cr
+&amp;=-log(p(x_T))+log(\frac{\prod_{t=1}^Tq(x_t\mid x_{t-1})}{\prod_{t=1}^Tp_\theta(x_{t-1}\mid x_t)}) \cr
+&amp;=-log(p(x_T))+\sum_{t=1}^Tlog(\frac{q(x_t\mid x_{t-1})}{p_\theta(x_{t-1}\mid x_t)}) \cr
+&amp;=-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_t\mid x_{t-1})}{p_\theta(x_{t-1}\mid x_t)})+\underbrace{log(\frac{q(x_1\mid x_0)}{p_\theta(x_0\mid x_1)})}_{t=1}
+\end{aligned}
+$$</p>
+</li>
+</ul>
+<p></p>
+<p>$q(x_t|x_{t-1})$ 根据贝叶斯公式可以变换如下：</p>
+<p>$$q(x_t\mid x_{t-1})=\frac{q(x_{t-1}\mid x_t)q(x_t)}{q(x_{t-1})}$$</p>
+<p>$q(x_{t-1}|x_{t})$具有比较高的方差，因为根据这张照片，我们无法确定它来自哪里，但是引入 $x_0$，我们就可以容易的预测出 $x_{t-1}$，</p>
+<p></p>
+<p>因此我们使用：</p>
+<p>$$\frac{q(x_{t-1}\mid x_t,x_0)\mathrm{~}q(x_t\mid x_0)}{q(x_{t-1}\mid x_0)}$$</p>
+<p>替换贝叶斯重写后的式子，我们得到：</p>
+<p>$$
+\begin{aligned}
+log(\frac{q(x_{1:T}\mid x_0)}{p_{\theta}(x_{0:T})})&amp; =-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)q(x_t\mid x_0)}{p_\theta(x_{t-1}\mid x_t)q(x_{t-1}\mid x_0)})+log(\frac{q(x_1\mid x_0)}{p_\theta(x_0\mid x_1)})  \cr
+&amp;=-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)}{p_\theta(x_{t-1}\mid x_t)})+\underbrace{\sum_{t=2}^Tlog(\frac{q(x_t\mid x_0)}{q(x_{t-1}\mid x_0)})}+log(\frac{q(x_1\mid x_0)}{p_\theta(x_0\mid x_1)})
+\end{aligned}
+$$</p>
+<p>上述标记的式子，也可以简化，我们假设 $t=4$：</p>
+<p>$$
+\begin{gathered}
+\begin{aligned}\sum_{t=2}^{T=4}log(\frac{q(x_t\mid x_0)}{q(x_{t-1}\mid x_0)})\end{aligned} =log(\frac{q(x_2\mid x_0)}{q(x_1\mid x_0)}\cdot\frac{q(x_3\mid x_0)}{q(x_2\mid x_0)}\cdot\frac{q(x_4\mid x_0)}{q(x_3\mid x_0)}) \
+=log(\frac{q(x_4\mid x_0)}{q(x_1\mid x_0)})
+\end{gathered}
+$$</p>
+<p>因此我们可以简化为：</p>
+<p>$$
+\begin{aligned}
+&amp;=-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)}{p_\theta(x_{t-1}\mid x_t)})+log(\frac{q(x_t\mid x_0)}{q(x_1\mid x_0)})+log(\frac{q(x_1\mid x_0)}{p_\theta(x_0\mid x_1)}) \cr
+&amp;=-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)}{p_\theta(x_{t-1}\mid x_t)})+log(q(x_t\mid x_0))-log(p_\theta(x_0\mid x_1)) \cr
+&amp;=log(\frac{q(x_t\mid x_0)}{p(x_T)})+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)}{p_\theta(x_{t-1}\mid x_t)})-log(p_\theta(x_0\mid x_1))\cr
+&amp;=\overbrace{\underbrace{D_{KL}(q(x_t\mid x_0)\mid\mid p(x_T))}<em>{q\text{只是个正向过程没有可学习参数}}}^{\text{可以忽略}} + \sum</em>{t=2}^TD_{KL}(q(x_{t-1}\mid x_t,x_0)\mid\mid p_\theta(x_{t-1}\mid x_t))-log(p_\theta(x_0\mid x_1))
+\end{aligned}
+$$</p>
+<ul>
+<li>第一项KL散度可以忽略，因为$q$只是个正向过程，没有可学习参数，换句话说就是它是固定的。</li>
+<li>第二项KL散度，左边和右边都是正太分布，分别服从 $N(x_{t-1};\tilde{\mu_t}(x_t,x_0),\tilde{\mathsf{\beta}<em>t}I)$ 、$N(x</em>{t-1};\mu_\theta(x_t,t),\text{β}I)$：</li>
+</ul>
+<p>$$
+\sum_{t=2}^TD_{KL}(\underbrace{q(x_{t-1}\mid x_t,x_0)}<em>{N(x</em>{t-1};\tilde{\mu}<em>t(x_t,x_0),\tilde{\mathsf{\beta}}<em>tI)}\mid\mid\overbrace{p</em>\theta(x</em>{t-1}\mid x_t)}^{N(x_{t-1};\mu_\theta(x_t,t),\mathsf{\beta}I})
+$$</p>
+<p>第一项的 $\tilde{\mu_{t}}(x_{t},x_{0})$、$\tilde{\beta_{t}}$ 就是我们要求的值，这里省略了这部分的推导，不影响算法的理解，</p>
+<p>$$
+\begin{gathered}\tilde{\mu}<em>t(x_t,x_0)=\frac{\sqrt{\alpha_t}(1-\overline{\alpha}</em>{t-1})}{1-\overline{\alpha}<em>t}x_t+\frac{\sqrt{\alpha}</em>{t-1}\beta_t}{1-\overline{\alpha}_t}x_0\\tilde{\mathsf{\beta}}<em>t=\frac{1-\overline{\alpha}</em>{t-1}}{1-\overline{\alpha}_t}\beta_t\end{gathered}
+$$</p>
+<blockquote>
+<p>凡是涉及到 $\alpha_t$ 的，就是学习调度器的，我们不需要关注它</p>
+</blockquote>
+<p>我们可以化简 $\tilde{\mu}_{t}$，我们知道 $x_t=\sqrt{\overline{\alpha}_t}x_0+\sqrt{1-\overline{\alpha}_t}\varepsilon $, 即:</p>
+<p>$$
+x_0=\frac1{\sqrt{\overline{\alpha}_t}}(x_t-\sqrt{1-\overline{\alpha}_t}\left.\varepsilon\right)
+$$</p>
+<p>还知道: $\overline{\alpha}=\prod_{s=1}^t\alpha_s$、$\alpha_t=1-\beta_t$:</p>
+<p>代入 $\tilde{\mu}_{t}$ 得到：</p>
+<p>$$
+\begin{aligned}
+\underbrace{\tilde{\mu}<em>t(x_t,x_0)}</em>{\text{不再依赖}x_0}&amp; =\frac{\sqrt{\alpha_{t}}(1-\overline{\alpha}<em>{t-1})}{1-\overline{\alpha}</em>{t}}x_{t}+\frac{\sqrt{\overline{\alpha}<em>{t-1}}\beta</em>{t}}{1-\overline{\alpha}<em>{t}}\frac{1}{\sqrt{\overline{\alpha}</em>{t}}}(x_{t}-\sqrt{1-\overline{\alpha}<em>{t}}\varepsilon)  \cr
+&amp;=\frac{\alpha_t(1-\overline{\alpha}</em>{t-1})x_t}{\sqrt{\alpha_t}(1-\overline{\alpha}_t)}+\frac{\beta_t}{\sqrt{\alpha_t}(1-\overline{\alpha}_t)}(x_t-\sqrt{1-\overline{\alpha}_t}\left.\varepsilon\right) \cr
+&amp;=\frac{\alpha_tx_t-\overline{\alpha}_tx_t+(1-\alpha_t)x_t-(1-\alpha_t)\sqrt{1-\overline{\alpha}_t}\varepsilon}{\sqrt{\alpha_t}(1-\overline{\alpha}_t)} \cr
+&amp;=\frac{x_t(1-\overline{\alpha}_t)-(1-\alpha_t)\sqrt{1-\overline{\alpha}_t}\varepsilon}{\sqrt{\alpha_t}(1-\overline{\alpha}_t)} \cr
+&amp;=\frac{x_t}{\sqrt{\alpha_t}}-\frac{(1-\alpha_t)\varepsilon}{\sqrt{\alpha_t}\sqrt{(1-\overline{\alpha}_t)}} \cr
+&amp;=\frac1{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}_t}}\left.\varepsilon\right)
+\end{aligned}
+$$</p>
+<p>代入之后我们发现它就不再依赖于 $x_0$ 了，它就是和 $x_t$ 的一个关系式，式中的 $\alpha_t$、$\beta_t$、$\varepsilon$都是已知的，最后的本质就是我们只是从中减去缩放的随机噪声。</p>
+<p>$$\therefore x_{t-1}=N(x_{t-1};\frac1{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\left.\varepsilon</em>\theta(x_t,t)\right),\Sigma_\theta(x_t,t))$$</p>
+<p>这样一来，DDPM的每一步推断可以总结为：</p>
+<ul>
+<li>每个时间步通过 $x_t$ 和 $t$ 来预测高斯噪声，图中用 $z$ 表示，根据上述公式计算得到均值 $\mu$；</li>
+<li>得到方差 $\Sigma_\theta(x_t,t)$</li>
+<li>入公式得到 $q(x_{t-1}\mid x_t)$ ，利用重参数化得到 $x_{t-1}$ 。</li>
+</ul>
+<p></p>
+<h3 id="43训练损">4.3、训练损</h3>
+<p>下面我们来看损失的推导，我们来回顾第二项：</p>
+<p></p>
+<p>我们需要减小KL散度，由于<mark>方差是固定的，我们无法优化，所以需要将它们的均值之差减小</mark>，原论文中使用的是简单的均方误差：</p>
+<p>将$\mu$表达式代入：</p>
+<p>$$
+\begin{aligned}
+L_{t}&amp; =\frac1{2\sigma_t^2}\mid|\tilde{\mu}<em>t(x_t,x_0)-\mu</em>\theta(x_t,t)||^2  \cr
+&amp;=\frac1{2\sigma_t^2}\mid\mid\frac1{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\left.\varepsilon\right)-\frac1{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\left.\varepsilon</em>\theta(x_t,t)\right)\mid\mid^2 \cr
+&amp;=\frac{\beta_t^2}{2\sigma_t^2\alpha_t(1-\overline{\alpha}<em>t)}\underbrace{\mid\mid\varepsilon-\varepsilon</em>\theta(x_t,t)\mid\mid^2}</em>{mse} \cr
+&amp;-&gt;\mid\mid\varepsilon-\varepsilon_\theta(x_t,t)\mid\mid^2=\mid\mid\varepsilon-\varepsilon_\theta(\sqrt{\overline{\alpha}_t}\left.x_0+\sqrt{1-\overline{\alpha}_t}\left.\varepsilon_t,t\right)\mid\mid^2\right.
+\end{aligned}
+$$</p>
+<p>研究人员发现，忽略前面的系数项会变得更简单，采样质量也会得到提高，所以前面这个系数项我们直接忽略，它是和噪声调度器有关的，我们加噪的话也会使计算复杂。</p>
+<p>我们最小化 $\mid\mid\varepsilon-\varepsilon_\theta(x_t, t)\mid\mid^2$ 也就是<strong>最小化了KL散度</strong>，KL散度变小了也就是变分上限优化到最小，所以那个负对数似然也会变小。</p>
+<p>上面还剩了最后一项 $-log(p_\theta(x_0\mid x_1))$ ，这个作者决定去掉它，即在 $t=1$ 时，我们不添加噪声。也就是下面横线的地方，只有 $t&gt;1$ 的时候才服从高斯分布，如果 $t\leq {1}$，直接让 $z=0$，即噪声设置为0。</p>
+<p></p>
+<p>回顾上面整个推导过程：我们从<strong>负对数似然 -&gt; 优化下界 -&gt; 简化下界 -&gt; 预测噪声</strong>。</p>
+<h2 id="五torch复现">五、torch复现</h2>
+<p><a href="https://wangguisen.blog.csdn.net/article/details/128821008"target="_blank" rel="external nofollow noopener noreferrer">https://wangguisen.blog.csdn.net/article/details/128821008<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>ref:
+[1]. <a href="https://arxiv.org/abs/2006.11239"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2006.11239<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[2]. <a href="https://kexue.fm/archives/9119"target="_blank" rel="external nofollow noopener noreferrer">https://kexue.fm/archives/9119<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[3]. <a href="https://zhuanlan.zhihu.com/p/576475987"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/576475987<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[4]. <a href="https://zhuanlan.zhihu.com/p/525106459"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/525106459<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[5]. <a href="https://www.bilibili.com/video/BV1b541197HX"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1b541197HX<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[6]. <a href="https://www.bilibili.com/video/BV1WD4y1E7X5"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1WD4y1E7X5<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[7]. <a href="https://huggingface.co/blog/annotated-diffusion"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/annotated-diffusion<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[8]. <a href="https://www.datalearner.com/blog/1051664857725795"target="_blank" rel="external nofollow noopener noreferrer">https://www.datalearner.com/blog/1051664857725795<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[9]. <a href="https://lilianweng.github.io/posts/2021-07-11-diffusion-models"target="_blank" rel="external nofollow noopener noreferrer">https://lilianweng.github.io/posts/2021-07-11-diffusion-models<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[10]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486128&amp;idx=1&amp;sn=7ffef5d8c1bbf24565d0597eb5eaeb16&amp;chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486128&idx=1&sn=7ffef5d8c1bbf24565d0597eb5eaeb16&chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [4]</title><link>https://jianye0428.github.io/posts/partfour/</link><pubDate>Mon, 31 Jul 2023 07:26:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partfour/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
