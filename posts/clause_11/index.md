@@ -7,7 +7,6 @@ note abstract info tip success question warning failure danger bug example quote
 
 <!--more-->
 
-
 ## 自定义分配器
 
 很多时候，你会有建立自定义分配器的想法：
