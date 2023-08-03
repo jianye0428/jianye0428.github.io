@@ -365,15 +365,15 @@ $$
 https://wangguisen.blog.csdn.net/article/details/128821008
 
 ref:
-[1]. https://arxiv.org/abs/2006.11239
-[2]. https://kexue.fm/archives/9119
-[3]. https://zhuanlan.zhihu.com/p/576475987
-[4]. https://zhuanlan.zhihu.com/p/525106459
-[5]. https://www.bilibili.com/video/BV1b541197HX
-[6]. https://www.bilibili.com/video/BV1WD4y1E7X5
-[7]. https://huggingface.co/blog/annotated-diffusion
-[8]. https://www.datalearner.com/blog/1051664857725795
-[9]. https://lilianweng.github.io/posts/2021-07-11-diffusion-models
+[1]. https://arxiv.org/abs/2006.11239</br>
+[2]. https://kexue.fm/archives/9119</br>
+[3]. https://zhuanlan.zhihu.com/p/576475987</br>
+[4]. https://zhuanlan.zhihu.com/p/525106459</br>
+[5]. https://www.bilibili.com/video/BV1b541197HX</br>
+[6]. https://www.bilibili.com/video/BV1WD4y1E7X5</br>
+[7]. https://huggingface.co/blog/annotated-diffusion</br>
+[8]. https://www.datalearner.com/blog/1051664857725795</br>
+[9]. https://lilianweng.github.io/posts/2021-07-11-diffusion-models</br>
 [10]. https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486128&idx=1&sn=7ffef5d8c1bbf24565d0597eb5eaeb16&chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&scene=21#wechat_redirect
 
 ---

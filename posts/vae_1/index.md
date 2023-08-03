@@ -237,7 +237,7 @@ $$
 L(\theta, \phi; x) &= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)}) \cr
 &= \sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x|z) p_{\theta}(z)}{q_{\phi}(z|x)}) \cr
 &= \sum_{z}q_{\phi}(z|x)[\log(p_{\theta}(x|z)) + \log(\frac{p_{\theta}(z)}{q_{\phi}(z | x)})] \cr
-&= {E}_{q_{\phi}(z|x)}[\log(p_{\theta}(x|z))] - D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))\cr
+&= {E}_{q_{\phi}(z|x)}[\log(p_{\theta}(x|z))] - D_{KL}(q_{\theta}(z | x) || p_{\theta}(z))
 \end{aligned}
 $$
 
@@ -271,7 +271,7 @@ $$
      &= \triangle_{\phi} \int {q_{\phi}(z)}f(z) \mathrm{d}z\cr
      &= \int \triangle_{\phi}{q_{\phi}(z)}f(z) \mathrm{d}z\cr
      &= \int {q_{\phi}(z)}f(z)\triangle_{\phi} \log {q_{\phi}(z)}\mathrm{d}z\cr
-     &= E_{q_{\phi}(z)}[f(z)\triangle_{\phi} \log {q_{\phi}(z)}]\cr
+     &= E_{q_{\phi}(z)}[f(z)\triangle_{\phi} \log {q_{\phi}(z)}]
 \end{aligned}
 $$
 
