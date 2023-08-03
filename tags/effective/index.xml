@@ -22,22 +22,65 @@
 <tbody>
 <tr>
 <td style="text-align:left">size()</td>
-<td style="text-align:left">「容器中有多少元素」。没有说明容器为容纳的元素分配了多少内存。</td>
+<td style="text-align:left">「容器中有多少元素」。</br>没有说明容器为容纳的元素分配了多少内存。</td>
 </tr>
 <tr>
 <td style="text-align:left">capacity()</td>
-<td style="text-align:left">「容器已经分配的内存中可以容纳多少元素」。那是容器在那块内存中总共可以容纳多少元素，而不是还可以容纳多少元素。如果想知道一个vector或string中有多少没有被占用的内存，必须从capacity()中减去size()。如果size和capacity返回同样的值，容器中就没有剩余空间了，而下一次插入（通过insert或push_back等）会引发上面的重新分配步骤。</td>
+<td style="text-align:left">「容器已经分配的内存中可以容纳多少元素」。</br>那是容器在那块内存中总共可以容纳多少元素，而不是还可以容纳多少元素。如果想知道一个vector或string中有多少没有被占用的内存，必须从capacity()中减去size()。如果size和capacity返回同样的值，容器中就没有剩余空间了，而下一次插入（通过insert或push_back等）会引发上面的重新分配步骤。</td>
 </tr>
 <tr>
 <td style="text-align:left">resize(Container::size_type n)</td>
-<td style="text-align:left">「强制把容器改为容纳n个元素」。调用resize之后，size将会返回n。如果n小于当前大小，容器尾部的元素会被销毁。如果n大于当前大小，新默认构造的元素会添加到容器尾部。如果n大于当前容量，在元素加入之前会发生重新分配。</td>
+<td style="text-align:left"></br>「强制把容器改为容纳n个元素」。调用resize之后，size将会返回n。如果n小于当前大小，容器尾部的元素会被销毁。如果n大于当前大小，新默认构造的元素会添加到容器尾部。如果n大于当前容量，在元素加入之前会发生重新分配。</td>
 </tr>
 <tr>
 <td style="text-align:left">reserve(Container::size_type n)</td>
-<td style="text-align:left">「强制容器把它的容量改为至少n，提供的n不小于当前大小」。这一般强迫进行一次重新分配，因为容量需要增加。</td>
+<td style="text-align:left">「强制容器把它的容量改为至少n，提供的n不小于当前大小」。</br>这一般强迫进行一次重新分配，因为容量需要增加。</td>
 </tr>
 </tbody>
 </table>
+<p><strong>reserve</strong>成员函数允许你最小化必须进行的重新分配的次数，因而可以避免真分配的开销和迭代器/指针/引用失效。</p>
+<p>「<strong>调用reserve不改变容器中对象的个数。</strong>」</p>
+<h2 id="提前-reserve">提前 reserve</h2>
+<p>「<strong>只要有元素需要插入而且容器的容量不足时就会发生重新分配</strong>」（包括它们维护的「原始内存分配和回收」，「对象的拷贝和析构」和「迭代器、指针和引用的失效」）。</p>
+<p>「避免重新分配的关键」是使用reserve尽快把容器的容量设置为足够大，最好在容器被构造之后立刻进行。</p>
+<p><strong>Example</strong></p>
+<p>假定你想建立一个容纳1-1000值的<code>vector&lt;int&gt;</code>。没有使用<code>reserve</code>：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">1000</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在大多数STL实现中，这段代码在循环过程中「<strong>将会导致2到10次重新分配</strong>」。（「vector在重新分配时一般把容量翻倍」，$1000 \approx 2^{10}$。） 把代码改为使用<code>reserve</code>：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">1000</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>「<strong>这在循环中不会发生重新分配。</strong>」</p>
+<h2 id="结论">结论</h2>
+<p>通常有2种情况使用<code>reserve</code>来避免不必要的重新分配:</p>
+<ol>
+<li>可用的情况是「<strong>当你确切或者大约知道有多少元素将最后出现在容器中</strong>」。可以提前reserve适当数量的空间。</li>
+</ol>
+<p>2.「<strong>保留可能需要的最大的空间</strong>」，然后，一旦添加完全部数据「<strong>修整掉任何多余的容量</strong>」。</p>
 ]]></description></item><item><title>Effective STL [13] | 尽量使用vector和string来代替动态分配的数组</title><link>https://jianye0428.github.io/posts/clause_13/</link><pubDate>Thu, 03 Aug 2023 09:11:16 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_13/</guid><description><![CDATA[<h2 id="使用new动态分配内存时的注意事项">使用new动态分配内存时的注意事项</h2>
 <ol>
 <li>
