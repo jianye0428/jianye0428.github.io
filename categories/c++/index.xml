@@ -1,4 +1,156 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 03 Aug 2023 13:06:29 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [14] | 使用reserve来避免不必要的重新分配</title><link>https://jianye0428.github.io/posts/clause_14/</link><pubDate>Thu, 03 Aug 2023 13:06:29 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_14/</guid><description><![CDATA[<h2 id="自动扩容">自动扩容</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 04 Aug 2023 08:25:48 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [15] | 小心string实现的多样性</title><link>https://jianye0428.github.io/posts/clause_15/</link><pubDate>Fri, 04 Aug 2023 08:25:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_15/</guid><description><![CDATA[<h2 id="sizeofstring的值">sizeof(string)的值</h2>
+<p>如果想知道<code>sizeof(string)</code>的值是多少，答案不一定。</p>
+<p><code>string</code>和<code>char*</code>指针一样大的实现很常见，也很容易找到<code>string</code>是<code>char</code>*7 倍大小的<code>string</code>实现。</p>
+<p>所以得了解一下<code>string</code>的实现</p>
+<h2 id="string的实现">string的实现</h2>
+<p><strong>基本实现</strong></p>
+<ul>
+<li>字符串的大小，也就是包含的字符的数目。</li>
+<li>容纳字符串字符的内存容量。</li>
+<li>字符串的值，也就是，构成这个字符串的字符。
+<strong>可能实现</strong></li>
+<li>配置器的拷贝
+<strong>依赖引用计数的string实现</strong>s</li>
+<li>包含这个值的引用计数</li>
+</ul>
+<h2 id="4种不同的string实现数据结构">4种不同的string实现数据结构</h2>
+<p>以下是原作者看到的4个源码的string的实现</p>
+<p><strong>A</strong>
+每个string对象包含一个<strong>配置器的拷贝</strong>，<strong>字符串的大小(size)</strong>，<strong>容量(capacity)</strong>，<strong>一个指向包含引用计数（“RefCnt”）<strong>和</strong>字符串值的动态分配的缓冲区的指针</strong>。</p>
+<p>在这个实现中，一个使用默认配置器的字符串对象是指针大小的4倍。对于一个自定义的配置器，string对象会随配置器对象的增大而变大：</p>
+<p></p>
+<p><strong>B</strong>
+B的<strong>string对象和指针一样大</strong>，因为在结构体中只包含一个指针。再次，这里假设使用默认配置器。正如实现A，如果使用自定义配置器，这个string对象的大小会增加大约配置器对象的大小。</p>
+<p>在这个实现中，<strong>使用默认配置器不占用空间，这归功于这里用了一个在实现A中没有的使用优化</strong>。</p>
+<p>B的string指向的对象包含<strong>字符串的大小</strong>、<strong>容量</strong>和<strong>引用计数</strong>，以及<strong>容纳字符串值的动态分配缓冲区的指</strong>针及&quot;<strong>其他</strong>&quot;。“其他”指对象包含在多线程系统中与并发控制有关的一些附加数据。</p>
+<p>
+在实现B中，<strong>用于并发控制的数据是一个指针大小的6倍</strong>。</p>
+<p><strong>C</strong>
+<strong>C的string对象总是等于指针的大小</strong>，但是<strong>这个指针指向一个包含所有与string相关的东西的动态分配缓冲器</strong>：大小、容量、引用计数和值。没有每物体配置器（per-object allocator）的支持。缓冲区也容纳一些关于值可共享性的数据，标记为“<strong>X</strong>”。
+</p>
+<p><strong>D</strong>
+D的<strong>string对象是一个指针大小的7倍</strong>（仍然假设使用了默认配置器）。这个实现<strong>没有使用引用计数</strong>，但每个string包含了一个足以<strong>表现最多15个字符的字符串值的内部缓冲区</strong>。</p>
+<p>因此小的字符串可以被整个保存在string对象中，一个有时被称为“<strong>小字符串优化</strong>”的特性。</p>
+<p>当一个string的容量超过15时，<strong>缓冲器的第一部分被用作指向动态分配内存的一个指针，而字符串的值存放在那块内存</strong>中：</p>
+<p></p>
+<p><strong>g++ 9.4.0中的实现</strong></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl">  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_CharT</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Traits</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Alloc</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">class</span> <span class="nc">basic_string</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__alloc_traits</span><span class="o">&lt;</span><span class="n">_Alloc</span><span class="o">&gt;::</span><span class="k">template</span>
+</span></span><span class="line"><span class="cl"> <span class="n">rebind</span><span class="o">&lt;</span><span class="n">_CharT</span><span class="o">&gt;::</span><span class="n">other</span> <span class="n">_Char_alloc_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__alloc_traits</span><span class="o">&lt;</span><span class="n">_Char_alloc_type</span><span class="o">&gt;</span> <span class="n">_Alloc_traits</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1">// Types:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Traits</span>     <span class="n">traits_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Traits</span><span class="o">::</span><span class="n">char_type</span>  <span class="n">value_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Char_alloc_type</span>    <span class="n">allocator_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">size_type</span>  <span class="n">size_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">difference_type</span> <span class="n">difference_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">reference</span>  <span class="n">reference</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">const_reference</span> <span class="n">const_reference</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">pointer</span>  <span class="n">pointer</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">const_pointer</span> <span class="n">const_pointer</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__normal_iterator</span><span class="o">&lt;</span><span class="n">pointer</span><span class="p">,</span> <span class="n">basic_string</span><span class="o">&gt;</span>  <span class="n">iterator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__normal_iterator</span><span class="o">&lt;</span><span class="n">const_pointer</span><span class="p">,</span> <span class="n">basic_string</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">       <span class="n">const_iterator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">reverse_iterator</span><span class="o">&lt;</span><span class="n">const_iterator</span><span class="o">&gt;</span> <span class="n">const_reverse_iterator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">reverse_iterator</span><span class="o">&lt;</span><span class="n">iterator</span><span class="o">&gt;</span>  <span class="n">reverse_iterator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1">///  Value returned by various member functions when they fail.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">static</span> <span class="k">const</span> <span class="n">size_type</span> <span class="n">npos</span> <span class="o">=</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">size_type</span><span class="o">&gt;</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>sizeof(string)</strong></p>
+<p>举例：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">s</span><span class="p">(</span><span class="s">&#34;Randy&#34;</span><span class="p">);</span> <span class="c1">// 5个字符
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>
+<p>实现A有32个字符的最小分配大小，所以虽然s的大小是5，在实现A下容量是31。（第32个字符大概被保留作<strong>尾部的null</strong>，因此可以容易地实现c_str成员函数。）</p>
+</li>
+<li>
+<p>实现C最小量16，而且没有为尾部null保留空间。所以在实现C下，s的容量是16。</p>
+</li>
+<li>
+<p>实现D的最小缓冲区大小也是16，包括尾部null的空间。当然，在这里区别出实现D是因为容量小于16的字符串使用的内存包含在本身字符串对象中。</p>
+</li>
+<li>
+<p>实现B没有最小分配，在实现B下，s的容量是7。</p>
+</li>
+</ol>
+<p><strong>动态分配</strong></p>
+<p>在实现D下<strong>将会没有动态分配</strong>，在<strong>实现A和C 1次</strong>，而在<strong>实现B 2次</strong>（一次是string对象指向的对象，一次是那个对象指向的字符缓冲区）。</p>
+<p>如果关心动态分配和回收内存的次数，或如果关心经常伴随这样分配的内存开销，你可能想要避开实现B。</p>
+<p>另一方面， 实<strong>现B的数据结构包括了对多线程系统并发控制的特殊支持的事实意味着它比实现A或C更能满足你的需要，尽管动态分配次数较多</strong>。</p>
+<p>实现D不需要对多线程的特殊支持，因为它不使用引用计数。</p>
+<p>在基于<strong>引用计数的设计</strong>中，<strong>字符串对象之外的每个东西都可以被多个字符串共享</strong>（如果它们有相同的值），所以我们可以从图中观察到的其他东西是<strong>实现A比B或C提供更少的共享性</strong>。</p>
+<p>特别是，<strong>实现B和C能共享一个字符串的大小和容量，因此潜在地减少了每物体分摊的的储存数据的开销</strong>。</p>
+<p>有趣的是，<strong>实现C不能支持每对象配置器的事实意味着它是唯一可以共享配置器的实现：所有字符串必须使用同一个</strong>！</p>
+<p><strong>实现D在字符串对象间没有共享数据。</strong></p>
+<h2 id="总结">总结</h2>
+<p>不同的实现以不同的方式从它们的设计灵活性中得到好处：</p>
+<ol>
+<li>
+<p><strong>字符串值可能是或可能不是引用计数的</strong>。默认情况下，很多实现的确是用了引用计数，但它们通常提供了关闭的方法，一般是通过预处理器宏。比如，<strong>引用计数只对频繁拷贝的字符串有帮助，而有些程序不经常拷贝字符串，所以没有那个开销</strong></p>
+</li>
+<li>
+<p>string对象的大小可能从1到至少7倍char*指针的大小</p>
+</li>
+<li>
+<p><strong>新字符串值的建立可能需要0、1或2次动态分配</strong></p>
+</li>
+<li>
+<p><strong>string对象可能是或可能不共享字符串的大小和容量信息</strong></p>
+</li>
+<li>
+<p><strong>string可能是或可能不支持每对象配置器</strong></p>
+</li>
+<li>
+<p><strong>不同实现对于最小化字符缓冲区的配置器有不同策略</strong></p>
+</li>
+</ol>
+<p>string是标准库中的最重要的组件之一，鼓励应该要多用。</p>
+<p>如果要<strong>有效使用STL</strong>，<strong>需要小心string实现的多样性</strong>，特别是如果你正在写必须在不同STL平台上运行的代码并且你面临严格的性能需求。</p>
+]]></description></item><item><title>Effective STL [14] | 使用reserve来避免不必要的重新分配</title><link>https://jianye0428.github.io/posts/clause_14/</link><pubDate>Thu, 03 Aug 2023 13:06:29 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_14/</guid><description><![CDATA[<h2 id="自动扩容">自动扩容</h2>
 <p>STL 容器只要存储的对象不超过「<strong>最大大小</strong>」，就可以自动增长到足以容纳放进去的数据。这个最大值，只要调用名叫max_size的成员函数就可以查询到。</p>
 <p>对于vector和string，只要需要更多空间，就以<code>realloc</code>等价的思想来增长。</p>
 <p>realloc的操作有4个部分：</p>
