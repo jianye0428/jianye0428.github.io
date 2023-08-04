@@ -14,8 +14,8 @@ note abstract info tip success question warning failure danger bug example quote
 本博客站点系列内容如下：</br>
 💡 [Effective C++(第3版)精读总结(一)](https://jianye0428.github.io/posts/partone/)</br>
 💡 [Effective C++(第3版)精读总结(二)](https://jianye0428.github.io/posts/parttwo/)</br>
-💡 Effective C++(第3版)精读总结(三)</br>
-💡 Effective C++(第3版)精读总结(四)</br>
+💡 [Effective C++(第3版)精读总结(三)](https://jianye0428.github.io/posts/partthree/)</br>
+💡 [Effective C++(第3版)精读总结(四)](https://jianye0428.github.io/posts/partfour/)</br>
 {{< /admonition >}}
 
 由于原书在C++11之前写成，有些现代C++特性不会提及，所以会根据本人`开发经验`新增一些个人感悟👉`By the way`环节。

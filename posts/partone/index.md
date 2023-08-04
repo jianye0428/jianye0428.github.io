@@ -11,9 +11,9 @@
 {{< admonition Note "Effective-C++系列List" false >}}
 本博客站点系列内容如下：</br>
 💡 [Effective C++(第3版)精读总结(一)](https://jianye0428.github.io/posts/partone/)</br>
-💡 Effective C++(第3版)精读总结(二)</br>
-💡 Effective C++(第3版)精读总结(三)</br>
-💡 Effective C++(第3版)精读总结(四)</br>
+💡 [Effective C++(第3版)精读总结(二)](https://jianye0428.github.io/posts/parttwo/)</br>
+💡 [Effective C++(第3版)精读总结(三)](https://jianye0428.github.io/posts/partthree/)</br>
+💡 [Effective C++(第3版)精读总结(四)](https://jianye0428.github.io/posts/partfour/)</br>
 {{< /admonition >}}
 
 ## CH1.让自己习惯C++
@@ -22,11 +22,10 @@
 
 如今的C++已经是个多重范式(multiparadigm)语言，同时支持面向过程形式、面向对象形式、函数形式、泛型形式、元编程形式。 要理解这么多特性，可以简单的归结为`四种次语言`(sublanguage)组成：
 
-- **C语言：**`C++仍以C为基础`。C++是C的超集，区块 、语句、预处理、内置数据类型、数组、指针等全部来自于C语言；
-  - 说到底 C++ 仍然以 C 为基础。区块、语句、预处理器、内置数据类型 、数组、指针等统统来自C，许多时候C++对问题的解决其实不过就是较高级的 C 解法，但当你C++内的 C 成分工作时，高效编程守则映照出 C 语言的局限：没有模板(template) ，没有异常(exceptions)，没有重载(overloading)……
-- **Object-Oriented C++:** 面向对象特性。这部分也就是 C with classes 所诉求的：classes(包括构造函数和析构函数)，封装(encapsulation)、继承(inheritance)、多态(polymorhpism)、virtual函数(动态绑定)……等等，这一部分是面向对象设计之古典守则在C++ 上的直接实施。
-- **Template C++:**C++的泛型(generic)编程的部分，也带来了黑魔法-模板元编程(TMP,Metaprogramming)；
-- **STL：**STL(Standard Temlate Library)即标准模板库，它是template程序库。封装了各类容器(container)、配置器(allocator)、迭代器(iterator)、算法以及常用对象。
+- **C语言:** `C++仍以C为基础`。C++是C的超集, 仍然以 C 为基础。<font color=green>区块</font>、<font color=green>语句</font>、<font color=green>预处理器</font>、<font color=green>内置数据类型</font> 、<font color=green>数组</font>、<font color=green>指针</font>等统统来自C，许多时候C++对问题的解决其实不过就是较高级的 C 解法，但当你C++内的 C 成分工作时，高效编程守则映照出 C 语言的<font color=red>局限</font>：没有模板(template) ，没有异常(exceptions)，没有重载(overloading)……
+- **Object-Oriented C++:** 面向对象特性。这部分也就是 C with classes 所诉求的: **classes**(包括构造函数和析构函数)，**封装**(encapsulation)、**继承**(inheritance)、**多态**(polymorhpism)、**virtual函数**(动态绑定)……等等，这一部分是面向对象设计之古典守则在C++ 上的直接实施。
+- **Template C++:** C++的泛型(generic)编程的部分，也带来了黑魔法-模板元编程(TMP,Metaprogramming)；
+- **STL：** STL(Standard Temlate Library)即标准模板库，它是template程序库。封装了各类容器(container)、配置器(allocator)、迭代器(iterator)、算法以及常用对象。
 
 **总结:**
 C++高效编程守则视状况而变化，取决于你使用C++的哪一部分
@@ -38,16 +37,16 @@ C++高效编程守则视状况而变化，取决于你使用C++的哪一部分
   ```c++
   // 举例：MAX_DATA_COUNT在预处理阶段就会被替换，编译器不会见到它，所以一旦有相关报错，给的是100这个值
   #define MAX_DATA_COUNT   100
-  const  int MAX_DATA_COUNT = 100 ;//常量只有一份，宏会导致多份常量值
+  const int MAX_DATA_COUNT = 100 ;// 常量只有一份，宏会导致多份常量值
   class Buffer{
   public://...类其他部分省略
-      static const double factor_ ;//static常量,类内声明
+      static const double factor_ ;// static常量,类内声明
       static const int  times_ = 2;// int类型允许类内初始化,规范上还是建议拿到类外
   private:
-      static const  int ArrLength = 5;
+      static const int ArrLength = 5;
       int arr[ArrLength];
   };
-  const double Buffer::factor_  = 0.1;//类外初始化,一般写在实现文件*.cpp,*.cc中
+  const double Buffer::factor_  = 0.1;// 类外初始化,一般写在实现文件*.cpp,*.cc中
   ```
   如果编译器不允许声明时"in-class初值设定",如果是整形常量，可以让枚举值来替代，而且<font color=red>`枚举值不能被取地址`</font>。
 - **对于宏定义的函数，建议用内联inline函数替换**
@@ -298,7 +297,7 @@ public:
   该主流协议/做法不是强制性的，只是个建议，因为这样可以允许**连续赋值**($x=y=z$的形式)。</br>
   该协议被内置类型，以及STL的类型(如string,vector,complex,shared_ptr)共同遵守。</br>
 
-## R11 在`operator=`中处理"自我赋值"
+### R11 在`operator=`中处理"自我赋值"
 
 一个对象赋值给自己，这种看起来有点傻的做法，有时候会比较难以发觉。比如：`a[i] = a[j]`，如果 $i$ 和 $j$ 相等，就是“自我赋值”的经典场景了。
 所以，我们需要一个尽量完备的赋值操作符函数🤔。
@@ -367,7 +366,7 @@ public:
 - 不要用一个Copying函数去实现另一个
 令copy-assignment操作符调用copy构造函数是不合理的；反之，后者调用前者也是无意义的。 如果2者有大量的代码是相同的，可以剥离一个类内private类型的`init`函数出来，提供给上述2者调用。
 
-ref:</br>
+## ref:</br>
 [1]. https://blog.csdn.net/cltcj/category_12098441.html</br>
 [2]. https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/</br>
 
