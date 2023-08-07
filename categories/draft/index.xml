@@ -1,4 +1,140 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 31 Jul 2023 15:57:07 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>Diffusion 扩散模型（DDPM）</title><link>https://jianye0428.github.io/posts/ddpm/</link><pubDate>Mon, 31 Jul 2023 15:57:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ddpm/</guid><description><![CDATA[<!--
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 07 Aug 2023 08:35:57 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>Effective STL [16] | 如何将vector和string的数据传给遗留的API</title><link>https://jianye0428.github.io/posts/clause_16/</link><pubDate>Mon, 07 Aug 2023 08:35:57 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_16/</guid><description><![CDATA[<h2 id="string-和-vector-传递给c-api">string 和 vector 传递给C API</h2>
+<h3 id="vector传递指针">vector传递指针</h3>
+<p>C风格API接受的是<strong>数组</strong>和<code>char*</code>指针，这样的API还会存在很长时间，如果有1个vector对象randy， 则使用<code>&amp;v[0]</code>就可以得到一个指向randy中数据的指针。对于string对象sesame，则传递<code>sesame.c_str()</code>即可。</p>
+<p>表达式<code>randy[0]</code>生产一个指向vector中第一个元素的引用，所以，<code>&amp;randy[0]</code>是指向那个首元素的指针。</p>
+<p>vector中的元素被C++标准限定为存储在连续内存中，就像是一个数组。</p>
+<p>所以我们可能会这么传递</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">pInts</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">numInts</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 调用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">randy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">randy</span><span class="p">.</span><span class="n">size</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>唯一的问题就是，如果randy是空的，<code>randysize()</code>是0，而<code>&amp;randy[0]</code>试图产生一个指向根本就不存在的东西的指针。</p>
+<p>可以提前判断一下randy的大小：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">randy</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">randy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">randy</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p><strong>randy.begin()代替&amp;randy[0]?</strong></p>
+</blockquote>
+<p>对于vector，其迭代器实际上是指针。</p>
+<p><code>begin</code>的返回类型是<code>iterator</code>，而不是一个指针，当你需要一个指向vector内部数据的指针时绝不该使用begin。如果你基于某些原因决定键入<code>randy.begin()</code>，就应该键入<code>&amp;*randy.begin()</code>，因为这将会产生和<code>&amp;v[0]</code>相同的指针。</p>
+<h3 id="string-传递指针">string 传递指针</h3>
+<p>类似从vector上获取指向内部数据的指针的方法，<strong>对string不是可靠的</strong>:</p>
+<ol>
+<li>string中的数据并没有保证被存储在独立的一块连续内存中</li>
+<li>string的内部表示形式并没承诺以一个null字符结束。这解释了string的成员函数c_str存在的原因</li>
+</ol>
+<p>即使是字符串的长度为0，<code>c_str</code>将返回一个指向<code>null</code>字符的指针。</p>
+<p><strong>在两种形式下，指针都被传递为指向const的指针。vector和string的数据只能传给只读取而不修改它的API。</strong></p>
+<p>如果你将<code>randy</code>传给一个修改其元素的C风格API的话，典型情况都是没问题，但<strong>被调用的函数绝不能试图改变vector中元素的个数</strong>。否则，randy的内部状态将会变得不一致，<code>v.size()</code>将会得到一个不正确的结果。</p>
+<p><strong>把一个vector传递给需要修改vector数据的API，一定要确保这些额外限制继续被满足</strong>，比如是否需要保持原来vector中元素的顺序。</p>
+<h2 id="c风格api返回的元素初始化stl容器">C风格API返回的元素初始化STL容器</h2>
+<h3 id="初始化vector">初始化vector</h3>
+<p><strong>利用vector和数组潜在的内存分布兼容性将存储vecotr的元素的空间传给API函数：</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API：此函数需要一个指向数组的指针，数组最多有arraySize个double
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 而且会对数组写入数据。它返回写入的double数，不会大于arraySize
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="nf">fillArray</span><span class="p">(</span><span class="kt">double</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">vd</span><span class="p">(</span><span class="n">maxNumDoubles</span><span class="p">);</span> <span class="c1">// 建立一个vector，它的大小是maxNumDoubles
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vd</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">fillArray</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vd</span><span class="p">.</span><span class="n">size</span><span class="p">()));</span> <span class="c1">// 让fillArray把数据写入vd，然后调整vd的大小为fillArray写入的元素个数
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>这个技巧只能工作于vector，因为只有vector承诺了与数组具有相同的潜在内存分布。</strong></p>
+<h3 id="初始化string">初始化string</h3>
+<p>只要让API将数据放入一个<code>vector&lt;char&gt;</code>，然后从vector中将数据拷到string：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API：此函数需要一个指向数组的指针，数组最多有arraySize个char
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 而且会对数组写入数据。它返回写入的char数，不会大于arraySize
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="nf">fillString</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span> <span class="n">vc</span><span class="p">(</span><span class="n">maxNumChars</span><span class="p">);</span> <span class="c1">// 建立一个vector，它的大小是maxNumChars
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="n">charsWritten</span> <span class="o">=</span> <span class="n">fillString</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vc</span><span class="p">.</span><span class="n">size</span><span class="p">());</span> <span class="c1">// 让fillString把数据写入vc
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span> <span class="nf">s</span><span class="p">(</span><span class="n">vc</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vc</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">charsWritten</span><span class="p">);</span> <span class="c1">// 从vc通过范围构造函数拷贝数据到s
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="初始化其他stl容器">初始化其他STL容器</h3>
+<p><strong>通用方法：C风格API把数据放入一个vector，然后拷到实际想要的STL容器</strong></p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">size_t</span> <span class="nf">fillArray</span><span class="p">(</span><span class="kt">double</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span> <span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">vd</span><span class="p">(</span><span class="n">maxNumDoubles</span><span class="p">);</span> <span class="c1">// 一样同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vd</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">fillArray</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vd</span><span class="p">.</span><span class="n">size</span><span class="p">()));</span>
+</span></span><span class="line"><span class="cl"><span class="n">deque</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">d</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到deque
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到list
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">set</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">s</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到set
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="stl容器传递给c-api">STL容器传递给C API</h3>
+<p>STL容器将它们的数据传给C风格API，只要将容器的每个数据拷到vector，然后将vector传给API:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span><span class="n">pints</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">numInts</span><span class="p">);</span> <span class="c1">// C API (同上)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">intSet</span><span class="p">;</span> <span class="c1">// 保存要传递给API数据的set
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">(</span><span class="n">intSet</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">intSet</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝set数据到vector
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">v</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">());</span> <span class="c1">// 传递数据到API
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>如果在编译期就知道容器的大小</strong>，可以将数据拷进一个<strong>数组</strong>，然后将数组传给C风格的API，否则不得不分配动态数组。</p>
+]]></description></item><item><title>Diffusion 扩散模型（DDPM）</title><link>https://jianye0428.github.io/posts/ddpm/</link><pubDate>Mon, 31 Jul 2023 15:57:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ddpm/</guid><description><![CDATA[<!--
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>

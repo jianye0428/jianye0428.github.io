@@ -1,4 +1,140 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 04 Aug 2023 08:25:48 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [15] | 小心string实现的多样性</title><link>https://jianye0428.github.io/posts/clause_15/</link><pubDate>Fri, 04 Aug 2023 08:25:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_15/</guid><description><![CDATA[<h2 id="sizeofstring的值">sizeof(string)的值</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 07 Aug 2023 08:35:57 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [16] | 如何将vector和string的数据传给遗留的API</title><link>https://jianye0428.github.io/posts/clause_16/</link><pubDate>Mon, 07 Aug 2023 08:35:57 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_16/</guid><description><![CDATA[<h2 id="string-和-vector-传递给c-api">string 和 vector 传递给C API</h2>
+<h3 id="vector传递指针">vector传递指针</h3>
+<p>C风格API接受的是<strong>数组</strong>和<code>char*</code>指针，这样的API还会存在很长时间，如果有1个vector对象randy， 则使用<code>&amp;v[0]</code>就可以得到一个指向randy中数据的指针。对于string对象sesame，则传递<code>sesame.c_str()</code>即可。</p>
+<p>表达式<code>randy[0]</code>生产一个指向vector中第一个元素的引用，所以，<code>&amp;randy[0]</code>是指向那个首元素的指针。</p>
+<p>vector中的元素被C++标准限定为存储在连续内存中，就像是一个数组。</p>
+<p>所以我们可能会这么传递</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">pInts</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">numInts</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 调用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">randy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">randy</span><span class="p">.</span><span class="n">size</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>唯一的问题就是，如果randy是空的，<code>randysize()</code>是0，而<code>&amp;randy[0]</code>试图产生一个指向根本就不存在的东西的指针。</p>
+<p>可以提前判断一下randy的大小：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">randy</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">randy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">randy</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p><strong>randy.begin()代替&amp;randy[0]?</strong></p>
+</blockquote>
+<p>对于vector，其迭代器实际上是指针。</p>
+<p><code>begin</code>的返回类型是<code>iterator</code>，而不是一个指针，当你需要一个指向vector内部数据的指针时绝不该使用begin。如果你基于某些原因决定键入<code>randy.begin()</code>，就应该键入<code>&amp;*randy.begin()</code>，因为这将会产生和<code>&amp;v[0]</code>相同的指针。</p>
+<h3 id="string-传递指针">string 传递指针</h3>
+<p>类似从vector上获取指向内部数据的指针的方法，<strong>对string不是可靠的</strong>:</p>
+<ol>
+<li>string中的数据并没有保证被存储在独立的一块连续内存中</li>
+<li>string的内部表示形式并没承诺以一个null字符结束。这解释了string的成员函数c_str存在的原因</li>
+</ol>
+<p>即使是字符串的长度为0，<code>c_str</code>将返回一个指向<code>null</code>字符的指针。</p>
+<p><strong>在两种形式下，指针都被传递为指向const的指针。vector和string的数据只能传给只读取而不修改它的API。</strong></p>
+<p>如果你将<code>randy</code>传给一个修改其元素的C风格API的话，典型情况都是没问题，但<strong>被调用的函数绝不能试图改变vector中元素的个数</strong>。否则，randy的内部状态将会变得不一致，<code>v.size()</code>将会得到一个不正确的结果。</p>
+<p><strong>把一个vector传递给需要修改vector数据的API，一定要确保这些额外限制继续被满足</strong>，比如是否需要保持原来vector中元素的顺序。</p>
+<h2 id="c风格api返回的元素初始化stl容器">C风格API返回的元素初始化STL容器</h2>
+<h3 id="初始化vector">初始化vector</h3>
+<p><strong>利用vector和数组潜在的内存分布兼容性将存储vecotr的元素的空间传给API函数：</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API：此函数需要一个指向数组的指针，数组最多有arraySize个double
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 而且会对数组写入数据。它返回写入的double数，不会大于arraySize
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="nf">fillArray</span><span class="p">(</span><span class="kt">double</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">vd</span><span class="p">(</span><span class="n">maxNumDoubles</span><span class="p">);</span> <span class="c1">// 建立一个vector，它的大小是maxNumDoubles
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vd</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">fillArray</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vd</span><span class="p">.</span><span class="n">size</span><span class="p">()));</span> <span class="c1">// 让fillArray把数据写入vd，然后调整vd的大小为fillArray写入的元素个数
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>这个技巧只能工作于vector，因为只有vector承诺了与数组具有相同的潜在内存分布。</strong></p>
+<h3 id="初始化string">初始化string</h3>
+<p>只要让API将数据放入一个<code>vector&lt;char&gt;</code>，然后从vector中将数据拷到string：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API：此函数需要一个指向数组的指针，数组最多有arraySize个char
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 而且会对数组写入数据。它返回写入的char数，不会大于arraySize
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="nf">fillString</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span> <span class="n">vc</span><span class="p">(</span><span class="n">maxNumChars</span><span class="p">);</span> <span class="c1">// 建立一个vector，它的大小是maxNumChars
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="n">charsWritten</span> <span class="o">=</span> <span class="n">fillString</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vc</span><span class="p">.</span><span class="n">size</span><span class="p">());</span> <span class="c1">// 让fillString把数据写入vc
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span> <span class="nf">s</span><span class="p">(</span><span class="n">vc</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vc</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">charsWritten</span><span class="p">);</span> <span class="c1">// 从vc通过范围构造函数拷贝数据到s
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="初始化其他stl容器">初始化其他STL容器</h3>
+<p><strong>通用方法：C风格API把数据放入一个vector，然后拷到实际想要的STL容器</strong></p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">size_t</span> <span class="nf">fillArray</span><span class="p">(</span><span class="kt">double</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span> <span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">vd</span><span class="p">(</span><span class="n">maxNumDoubles</span><span class="p">);</span> <span class="c1">// 一样同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vd</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">fillArray</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vd</span><span class="p">.</span><span class="n">size</span><span class="p">()));</span>
+</span></span><span class="line"><span class="cl"><span class="n">deque</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">d</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到deque
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到list
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">set</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">s</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到set
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="stl容器传递给c-api">STL容器传递给C API</h3>
+<p>STL容器将它们的数据传给C风格API，只要将容器的每个数据拷到vector，然后将vector传给API:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span><span class="n">pints</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">numInts</span><span class="p">);</span> <span class="c1">// C API (同上)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">intSet</span><span class="p">;</span> <span class="c1">// 保存要传递给API数据的set
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">(</span><span class="n">intSet</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">intSet</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝set数据到vector
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">v</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">());</span> <span class="c1">// 传递数据到API
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>如果在编译期就知道容器的大小</strong>，可以将数据拷进一个<strong>数组</strong>，然后将数组传给C风格的API，否则不得不分配动态数组。</p>
+]]></description></item><item><title>Effective STL [15] | 小心string实现的多样性</title><link>https://jianye0428.github.io/posts/clause_15/</link><pubDate>Fri, 04 Aug 2023 08:25:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_15/</guid><description><![CDATA[<h2 id="sizeofstring的值">sizeof(string)的值</h2>
 <p>如果想知道<code>sizeof(string)</code>的值是多少，答案不一定。</p>
 <p><code>string</code>和<code>char*</code>指针一样大的实现很常见，也很容易找到<code>string</code>是<code>char</code>*7 倍大小的<code>string</code>实现。</p>
 <p>所以得了解一下<code>string</code>的实现</p>
@@ -7390,155 +7526,4 @@ $$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>即便需要知道STL容器使用了拷贝，但是别忘了一个事实：比起数组它们仍然是一个进步。</p>
-]]></description></item><item><title>Effective STL [2] | 小心对“容器无关代码”的幻想</title><link>https://jianye0428.github.io/posts/clause_2/</link><pubDate>Thu, 20 Jul 2023 15:58:12 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_2/</guid><description><![CDATA[<h2 id="stl-容器特点">STL 容器特点</h2>
-<p>STL是建立在<strong>泛化</strong>之上的</p>
-<ul>
-<li>数组泛化为容器，参数化了所包含的对象的类型</br></li>
-<li>函数泛化为算法，参数化了所用的迭代器的类型</br></li>
-<li>指针泛化为迭代器，参数化了所指向的对象的类型</br></li>
-</ul>
-<p><strong>独立的容器类型泛化为序列或关联容器，而且类似的容器拥有类似的功能。</strong></p>
-<p>标准的内存相邻容器都提供随机访问迭代器，标准的基于节点的容器都提供双向迭代器。</p>
-<p>序列容器支持<code>push_front</code>或<code>push_back</code>，但关联容器不支持。关联容器提供对数时间复杂度的<code>lower_bound</code>、<code>upper_bound</code>和<code>equal_range</code>成员函数，但序列容器却没有。</p>
-<p>举例:</p>
-<ul>
-<li>标准序列容器: vector、string、deque 和 list</li>
-<li>标准关联容器: set、multiset、map 和 multimap</li>
-</ul>
-<h2 id="推行自己的容器">推行自己的容器</h2>
-<p>很多人会试图在他们的软件中泛化容器的不同，而不是针对容器的特殊性编程，他们会想在vector 中使用 deque 或者 list的特性，这往往会带来麻烦。</p>
-<p>比如：</p>
-<ul>
-<li>
-<p>只有序列容器支持push_front或push_back，只有关联容器支持count和lower_bound</p>
-</li>
-<li>
-<p>即便是 insert和erase这样的操作在名称和语义上也有差别</p>
-<ul>
-<li>当把对象插入序列容器中，该对象会保留在你放置的位置上;</li>
-<li>当你把对象插入到一个关联容器中，容器会按照排列顺序把对象移到它应该在的位置;</li>
-</ul>
-</li>
-<li>
-<p>在序列容器上用一个迭代器作为参数调用 erase，会返回一个新的迭代器；在关联容器上什么都不返回。</p>
-</li>
-</ul>
-<p><strong>容器能力的交集</strong></p>
-<p>如果你想写一个可以用在常用序列容器上的代码—— 包含vector, deque和list。你必须使用它们能力的交集来编写。</p>
-<p>但要考虑几点：</p>
-<ul>
-<li><code>deque</code>和<code>list</code>不支持<code>reserve</code>或<code>capacity</code></li>
-<li><code>list</code>不支持<code>operator[]</code>操作，且受限于双向迭代器的性能</li>
-<li>不能使用需要随机访问迭代器的算法，包括<code>sort</code>，<code>stable_sort</code>，<code>partial_sort</code>和<code>nth_element</code></li>
-<li>如果想支持<code>vector</code>的规则，则不能使用<code>push_front</code>和<code>pop_front</code></li>
-<li><code>vector</code>和<code>deque</code>都会使<code>splice</code>和成员函数方式的<code>sort</code>失败</li>
-<li>因为<code>deque::insert</code>会使所有迭代器失效，而且因为缺少<code>capacity</code>，<code>vector::insert</code>也必须假设使所有指针和引用失效，而deque是唯一一个在迭代器失效的情况下, 指针和引用仍然有效的东西</li>
-<li><strong>不能把容器里的数据传递给C风格的界面</strong>，只有vector支持这么做</li>
-<li><strong>不能用bool作为保存的对象来实例化你的容器</strong>，因为vector 并非总表现为一个vector，实际上它并没有真正保存bool值。</li>
-<li>不能期望享受到list的常数时间复杂度的插入和删除，vector和deque的插入和删除操作是线性时间复杂度的</li>
-</ul>
-<p>所以，真正开发时，如果都考虑到上面几点，那想开发的容器只剩下一个&quot;泛化的序列容器&quot;，但是你不能调用<code>reserve</code>、<code>capacity</code>、<code>operator[]</code>、<code>push_front</code>、<code>pop_front</code>、<code>splice</code>或任何需要随机访问迭代器的算法；调用insert和erase会有线性时间复杂度而且会使所有迭代器、指针和引用失效；而且不能兼容C风格的界面，不能存储bool。</p>
-<p>如果你放弃了序列容器，把代码改为只能和不同的关联容器配合，这情况并没有什么改善。</p>
-<ul>
-<li>要同时兼容set和map几乎是不可能的，因为set保存单个对象，而map保存对象对。</li>
-<li>甚至要同时兼容set和multiset（或map和multimap）也是很难的。</li>
-<li><code>set/map</code>的<code>insert</code>成员函数只返回一个值，和他们的multi兄弟的返回类型不同，而且你必须避免对一个保存在容器中的值的拷贝份数作出任何假设。</li>
-<li>对于<code>map</code>和<code>multimap</code>，你必须避免使用<code>operator[]</code>，因为这个成员函数只存在于map中。</li>
-</ul>
-<h2 id="封装">封装</h2>
-<p>如果想改变容器类型，就使用<strong>封装</strong>。</p>
-<p><strong>Method 1: typedef</strong>
-一种最简单的方法是通过自由地对容器和迭代器类型使用typedef</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{...};</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">vw</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">Widget</span> <span class="n">bestWidget</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 给bestWidget一个值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span>  <span class="c1">// 寻找和bestWidget相等的Widget
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">find</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">bestWidget</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>可以简化上述写法</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span>
-</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">WidgetContainer</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">WidgetContainer</span><span class="o">::</span><span class="n">iterator</span> <span class="n">WCIterator</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">WidgetContainer</span> <span class="n">cw</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">Widget</span> <span class="n">bestWidget</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="n">WCIterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="n">cw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">cw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">bestWidg</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果需要加上用户的allocator，也特别方便。（一个不影响对迭代器/指针/参考的失效规则的改变）</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span>
-</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="c1">// 关于为什么这里需要一个template
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">SpecialAllocator</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span> <span class="c1">// 请参见条款10
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SpecialAllocator</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">WidgetContainer</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">WidgetContainer</span><span class="o">::</span><span class="n">iterator</span> <span class="n">WCIterator</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">WidgetContainer</span> <span class="n">cw</span><span class="p">;</span> <span class="c1">// 仍然能用
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Widget</span> <span class="n">bestWidget</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="n">WCIterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="n">cw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">cw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">bestWidget</span><span class="p">);</span> <span class="c1">// 仍然能用
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><font color=red><code>typedef</code>只是其它类型的同义字，所以它提供的的封装是纯的词法（译注：不像#define是在预编译阶段替换的）。<code>typedef</code>并不能阻止用户使用（或依赖）任何他们不应该用的（或依赖的）。</font></p>
-<p><strong>Method 2: class</strong></p>
-<p>要限制如果用一个容器类型替换了另一个容器可能需要修改的代码，就需要在类中隐藏那个容器，而且要通过类的接口限制容器特殊信息可见性的数量。</p>
-<p>比如需要隐藏 真实的容器 list 建立客户列表：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">CustomerList</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">list</span><span class="o">&lt;</span><span class="n">Customer</span><span class="o">&gt;</span> <span class="n">CustomerContainer</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">CustomerContainer</span><span class="o">::</span><span class="n">iterator</span> <span class="n">CCIterator</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">CustomerContainer</span> <span class="n">customers</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span> <span class="c1">// 通过这个接口
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span> <span class="c1">// 限制list特殊信息的可见性
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果使用过程中，你发现从列表的中部插入和删除客户并不像你想象的那么频繁，仅仅需要快速确定客户列表顶部的20%——一个为nth_element算法量身定做的任务。</p>
-<p>但<code>nth_element</code>需要随机访问迭代器，不能兼容<code>list</code>。</p>
-<p>在这种情况下，你的客户&quot;list&quot;可能更应该用&quot;vector&quot;或&quot;deque&quot;来实现</p>
-<p>当你决定作这种更改的时候，你仍然<strong>必须检查每个CustomerList的成员函数和每个友元，看看他们受影响的程度（根据性能和迭代器/指针/引用失效的情况等等）</strong>。</p>
-<p>但如果你做好了对CustomerList地实现细节做好封装的话，那对CustomerList的客户的影响将会很小。</p>
 ]]></description></item></channel></rss>
