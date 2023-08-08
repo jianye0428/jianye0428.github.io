@@ -1,4 +1,50 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 07 Aug 2023 08:35:57 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [16] | 如何将vector和string的数据传给遗留的API</title><link>https://jianye0428.github.io/posts/clause_16/</link><pubDate>Mon, 07 Aug 2023 08:35:57 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_16/</guid><description><![CDATA[<h2 id="string-和-vector-传递给c-api">string 和 vector 传递给C API</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Tue, 08 Aug 2023 08:48:22 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [17] | 使用“交换技巧”来修整过剩容量(仅适用于vector和string)</title><link>https://jianye0428.github.io/posts/clause_17/</link><pubDate>Tue, 08 Aug 2023 08:48:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_17/</guid><description><![CDATA[<blockquote>
+<p>注意: 这里的容量指的是capacity</p>
+</blockquote>
+<p>先举个例子，先创建个容器，然后获得了很多元素。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Contestant</span> <span class="p">{...};</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">contestants</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>但是很快发现大部分元素是没有用的，那就把元素删了，但是空间仍然还是那么大，怎么办呢？</br></p>
+<p>当然可以通过resize方法去改变，但是如果我不知道大概要多少，我只知道有一些符合我的要求，如果直接用resize可能大了很多，或者抛弃了原本符合要求的元素。所以最好有一种shrink_to_fit的方式。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">contestants</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span><span class="p">(</span><span class="n">contestants</span><span class="p">).</span><span class="n">swap</span><span class="p">(</span><span class="n">contestants</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>　
+表达式<code>vector&lt;Contestant&gt;(contestants)</code>建立一个临时vector，它是contestants的一份拷贝: vector的拷贝构造函数做了这个工作。但是，vector的拷贝构造函数只分配拷贝的元素需要的内存，所以这个临时vector没有多余的容量。然后我们让临时vector和contestants交换数据，这时我们完成了，contestants只有临时变量的修整过的容量，而这个临时变量则持有了曾经在contestants中的发胀的容量。在这里（这个语句结尾），临时vector被销毁，因此释放了以前contestants使用的内存。同样的技巧可以应用于string。交换技巧的变体可以用于清除容器和减少它的容量到你的实现提供的最小值。</p>
+<p>string也同样适用：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contest</span><span class="o">&gt;</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>	<span class="c1">//清楚v并把它的容量变为最小
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>			<span class="c1">//清楚s并把它的容量变为最小
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>另外，在swap的时候，不仅仅容器内容被交换，其迭代器、指针和引用也被交换(string除外)。因此，在发生交换后，原来的迭代器、指针和引用依然有效，并指向同样的元素——但这些元素已经在另外一个容器中。</p>
+<p>ref:</br>
+[1]. <a href="https://blog.csdn.net/u011058765/article/details/51205757?spm=1001.2101.3001.6650.2&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&amp;utm_relevant_index=3"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/u011058765/article/details/51205757?spm=1001.2101.3001.6650.2&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&utm_relevant_index=3<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Effective STL [16] | 如何将vector和string的数据传给遗留的API</title><link>https://jianye0428.github.io/posts/clause_16/</link><pubDate>Mon, 07 Aug 2023 08:35:57 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_16/</guid><description><![CDATA[<h2 id="string-和-vector-传递给c-api">string 和 vector 传递给C API</h2>
 <h3 id="vector传递指针">vector传递指针</h3>
 <p>C风格API接受的是<strong>数组</strong>和<code>char*</code>指针，这样的API还会存在很长时间，如果有1个vector对象randy， 则使用<code>&amp;v[0]</code>就可以得到一个指向randy中数据的指针。对于string对象sesame，则传递<code>sesame.c_str()</code>即可。</p>
 <p>表达式<code>randy[0]</code>生产一个指向vector中第一个元素的引用，所以，<code>&amp;randy[0]</code>是指向那个首元素的指针。</p>
@@ -557,23 +603,14 @@ D的<strong>string对象是一个指针大小的7倍</strong>（仍然假设使�
 <li>
 <p>「你不能希望库消除对手工并行控制的需要，而且你完全不能依赖于任何线程支持」</p>
 </li>
-</ul>]]></description></item><item><title>Diffusion 扩散模型（DDPM）</title><link>https://jianye0428.github.io/posts/ddpm/</link><pubDate>Mon, 31 Jul 2023 15:57:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ddpm/</guid><description><![CDATA[<!--
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="一引入">一、引入</h2>
+</ul>]]></description></item><item><title>Diffusion 扩散模型（DDPM）</title><link>https://jianye0428.github.io/posts/ddpm/</link><pubDate>Mon, 31 Jul 2023 15:57:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ddpm/</guid><description><![CDATA[<h2 id="一引入">一、引入</h2>
 <p></p>
-<p>近年AIGC的爆火离不开人工智能在图像生成、文本生成以及多模态等领域的不断累积，其中<strong>生成模型</strong>的发展占据了很大功劳，如：生成对抗网络 GAN 及其一系列变体、变分自编码器 VAE 及其一系列变体、自回归模型 AR、流模型 flow ，以及近年大火的<strong>扩散模型 Diffusion Model</strong> 等。</p>
+<p>近年AIGC的爆火离不开人工智能在图像生成、文本生成以及多模态等领域的不断累积，其中<strong>生成模型</strong>的发展占据了很大功劳，如：<mark>生成对抗网络 GAN</mark> 及其一系列变体、<mark>变分自编码器 VAE</mark> 及其一系列变体、<mark>自回归模型 AR</mark>、<mark>流模型 flow</mark> ，以及近年大火的<strong>扩散模型 Diffusion Model</strong> 等。</p>
 <p>扩散模型的大火并非横空出世，早在2015年就有人提出了类似的想法，直到2020年才提出了经典的 <strong>Denoising Diffusion Probabilistic Models（DDPM）</strong>，像OpenAI、NovelAI、NVIDIA和Google成功的训练了大规模模型之后，它们吸引了很多人注意，后续有了很多基于扩散模型的变体，比如有：GLIDE、DALLE-2、Imagen和年底爆火的完全开源的稳定扩散模型（Stable Diffusion）。</p>
 <p>扩散模型与之前所有的生成方法有着本质的区别：</p>
 <p></p>
 <p>直观的说它是<mark>将图像生成过程（采样）分解为许多小的去噪步骤</mark>，其实 Diffusion 的含义本质上就是一个迭代过程，实线箭头用于扩散步骤中添加随机噪声，虚线箭头代表的是通过学习逆向扩散过程<mark>从噪声中重构所需的数据样本</mark>。<strong>引入噪声导致了信息的衰减，再通过噪声尝试还原原始数据，多次迭代最小化损失后，能够使模型在给定噪声输入的情况下学习生成新图像。</strong></p>
-<p>所以Diffusion模型和其它生成模型的区别是，它不是直接的图像-&gt;潜变量、潜变量-&gt;图像的一步到位，它是一步一步的<mark>逐渐分解、逐渐去噪</mark>的过程。</p>
+<p>所以Diffusion模型和其它生成模型的区别是，它不是直接的<strong>图像-&gt;潜变量、潜变量-&gt;图像</strong>的一步到位，它是一步一步的<mark><font color=red><strong>逐渐分解、逐渐去噪</strong></font></mark>的过程。</p>
 <p>当然有关Diffusion的理解和变体有很多，但是扩散模型从本质上讲就是DDPM，所以本文主要对DDPM的原理进行讲解，并给出DDPM的扩散过程、去噪过程、训练损失的详细推导，对于掌握Diffusion算法原理只需要抓住以下四点即可：</p>
 <ul>
 <li>前向过程（扩散）；</li>
@@ -585,10 +622,16 @@ D的<strong>string对象是一个指针大小的7倍</strong>（仍然假设使�
 <p>扩散模型包括 <strong>前向扩散过程</strong> 和 <strong>反向去噪过程(采样)</strong>，前向阶段对图像逐步施加噪声，直至图像被破坏变成完全的高斯噪声，然后在反向阶段学习从高斯噪声还原为原始图像的过程。</p>
 <h3 id="21直观理解">2.1、直观理解</h3>
 <ul>
-<li>散模型的目的是什么？
-学习从纯噪声生成图片的方法。</li>
+<li>扩散模型的目的是什么？
+<ul>
+<li>学习从纯噪声生成图片的方法。</li>
+</ul>
+</li>
 <li>扩散模型是怎么做的？
-训练一个UNet，接受一系列加了噪声的图片，学习预测所加的噪声。</li>
+<ul>
+<li>训练一个UNet，接受一系列加了噪声的图片，学习预测所加的噪声。</li>
+</ul>
+</li>
 <li>前向过程在干什么？
 <ul>
 <li>逐步向真实图片添加噪声最终得到一个纯噪声；</li>
@@ -597,7 +640,10 @@ D的<strong>string对象是一个指针大小的7倍</strong>（仍然假设使�
 </ul>
 </li>
 <li>反向过程在干什么？
-训练好模型后，采样、生成图片。</li>
+<ul>
+<li>训练好模型后，采样、生成图片。</li>
+</ul>
+</li>
 </ul>
 <h3 id="22前向过程扩散">2.2、前向过程（扩散）</h3>
 <p></p>
@@ -634,7 +680,7 @@ D的<strong>string对象是一个指针大小的7倍</strong>（仍然假设使�
 <h3 id="23反向过程去噪">2.3、反向过程（去噪）</h3>
 <p>反向过程则是不断去除噪声的过程，给定一个噪声图片 $x_T$，对它一步步的去噪还原，直至最终将原始图像 $x_0$ 给恢复出来，如下图所示：</p>
 <p></p>
-<p>去噪的过程，$x_t$、$\alpha_t$、$\beta_t$ 都是已知的，只有公式 $(2)$ 中的真实噪声是未知的，因为它是随机采样的。所以需要一个神经网络把 $\varepsilon$ 给学出来，也就是说训练一个由 $x_t$ 和 $t$ 估测噪声的模型：</p>
+<p>去噪的过程，$x_t$、$\alpha_t$、$\beta_t$ 都是已知的，只有公式 $(2)$ 中的真实噪声是未知的，因为它是随机采样的。所以需要一个神经网络把 $\varepsilon$ 给学出来，也就是说训练一个由 $x_t$ 和 $t$ 估测噪声的模型:</p>
 <p>$$x_{t-1}=\frac{1}{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\varepsilon</em>\theta(x_t,t))$$</p>
 <p>其中 $\theta$ 就是模型的参数，通常使用UNet作为预估噪声的模型。</p>
 <h3 id="24模型训练">2.4、模型训练</h3>
@@ -866,7 +912,9 @@ $$</p>
 [7]. <a href="https://huggingface.co/blog/annotated-diffusion"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/annotated-diffusion<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [8]. <a href="https://www.datalearner.com/blog/1051664857725795"target="_blank" rel="external nofollow noopener noreferrer">https://www.datalearner.com/blog/1051664857725795<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [9]. <a href="https://lilianweng.github.io/posts/2021-07-11-diffusion-models"target="_blank" rel="external nofollow noopener noreferrer">https://lilianweng.github.io/posts/2021-07-11-diffusion-models<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[10]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486128&amp;idx=1&amp;sn=7ffef5d8c1bbf24565d0597eb5eaeb16&amp;chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486128&idx=1&sn=7ffef5d8c1bbf24565d0597eb5eaeb16&chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [4]</title><link>https://jianye0428.github.io/posts/partfour/</link><pubDate>Mon, 31 Jul 2023 07:26:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partfour/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+[10]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486128&amp;idx=1&amp;sn=7ffef5d8c1bbf24565d0597eb5eaeb16&amp;chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486128&idx=1&sn=7ffef5d8c1bbf24565d0597eb5eaeb16&chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[11]. <a href="https://arxiv.org/pdf/2006.11239.pdf"target="_blank" rel="external nofollow noopener noreferrer">paper link<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Effective C++ (第3版) 精读总结 [4]</title><link>https://jianye0428.github.io/posts/partfour/</link><pubDate>Mon, 31 Jul 2023 07:26:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partfour/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
@@ -7401,129 +7449,4 @@ $$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
 </div>
 </div><h2 id="结论">结论</h2>
 <p>几乎所有目标区间被插入迭代器指定的copy的使用都可以用调用的区间成员函数的来代替 。</p>
-<p>尽量使用区间成员函数来代替单元素兄弟的三个可靠的论点。区间成员函数更容易写，它们更清楚地表达你的意图，而且它们提供了更高的性能。那是很难打败的三驾马车。</p>]]></description></item><item><title>Effective STL [3] | 使容器里对象的拷贝操作轻量而正确</title><link>https://jianye0428.github.io/posts/clause_3/</link><pubDate>Mon, 24 Jul 2023 09:11:28 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_3/</guid><description><![CDATA[<h2 id="拷贝对象是stl的方式">拷贝对象是STL的方式</h2>
-<ul>
-<li>
-<p>当一个对象进入一个容器，它已经不是你添加（<code>insert</code>或<code>push_back</code>等）的那个对象了，进入容器的是你指定的对象的拷贝；</p>
-</li>
-<li>
-<p>当从容器中取出一个对象时，所得到的也不是容器里的对象；</p>
-</li>
-<li>
-<p>如果从<code>vector</code>、<code>string</code>或<code>deque</code>中插入或删除了什么，现有的容器元素会移动（拷贝）</p>
-</li>
-<li>
-<p>如果使用了任何排序算法：<code>next_permutation</code>或者<code>previous_permutation</code>；</p>
-</li>
-<li>
-<p><code>remove</code>、<code>unique</code>或它们的同类；</p>
-</li>
-<li>
-<p><code>rotate</code>或<code>reverse</code>等，对象会移动（拷贝）</p>
-</li>
-</ul>
-<p><strong>拷进去，拷出来</strong>。这就是STL的方式.</p>
-<p>因为拷贝，还解决了一个 double free 的 bug<a href="https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&amp;mid=2247490628&amp;idx=1&amp;sn=43650727bc93d8064fd2969733873fdc&amp;chksm=f9e422d7ce93abc1d2784bcb5772536f55aa79902bbb783003c3314df7ed6461a014ed3cce25&amp;token=235869638&amp;lang=zh_CN&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">点击查看<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="how-copy-如何完成拷贝">How Copy? 如何完成拷贝</h2>
-<div class="details admonition info open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-info-circle fa-fw" aria-hidden="true"></i>Notice<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">通过拷贝构造函数和拷贝复制操作符完成！</div>
-    </div>
-  </div>
-<p>一个对象通过使用它的拷贝成员函数来拷贝，特别是它的拷贝构造函数和它的拷贝赋值操作符。</p>
-<p>对于用户自定义类，比如Widget，这些函数传统上是这么声明的：</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="n">Widget</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span><span class="p">);</span> <span class="c1">// 拷贝构造函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Widget</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span><span class="p">);</span> <span class="c1">// 拷贝赋值操作符
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>如果你自己没有声明这些函数，你的编译器始终会为你声明它们。</strong></p>
-<p>拷贝内建类型（比如int、指针等）也始终是通过简单地拷贝他们的内在比特来完成的。（请参考《Effective C++》中，条款11和27专注于这些函数的行为。）</p>
-<h2 id="拷贝带来的问题">拷贝带来的问题</h2>
-<p><strong>性能瓶颈</strong></p>
-<p>拷贝会导致把对象放进容器也会被证明为是一个性能瓶颈。</p>
-<p>容器中移动越多的东西，你就会在拷贝上浪费越多的内存和时钟周期。</p>
-<p><strong>切片分割</strong></p>
-<p>当然由于继承的存在，拷贝会导致分割。</p>
-<p>如果以基类对象建立一个容器，而你试图插入派生类对象，那么当对象（通过基类的拷贝构造函数）拷入容器的时候对象的派生部分会被删除：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">randy</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecialWidget</span><span class="o">:</span> <span class="k">public</span> <span class="n">Widget</span> <span class="p">{...};</span> <span class="c1">// SpecialWidget从上面的Widget派生
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">SpecialWidget</span> <span class="n">sw</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">randy</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">sw</span><span class="p">);</span> <span class="c1">// sw被当作基类对象拷入randy，当拷贝时它的特殊部分丢失了
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>分割问题暗示了把一个派生类对象插入基类对象的容器几乎总是错的。</p>
-<p>如果你希望结果对象表现为派生类对象，比如，调用派生类的虚函数等，总是错的。</p>
-<h2 id="解决">解决</h2>
-<p>一个使拷贝更高效、正确而且对分割问题免疫的简单的方式是<strong>建立指针的容器而不是对象的容器</strong>。</p>
-<p>也就是说，不是建立一个Widget的容器，建立一个Widget*的容器。</p>
-<p><strong>拷贝指针很快，它总是严密地做你希望的（指针拷贝比特），而且当指针拷贝时没有分割，就是int类型的地址。</strong></p>
-<p><font color=red>但是一定要记得在销毁容器的时候，使用delete 销毁里面保存的每个指针。而且一定要定义对象的深拷贝构造函数和深拷贝拷贝赋值操作符，否则delete 的时候会报错。</font></p>
-<h2 id="和数组对比stl容器更文明">和数组对比，STL容器更文明</h2>
-<p><strong>STL容器只建立（通过拷贝）你需要的个数的对象，而且它们只在你指定的时候做。</strong></p>
-<p>STL进行了大量拷贝，但它通常设计为避免不必要的对象拷贝，实际上，它也被实现为避免不必要的对象拷贝。</p>
-<ol>
-<li>数组在声明的时候，会默认先构造好每个元素；STL容器可以实现动态扩展</li>
-</ol>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Widget</span> <span class="n">randy</span><span class="p">[</span><span class="n">maxNumWidgets</span><span class="p">];</span> <span class="c1">// 建立一个大小为maxNumWidgets的Widgets数组
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 默认构造每个元素
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>即使只使用其中的一些或者我们立刻使用从某个地方获取（比如，一个文件）的值覆盖每个默认构造的值，这也得构造maxNumWidgets个Widget对象。</p>
-<p>使用STL来代替数组，你可以使用一个可以在需要的时候增长的vector，就是动态数组的概念：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">randy</span><span class="p">;</span> <span class="c1">// 建立一个0个Widget对象的vector
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 需要的时候可以扩展
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol start="2">
-<li>建立一个可以足够包含maxNumWidgets个Widget的空vector，但不去构造Widget，需要时再构造：</li>
-</ol>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">randy</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">randy</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">maxNumWidgets</span><span class="p">);</span> <span class="c1">// reserve的详细信息请参见条款14
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>即便需要知道STL容器使用了拷贝，但是别忘了一个事实：比起数组它们仍然是一个进步。</p>
-]]></description></item></channel></rss>
+<p>尽量使用区间成员函数来代替单元素兄弟的三个可靠的论点。区间成员函数更容易写，它们更清楚地表达你的意图，而且它们提供了更高的性能。那是很难打败的三驾马车。</p>]]></description></item></channel></rss>

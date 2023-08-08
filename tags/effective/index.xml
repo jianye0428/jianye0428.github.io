@@ -1,4 +1,50 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective/</link><description>Effective - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 04 Aug 2023 08:25:48 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective/" rel="self" type="application/rss+xml"/><item><title>Effective STL [15] | 小心string实现的多样性</title><link>https://jianye0428.github.io/posts/clause_15/</link><pubDate>Fri, 04 Aug 2023 08:25:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_15/</guid><description><![CDATA[<h2 id="sizeofstring的值">sizeof(string)的值</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective/</link><description>Effective - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Tue, 08 Aug 2023 08:48:22 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective/" rel="self" type="application/rss+xml"/><item><title>Effective STL [17] | 使用“交换技巧”来修整过剩容量(仅适用于vector和string)</title><link>https://jianye0428.github.io/posts/clause_17/</link><pubDate>Tue, 08 Aug 2023 08:48:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_17/</guid><description><![CDATA[<blockquote>
+<p>注意: 这里的容量指的是capacity</p>
+</blockquote>
+<p>先举个例子，先创建个容器，然后获得了很多元素。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Contestant</span> <span class="p">{...};</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">contestants</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>但是很快发现大部分元素是没有用的，那就把元素删了，但是空间仍然还是那么大，怎么办呢？</br></p>
+<p>当然可以通过resize方法去改变，但是如果我不知道大概要多少，我只知道有一些符合我的要求，如果直接用resize可能大了很多，或者抛弃了原本符合要求的元素。所以最好有一种shrink_to_fit的方式。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">contestants</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span><span class="p">(</span><span class="n">contestants</span><span class="p">).</span><span class="n">swap</span><span class="p">(</span><span class="n">contestants</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>　
+表达式<code>vector&lt;Contestant&gt;(contestants)</code>建立一个临时vector，它是contestants的一份拷贝: vector的拷贝构造函数做了这个工作。但是，vector的拷贝构造函数只分配拷贝的元素需要的内存，所以这个临时vector没有多余的容量。然后我们让临时vector和contestants交换数据，这时我们完成了，contestants只有临时变量的修整过的容量，而这个临时变量则持有了曾经在contestants中的发胀的容量。在这里（这个语句结尾），临时vector被销毁，因此释放了以前contestants使用的内存。同样的技巧可以应用于string。交换技巧的变体可以用于清除容器和减少它的容量到你的实现提供的最小值。</p>
+<p>string也同样适用：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contest</span><span class="o">&gt;</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>	<span class="c1">//清楚v并把它的容量变为最小
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>			<span class="c1">//清楚s并把它的容量变为最小
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>另外，在swap的时候，不仅仅容器内容被交换，其迭代器、指针和引用也被交换(string除外)。因此，在发生交换后，原来的迭代器、指针和引用依然有效，并指向同样的元素——但这些元素已经在另外一个容器中。</p>
+<p>ref:</br>
+[1]. <a href="https://blog.csdn.net/u011058765/article/details/51205757?spm=1001.2101.3001.6650.2&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&amp;utm_relevant_index=3"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/u011058765/article/details/51205757?spm=1001.2101.3001.6650.2&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&utm_relevant_index=3<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Effective STL [15] | 小心string实现的多样性</title><link>https://jianye0428.github.io/posts/clause_15/</link><pubDate>Fri, 04 Aug 2023 08:25:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_15/</guid><description><![CDATA[<h2 id="sizeofstring的值">sizeof(string)的值</h2>
 <p>如果想知道<code>sizeof(string)</code>的值是多少，答案不一定。</p>
 <p><code>string</code>和<code>char*</code>指针一样大的实现很常见，也很容易找到<code>string</code>是<code>char</code>*7 倍大小的<code>string</code>实现。</p>
 <p>所以得了解一下<code>string</code>的实现</p>

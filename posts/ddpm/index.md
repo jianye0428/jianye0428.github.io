@@ -1,17 +1,11 @@
 # Diffusion 扩散模型（DDPM）
 
-<!--
-{{< admonition quote "quote" false >}}
-note abstract info tip success question warning failure danger bug example quote
-{{< /admonition >}} -->
-
-<!--more-->
 
 ## 一、引入
 
 ![](images/DDPM_0.png)
 
-近年AIGC的爆火离不开人工智能在图像生成、文本生成以及多模态等领域的不断累积，其中**生成模型**的发展占据了很大功劳，如：生成对抗网络 GAN 及其一系列变体、变分自编码器 VAE 及其一系列变体、自回归模型 AR、流模型 flow ，以及近年大火的**扩散模型 Diffusion Model** 等。
+近年AIGC的爆火离不开人工智能在图像生成、文本生成以及多模态等领域的不断累积，其中**生成模型**的发展占据了很大功劳，如：<mark>生成对抗网络 GAN</mark> 及其一系列变体、<mark>变分自编码器 VAE</mark> 及其一系列变体、<mark>自回归模型 AR</mark>、<mark>流模型 flow</mark> ，以及近年大火的**扩散模型 Diffusion Model** 等。
 
 扩散模型的大火并非横空出世，早在2015年就有人提出了类似的想法，直到2020年才提出了经典的 **Denoising Diffusion Probabilistic Models（DDPM）**，像OpenAI、NovelAI、NVIDIA和Google成功的训练了大规模模型之后，它们吸引了很多人注意，后续有了很多基于扩散模型的变体，比如有：GLIDE、DALLE-2、Imagen和年底爆火的完全开源的稳定扩散模型（Stable Diffusion）。
 
@@ -21,7 +15,7 @@ note abstract info tip success question warning failure danger bug example quote
 
 直观的说它是<mark>将图像生成过程（采样）分解为许多小的去噪步骤</mark>，其实 Diffusion 的含义本质上就是一个迭代过程，实线箭头用于扩散步骤中添加随机噪声，虚线箭头代表的是通过学习逆向扩散过程<mark>从噪声中重构所需的数据样本</mark>。**引入噪声导致了信息的衰减，再通过噪声尝试还原原始数据，多次迭代最小化损失后，能够使模型在给定噪声输入的情况下学习生成新图像。**
 
-所以Diffusion模型和其它生成模型的区别是，它不是直接的图像->潜变量、潜变量->图像的一步到位，它是一步一步的<mark>逐渐分解、逐渐去噪</mark>的过程。
+所以Diffusion模型和其它生成模型的区别是，它不是直接的**图像->潜变量、潜变量->图像**的一步到位，它是一步一步的<mark><font color=red>**逐渐分解、逐渐去噪**</font></mark>的过程。
 
 当然有关Diffusion的理解和变体有很多，但是扩散模型从本质上讲就是DDPM，所以本文主要对DDPM的原理进行讲解，并给出DDPM的扩散过程、去噪过程、训练损失的详细推导，对于掌握Diffusion算法原理只需要抓住以下四点即可：
 - 前向过程（扩散）；
@@ -35,16 +29,16 @@ note abstract info tip success question warning failure danger bug example quote
 
 ### 2.1、直观理解
 
-- 散模型的目的是什么？
-学习从纯噪声生成图片的方法。
+- 扩散模型的目的是什么？
+  - 学习从纯噪声生成图片的方法。
 - 扩散模型是怎么做的？
-训练一个UNet，接受一系列加了噪声的图片，学习预测所加的噪声。
+  - 训练一个UNet，接受一系列加了噪声的图片，学习预测所加的噪声。
 - 前向过程在干什么？
   - 逐步向真实图片添加噪声最终得到一个纯噪声；
   - 对于训练集中的每张图片，都能生成一系列的噪声程度不同的加噪图片；
   - 在训练时，这些 【不同程度的噪声图片 + 生成它们所用的噪声】 是实际的训练样本。
 - 反向过程在干什么？
-训练好模型后，采样、生成图片。
+  - 训练好模型后，采样、生成图片。
 
 ### 2.2、前向过程（扩散）
 ![](images/DDPM_2.png)
@@ -87,7 +81,7 @@ $$x_t=\sqrt{\overline{\alpha}_t}\left.x_0+\sqrt{1-\overline{\alpha}_t}\right.\va
 
 ![](images/DDPM_4.png)
 
-去噪的过程，$x_t$、$\alpha_t$、$\beta_t$ 都是已知的，只有公式 $(2)$ 中的真实噪声是未知的，因为它是随机采样的。所以需要一个神经网络把 $\varepsilon$ 给学出来，也就是说训练一个由 $x_t$ 和 $t$ 估测噪声的模型：
+去噪的过程，$x_t$、$\alpha_t$、$\beta_t$ 都是已知的，只有公式 $(2)$ 中的真实噪声是未知的，因为它是随机采样的。所以需要一个神经网络把 $\varepsilon$ 给学出来，也就是说训练一个由 $x_t$ 和 $t$ 估测噪声的模型:
 
 $$x_{t-1}=\frac{1}{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}_t}}\varepsilon_\theta(x_t,t))$$
 
@@ -375,6 +369,7 @@ ref:
 [8]. https://www.datalearner.com/blog/1051664857725795</br>
 [9]. https://lilianweng.github.io/posts/2021-07-11-diffusion-models</br>
 [10]. https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486128&idx=1&sn=7ffef5d8c1bbf24565d0597eb5eaeb16&chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&scene=21#wechat_redirect
+[11]. [paper link](https://arxiv.org/pdf/2006.11239.pdf)
 
 ---
 
