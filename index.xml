@@ -1,7 +1,618 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Tue, 08 Aug 2023 08:48:22 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [17] | 使用“交换技巧”来修整过剩容量(仅适用于vector和string)</title><link>https://jianye0428.github.io/posts/clause_17/</link><pubDate>Tue, 08 Aug 2023 08:48:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_17/</guid><description><![CDATA[<blockquote>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 11 Aug 2023 16:10:59 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [20] | 为指针的关联容器指定比较类型</title><link>https://jianye0428.github.io/posts/clause_20/</link><pubDate>Fri, 11 Aug 2023 16:10:59 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_20/</guid><description><![CDATA[<h2 id="example">Example</h2>
+<p>假定你有一个string*指针的set，你把一些动物的名字插入进set:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*&gt;</span> <span class="n">ssp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ssp</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="k">new</span> <span class="n">string</span><span class="p">(</span><span class="s">&#34;Anteater&#34;</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="n">ssp</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="k">new</span> <span class="n">string</span><span class="p">(</span><span class="s">&#34;Wombat&#34;</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="n">ssp</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="k">new</span> <span class="n">string</span><span class="p">(</span><span class="s">&#34;Lemur&#34;</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="n">ssp</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="k">new</span> <span class="n">string</span><span class="p">(</span><span class="s">&#34;Penguin&#34;</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// ssp = “set of string ptrs”
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后你写了下列代码打印set的内容，希望字符串按字母顺序出现。毕竟，确定set保持它们的内容有序。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*&gt;::</span><span class="n">const_iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">ssp</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span><span class="n">i</span> <span class="o">!=</span> <span class="n">ssp</span><span class="p">.</span><span class="n">end</span><span class="p">();</span><span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">i</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>你期望看到</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">Anteater
+</span></span><span class="line"><span class="cl">Wombat
+</span></span><span class="line"><span class="cl">Lemur
+</span></span><span class="line"><span class="cl">Penguin</span></span></code></pre></td></tr></table>
+</div>
+</div><p>实际运行结果:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="mh">0x5566364b5eb0</span>
+</span></span><span class="line"><span class="cl"><span class="mh">0x5566364b5f10</span>
+</span></span><span class="line"><span class="cl"><span class="mh">0x5566364b5f70</span>
+</span></span><span class="line"><span class="cl"><span class="mh">0x5566364b5fd0</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果是4个十六进制的数，代表指针的值。 因为set容纳指针，<code>*i</code>不是一个<code>string</code>，是一个<code>string</code>的指针。</p>
+<p>如果你已经改为调用copy算法，</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">copy</span><span class="p">(</span><span class="n">ssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">ssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">ostream_iterator</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">cout</span><span class="p">,</span> <span class="s">&#34;</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">));</span><span class="c1">// 把ssp中的字符串拷贝到cout（但这不能编译）
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个copy的调用将不能编译，因为<code>ostream_iterator</code>需要知道被打印的对象的类型，所以当你告诉它是一个string时（通过作为模板参数传递），编译器检测到那和ssp中储存的对象类型(是<code>string*</code>)之间不匹配，它们会拒绝编译代码。</p>
+<p>把显式循环中的<code>*i</code>改为<code>**i</code>，你可能可以得到你想要的输出，但也可能不。动物名字将被打印，但它们按字母顺序出现的机会只是24份之1。ssp保持它的内容有序，但是它容纳的是指针，所以它以指针的值排序，而不以string值。对于四个指针值可能有24种排列（），所以指针被储存时有24种可能的顺序。因此你看见字符串按字母排序有24份之1的几率。</p>
+<p>或者打印 <code>*string</code>的<code>char*</code>数组</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*&gt;::</span><span class="n">const_iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">ssp</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">ssp</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">c_str</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="solution">Solution</h2>
+<p>当我们写下<code>set&lt;string*&gt; ssp</code>;，其实省略了一个默认参数<code>set&lt;string*, less&lt;string*&gt; &gt; ssp</code>;，实际上还有个默认参数:</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="n">less</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*&gt;</span><span class="p">,</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*&gt;</span> <span class="o">&gt;</span> <span class="n">ssp</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="自定义仿函数">自定义仿函数</h2>
+<p>如果想要<code>string*</code>指针以字符串值确定顺序被储存在<code>set</code>中，不能使用默认比较仿函数类<code>less&lt;string*&gt;</code>。</p>
+<p><strong>必须改为写自己的比较仿函数类，它的对象带有string*指针并按照指向的字符串值来进行排序:</strong></p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">StringPtrLess</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps2</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="o">*</span><span class="n">ps1</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">ps2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后可以使用<code>StringPtrLess</code>作为<code>ssp</code>的比较类型:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="n">StringPtrLess</span><span class="o">&gt;</span> <span class="n">StringPtrSet</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">StringPtrSet</span> <span class="n">ssp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 建立字符串的集合，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 按照StringPtrLess定义的顺序排序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 和前面一样插入
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 同样四个字符串
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在循环最后将做想要它做的（也就是前面你使用*i代替**i所修正的问题）:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">StringPtrSet</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">ssp</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">ssp</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="o">**</span><span class="n">i</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>指针之前对它们解引用的函数，然后和<code>for_each</code>联用那个函数:</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">print</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">ps</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">for_each</span><span class="p">(</span><span class="n">ssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">ssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">print</span><span class="p">);</span><span class="c1">// 在ssp中的每个元素上调用print
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>或者你想象并写出了泛型的解引用仿函数类，然后让它和transform与ostream_iterator连用:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 当本类型的仿函数被传入一个T*时，它们返回一个const T&amp;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">struct</span> <span class="nc">Dereference</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">*</span><span class="n">ptr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过解引用“转换” ssp中的每个元素，把结果写入cout
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">ssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">ssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">ostream_iterator</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">cout</span><span class="p">,</span> <span class="s">&#34;</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">),</span> <span class="n">Dereference</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要点是无论何时你建立一个指针的标准关联容器，你必须记住容器会以指针的值排序。这基本上不是你想要的，所以你几乎总是需要建立自己的仿函数类作为比较类型。</p>
+<p><strong>比较类型 vs 比较函数</strong></p>
+<p>注意到这里写的是“比较类型”。</p>
+<p>你可能奇怪为什么必须特意创造一个仿函数类而不是简单地为set写一个比较函数:</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">stringPtrLess</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">*</span> <span class="n">ps1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">*</span> <span class="n">ps2</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 将成为用于按字符串值排序的string*指针的比较函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">return</span> <span class="o">*</span><span class="n">ps1</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">ps2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="n">stringPtrLess</span><span class="o">&gt;</span> <span class="n">ssp</span><span class="p">;</span><span class="c1">// 假设使用stringPtrLess 作为ssp的比较函数；
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 这不能编译
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里的问题是每个set模板的第三个参数都是一种类型，而<code>stringPtrLess</code>不是一种类型，它是一个函数。这就是为什么尝试使用<code>stringPtrLess</code>作为set的比较函数不能编译的原因，set不要一个函数，它要的是能在内部用实例化建立函数的一种类型。</p>
+<p><strong>无论何时你建立指针的关联容器，注意你也得指定容器的比较类型。</strong></p>
+<p>大多数时候，你的比较类型只是解引用指针并比较所指向的对象（就像上面的<code>StringPtrLess</code>做的那样）。</p>
+<p>鉴于这种情况，你手头最好也能有一个用于那种比较的仿函数模板。像这样:</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">DereferenceLess</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">PtrType</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="k">operator</span><span class="p">()(</span><span class="n">PtrType</span> <span class="n">pT1</span><span class="p">,</span> <span class="n">PtrType</span> <span class="n">pT2</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span> <span class="c1">// 参数是值传递的因为我们希望它们是（或行为像）指针
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">return</span> <span class="o">*</span><span class="n">pT1</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">pT2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样的模板消除了写像<code>StringPtrLess</code>那样的类的需要，因为我们可以改为使用<code>DereferenceLess</code>:</p>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="n">DereferenceLess</span><span class="o">&gt;</span> <span class="n">ssp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 行为就像 set&lt;string*, StringPtrLess&gt;
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="总结">总结</h2>
+<p>本条款是关于指针的关联容器，但它也可以应用于表现为指针的对象的容器，例如，智能指针和迭代器。</p>
+<p>如果你有一个智能指针或迭代器的关联容器，那也得为它指定比较类型。幸运的是，指针的这个解决方案也可以用于类似指针的对象。正如DereferenceLess适合作为T*的关联容器的比较类型一样，它也 可以作为T对象的迭代器和智能指针容器的比较类型。</p>
+<p>实际上，这24种排列很可能不是平等的，所以“24份之1”的陈述有点使人误解。确实，有24个不同的顺序，而且你可能得到它们中的任何一个。</p>
+]]></description></item><item><title>Effective STL [19] | 了解相等和等价的区别</title><link>https://jianye0428.github.io/posts/clause_19/</link><pubDate>Thu, 10 Aug 2023 08:30:55 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_19/</guid><description><![CDATA[<h2 id="比较对象">比较对象</h2>
+<p>STL充满了比较对象是否有同样的值。比如，当你用<code>find</code>来定位区间中第一个有特定值的对象的位置，<code>find</code>必须可以比较两个对象，看看一个的值是否与另一个相等。同样，当你尝试向<code>set</code>中插入一个新元素时，<code>set::insert</code>必须可以判断那个元素的值是否已经在<code>set</code>中了。</p>
+<p><code>find</code>算法和<code>set</code>的<code>insert</code>成员函数是很多必须判断两个值是否相同的函数的代表。但它们实现方式不同，find对“相同”的定义是相等，基于<code>operator==</code>。<code>set::insert</code>对“相同”的定义是等价，通常基于<code>operator&lt;</code>。因为有定义不同，所以有可能一个定义规定了两个对象有相同的值而另一个定义判定它们没有。结果，如果你想有效使用STL，那么你必须明白相等和等价的区别。</p>
+<p><strong>相等</strong></p>
+<p>操作上来说，相等的概念是基于<code>operator</code>的。如果表达式“<code>x == y</code>”返回true，<code>x</code>和<code>y</code>有相等的值，否则它们没有。</p>
+<p><strong><font color=red>x和y有相等的值并不意味着所有它们的成员有相等的值</font></strong>。比如，我们可能有一个内部记录了最后一次访问的Widget类。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl"> <span class="n">TimeStamp</span> <span class="n">lastAccessed</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们可以有一个用于Widget的忽略这个域的operator:</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">operator</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 忽略lastAccessed域的代码
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在这里，两个<code>Widget</code>即使它们的<code>lastAccessed</code>域不同也可以有相等的值。</p>
+<p>一般而言，相等意味着两个变量的值相同，但是如果比较2个对象，因为比较函数可以自定义，因此有时候对象的某些成员变量值不同也会设定2个对象相等。</p>
+<p><strong>等价</strong></p>
+<p>==等价是基于在一个有序区间中对象值的相对位置==。</p>
+<p>等价一般在每种标准关联容器（比如，set、multiset、map和multimap）的一部分——排序顺序方面有意义。注意这里的应用场景是==排序==。</p>
+<p>两个对象x和y如果在关联容器c的排序顺序中没有哪个排在另一个之前，那么它们关于c使用的排序顺序有等价的值。</p>
+<p>举一个例子，一个set<Widget> s。两个Widget w1和w2，如果在s的排序顺序中没有哪个在另一个之前，那么关于s它们有等价的值。set<Widget>的默认比较函数是less<Widget>，而默认的less<Widget>简单地对Widget调用operator&lt;，所以w1和w2关于operator&lt;有等价的值如果下面表达式为真：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">!</span><span class="p">(</span><span class="n">w1</span> <span class="o">&lt;</span> <span class="n">w2</span><span class="p">)</span> <span class="c1">// w1 &lt; w2时它非真
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">&amp;&amp;</span> <span class="c1">// 而且
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">!</span><span class="p">(</span><span class="n">w2</span><span class="o">&lt;</span><span class="n">w1</span><span class="p">)</span> <span class="c1">// w2 &lt; w1时它非真
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个有意义：<font color=red>两个值如果没有哪个在另一个之前（关于某个排序标准），那么它们等价（按照那个标准）。</font>在一般情况下，用于关联容器的比较函数不是<code>operator&lt;</code>或甚至<code>less</code>，它是用户定义的判断式。每个标准关联容器通过它的<code>key_comp</code>成员函数来访问排序判断式，所以如果下式求值为真，两个对象x和y关于一个关联容器c的排序标准有等价的值：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">!</span><span class="n">c</span><span class="p">.</span><span class="n">key_comp</span><span class="p">()(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">c</span><span class="p">.</span><span class="n">key_comp</span><span class="p">()(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="c1">// 在c的排序顺序中
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 如果x在y之前它非真，同时在c的排序顺序中,如果y在x之前它非真
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要完全领会==相等==和==等价==的含义，考虑一个忽略大小写的<code>set&lt;string&gt;</code>，也就是set的比较函数忽略字符串中字符大小写的<code>set&lt;string&gt;</code>。这样的比较函数会认为“STL”和“stL”是等价的。条款35演示了怎么实现一个函数，<code>ciStringCompare</code>，它进行了忽略大小写比较，但set要一个比较函数的类型，不是真的函数。要填平这个鸿沟，我们写一个operator()调用了ciStringCompare的仿函数类:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">CIStringCompare</span><span class="o">:</span> <span class="c1">// 用于忽略大小写
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span> <span class="c1">// 字符串比较的类；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">binary_function</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">string</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">return</span> <span class="n">ciStringCompare</span><span class="p">(</span><span class="n">lhs</span><span class="p">,</span> <span class="n">rhs</span><span class="p">);</span> <span class="c1">// 关于ciStringCompare
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>具体实现为:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">ciCharCompare</span><span class="p">(</span><span class="kt">char</span> <span class="n">c1</span><span class="p">,</span> <span class="kt">char</span> <span class="n">c2</span><span class="p">)</span> <span class="c1">// 忽略大小写比较字符
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">{</span>   <span class="c1">// c1和c2，如果c1 &lt; c2返回-1，
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 如果c1==c2返回0，如果c1 &gt; c2返回1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">int</span> <span class="n">Ic1</span> <span class="o">=</span> <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c1</span><span class="p">));</span><span class="c1">// 转成小写
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">int</span> <span class="n">Ic2</span> <span class="o">=</span> <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">Ic1</span> <span class="o">&lt;</span> <span class="n">Ic2</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">lc1</span> <span class="o">&gt;</span> <span class="n">Ic2</span><span class="p">)</span> <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>给定<code>CIStringCompare</code>，要建立一个忽略大小写的set<string>就很简单了:</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">CIStringCompare</span><span class="o">&gt;</span> <span class="n">ciss</span><span class="p">;</span> <span class="c1">// ciss = “case-insensitive
+</span></span></span><span class="line"><span class="cl"><span class="c1">// string set”
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果我们向这个set中插入“<code>Persephone</code>”和“<code>persephone</code>”，只有第一个字符串加入了，因为第二个等价于第一个：</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ciss</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="s">&#34;Persephone&#34;</span><span class="p">);</span> <span class="c1">// 一个新元素添加到set中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">ciss</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="s">&#34;persephone&#34;</span><span class="p">);</span> <span class="c1">// 没有新元素添加到set中
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果我们现在使用set的find成员函数搜索字符串“persephone”，搜索会成功，</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">ciss</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#34;persephone&#34;</span><span class="p">)</span> <span class="o">!=</span> <span class="n">ciss</span><span class="p">.</span><span class="n">end</span><span class="p">())...</span> <span class="c1">// 这个测试会成功
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>但如果我们用非成员的find算法，搜索会失败：</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">find</span><span class="p">(</span><span class="n">ciss</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">ciss</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl"><span class="s">&#34;persephone&#34;</span><span class="p">)</span> <span class="o">!=</span> <span class="n">ciss</span><span class="p">.</span><span class="n">end</span><span class="p">())...</span> <span class="c1">// 这个测试会失败
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>那是因为“<code>persephone</code>”等价于“<code>Persephone</code>”（关于比较仿函数CIStringCompare），但不等于它（因为string(&ldquo;persephone&rdquo;) != string(&ldquo;Persephone&rdquo;)）。你可能会奇怪为什么标准关联容器是基于等价而不是相等。毕竟，大多数程序员对相等有感觉而缺乏等价的感觉。</p>
+<p><font color=red>标准关联容器保持有序，所以每个容器必须有一个定义了怎么保持东西有序的比较函数（默认是less）。等价是根据这个比较函数定义的，所以标准关联容器的用户只需要为他们要使用的任意容器指定一个比较函数（决定排序顺序的那个）。</p>
+<p>如果关联容器使用相等来决定两个对象是否有相同的值，那么每个关联容器就需要，除了用于排序的比较函数，还需要一个用于判断两个值是否相等的比较函数。（默认的，这个比较函数大概应该是equal_to，但有趣的是equal_to从没有在STL中用做默认比较函数。当在STL中需要相等时，习惯是简单地直接调用operator==。比如，这是非成员find算法所作的。）</font></p>
+<p><strong><font color=blue>说白了，就是等价是为容器排序服务的，如果容器想要插入多个转化为小写后相等的单词，容器会判定这些单词等价，虽然它们本身不相等，这样就能够很好地保持容器内单词的唯一性和单词的有序性。否则通过查找或插入该单词的时候，容器内部就会发生歧义，造成不符合使用者逻辑。</font></strong></p>
+<p>让我们假设我们有一个类似set的STL容器叫做<code>set2CF</code>，“set with two comparison functions”。<strong><font color=red>第一个比较函数用来决定set的排序顺序，第二个用来决定是否两个对象有相同的值。</font></strong> 现在考虑这set2CF：</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set2CF</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">CIStringCompare</span><span class="p">,</span> <span class="n">equal_to</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">s</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在这里，s内部排序它的字符串时不考虑大小写，等价标准直觉上是这样：如果两个字符串中一个等于另一个，那么它们有相同的值。让我们向s中插入哈迪斯强娶的新娘（Persephone）的两个拼写:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">s</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="s">&#34;Persephone&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">s</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="s">&#34;persephone&#34;</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p>如果我们说<code>&quot;Persephone&quot; != &quot;persephone&quot;</code>然后两个都插入s，它们应该是什么顺序？</p>
+</blockquote>
+<p>记住排序函数不能分别告诉它们。我们可以以任意顺序插入，因此放弃以确定的顺序遍历set内容的能力吗？（不能以确定的顺序遍历关联容器元素已经折磨着<code>multiset</code>和<code>multimap</code>了，因为标准没有规定等价的值（对于multiset）或键（对于multimap）的相对顺序。）或者我们坚持s的内容的一个确定顺序并忽略第二次插入的尝试（“persephone”的那个）? 如果我们那么做，这里会发生什么？</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#34;persephone&#34;</span><span class="p">)</span> <span class="o">!=</span> <span class="n">s</span><span class="p">.</span><span class="n">end</span><span class="p">())...</span> <span class="c1">// 这个测试成功或失败？
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>大概**<font color=red>find使用了等价检查</font>**，但如果我们为了维护s中元素的一个确定顺序而忽略了第二个insert的调用，这个find会失败，即使“persephone”的插入由于它是一个重复的值的原则而被忽略！</p>
+<h2 id="总结">总结</h2>
+<p>通过只使用一个比较函数并使用等价作为两个值“相等”的意义的仲裁者，标准关联容器避开了很多会由允许两个比较函数而引发的困难。</p>
+<p>一开始行为可能看起来有些奇怪（特别是当你发现成员和非成员find可能返回不同结果），但最后，它避免了会由在标准关联容器中混用相等和等价造成的混乱。</p>
+]]></description></item><item><title>Effective STL [18] | 避免使用vector&lt;bool></title><link>https://jianye0428.github.io/posts/clause_18/</link><pubDate>Wed, 09 Aug 2023 14:39:18 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_18/</guid><description><![CDATA[<h2 id="vectorbool-问题">vector<bool> 问题</h2>
+<p>作为一个STL容器，vector<bool>确实只有1个问题:</p>
+<ul>
+<li>它不是一个STL容器；</li>
+<li>它并不容纳bool。</li>
+</ul>
+<h2 id="剖析">剖析</h2>
+<p>一个东西要成为STL容器就必须满足所有在C++标准23.1节中列出的容器必要条件。</p>
+<p>如果c是一个T类型对象的容器，且c支持operator[]，那么以下代码必须能够编译:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">T</span> <span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="c1">// 无论operator[]返回什么，都可以用这个地址初始化一个T*
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>换句话说，如果你使用<code>operator[]</code>来得到Container中的一个T对象，你可以通过取它的地址而获得指向那个对象的指针。(假设T没有倔强地重载一些操作符。) 然而如果vector是一个容器，这段代码必须能够编译：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">bool</span> <span class="o">*</span><span class="n">pb</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="c1">// 用vector&lt;bool&gt;::operator[]返回的东西的地址初始化一个bool*
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>但它不能编译。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">test_vector.cpp:154:19: error: taking address of rvalue <span class="o">[</span>-fpermissive<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  <span class="m">154</span> <span class="p">|</span>   bool *pb <span class="o">=</span> <span class="p">&amp;</span>r2<span class="o">[</span>0<span class="o">]</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>                   ^
+</span></span><span class="line"><span class="cl">test_vector.cpp:154:14: error: cannot convert ‘std::vector&lt;bool&gt;::reference*’ <span class="o">{</span>aka ‘std::_Bit_reference*’<span class="o">}</span> to ‘bool*’ in initialization
+</span></span><span class="line"><span class="cl">  <span class="m">154</span> <span class="p">|</span>   bool *pb <span class="o">=</span> <span class="p">&amp;</span>r2<span class="o">[</span>0<span class="o">]</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>              ^~~~~~
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>              <span class="p">|</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>              std::vector&lt;bool&gt;::reference* <span class="o">{</span>aka std::_Bit_reference*<span class="o">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为<code>vector&lt;bool&gt;</code>是一个伪容器，并不保存真正的bool，而是打包bool以节省空间。在一个典型的实现中，每个保存在“vector”中的“bool”占用一个单独的比特，而一个8比特的字节将容纳8个“bool”。</p>
+<p>在内部，<code>vector&lt;bool&gt;</code>使用了与位域（bitfield）等价的思想来表示它假装容纳的bool。</p>
+<p><font color=blue>位域也只表现为两种可能的值，但真的bool和化装成bool的位域之间有一个重要的不同：你可以创建指向真的bool的指针，但却禁止有指向单个比特的指针。</font></p>
+<h2 id="实际实现">实际实现</h2>
+<p>vector::operator[]返回一个对象，其行为类似于比特的引用，也称为代理对象。</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"> <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Alloc</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">class</span> <span class="nc">vector</span><span class="o">&lt;</span><span class="kt">bool</span><span class="p">,</span> <span class="n">_Alloc</span><span class="o">&gt;</span> <span class="o">:</span> <span class="k">protected</span> <span class="n">_Bvector_base</span><span class="o">&lt;</span><span class="n">_Alloc</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Bvector_base</span><span class="o">&lt;</span><span class="n">_Alloc</span><span class="o">&gt;</span>   <span class="n">_Base</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Base</span><span class="o">::</span><span class="n">_Bit_pointer</span>  <span class="n">_Bit_pointer</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Base</span><span class="o">::</span><span class="n">_Bit_alloc_traits</span>  <span class="n">_Bit_alloc_traits</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#if __cplusplus &gt;= 201103L
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>      <span class="k">friend</span> <span class="k">struct</span> <span class="nc">std</span><span class="o">::</span><span class="n">hash</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&gt;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="cp">#endif
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl">    <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="kt">bool</span>     <span class="n">value_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">size_t</span>     <span class="n">size_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">ptrdiff_t</span>     <span class="n">difference_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Bit_reference</span>    <span class="n">reference</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="kt">bool</span>     <span class="n">const_reference</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Bit_reference</span><span class="o">*</span>    <span class="n">pointer</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">const</span> <span class="kt">bool</span><span class="o">*</span>    <span class="n">const_pointer</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Bit_iterator</span>    <span class="n">iterator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Bit_const_iterator</span>   <span class="n">const_iterator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">reverse_iterator</span><span class="o">&lt;</span><span class="n">const_iterator</span><span class="o">&gt;</span> <span class="n">const_reverse_iterator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">reverse_iterator</span><span class="o">&lt;</span><span class="n">iterator</span><span class="o">&gt;</span>  <span class="n">reverse_iterator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Alloc</span>     <span class="n">allocator_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="n">allocator_type</span>
+</span></span><span class="line"><span class="cl">      <span class="nf">get_allocator</span><span class="p">()</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">      <span class="p">{</span> <span class="k">return</span> <span class="n">_Base</span><span class="o">::</span><span class="n">get_allocator</span><span class="p">();</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">protected</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">using</span> <span class="n">_Base</span><span class="o">::</span><span class="n">_M_allocate</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">using</span> <span class="n">_Base</span><span class="o">::</span><span class="n">_M_deallocate</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">using</span> <span class="n">_Base</span><span class="o">::</span><span class="n">_S_nword</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="k">using</span> <span class="n">_Base</span><span class="o">::</span><span class="n">_M_get_Bit_allocator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">         <span class="n">reference</span>
+</span></span><span class="line"><span class="cl">      <span class="k">operator</span><span class="p">[](</span><span class="n">size_type</span> <span class="n">__n</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">return</span> <span class="o">*</span><span class="nf">iterator</span><span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">_M_impl</span><span class="p">.</span><span class="n">_M_start</span><span class="p">.</span><span class="n">_M_p</span>
+</span></span><span class="line"><span class="cl">    <span class="o">+</span> <span class="n">__n</span> <span class="o">/</span> <span class="kt">int</span><span class="p">(</span><span class="n">_S_word_bit</span><span class="p">),</span> <span class="n">__n</span> <span class="o">%</span> <span class="kt">int</span><span class="p">(</span><span class="n">_S_word_bit</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="n">const_reference</span>
+</span></span><span class="line"><span class="cl">      <span class="k">operator</span><span class="p">[](</span><span class="n">size_type</span> <span class="n">__n</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">      <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">return</span> <span class="o">*</span><span class="nf">const_iterator</span><span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">_M_impl</span><span class="p">.</span><span class="n">_M_start</span><span class="p">.</span><span class="n">_M_p</span>
+</span></span><span class="line"><span class="cl">        <span class="o">+</span> <span class="n">__n</span> <span class="o">/</span> <span class="kt">int</span><span class="p">(</span><span class="n">_S_word_bit</span><span class="p">),</span> <span class="n">__n</span> <span class="o">%</span> <span class="kt">int</span><span class="p">(</span><span class="n">_S_word_bit</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>上述代码不能编译的原因很明显：<code>bool *pb = &amp;v[0]</code>右边的表达式是<code>vector&lt;bool&gt;::reference*</code>类型，不是<code>bool*</code>。</p>
+<h2 id="替代品">替代品</h2>
+<h3 id="1-dequebool">1. deque<bool></h3>
+<p><code>deque</code>提供了几乎所有<code>vector</code>所提供的（唯一值得注意的是<code>reserve</code>和<code>capacity</code>），而<code>deque&lt;bool&gt;</code>是一个STL容器，它保存真正的<code>bool</code>值。</p>
+<p><code>deque</code>内部内存不是连续的。所以不能传递<code>deque&lt;bool&gt;</code>中的数据给一个希望得到<code>bool</code>数组的<code>C API</code>。</p>
+<p>条款16中用于<code>vector</code>的技术不能在<code>vector&lt;bool&gt;</code>上通过编译，因为它们依赖于能够取得指向容器中包含的元素类型的指针。</p>
+<h3 id="2-bitset">2. bitset</h3>
+<p><code>bitset</code>不是一个STL容器，但它是C++标准库的一部分。与STL容器不同，<strong>它的大小（元素数量）在编译期固定</strong>，因此它不支持插入和删除元素。</p>
+<p>因为它不是一个STL容器，它也不支持iterator。但就像<code>vector&lt;bool&gt;</code>，<strong>它使用一个压缩的表示法，使得它包含的每个值只占用一比特。</strong></p>
+<p>它提供<code>vector&lt;bool&gt;</code>特有的<code>flip</code>成员函数，还有一系列其他操作位集<code>(collection of bits)</code>所特有的成员函数。</p>
+<h2 id="总结">总结</h2>
+<p><code>vector&lt;bool&gt;</code>不满足STL容器的必要条件，你最好不要使用它；</p>
+<p>而<code>deque&lt;bool&gt;</code>和<code>bitset</code>是基本能满足你对<code>vector&lt;bool&gt;</code>提供的性能的需要的替代数据结构。</p>
+]]></description></item><item><title>Effective STL [17] | 使用“交换技巧”来修整过剩容量(仅适用于vector和string)</title><link>https://jianye0428.github.io/posts/clause_17/</link><pubDate>Tue, 08 Aug 2023 08:48:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_17/</guid><description><![CDATA[<blockquote>
 <p>注意: 这里的容量指的是capacity</p>
 </blockquote>
-<p>先举个例子，先创建个容器，然后获得了很多元素。</p>
+<p>假如有一个海选，需要从申请者中挑选一些人进入到下一轮比赛当中，我们可能会建立一个vector用来存储申请者：</p>
 <div class="highlight" id="id-1"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -11,7 +622,8 @@
 <pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Contestant</span> <span class="p">{...};</span>
 </span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">contestants</span><span class="p">;</span></span></span></code></pre></td></tr></table>
 </div>
-</div><p>但是很快发现大部分元素是没有用的，那就把元素删了，但是空间仍然还是那么大，怎么办呢？</br></p>
+</div><p><code>vector</code>会很快获得很多元素，你可能会将能够进入到下一轮的申请者放到 vector 的前端（可能通过 <code>partial_sort</code>或<code>partition</code>），如果没有参与到下一轮的申请者就会从vector 中删除（典型的方法就是调用 erase 的区间形式，具体见条款5）。</p>
+<p>这样很好地减少了 vector 的大小，<strong>但是没有减少它的容量</strong>。</p>
 <p>当然可以通过resize方法去改变，但是如果我不知道大概要多少，我只知道有一些符合我的要求，如果直接用resize可能大了很多，或者抛弃了原本符合要求的元素。所以最好有一种shrink_to_fit的方式。</p>
 <div class="highlight" id="id-2"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -22,10 +634,58 @@
 <pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">contestants</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span><span class="p">(</span><span class="n">contestants</span><span class="p">).</span><span class="n">swap</span><span class="p">(</span><span class="n">contestants</span><span class="p">);</span></span></span></code></pre></td></tr></table>
 </div>
-</div><p>　
-表达式<code>vector&lt;Contestant&gt;(contestants)</code>建立一个临时vector，它是contestants的一份拷贝: vector的拷贝构造函数做了这个工作。但是，vector的拷贝构造函数只分配拷贝的元素需要的内存，所以这个临时vector没有多余的容量。然后我们让临时vector和contestants交换数据，这时我们完成了，contestants只有临时变量的修整过的容量，而这个临时变量则持有了曾经在contestants中的发胀的容量。在这里（这个语句结尾），临时vector被销毁，因此释放了以前contestants使用的内存。同样的技巧可以应用于string。交换技巧的变体可以用于清除容器和减少它的容量到你的实现提供的最小值。</p>
-<p>string也同样适用：</p>
+</div><p><font color=Aqua><strong>具体工作原理：</strong></font></p>
+<ol>
+<li>表达式<code>vector&lt;Contestant&gt;(contestants)</code>建立一个临时<code>vector</code>，它是<code>contestants</code>的一份拷贝：<code>vector</code>的拷贝构造函数做了这个工作。<strong>vector的拷贝构造函数只分配拷贝的元素需要的内存</strong>，就是说<code>contestants</code>真实包含多少元素，就分配多少内存空间，按照<code>size()</code>的个数，而不是capicatiy个数，所以这个临时vector没有多余的容量。</li>
+<li>让临时<code>vector</code>和<code>contestants</code>交换数据，这时contestants只有临时变量的修整过的容量(size)，而这个临时变量则持有了曾经在contestants中的发胀的容量(capacity)。在这里（这个语句结尾），临时vector被销毁，因此释放了以前contestants使用的内存。  收缩到合适。</li>
+<li>完成收缩内存的同时，也拷贝了实际<code>size()</code>个内存，也有性能消耗。</li>
+</ol>
+<p><strong>TEST</strong></p>
 <div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">r1</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// r1 包含100个1，即100个申请者
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">            <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">r1</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">50</span><span class="p">);</span> <span class="c1">// 只保留前50名申请者进入下一轮
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">            <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">r1</span><span class="p">).</span><span class="n">swap</span><span class="p">(</span><span class="n">r1</span><span class="p">);</span> <span class="c1">// shrink to fit
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">            <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>结果:</strong></p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">r1 size: <span class="m">100</span> capacity: <span class="m">100</span>
+</span></span><span class="line"><span class="cl">r1 size: <span class="m">50</span> capacity: <span class="m">100</span>
+</span></span><span class="line"><span class="cl">r1 size: <span class="m">50</span> capacity: <span class="m">50</span>
+</span></span><span class="line"><span class="cl">r1 size: <span class="m">0</span> capacity: <span class="m">0</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>string也同样适用：</p>
+<div class="highlight" id="id-5"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
@@ -42,7 +702,56 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>另外，在swap的时候，不仅仅容器内容被交换，其迭代器、指针和引用也被交换(string除外)。因此，在发生交换后，原来的迭代器、指针和引用依然有效，并指向同样的元素——但这些元素已经在另外一个容器中。</p>
-<p>ref:</br>
+<h2 id="清空容器并减少容量到最小">清空容器并减少容量到最小</h2>
+<p><strong>交换技巧的变体可以用于清除容器和减少它的容量到你的实现提供的最小值。</strong></p>
+<p>可以简单地和一个默认构造的临时vector或string做个交换：</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 使用v和s
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">v</span><span class="p">);</span> <span class="c1">// 清除v而且最小化它的容量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">s</span><span class="p">);</span> <span class="c1">// 清除s而且最小化它的容量
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>测试代码：</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">r1</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// r1 包含100个1，即100个申请者
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">          <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">r1</span><span class="p">);</span> <span class="c1">// 清空 r1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">          <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">r1</span> <span class="nl">size</span><span class="p">:</span> <span class="mi">100</span> <span class="nl">capacity</span><span class="p">:</span> <span class="mi">100</span>
+</span></span><span class="line"><span class="cl"><span class="n">r1</span> <span class="nl">size</span><span class="p">:</span> <span class="mi">0</span> <span class="nl">capacity</span><span class="p">:</span> <span class="mi">0</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>ref:</br>
 [1]. <a href="https://blog.csdn.net/u011058765/article/details/51205757?spm=1001.2101.3001.6650.2&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&amp;utm_relevant_index=3"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/u011058765/article/details/51205757?spm=1001.2101.3001.6650.2&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&utm_relevant_index=3<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>Effective STL [16] | 如何将vector和string的数据传给遗留的API</title><link>https://jianye0428.github.io/posts/clause_16/</link><pubDate>Mon, 07 Aug 2023 08:35:57 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_16/</guid><description><![CDATA[<h2 id="string-和-vector-传递给c-api">string 和 vector 传递给C API</h2>
 <h3 id="vector传递指针">vector传递指针</h3>
@@ -6844,609 +7553,4 @@ ref:</br>
 [1]. <a href="https://arxiv.org/abs/1406.2661"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/1406.2661<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [2]. <a href="https://www.bilibili.com/video/BV1eE411g7xc"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1eE411g7xc<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [3]. <a href="https://www.bilibili.com/video/BV1rb4y187vD"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1rb4y187vD<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[4]. <a href="https://www.bilibili.com/video/BV1HD4y1S7Pe"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1HD4y1S7Pe<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Transformer 详解</title><link>https://jianye0428.github.io/posts/transformerdetailedexplanation/</link><pubDate>Mon, 24 Jul 2023 17:37:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerdetailedexplanation/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"></div>
-    </div>
-  </div> -->
-<p>ref:
-[1]. <a href="https://www.bilibili.com/video/BV1mk4y1q7eK?p=1"target="_blank" rel="external nofollow noopener noreferrer">B站讲解视频<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2]. <a href="https://wmathor.com/index.php/archives/1438/"target="_blank" rel="external nofollow noopener noreferrer">https://wmathor.com/index.php/archives/1438/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[3]. <a href="https://wmathor.com/index.php/archives/1455/"target="_blank" rel="external nofollow noopener noreferrer">Transformer的pytorch实现<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="transformer-详解">Transformer 详解</h2>
-<p>Transformer 是谷歌大脑在 2017 年底发表的论文 <a href="https://arxiv.org/pdf/1706.03762.pdf"target="_blank" rel="external nofollow noopener noreferrer">attention is all you need<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中所提出的 seq2seq 模型。现在已经取得了大范围的应用和扩展，而 BERT 就是从 Transformer 中衍生出来的预训练语言模型</p>
-<p>这篇文章分为以下几个部分</p>
-<ul>
-<li>Transformer 直观认识</br></li>
-<li>Positional Encoding</br></li>
-<li>Self Attention Mechanism</br></li>
-<li>残差连接和 Layer Normalization</br></li>
-<li>Transformer Encoder 整体结构</br></li>
-<li>Transformer Decoder 整体结构</br></li>
-<li>总结</br></li>
-<li>参考文章</br></li>
-</ul>
-<h3 id="0-transformer-直观认识">0. Transformer 直观认识</h3>
-<p>Transformer 和 LSTM 的最大区别，就是 LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字。而 Transformer 的训练时并行的，即所有字是同时训练的，这样就大大增加了计算效率。<font color=green>Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序</font>，使用自注意力机制（Self Attention Mechanism）和全连接层进行计算，这些后面会讲到</p>
-<p>Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<font color=red>Encoder 负责把输入（语言序列）隐射成隐藏层（下图中第 2 步用九宫格代表的部分），然后解码器再把隐藏层映射为自然语言序列</font>。例如下图机器翻译的例子（Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token）</p>
-<p></p>
-<p>本篇文章大部分内容在于解释 Encoder 部分，即把自然语言序列映射为隐藏层的数学表达的过程。理解了 Encoder 的结构，再理解 Decoder 就很简单了</p>
-<p></p>
-<p>上图为 Transformer Encoder Block 结构图，注意：下面的内容标题编号分别对应着图中 1,2,3,4 个方框的序号</p>
-<h3 id="1-positional-encoding">1. Positional Encoding</h3>
-<p>由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能识别出语言中的顺序关系。</p>
-<p>现在定义一个<strong>位置嵌入</strong>的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成</p>
-<p>注意，我们一般以字为单位训练 Transformer 模型。首先初始化字编码的大小为 [vocab_size, embedding_dimension]，vocab_size 为字库中所有字的数量，embedding_dimension 为字向量的维度，对应到 PyTorch 中，其实就是 nn.Embedding(vocab_size, embedding_dimension)</p>
-<p>论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:</p>
-<p>$$\left{\begin{aligned}
-PE(pos, 2i) = \sin (pos/10000^{2i/d_{model}}) \
-PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \
-\end{aligned}\right.$$</p>
-<p>上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max_sequence_length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding_dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值</p>
-<p>上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到<strong>位置之间的依赖关系和自然语言的时序特性</strong>。</p>
-<p>如果不理解这里为何这么设计，可以看这篇文章 <a href="https://wmathor.com/index.php/archives/1453/"target="_blank" rel="external nofollow noopener noreferrer">Transformer 中的 Positional Encoding<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>下面画一下位置嵌入，纵向观察，可见随着 embedding_dimension​序号增大，位置嵌入函数的周期变化越来越平缓</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">math</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">get_positional_encoding</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># 初始化一个positional encoding</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># embed_dim: 字嵌入的维度</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># max_seq_len: 最大的序列长度</span>
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-</span></span><span class="line"><span class="cl">            <span class="p">[</span><span class="n">pos</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">i</span> <span class="o">/</span> <span class="n">embed_dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)]</span>
-</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">)])</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># dim 2i 偶数</span>
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># dim 2i+1 奇数</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">positional_encoding</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">positional_encoding</span> <span class="o">=</span> <span class="n">get_positional_encoding</span><span class="p">(</span><span class="n">max_seq_len</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">    <span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&#34;Sinusoidal Function&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&#34;hidden dimension&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&#34;sequence length&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 1&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 2&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 3&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&#34;Sequence length&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&#34;Period of Positional Encoding&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<h3 id="2-self-attention-mechanism">2. Self Attention Mechanism</h3>
-<p>对于输入的句子 $ X $，通过 WordEmbedding 得到该句子中每个字的字向量，同时通过 Positional Encoding 得到所有字的位置向量，将其相加（维度相同，可以直接相加），得到该字真正的向量表示。第 $ t $ 个字的向量记作 $ x_t $。</p>
-<p>接着我们定义三个矩阵 $ W_Q $, $ W_K $, $ W_V $，使用这三个矩阵分别对所有的字向量进行三次线性变换，于是所有的字向量又衍生出三个新的向量 $ q_t $, $ k_t $, $ v_t $。我们将所有的 $ q_t $ 向量拼成一个大矩阵，记作查询矩阵 $ Q $ ，将所有的 $ k_t $ 向量拼成一个大矩阵，记作键矩阵 $ K $  ，将所有的 $ v_t $ 向量拼成一个大矩阵，记作值矩阵 $ V $ （见下图）</p>
-<p></p>
-<p>为了获得第一个字的注意力权重，我们需要用第一个字的查询向量 $ q_1 $ 乘以键矩阵 $ K $（见下图）</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">                [0, 4, 2]
-</span></span><span class="line"><span class="cl">    [1, 0, 2] x [1, 4, 3] = [2, 4, 4]
-</span></span><span class="line"><span class="cl">                [1, 0, 1]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>之后还需要将得到的值经过 softmax，使得它们的和为 1（见下图）</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"> softmax([2, 4, 4]) = [0.0, 0.5, 0.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>有了权重之后，将权重其分别乘以对应字的值向量 $ v_t $（见下图）</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">    0.0 * [1, 2, 3] = [0.0, 0.0, 0.0]
-</span></span><span class="line"><span class="cl">    0.5 * [2, 8, 0] = [1.0, 4.0, 0.0]
-</span></span><span class="line"><span class="cl">    0.5 * [2, 6, 3] = [1.0, 3.0, 1.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>最后将这些<strong>权重化后的值向量求和</strong>，得到第一个字的输出（见下图）</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">      [0.0, 0.0, 0.0]
-</span></span><span class="line"><span class="cl">    + [1.0, 4.0, 0.0]
-</span></span><span class="line"><span class="cl">    + [1.0, 3.0, 1.5]
-</span></span><span class="line"><span class="cl">    -----------------
-</span></span><span class="line"><span class="cl">    = [2.0, 7.0, 1.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>对其它的输入向量也执行相同的操作，即可得到通过 self-attention 后的所有输出</p>
-<p></p>
-<p><strong>矩阵计算</strong></p>
-<p>上面介绍的方法需要一个循环遍历所有的字$ x_t $，我们可以把上面的向量计算变成矩阵的形式，从而一次计算出所有时刻的输出</p>
-<p>第一步就不是计算某个时刻的$ q_t $, $ k_t $, $ v_t $了，而是一次计算所有时刻的 $
-Q $, $ K $, $ V $。计算过程如下图所示，这里的输入是一个矩阵 $ X $，矩阵第 $ t $ 行为第 $ t $ 个词的向量表示 $x_t$</p>
-<p></p>
-<p>接下来将 $ Q $ 和 $K_T$ 相乘，然后除以 $ \sqrt{d_k} $（这是论文中提到的一个 trick），经过 softmax 以后再乘以 $ V $ 得到输出</p>
-<p></p>
-<p><strong>Multi-Head Attention</strong></p>
-<p>这篇论文还提出了 Multi-Head Attention 的概念。其实很简单，前面定义的一组 $Q $, $ K $, $ V $, 可以让一个词 attend to 相关的词，我们可以定义多组 $Q $, $ K $, $ V $，让它们分别关注不同的上下文。计算 $Q $, $ K $, $ V $ 的过程还是一样，只不过线性变换的矩阵从一组 $ W^Q $, $ W^K $, $ W^V $ 变成了多组$ W^Q_0 $, $ W^K_0 $, $ W^V_0 $  ，$ W^Q_1 $, $ W^K_1 $, $ W^V_1 $ ，… 如下图所示:</p>
-<p></p>
-<p>对于输入矩阵 $ X $ ，每一组 $ Q $ 、$ K $ 和 $ V $ 都可以得到一个输出矩阵 $ Z $ 。如下图所示</p>
-<p></p>
-<p><strong>Padding Mask</strong>
-</p>
-<p>上面 Self Attention 的计算过程中，我们通常使用 mini-batch 来计算，也就是一次计算多句话，即 $ X $ 的维度是 <code>[batch_size, sequence_length]</code>，sequence_length​是句长，而一个 mini-batch 是由多个不等长的句子组成的，我们需要按照这个 mini-batch 中最大的句长对剩余的句子进行补齐，一般用 0 进行填充，这个过程叫做 padding</p>
-<p>但这时在进行 softmax 就会产生问题。回顾 softmax 函数 $\sigma(z_i) = \frac{e^{z_i}}{\sum_K^{j=i} e^{z_j}}$，$e^0$ 是 1，是有值的，这样的话 softmax 中被 padding 的部分就参与了运算，相当于让无效的部分参与了运算，这可能会产生很大的隐患。因此需要做一个 mask 操作，让这些无效的区域不参与运算，一般是给无效区域加一个很大的负数偏置，即</p>
-<p>$$\left{\begin{aligned}
-Z_{illegal} = Z_{illegal} + bias_{illegal} \
-bias_{illegal}-&gt; -\infin \
-\end{aligned}\right.$$</p>
-<h3 id="3-残差连接和-layer-normalization">3. 残差连接和 Layer Normalization</h3>
-<p><strong>残差连接</strong></p>
-<p>我们在上一步得到了经过 self-attention 加权之后输出，也就是$\text{Self-Attention(Q, K, V)}$，然后把他们加起来做残差连接</p>
-<p>$$X_{\text{embedding}} + \text{Self-Attention(Q, K, V)}$$</p>
-<p><strong>Layer Normalization</strong></p>
-<p>Layer Normalization 的作用是<strong>把神经网络中隐藏层归一为标准正态分布</strong>，也就是 $i.i.d$ 独立同分布，以起到<strong>加快训练速度，加速收敛</strong>的作用</p>
-<p>$$\mu_j = \frac{1}{m} \sum^{i}<em>{i=1} x</em>{ij}$$</p>
-<p>上式以矩阵的列（column）为单位求均值；</p>
-<p>$$\sigma^2_{j} = \frac{1}{m}\sum^m_{i=1}(x_{ij} - \mu_j)^2$$</p>
-<p>上式以矩阵的列（column）为单位求方差</p>
-<p>$$LayerNorm(x) = \frac{x_{ij} - \mu_{j}}{\sqrt{\sigma^2 + \epsilon}}$$</p>
-<p>然后用每一列的每一个元素减去这列的均值，再除以这列的标准差，从而得到归一化后的数值，加 $\epsilon$ 是为了防止分母为 0。</p>
-<p></p>
-<p>下图展示了更多细节：输入 $x_1, x_2$ 经 self-attention 层之后变成 $z_1, z_2$，然后和输入 $x_1, x_2$ 进行残差连接，经过 LayerNorm 后输出给全连接层。全连接层也有一个残差连接和一个 LayerNorm，最后再输出给下一个 Encoder（每个 Encoder Block 中的 FeedForward 层权重都是共享的）</p>
-<p></p>
-<h3 id="4-transformer-encoder-整体结构">4. Transformer Encoder 整体结构</h3>
-<p>经过上面 3 个步骤，我们已经基本了解了 Encoder 的主要构成部分，下面我们用公式把一个 Encoder block 的计算过程整理一下：</p>
-<p>(1). 字向量与位置编码</p>
-<p>$$X = \text{Embedding-Lookup(X)} + \text{Positional-Encoding}$$</p>
-<p>(2). 自注意力机制</p>
-<p>$$Q = Linear_{q}(X) = XW_{Q}$$
-$$K = Linear_{k}(X) = XW_{K}$$
-$$V = Linear_{v}(X) = XW_{V}$$
-$$X_{attention} = \text{Self-Attention(Q, K, V)}$$</p>
-<p>(3). self-attention 残差连接与 Layer Normalization</p>
-<p>$$X_{attention} = X + X_{attention}$$
-$$X_{attention} = LayerNorm(attention)$$</p>
-<p>(4). 下面进行 Encoder block 结构图中的第 4 部分，也就是 FeedForward，其实就是两层线性映射并用激活函数激活，比如说 $ReLU$</p>
-<p>$$X_{hidden} = Linear(ReLU(Linear(X_{attention})))$$</p>
-<p>(5). FeedForward 残差连接与 Layer Normalization</p>
-<p>$$X_{hidden} = X_{attention} + X_{hidden}$$
-$$X_{hidden} = LayerNorm(X_{hidden})$$</p>
-<p>其中
-$$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
-<h3 id="5-transformer-decoder-整体结构">5. Transformer Decoder 整体结构</h3>
-<p>我们先从 HighLevel 的角度观察一下 Decoder 结构，从下到上依次是：</p>
-<ul>
-<li>Masked Multi-Head Self-Attention</li>
-<li>Multi-Head Encoder-Decoder Attention</li>
-<li>FeedForward Network</li>
-</ul>
-<p>和 Encoder 一样，上面三个部分的每一个部分，都有一个残差连接，后接一个 Layer Normalization。Decoder 的中间部件并不复杂，大部分在前面 Encoder 里我们已经介绍过了，但是 Decoder 由于其特殊的功能，因此在训练时会涉及到一些细节</p>
-<p></p>
-<p><strong>Masked Self-Attention</strong></p>
-<p>具体来说，传统 Seq2Seq 中 Decoder 使用的是 RNN 模型，因此在训练过程中输入 $t$ 时刻的词，模型无论如何也看不到未来时刻的词，因为循环神经网络是时间驱动的，只有当 $t$ 时刻运算结束了，才能看到 $t + 1$ 时刻的词。而 Transformer Decoder 抛弃了 RNN，改为 Self-Attention，由此就产生了一个问题，<font color=red>在训练过程中，整个 ground truth 都暴露在 Decoder 中</font>，这显然是不对的，我们需要对 Decoder 的输入进行一些处理，该处理被称为 Mask
-</br>
-举个例子，Decoder 的 ground truth 为 &ldquo;<start> I am fine&rdquo;，我们将这个句子输入到 Decoder 中，经过 WordEmbedding 和 Positional Encoding 之后，将得到的矩阵做三次线性变换 $(W_Q, W_K, W_V)$。然后进行 self-attention 操作，首先通过得到 Scaled Scores，接下来非常关键，我们要<strong>对 Scaled Scores 进行 Mask</strong>，举个例子，当我们输入 &ldquo;I&rdquo; 时，模型目前仅知道包括 &ldquo;I&rdquo; 在内之前所有字的信息，即 &ldquo;<start>&rdquo; 和 &ldquo;I&rdquo; 的信息，不应该让其知道 &ldquo;I&rdquo; 之后词的信息。道理很简单，我们做预测的时候是按照顺序一个字一个字的预测，怎么能这个字都没预测完，就已经知道后面字的信息了呢？Mask 非常简单，首先生成一个下三角全 0，上三角全为负无穷的矩阵，然后将其与 Scaled Scores 相加即可</p>
-<p></p>
-<p>之后再做 softmax，就能将 - inf 变为 0，得到的这个矩阵即为每个字之间的权重</p>
-<p></p>
-<p>Multi-Head Self-Attention 无非就是并行的对上述步骤多做几次，前面 Encoder 也介绍了，这里就不多赘述了</p>
-<p><strong>Masked Encoder-Decoder Attention</strong></p>
-<p>其实这一部分的计算流程和前面 Masked Self-Attention 很相似，结构一模一样，唯一不同的是这里的 K, V为 Encoder 的输出，Q 为 Decoder 中 Masked Self-Attention 的输出</p>
-<p></p>
-<h3 id="6-总结">6. 总结</h3>
-<p>到此为止，Transformer 中 95% 的内容已经介绍完了，我们用一张图展示其完整结构。不得不说，Transformer 设计的十分巧夺天工</p>
-<p></p>
-<p>下面有几个问题，是我从网上找的，感觉看完之后能对 Transformer 有一个更深的理解</p>
-<p><font color=red>Transformer 为什么需要进行 Multi-head Attention？</font></p>
-<ul>
-<li>原论文中说到进行 Multi-head Attention 的原因是将模型分为多个头，形成多个子空间，可以让模型去关注不同方面的信息，最后再将各个方面的信息综合起来。其实直观上也可以想到，如果自己设计这样的一个模型，必然也不会只做一次 attention，多次 attention 综合的结果至少能够起到增强模型的作用，也可以类比 CNN 中同时使用多个卷积核的作用，直观上讲，多头的注意力有助于网络捕捉到更丰富的特征 / 信息</li>
-</ul>
-<p><font color=red>Transformer 相比于 RNN/LSTM，有什么优势？为什么？</font></p>
-<ul>
-<li>RNN 系列的模型，无法并行计算，因为 T 时刻的计算依赖 T-1 时刻的隐层计算结果，而 T-1 时刻的计算依赖 T-2 时刻的隐层计算结果</li>
-<li>Transformer 的特征抽取能力比 RNN 系列的模型要好</li>
-</ul>
-<p><font color=red>为什么说 Transformer 可以代替 seq2seq？</font></p>
-<ul>
-<li>这里用代替这个词略显不妥当，seq2seq 虽已老，但始终还是有其用武之地，seq2seq 最大的问题在于<strong>将Encoder端的所有信息压缩到一个固定长度的向量中</strong>，并将其作为 Decoder 端首个隐藏状态的输入，来预测 Decoder 端第一个单词 (token) 的隐藏状态。在输入序列比较长的时候，这样做显然会损失 Encoder 端的很多信息，而且这样一股脑的把该固定向量送入 Decoder 端，Decoder 端不能够关注到其想要关注的信息。</li>
-<li>Transformer 不但对 seq2seq 模型这两点缺点有了实质性的改进 (多头交互式 attention 模块)，而且还引入了 self-attention 模块，让源序列和目标序列首先 “自关联” 起来，这样的话，源序列和目标序列自身的 embedding 表示所蕴含的信息更加丰富，而且后续的 FFN 层也增强了模型的表达能力，并且 Transformer 并行计算的能力远远超过了 seq2seq 系列模型</li>
-</ul>
-<h3 id="7-参考文章">7. 参考文章</h3>
-<ul>
-<li><a href="http://mantchs.com/2019/09/26/NLP/Transformer/"target="_blank" rel="external nofollow noopener noreferrer">Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="http://jalammar.github.io/illustrated-transformer/"target="_blank" rel="external nofollow noopener noreferrer">The Illustrated Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="http://www.peterbloem.nl/blog/transformers"target="_blank" rel="external nofollow noopener noreferrer">TRANSFORMERS FROM SCRATCH<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="https://medium.com/@bgg/seq2seq-pay-attention-to-self-attention-part-2-%E4%B8%AD%E6%96%87%E7%89%88-ef2ddf8597a4"target="_blank" rel="external nofollow noopener noreferrer">Seq2seq pay Attention to Self Attention: Part 2<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ul>]]></description></item><item><title>Effective STL [6] | 警惕C++最令人恼怒的解析</title><link>https://jianye0428.github.io/posts/clause_6/</link><pubDate>Mon, 24 Jul 2023 13:15:53 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_6/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="函数声明的几种方式">函数声明的几种方式</h2>
-<ol>
-<li>声明一个函数f带有一个double而且返回一个int：</li>
-</ol>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">f</span><span class="p">(</span><span class="kt">double</span> <span class="n">d</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol start="2">
-<li>名为d的参数左右的括号是多余的，被忽略：</li>
-</ol>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">f</span><span class="p">(</span><span class="kt">double</span> <span class="p">(</span><span class="n">d</span><span class="p">));</span> <span class="c1">// 同上；d左右的括号被忽略
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol start="3">
-<li>省略了参数名：</li>
-</ol>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">f</span><span class="p">(</span><span class="kt">double</span><span class="p">);</span> <span class="c1">// 同上；参数名被省略
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol start="4">
-<li>第一个声明了一个函数g，它带有一个参数，那个参数是指向一个没有参数、返回double的函数的指针：</li>
-</ol>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">g</span><span class="p">(</span><span class="kt">double</span> <span class="p">(</span><span class="o">*</span><span class="n">pf</span><span class="p">)());</span> <span class="c1">// g带有一个指向函数的指针作为参数
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol start="5">
-<li>唯一的不同是pf使用非指针语法来声明(一个在C和C++中都有效的语法):</li>
-</ol>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">g</span><span class="p">(</span><span class="kt">double</span> <span class="n">pf</span><span class="p">());</span> <span class="c1">// 同上；pf其实是一个指针
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol start="6">
-<li>照常，参数名可以省略，所以这是g的第三种声明，去掉了pf这个名字：</li>
-</ol>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">g</span><span class="p">(</span><span class="kt">double</span> <span class="p">());</span> <span class="c1">// 同上；参数名省略
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>注意参数名左右的括号（就像f的第二种声明中的d）和单独的括号（正如本例）之间的区别。</p>
-<p><strong>参数名左右的括号被忽略，但单独的括号指出存在一个参数列表：它们声明了存在指向函数的指针的参数。</strong></p>
-<h2 id="问题探讨">问题探讨</h2>
-<p>假设有一个int的文件，想要把那些int拷贝到一个list中，可能会使用下面代码：</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">dataFile</span><span class="p">(</span><span class="s">&#34;ints.dat&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 警告！这完成的并不是像你想象的那样
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">data</span><span class="p">(</span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">dataFile</span><span class="p">),</span>
-</span></span><span class="line"><span class="cl"><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">());</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这里的想法是传一对<code>istream_iterator</code>给<code>list</code>的区间构造函数，因此把int从文件拷贝到list中。</p>
-<p>这段代码可以编译，但是运行时什么都不会做，不会从文件中读出任何数据，甚至不会构建1个<code>list</code>。</p>
-<p>第二句并不声明list，也不调用构造函数。</p>
-<p>这声明了一个函数data，它的返回类型是<code>list&lt;int&gt;</code>。这个函数data带有两个参数：</p>
-<p>● 第1个参数叫做dataFile。它的类型是<code>istream_iterator&lt;int&gt;</code>。dataFile左右的括号是多余的而且被忽略。</p>
-<p>● 第2个参数没有名字。它的类型是指向一个没有参数而且返回<code>istream_iterator&lt;int&gt;</code>的函数的指针。</p>
-<p>就像下面具有这条规则的代码：</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{...};</span> <span class="c1">// 假设Widget有默认构造函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Widget</span> <span class="nf">w</span><span class="p">();</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这并没有声明一个叫做w的Widget，它声明了一个叫作w的没有参数且返回Widget的函数。</p>
-<p>本来代码的初衷，是用一个文件的内容来初始化一个<code>list&lt;int&gt;</code>对象，现在并没有达到我们的期望。</p>
-<h2 id="解决办法">解决办法</h2>
-<ol>
-<li>函数调用前后增加括号
-用括号包围一个实参的声明是不合法的，但用括号包围一个函数调用的观点是合法的，所以通过增加一对括号，代码变为：</li>
-</ol>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">data</span><span class="p">((</span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">dataFile</span><span class="p">)),</span> <span class="c1">// 注意在list构造函数的第一个实参左右的新括号
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">());</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这是可能的声明数据方法，给予<code>istream_iterators</code>的实用性和区间构造函数。</p>
-<ol start="2">
-<li>命名迭代器对象</li>
-</ol>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">dataFile</span><span class="p">(</span><span class="s">&#34;ints.dat&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">dataBegin</span><span class="p">(</span><span class="n">dataFile</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">dataEnd</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">data</span><span class="p">(</span><span class="n">dataBegin</span><span class="p">,</span> <span class="n">dataEnd</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>命名迭代器对象的使用和普通的STL编程风格相反，但是你得判断这种方法对编译器和必须使用编译器的人都模棱两可的代码是一个值得付出的代价。</p>]]></description></item><item><title>Effective STL [5] | 尽量使用区间成员函数代替它们的单元素兄弟</title><link>https://jianye0428.github.io/posts/clause_5/</link><pubDate>Mon, 24 Jul 2023 13:15:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_5/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<p>ref:</br>
-[1]. <a href="https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&amp;mid=2247490705&amp;idx=1&amp;sn=830797e69b61fe9693bf4aaea72df4b3&amp;chksm=f9e42202ce93ab1437ad36c37e141b0794328495c0c584d808d0f4ad36251680dbfba257b060&amp;cur_album_id=3009999611861975043&amp;scene=189#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&mid=2247490705&idx=1&sn=830797e69b61fe9693bf4aaea72df4b3&chksm=f9e42202ce93ab1437ad36c37e141b0794328495c0c584d808d0f4ad36251680dbfba257b060&cur_album_id=3009999611861975043&scene=189#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="example">Example</h2>
-<p>Q：给定两个vector，v1和v2，使v1的内容和v2的后半部分一样的最简单方式是什么？</p>
-<p>A：</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">v1</span><span class="p">.</span><span class="n">assign</span><span class="p">(</span><span class="n">v2</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">v2</span><span class="p">.</span><span class="n">end</span><span class="p">());</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这个测验设计为做两件事:</p>
-<ol>
-<li>它提供给我一个机会来提醒你assign成员函数的存在</li>
-</ol>
-<p>太多的程序员没注意到这是一个很方便的方法。<strong>它对于所有标准序列容器（vector，string，deque和list）都有效。</strong></p>
-<p>无论何时你必须完全代替一个容器的内容，你就应该想到赋值。</p>
-<p>如果你只是拷贝一个容器到另一个同类型的容器，<code>operator=</code>就是选择的赋值函数，但对于示范的那个例子，当你想要给一个容器完全的新数据集时，assign就可以利用，但<code>operator=</code>做不了。</p>
-<ol start="2">
-<li>演示为什么区间成员函数优先于它们的单元素替代品。</li>
-</ol>
-<p>区间成员函数是一个像STL算法的成员函数，使用两个迭代器参数来指定元素的一个区间来进行某个操作。</p>
-<p>不用区间成员函数来解决这个条款开头的问题，你就必须写一个显式循环，可能就像这样:</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Randy</span><span class="o">&gt;</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">;</span> <span class="c1">// 假设v1和v2是Randy的vector
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">v1</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Randy</span><span class="o">&gt;::</span><span class="n">const_iterator</span> <span class="n">ci</span> <span class="o">=</span> <span class="n">v2</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">ci</span> <span class="o">!=</span> <span class="n">v2</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">ci</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">v1</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="o">*</span><span class="n">ci</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>写这段代码比写assign的调用要做多得多的工作。</p>
-<p><strong>copy 替代循环</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">v1</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="n">copy</span><span class="p">(</span><span class="n">v2</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">v2</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">back_inserter</span><span class="p">(</span><span class="n">v1</span><span class="p">))</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>虽然在这段代码中没有表现出循环，在copy中的确存在一个循环 。</p>
-<p>效率损失仍然存在。</p>
-<p>几乎所有目标区间是通过插入迭代器（比如，通过inserter，back_inserter或front_inserter）指定的copy的使用都可以——应该——通过调用区间 成员函数来代替。</p>
-<p>比如这里，这个copy的调用可以用一个insert的区间版本代替：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">v1</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">v1</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">v2</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">v2</span><span class="p">.</span><span class="n">end</span><span class="p">());</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这个输入量稍微比调用copy少，但它发生的也比说的要直接：数据插入v1。</p>
-<p>这里insert 也比 copy 好，因为字面上insert 表示有数据插入到了 v1中，而copy 的使用把它变得晦涩。</p>
-<p><strong>关于东西被拷贝这个事实并没有什么好关注的，因为STL构建在东西会被拷贝的假定上。拷贝对STL来说很基本。</strong></p>
-<p><strong>小结</strong></p>
-<p>我们已经确定3个尽量使用区间成员函数代替它们的单元素兄弟的理由。 ● 一般来说使用区间成员函数可以输入更少的代码。 ● 区间成员函数会导致代码更清晰更直接了当。</p>
-<h2 id="效率">效率</h2>
-<p>当处理标准序列容器时，应用单元素成员函数比完成同样目的的区间成员函数需要更多地内存分配，更频繁地拷贝对象，而且/或者造成多余操作。</p>
-<p>对此，我之前还做了个单元素兄弟插入和批量插入的效率比较的文章<a href="https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&amp;mid=2247490268&amp;idx=1&amp;sn=fcf5b24ec09e544f1f0fea544e59bfd6&amp;chksm=f9e4244fce93ad5988926b2cba002426ada65b79d4672b7bad565fff633c52a29f9f451d6494&amp;token=855912511&amp;lang=zh_CN&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">《vector 用 insert 批量插入效率高还是emplace_back效率高》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，也证实了这个观点。</p>
-<p>标准要求区间<code>insert</code>函数直接把现有元素移动到它们最后的位置，也就是，开销是每个元素一次移动。总共开销是n次移动，numValues次容器中的对象类型的拷贝构造函数，剩下的是类型的赋值操作符。</p>
-<p>相比单元素插入策略，区间insert少执行了n*(numValues-1)次移动。</p>
-<p>花一分钟想想。这意味着如果numValues是100，insert的区间形式会比重复调用insert的单元素形式的代码少花费99%的移动！</p>
-<p>仅当可以不用失去两个迭代器的位置就能决定它们之间的距离时，一个区间insert函数才能在一次移动中把一个元素移动到它的最终位置。</p>
-<p>这几乎总是可能的，因为所有前向迭代器提供了这个功能，而且前向迭代器几乎到处都是。</p>
-<p>所有用于标准容器的迭代器都提供了前向迭代器的功能。非标准的散列容器的迭代器也是。</p>
-<p>在数组中表现为迭代器的指针也提供了这样的功能。事实上，唯一不提供前向迭代器能力的标准迭代器是输入和输出迭代器。</p>
-<p><strong>单元素插入的问题</strong></p>
-<ul>
-<li>
-<p>当你试图去把一个元素插入内存已经满了的vector时，这个vector会分配具有更多容量的新内存，从旧内存把它的元素拷贝到新内存，销毁旧内存里的元素，回收旧内存。然后它添加插入的元素。</p>
-</li>
-<li>
-<p>每当用完内存时，大部分vector实现都使它们的容量翻倍，所以插入numValues个新元素会导致最多$\log_2{numValues}$次新内存的分配。</p>
-</li>
-<li>
-<p>每次一个地插入1000个元素会导致10次新的分配（包括它们负责的元素拷贝）。</p>
-</li>
-</ul>
-<p>与之对比的是，一个区间插入可以在开始插入东西前计算出需要多少新内存（假设给的是前向迭代器），所以它不用多于一次地重新分配vector的内在内存。</p>
-<p>刚才进行分析是用于vector的，但同样的理由也作用于string。</p>
-<p><strong>deque</strong></p>
-<p>对于deque，理由也很相似，但deque管理它们内存的方式和vector和string不同，所以重复内存分配的论点不能应用。</p>
-<p>但是，关于<strong>很多次不必要的元素移动</strong>的论点通常通过对函数调用次数的观察也应用到了（虽然细节不同）。</p>
-<p><strong>list</strong></p>
-<p>在这里使用insert区间形式代替单元素形式也有一个性能优势。</p>
-<p>关于重复函数调用的论点当然继续有效，但因为链表的工作方式，拷贝和内存分配问题没有发生。</p>
-<p>取而代之的是，这里有一个新问题：过多重复地对list中的一些节点的next和prev指针赋值。</p>
-<p>每当一个元素添加到一个链表时，持有元素的链表节点必须有它的next和prev指针集，而且当然新节点前面的节点（我们叫它B，就是“before”）必须设置它的next指针，新节点后面的节点（我们叫它A，就是“after”）必须设置它的prev指针</p>
-<p></p>
-<p>当一系列新节点通过调用list的单元素insert一个接一个添加时，除了最后一个以外的其他新节点都会设置它的next指针两次，第一次指向A，第二次指向在它后面插入的元素。每次在A前面插入时，它都会设置它的prev指针指向一个新节点。</p>
-<p>如果numValues个节点插入A前面，插入节点的next指针会发生次多余的赋值，而且A的prev指针会发生numValues-1次多余的赋值。合计次没有必要的指针赋值。当然，指针赋值很轻量，但如果不是必须，为什么要为它们花费呢？</p>
-<p>**避免开销的关键是使用list的insert区间形式。**因为那个函数知道最后有多少节点会被插入，它可以避免多余的指针赋值，对每个指针只使用一次赋值就能设置它正确的插入后的值</p>
-<h2 id="区间函数">区间函数</h2>
-<p>参数类型iterator意思是容器的迭代器类型，也就是container::iterator。</p>
-<p>参数类型InputIterator意思是可以接受任何输入迭代器。</p>
-<ul>
-<li><strong>区间构造</strong></li>
-</ul>
-<p>所有标准容器都提供这种形式的构造函数：</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">container</span><span class="o">::</span><span class="n">container</span><span class="p">(</span><span class="n">InputIterator</span> <span class="n">begin</span><span class="p">,</span> <span class="c1">// 区间的起点
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">InputIterator</span> <span class="n">end</span><span class="p">);</span> <span class="c1">// 区间的终点
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果传给这个构造函数的迭代器是<code>istream_iterators</code>或<code>istreambuf_iterators</code>，你可能会遇到C++的最惊异的解析，原因之一是你的编译器可能会因为把这个构造看作一个函数声明而不是一个新容器对象的定义而中断。</p>
-<ul>
-<li><strong>区间插入</strong></li>
-</ul>
-<p>所有标准序列容器都提供这种形式的insert:</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">container</span><span class="o">::</span><span class="n">insert</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">,</span> <span class="c1">// 区间插入的位置
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">InputIterator</span> <span class="n">begin</span><span class="p">,</span> <span class="c1">// 插入区间的起点
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">InputIterator</span> <span class="n">end</span><span class="p">);</span> <span class="c1">// 插入区间的终点
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>关联容器使用它们的比较函数来决定元素要放在哪里，所以它们了省略position参数。</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">container</span><span class="o">::</span><span class="n">insert</span><span class="p">(</span><span class="n">lnputIterator</span> <span class="n">begin</span><span class="p">,</span> <span class="n">InputIterator</span> <span class="n">end</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>当寻找用区间版本代替单元素插入的方法时，不要忘记有些单元素变量用采用不同的函数名伪装它们自己。比如，<code>push_front</code>和<code>push_back</code>都把单元素插入容器，即使它们不叫<code>insert</code>。如果你看见一个循环调用<code>push_front</code>或<code>push_back</code>，或如果你看见一个算法——比如copy——的参数是<code>front_inserter</code>或者<code>back_inserter</code>，你就发现了一个<code>insert</code>的区间形式应该作为优先策略的地方。</p>
-<ul>
-<li><strong>区间删除</strong></li>
-</ul>
-<p>每个标准容器都提供了一个区间形式的<code>erase</code>，但是序列和关联容器的返回类型不同。</p>
-<p><strong>序列容器</strong>提供了这个：</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">iterator</span> <span class="n">container</span><span class="o">::</span><span class="n">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">begin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">end</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>关联容器提供这个:</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">container</span><span class="o">::</span><span class="n">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">begin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">end</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>Q：为什么不同？</p>
-<p>A：解释是，如果erase的关联容器版本返回一个迭代器（被删除的那个元素的下一个）会<strong>招致一个无法接受的性能下降</strong>。</p>
-<p>这个条款的对insert的性能分析大部分也同样可以用于erase。单元素删除的函数调用次数仍然大于一次调用区间删除。当使用单元素删除时，每一次元素值仍然必须向它们的目的地移动一位，而区间删除可以在一个单独的移动中把它们移动到目标位置。</p>
-<p>关于vector和string的插入和删除的一个论点是必须做很多重复的分配。（当然对于删除，会发生重复的回收。）那是因为用于vector和string的内存自动增长来适应于新元素，但当元素的数目减少时它不自动收缩。</p>
-<ul>
-<li><strong>区间赋值</strong></li>
-</ul>
-<p>所有标准列容器都提供了区间形式的assign:</p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">container</span><span class="o">::</span><span class="n">assign</span><span class="p">(</span><span class="n">InputIterator</span> <span class="n">begin</span><span class="p">,</span> <span class="n">InputIterator</span> <span class="n">end</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="结论">结论</h2>
-<p>几乎所有目标区间被插入迭代器指定的copy的使用都可以用调用的区间成员函数的来代替 。</p>
-<p>尽量使用区间成员函数来代替单元素兄弟的三个可靠的论点。区间成员函数更容易写，它们更清楚地表达你的意图，而且它们提供了更高的性能。那是很难打败的三驾马车。</p>]]></description></item></channel></rss>
+[4]. <a href="https://www.bilibili.com/video/BV1HD4y1S7Pe"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1HD4y1S7Pe<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item></channel></rss>
