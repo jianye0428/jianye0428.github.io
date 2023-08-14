@@ -1,4 +1,530 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 11 Aug 2023 16:10:59 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [20] | 为指针的关联容器指定比较类型</title><link>https://jianye0428.github.io/posts/clause_20/</link><pubDate>Fri, 11 Aug 2023 16:10:59 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_20/</guid><description><![CDATA[<h2 id="example">Example</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 14 Aug 2023 08:13:21 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [22] | 避免原地修改set和multiset的键</title><link>https://jianye0428.github.io/posts/clause_22/</link><pubDate>Mon, 14 Aug 2023 08:13:21 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_22/</guid><description><![CDATA[<p><strong>所有标准关联容器，set和multiset保持它们的元素有序，这些容器的正确行为依赖于它们保持有序。</strong></p>
+<p>如果你改了关联容器里的一个元素的值（例如，把10变为1000），新值可能不在正确的位置，而且那将破坏容器的有序性。</p>
+<h2 id="修改map和multimap值">修改map和multimap值</h2>
+<p>试图改变这些容器里的一个键值的程序将不能编译:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">map</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">string</span><span class="o">&gt;</span> <span class="n">m</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">m</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">first</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="c1">// 错误！map键不能改变
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">multimap</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">string</span><span class="o">&gt;</span> <span class="n">mm</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">mm</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">first</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span> <span class="c1">// 错误！multimap键也不能改变
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition tip open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-lightbulb fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">因为<code>map&lt;K, V&gt;</code>或<code>multimap&lt;K, V&gt;</code>类型的对象中元素的类型是<code>pair&lt;const K, V&gt;</code>。因为键的类型const K，它不能改变。</div>
+    </div>
+  </div>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Key</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Tp</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Compare</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">less</span><span class="o">&lt;</span><span class="n">_Key</span><span class="o">&gt;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">_Alloc</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">allocator</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">_Key</span><span class="p">,</span> <span class="n">_Tp</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">map</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Key</span>     <span class="n">key_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Tp</span>     <span class="n">mapped_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">_Key</span><span class="p">,</span> <span class="n">_Tp</span><span class="o">&gt;</span>  <span class="n">value_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Compare</span>     <span class="n">key_compare</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Alloc</span>     <span class="n">allocator_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果你使用一个<code>const_cast</code>，或许能改变它，后面会讨论到。</p>
+<h2 id="修改set和multiset值">修改set和multiset值</h2>
+<p>对于<code>set&lt;T&gt;</code>或<code>multiset&lt;T&gt;</code>类型的对象来说，储存在容器里的元素类型只不过是<code>T</code>，并非<code>const T</code>。因此，<code>set</code>或<code>multiset</code>里的元素可能在你想要的任何时候改变。不需要映射。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Key</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Compare</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">less</span><span class="o">&lt;</span><span class="n">_Key</span><span class="o">&gt;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typename</span> <span class="n">_Alloc</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">allocator</span><span class="o">&lt;</span><span class="n">_Key</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">set</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// typedefs:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">///@{
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">/// Public typedefs.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">typedef</span> <span class="n">_Key</span>     <span class="n">key_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Key</span>     <span class="n">value_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Compare</span> <span class="n">key_compare</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Compare</span> <span class="n">value_compare</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Alloc</span>   <span class="n">allocator_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">///@}
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>为什么set或multiset里的元素不是常数？</strong></p>
+<p>假设我们有一个雇员的类:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Employee</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl">  <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>       <span class="c1">// 获取雇员名
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="nf">setName</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span> <span class="c1">// 设置雇员名
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">getTitle</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>   <span class="c1">// 获取雇员头衔
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="nf">setTitle</span><span class="p">(</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">title</span><span class="p">);</span>     <span class="c1">// 设置雇员头衔
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">int</span> <span class="nf">idNumber</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>             <span class="c1">// 获取雇员ID号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>让我们做合理的假设，每个雇员有唯一的ID号，就是<code>idNumber</code>函数返回的数字。然后，建立一个雇员的<code>set</code>，很显然应该只以<code>ID</code>号来排序<code>set</code>:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">IDNumberLess</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="n">Employee</span><span class="p">,</span> <span class="n">Employee</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span> <span class="c1">// 参见条款40
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Employees</span> <span class="n">lhs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="n">Employee</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">lhs</span><span class="p">.</span><span class="n">idNumber</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">rhs</span><span class="p">.</span><span class="n">idNumber</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">set</span><span class="o">&lt;</span><span class="n">Employee</span><span class="p">,</span> <span class="n">IDNumberLess</span><span class="o">&gt;</span> <span class="n">EmpIDSet</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">EmpIDSet</span> <span class="n">se</span><span class="p">;</span> <span class="c1">// se是雇员的set， 按照ID号排序
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>实际上，雇员的<code>ID</code>号是<code>set</code>中元素的键。<strong>其余的雇员数据只是虚有其表</strong>。在这里，没有理由不能把一个特定雇员的头衔改成某个有趣的东西:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Employee</span> <span class="n">selectedID</span><span class="p">;</span> <span class="c1">// 容纳被选择的雇员
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span> <span class="c1">// ID号的变量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">EmpIDSet</span><span class="o">::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">se</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">selectedID</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">()){</span>
+</span></span><span class="line"><span class="cl">    <span class="n">i</span><span class="o">-&gt;</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 给雇员新头衔
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为在这里我们只是改变雇员的一个与set排序的方式无关的方面（一个雇员的非键部分），所以这段代码不会破坏set。那是它合法的原因。但它的合法排除了<code>set/multiset</code>的元素是<code>const</code>的可能。而且那是它们为什么不是的原因。</p>
+<p>因为<code>set</code>或<code>multiset</code>里的值不是<code>const</code>，所以试图改变它们可以编译。</p>
+<p><font color=red>如果你改变<code>set</code>或<code>multiset</code>里的元素， 你必须<strong>确保不改变一个键部分——影响容器有序性的元素部分</strong>。如果你做了，你会破坏容器，再使用那个容器将产生未定义的结果， 而且那是你的错误。另一方面，这个限制只应用于被包含对象的键部分。对被包含元素的所有其他部分来说，是开放的: 随便改变！</font></p>
+<h2 id="阻止修改set和multiset值">阻止修改set和multiset值</h2>
+<p>即使<code>set</code>和<code>multiset</code>的元素不是<code>const</code>，实现仍然有很多方式可以阻止它们被修改。</p>
+<p>例如，实现可以让用于<code>set&lt;T&gt;::iterator的operator*</code>返回一个常数<code>T&amp;</code>。即，它可以让<code>set</code>的迭代器解引用的结果是<code>set</code>元素的常量引用。</p>
+<p>在这样的实现下，将没有办法修改<code>set</code>或<code>multiset</code>的元素，因为所有访问那些元素的方法都将在让你访问之前加一个<code>const</code>。</p>
+<h2 id="要不要修改set和multiset值">要不要修改set和multiset值</h2>
+<ol>
+<li>如果<strong>不关心移植性</strong>，你想要改变set或multiset中元素的值，而且你的STL实现让你侥幸成功，继续做。只是要确定不要改变元素的键部分，即，会影响容器有序性的元素部分。</li>
+<li>如果<strong>在乎移植性</strong>，就认为set和multiset中的元素不能被修改，至少不能在没有映射的情况下</li>
+</ol>
+<p><strong>Solution: 映射到一个引用</strong></p>
+<p>有时候完全有理由改变<code>set</code>或<code>multiset</code>元素的非键部分。例如刚看的不能在一些实现下编译的<code>setTitle</code>调用:</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">EmpIDSet</span><span class="o">::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">se</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">selectedID</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">i</span><span class="o">-&gt;</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 有些STL实现会拒绝这样，因为*i是const
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>为了让它可以编译并且行为正确，我们必须映射掉*i的常量性。这是那么做的正确方法:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">const_cast</span><span class="o">&lt;</span><span class="n">Employee</span><span class="o">&amp;&gt;</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">).</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 映射掉*i的常量性
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>这可以得到i指向的对象，告诉你的编译器把映射的结果当作一个（非常数）Employee的引用，然后在那个引用上调用setTitle。</strong></p>
+<p><strong>错误版本的映射</strong></p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">()){</span>
+</span></span><span class="line"><span class="cl">  <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">Employee</span><span class="o">&gt;</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">).</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 把*i映射到一个Employee
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>它也等价于如下内容:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="p">((</span><span class="n">Employee</span><span class="p">)(</span><span class="o">*</span><span class="n">i</span><span class="p">)).</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 使用C映射语法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这两个都能编译，而且因为它们等价，所以它们错的原因也相同。</p>
+<p><strong>在运行期，它们不能修改<code>*i</code>！</strong></p>
+<p><strong>在这两个情况里，映射的结果是一个<code>*i</code>副本的临时匿名对象，而setTitle是在匿名的物体上调用，不在<code>*i</code>上<code>！*i</code>没被修改，因为setTitle从未在那个对象上调用，它在那个对象的副本上调用。</strong></p>
+<p>两个句法形式等价于这个:</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">()){</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Employee</span> <span class="nf">tempCopy</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">);</span> <span class="c1">// 把*i拷贝到tempCopy
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">tempCopy</span><span class="p">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 修改tempCopy
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过映射到引用，我们避免了建立一个新对象。</p>
+<p>取而代之的是，映射的结果是一个现有对象的引用，<code>i</code>指向的对象。</p>
+<p>当我们在有这个引用指定的对象上调用setTitle时，我们是在<code>*i</code>上调用setTitle，而且那正是我们想要的。</p>
+<p><strong>为什么不能去掉map和multimap的常量性</strong></p>
+<p>注意<code>map&lt;K, V&gt;</code>或<code>multimap&lt;K, V&gt;</code>包含<code>pair&lt;const K, V&gt;</code>类型的元素。</p>
+<p>那个<code>const</code>表明<code>pair</code>的第一个组件被定义为常量，而那意味着试图修改它是未定义的行为（即使映射掉它的常量性）。</p>
+<p>理论上，一个STL实现可能把这样的值写到一个只读的内存位置（比如，一旦写了就通过系统调用进行写保护的虚拟内存页），而且试图映射掉它的常量性，最多，没有效果。</p>
+<p>如果你是一个坚持遵循标准拟定的规则的人，你绝不会试图映射掉<code>map</code>或<code>multimap</code>键的常量性。</p>
+<h2 id="安全修改元素步骤">安全修改元素步骤</h2>
+<p>想要总是可以工作而且总是安全地改变set、multiset、map或multimap里的元素，按5个简单的步骤去做：</p>
+<ol>
+<li>定位你想要改变的容器元素。如果你不确定最好的方法， 条款45提供了关于怎样进行适当搜寻的指导。</li>
+<li>拷贝一份要被修改的元素。对map或multimap而言，确定不要把副本的第一个元素声明为const。毕竟，你想要改变它！</li>
+<li>修改副本，使它有你想要在容器里的值。</li>
+<li>从容器里删除元素，通常通过调用erase（参见条款9）。</li>
+<li>把新值插入容器。如果新元素在容器的排序顺序中的位置正好相同或相邻于删除的元素，使用insert的“提示”形式把插入的效率从对数时间改进到分摊的常数时间。使用你从第一步获得的迭代器作为提示。</li>
+</ol>
+<p><strong>一句话概括就是：先删除，再插入新的。</strong></p>
+<p><strong>Example:</strong></p>
+<p>这是同一个累人的雇员例子，这次以安全、可移植的方式写:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">EmpIDSet</span> <span class="n">se</span><span class="p">;</span> <span class="c1">// 同前，se是一个以ID号排序的雇员set
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Employee</span> <span class="n">selectedID</span><span class="p">;</span> <span class="c1">// 同前，selectedID是一个带有需要ID号的雇员
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">EmpIDSet</span><span class="o">::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">se</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">selectedID</span><span class="p">);</span> <span class="c1">// 第一步：找到要改变的元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">!=</span><span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Employee</span> <span class="nf">e</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">);</span> <span class="c1">// 第二步：拷贝这个元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">se</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="o">++</span><span class="p">);</span>  <span class="c1">// 第三步：删除这个元素；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                  <span class="c1">// 自增这个迭代器以
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                  <span class="c1">// 保持它有效（参见条款9）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">e</span><span class="p">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 第四步：修改这个副本
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">se</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">e</span><span class="p">);</span>               <span class="c1">// 第五步：插入新值；提示它的位置和原先元素的一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>Effective STL [21] | 永远让比较函数对相等的值返回false</title><link>https://jianye0428.github.io/posts/clause_21/</link><pubDate>Fri, 11 Aug 2023 17:11:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_21/</guid><description><![CDATA[<h2 id="example-set">Example set</h2>
+<p>建立一个set，比较类型用<code>less_equal</code>，然后插入整型数字33(称为 $33_{A}$):</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">less_equal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">s</span><span class="p">;</span> <span class="c1">// s以“&lt;=”排序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">s</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">33</span><span class="p">);</span> <span class="c1">// 插入33
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在尝试再插入一次33(称为 $33_{B}$):</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">s</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">33</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>对于这个insert的调用，set必须先要判断出 $33_{A}$ 是否已经位于其中了，查找哪儿适合插入 $33_{B}$。最终，它总要检查 $33_{B}$是否与 $33_{A}$ 相同。</p>
+<p>关联容器对“相同”的定义是等价，因此set测试 $33_{B}$是否等价于 $33_{A}$。</p>
+<p>当执行这个测试时，它自然是使用set的比较函数。在这一例子里，是<code>operator&lt;=</code>，因为我们指定<code>set</code>的比较函数为<code>less_equal</code>，而<code>less_equal</code>意思就是<code>operator&lt;=</code>。</p>
+<p>可以看看<code>less_equal</code>的源码实现：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">/// One of the @link comparison_functors comparison functors@endlink.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Tp</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">less_equal</span> <span class="o">:</span> <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="n">_Tp</span><span class="p">,</span> <span class="n">_Tp</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">_GLIBCXX14_CONSTEXPR</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">  <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">_Tp</span><span class="o">&amp;</span> <span class="n">__x</span><span class="p">,</span> <span class="k">const</span> <span class="n">_Tp</span><span class="o">&amp;</span> <span class="n">__y</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span> <span class="k">return</span> <span class="n">__x</span> <span class="o">&lt;=</span> <span class="n">__y</span><span class="p">;</span> <span class="p">}</span> <span class="c1">// 此处是 &lt;=
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>于是，set将计算这个表达式是否为真:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">!</span><span class="p">(</span><span class="mi">33</span><span class="n">A</span> <span class="o">&lt;=</span> <span class="mi">33</span><span class="n">B</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="p">(</span><span class="mi">33</span><span class="n">B</span> <span class="o">&lt;=</span> <span class="mi">33</span><span class="n">A</span><span class="p">)</span> <span class="c1">// 测试33A和33B是否等价
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>$33_{A}$ 和 $33_{B}$ 都是33，因此， $33_{A}$&lt;=$33_{B}$ 肯定为真。同样清楚的是，$33_{B}$ &lt;= $33_{A}$。于是上述的表达式简化为:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">!</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>再简化就是</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="nb">false</span> <span class="o">&amp;&amp;</span> <span class="nb">false</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果当然是false。</p>
+<p>也就是说，set得出的结论是 $33_{B}$ 与 $33_{B}$ 不等价，因此不一样，于是它将 $33_{B}$ 插入容器中的旁边。</p>
+<p>在技术上而言，这个做法导致未定义的行为，但是通常的结果是set以拥有了两个为33的值的拷贝而告终，也就是说它不再是一个set了。通过使用less_equal作为我们的比较类型，我们破坏了容器！</p>
+<p><strong>测试</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">print</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span> <span class="n">t</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">t</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">less_equal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">snumber</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">snumber</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">33</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">snumber</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">33</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">for_each</span><span class="p">(</span><span class="n">snumber</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">snumber</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">print</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="mi">33</span>
+</span></span><span class="line"><span class="cl"><span class="mi">33</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="example-string">Example string*</h2>
+<p><code>条款20</code>描述了该如何写一个比较函数以使得容纳<code>string*</code>指针的容器根据string的值排序，而不是对指针的值排序。那个比较函数是按升序排序的，但现在假设你需要<code>string*</code>指针的容器的降序排序的比较函数。</p>
+<p>自然是抓现成的代码来修改了。如果不细心，可能会这么干:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">StringPtrGreater</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span> <span class="c1">// 这代码是有瑕疵的！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps2</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">!</span><span class="p">(</span><span class="o">*</span><span class="n">ps1</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">ps2</span><span class="p">);</span> <span class="c1">// 只是相反了旧的测试；这是不对的！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里的想法是通过将比较函数内部结果取反来达到反序的结果。很不幸，取反“&lt;”不会给你（你所期望的）“&gt;”，它给你的是 “&gt;=”。</p>
+<p>而你现在知道，因为它将对相等的值返回true，对关联容器来说，它是一个无效的比较函数。</p>
+<p>你真正需要的比较类型是这个:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">StringPtrGreater</span><span class="o">:</span> <span class="c1">// 对关联容器来说这是有效的比较类型
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps2</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="o">*</span><span class="n">ps2</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">ps1</span><span class="p">;</span> <span class="c1">// 返回*ps2是否大于*ps1（也就是交换操作数的顺序）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要避免掉入这个陷阱，你所要记住的就是比较函数的返回值表明的是在此函数定义的排序方式下，一个值是否大于另一个。</p>
+<p><strong>相等的值绝不该一个大于另一个，所以比较函数总应该对相等的值返回<code>false</code></strong></p>
+<h2 id="example-multiset">Example multiset</h2>
+<p>multiset和multimap那些容器可以容纳复本可能包含副本，如果容器认为两个值相等的对象不等价，它将会把两个都存储进去的，这正是multi系列容器的所要支持的事情。</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">multiset</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">less_equal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">msnum</span><span class="p">;</span> <span class="c1">// 仍然以“&lt;=”排序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">msnum</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">22</span><span class="p">);</span> <span class="c1">// 插入22A
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">msnum</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">22</span><span class="p">);</span> <span class="c1">// 插入22B
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">for_each</span><span class="p">(</span><span class="n">msnum</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">msnum</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">print</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="mi">22</span>
+</span></span><span class="line"><span class="cl"><span class="mi">22</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>s里有两个22的拷贝，<strong>因此我们期望如果我们在它上面做一个<code>equal_range</code>，我们将会得到一对指出包含这两个拷贝的范围的迭代器。但那是不可能的。</strong></p>
+<p><code>equal_range</code>，虽然叫这个名字，但不是指示出相等的值的范围，而是等价的值的范围。在这个例子中，s的比较函数说22A和22B是不等价的，所以不可能让它们同时出现在equal_range所指示的范围内。</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">pair</span><span class="o">&lt;</span><span class="n">multiset</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="p">,</span> <span class="n">multiset</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="o">&gt;</span> <span class="n">range2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//在 myvector 容器中找到所有的元素 22
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">range2</span> <span class="o">=</span> <span class="n">equal_range</span><span class="p">(</span><span class="n">msnum</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">msnum</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">22</span><span class="p">,</span> <span class="n">less_equal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{});</span>
+</span></span><span class="line"><span class="cl"><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;</span><span class="se">\n</span><span class="s">my multiset：&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="n">it</span> <span class="o">=</span> <span class="n">range2</span><span class="p">.</span><span class="n">first</span><span class="p">;</span> <span class="n">it</span> <span class="o">!=</span> <span class="n">range2</span><span class="p">.</span><span class="n">second</span><span class="p">;</span> <span class="o">++</span><span class="n">it</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">it</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; &#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果没有得到期望结果:</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">my multiset:</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果改为<code>less</code>比较:</p>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">range2</span> <span class="o">=</span> <span class="n">equal_range</span><span class="p">(</span><span class="n">msnum</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">msnum</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">22</span><span class="p">,</span> <span class="n">less</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{});</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果:</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">my</span> <span class="n">multiset</span><span class="err">：</span><span class="mi">22</span> <span class="mi">22</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><font color=red><strong>除非你的比较函数总是为相等的值返回false，你将会打破所有的标准关联型容器，不管它们是否允许存储复本。</strong></font></p>
+<h2 id="总结">总结</h2>
+<p>从技术上说，用于排序关联容器的比较函数必须在它们所比较的对象上定义一个“<strong>严格的弱序化(strict weakordering)</strong>”。（传给sort等算法（参见条款31）的比较函数也有同样的限制）。</p>
+<p><strong>任何一个定义了严格的弱序化的函数都必须在传入相同的值的两个拷贝时返回false。</strong></p>
+]]></description></item><item><title>Effective STL [20] | 为指针的关联容器指定比较类型</title><link>https://jianye0428.github.io/posts/clause_20/</link><pubDate>Fri, 11 Aug 2023 16:10:59 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_20/</guid><description><![CDATA[<h2 id="example">Example</h2>
 <p>假定你有一个string*指针的set，你把一些动物的名字插入进set:</p>
 <div class="highlight" id="id-1"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -6414,1210 +6940,4 @@ const成员函数有2个好处：(1). 明确理解函数是否修改对象内容
 </li>
 </ol>
 <h2 id="结语">结语</h2>
-<p><font color=green><strong>当面对容器时，STL给了你很多选项。如果你的视线超越了STL的范围，那就会有更多的选项。在选择一个容器前，要保证考虑了所有你的选项。</strong></font></p>]]></description></item><item><title>C++ STL Containers</title><link>https://jianye0428.github.io/posts/datastructrue/</link><pubDate>Sun, 16 Jul 2023 15:03:55 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/datastructrue/</guid><description><![CDATA[<h2 id="c-stl-standard-template-library-总结">C++ STL (Standard Template Library) 总结</h2>
-<p>C++ STL 容器是使用频率超高的基础设施，只有了解各个容器的底层原理，才能得心应手地用好不同的容器，做到用最合适的容器干最合适的事情。</p>
-<p>本文旨在对 C++ 标准模板库的 <em>array</em>, <em>vector</em>, <em>deque</em>, <em>list</em>, <em>forward_list</em>, <em>queue</em>, <em>priority_queue</em>, <em>stack</em>, <em>map</em>, <em>multimap</em>, <em>set</em>, <em>multi_set</em>, <em>unordered_map</em>, <em>unordered_multimap</em>, <em>unordered_set</em>, <em>unordered_multiset</em> 共十六类容器进行系统的对比分析，重点关注各个容器的底层原理与性能特点。本文唯一参考资料为C++官方文档，若有其它参考则会指明出处。</p>
-<h3 id="1-array">1. array</h3>
-<blockquote>
-<p>Container properties: Sequence | Contiguous storage | Fixed-size aggregate
-容器属性：顺序容器（支持随机访问），连续内存空间，固定大小；//连续内存
-类模板头：template &lt; class T, size_t N &gt; class array;</p>
-</blockquote>
-<p>array 即数组，其大小固定，所有的元素严格按照内存地址线性排列，array 并不维护元素之外的任何多余数据，甚至也不会维护一个size这样的变量，这保证了它在存储性能上和C++语法中的数组符号[]无异。尽管其它大部分标准容器都可以通过 std::allocator 来动态的分配和回收内存空间，但 <strong>Array 并不支持这样做</strong>。</p>
-<p>Array 和其它标准容器一个很重要的不同是：<u>对两个 array 执行 swap 操作意味着真的会对相应 range 内的元素一一置换</u>，因此其时间花销正比于置换规模；但同时，对两个 array 执行 swap 操作不会改变两个容器各自的迭代器的依附属性，这是由 array 的 swap 操作不交换内存地址决定的。</p>
-<p>Array 的另一个特性是：不同于其它容器，<font color = red>array 可以被当作 std::tuple 使用</font>，因为 array 的头文件重载了get()以及tuple_size()和tuple_element()函数（注意这些函数非 array 的成员函数，而是外部函数）。</p>
-<p>最后需要注意，虽然 array 和 C++语法中的[]符号无限接近，但两者是两个存在，array 毕竟是标准模板库的一员，是一个class，因此支持
-<code>begin(), end(), front(), back(), at(), empty(), data(), fill(), swap(), ... </code> 等等标准接口，而[]是真正的最朴素的数组。</p>
-<h3 id="2-vector">2. vector</h3>
-<blockquote>
-<p>Container properties: Sequence | Dynamic array | Allocator-aware
-容器属性：<font color = red>顺序容器</font>（支持随机访问），动态调整大小，使用内存分配器动态管理内存；//连续内存
-类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class vector;</p>
-</blockquote>
-<p>一句话来说，<u>vector 就是能够动态调整大小的 array</u>。和 array 一样，vector 使用<font color=red>连续内存空间</font>来保存元素，这意味着其元素可以用普通指针的<code>++</code>和<code>--</code>操作来访问；不同于 array 的是，其<strong>存储空间可以自动调整</strong>。</p>
-<p>在底层上，vector 使用动态分配的 array，当现有空间无法满足增长需求时，会重新分配（reallocate）一个更大的 array 并把所有元素移动过去，因此，<font color=red>vector 的 reallocate 是一个很耗时的处理</font>。所以，每次 reallocate 时都会预留多余的空间，以满足潜在的增长需求，也就是说，vector的capacity()通常会大于size()。vector 什么时候做 reallocate，reallocate 多少多余空间，是有具体策略的，按下不表。总体来说，<u>vector 比 array 多了一些内存消耗，以换取更灵活的内存管理</u>。</p>
-<p>和其它的动态顺序容器（deque, list, forward_list）相比，<u>vector 在元素访问上效率最高，在尾部增删元素的效率也相对最高</u>。如果调用者有在尾部以外的地方增删元素的需求，vector 则不如其它容器，并且迭代器的一致性也较差（have less consistent iterators and references than lists and forward_lists）。</p>
-<h3 id="3-queue">3. queue</h3>
-<blockquote>
-<p>容器属性：<font color=red>容器适配器(adapter)</font>，先进先出型容器（FIFO）；//C++设计模式之适配器模式
-template &lt;class T, class Container = deque<T> &gt; class queue;</p>
-</blockquote>
-<p>queue（普通队列）是一个专为 FIFO 设计的容器适配器，也即只能从一端插入、从另一端删除；所谓容器适配器，是指它本身只是一个封装层，必须依赖指定的底层容器（通过模板参数中的class Container指定）才能实现具体功能。</p>
-<p>**容器适配器(Adapter)**实际上是C++设计模式的一种 &ndash; 称为 Adapter 模式（适配器模式），Adapter 模式的目的是将第三方库提供的接口做一个封装和转化，使其适配自己工程中预留的接口，或者适应自己工程的调用风格。换句话说，Adapter 模式的目的是将被调用类（如第三方库）的接口转化为希望的接口。</p>
-<p>回到正题，queue 可以接纳任何一个至少支持下列接口的容器作为底层容器：</p>
-<blockquote>
-<p>empty(); size(); front(); back(); push_back(); pop_front().</p>
-</blockquote>
-<p>在标准模板库容器中，deque 和 list 满足上述要求，当然用户也可以自定义一个满足上述要求的容器。通过模板参数可以看出，<font color=red>默认情况下，queue 使用 deque 作为底层容器</font>。</p>
-<h3 id="4-deque">4. deque</h3>
-<blockquote>
-<p>Container properties: Sequence | Dynamic array | Allocator-aware
-容器属性：<font color=red>顺序容器</font>（支持随机访问），动态调整大小，使用内存分配器动态管理内存；//分段连续内存
-类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class deque;</p>
-</blockquote>
-<p>deque（读作&quot;deck&quot;）是 double-ended queue 的缩写，是一个可以在首尾两端进行动态增删的顺序容器。</p>
-<p>不同的库对 deque 的实现可能不同，但大体上都是<font color=green>某种形式的动态 array</font>，且都支持随机访问。deque 的功能和 vector 比较接近，但 deque 额外支持在头部动态增删元素。和 vector 不一样的是，<font color = red><u>deque 不保证存储区域一定是连续的!</u></font> 因此用指向元素的普通指针做<code>++</code>和<code>--</code>操作是非常危险的行为。</p>
-<p>从底层机理上能更透彻地理解 deque 的特点：<font color = red>vector 使用的是单一的 array，deque 则会使用很多个离散的 array 来组织数据</font>「the elements of a deque can be scattered in different chunks of storage」！如果说 vector 是连续的，deque 则是分段连续。deque 会维护不同 array 之间的关联信息，使用户无需关心分段这个事实。这样做的好处是很明显的：deque 在 reallocate 时，只需新增/释放两端的 storage chunk 即可，无需移动已有数据（vector 的弊端），极大提升了效率，尤其在数据规模很大时，优势明显。</p>
-<p>相比于 vector 和 list，deque 并不适合遍历！因为每次访问元素时，deque 底层都要检查是否触达了内存片段的边界，造成了额外的开销！deque 的核心优势是在双端都支持高效的增删操作，程序员选择使用 deque 时需要有双端操作的明确理由。</p>
-<h3 id="5-priority_queue">5. priority_queue</h3>
-<blockquote>
-<p>容器属性：<font color=red>容器适配器</font>，严格弱序（Strict Weak Ordering），优先级队列；
-template &lt;class T, class Container = vector<T>,
-class Compare = less<typename Container::value_type> &gt; class priority_queue;</p>
-</blockquote>
-<p>和 queue 类似，priority_queue（术语叫作优先级队列）也只是一个容器适配器，需要指定底层容器才能实例化，参见模板参数中的class Container形参。priority_queue 的核心特点在于其严格弱序特性（strict weak ordering）：也即 priority_queue 保证容器中的第一个元素始终是所有元素中最大的！为此，用户在实例化一个 priority_queue 时，必须为元素类型（class T）重载&lt;运算符，以用于元素排序！</p>
-<p>priority_queue 的原理可以用一个大顶堆来解释：priority_queue 在内部维护一个基于二叉树的大顶堆数据结构，在这个数据结构中，最大的元素始终位于堆顶部，且只有堆顶部的元素（max heap element）才能被访问和获取，大顶堆的具体原理可参见任何一本数据结构书籍。</p>
-<p>为了支持这种工作原理，priority_queue 对底层容器也是有要求的，priority_queue 的底层容器必须支持随机访问和至少以下接口：</p>
-<blockquote>
-<p>empty(); size(); front(); push_back(); pop_back().</p>
-</blockquote>
-<p>标准模板库中的 vector 和 deque 能够满足上述需求，默认情况下，priority_queue 使用 vector 作为底层容器。</p>
-<p>某种程度上来说，priority_queue 默认在 vector 上使用堆算法将 vector 中元素构造成大顶堆的结构，因此 priority_queue 就是堆 ，所有需要用到堆的位置，都可以考虑使用 priority_queue。priority_queue 默认是大顶堆，用户也可以通过自定义模板参数中的 class Compare 来实现一个小顶堆。</p>
-<p>相比于 queue（普通队列）的先进先出FIFO，priority_queue 实现了最高优先级先出。</p>
-<h3 id="6-list">6. list</h3>
-<blockquote>
-<p>Container properties: Sequence | Doubly-linked list | Allocator-aware
-容器属性：<font color = red>顺序容器</font>（可顺序访问，但不支持随机访问），双链表，使用内存分配器动态管理内存；//离散内存
-类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class list;</p>
-</blockquote>
-<p>list 是一种支持在<strong>任意位置都可以快速地插入和删除</strong>元素的容器，且支持<strong>双向遍历</strong>。list 容器能够做到这些的原因在于<strong>其底层结构是双链表</strong>，双链表允许把各个元素都保存在彼此不相干的内存地址上，但每个元素都会与前后相邻元素关联。</p>
-<p>和其它的顺序容器（array, vector, deque）相比，<u>list 的最大优势在于支持在任意位置插入、删除和移动元素</u>，对 list 来说，在哪个位置进行操作并没有区别。list 在部分算法（如 sorting）中的效率可能优于其它顺序容器。</p>
-<p>list 的<strong>主要缺点</strong>是<u>不支持元素的随机访问</u>！如果我们想要访问某个元素，则必须从一个已知元素（如 begin 或 end）开始朝一个方向遍历，直至到达要访问的元素。此外，list 还要消耗更多的内存空间，用于保存各个元素的关联信息。</p>
-<p>[另说] <strong>list 对内存空间的使用效率并不高，一方面元素内存地址是离散的而非连续，另一方面，list 需要保存额外的关联信息。</strong></p>
-<h3 id="7-forward_list">7. forward_list</h3>
-<blockquote>
-<p>Container properties: Sequence | Linked list | Allocator-aware
-容器属性：<font color = red>顺序容器</font>（可顺序访问，但不支持随机访问），单链表，使用内存分配器动态管理内存；
-类模板头：template &lt; class T, class Alloc = allocator<T> &gt; class list;</p>
-</blockquote>
-<p>forward_list 也是一种支持在任意位置快速插入和删除元素的容器，forward_list 相比于 list 的核心区别是它是一个单链表，因此, 每个元素只会与相邻的下一个元素关联！由于关联信息少了一半，因此 forward_list 占用的内存空间更小，且插入和删除的效率稍稍高于 list。作为代价，forward_list 只能单向遍历。</p>
-<p>相比于其它顺序容器（array, vector, deque），forward_list 的优缺点和 list 基本相同。</p>
-<p>既然已经有了 list，为什么 C++ STL 又设计了 forward_list 这一容器呢？设计 forward_list 的目的是为了达到不输于任何一个C风格<strong>手写链表的极值效率</strong>！为此，forward_list 是一个最小链表设计，它甚至没有size()接口，因为内部维护一个size变量会降低增删元素的效率。如果想要获取 forward_list 的 size，一个通常的做法是，用 std::distance 计算 begin 到 end 的距离得出 size。一句话总结：list 兼顾了接口丰富性牺牲了效率，而 forward_list 舍弃了不必要的接口只为追求极致效率。</p>
-<h3 id="8-stack">8. stack</h3>
-<blockquote>
-<p>容器属性：<font color = red>容器适配器</font>，后进先出型容器（LIFO）；
-template &lt;class T, class Container = deque<T> &gt; class stack;</p>
-</blockquote>
-<p>stack（栈）是一个专为 LIFO 设计的容器适配器，也即只能从一端插入和删除；作为适配器，需要指定底层容器才能实例化，参见模板参数中的<code>class Container</code>形参。</p>
-<p>stack 的特点是后进先出（一端进出），不允许遍历；任何时候外界只能访问 stack 顶部的元素；只有在移除 stack 顶部的元素后，才能访问下方的元素。stack 需要底层容器能够在一端增删元素，这一端也即 stack 的“栈顶”；stack 可以接纳任何一个至少支持下列接口的容器作为底层容器：</p>
-<blockquote>
-<p>empty(); size(); back(); push_back(); pop_back()</p>
-</blockquote>
-<p>在标准模板库容器中，vector、deque 和 list 满足上述要求，当然用户也可以自定义一个满足上述要求的容器。通过模板参数可以看出，默认情况下，<strong>stack 使用 deque 作为底层容器</strong>。</p>
-<p>stack 容器应用广泛，例如，编辑器中的 undo （撤销操作）机制就是用栈来记录连续的操作。stack 的设计场景和自助餐馆中堆叠的盘子、摞起来的一堆书类似。</p>
-<h3 id="9-map">9. map</h3>
-<blockquote>
-<p>Container properties: Associative | Ordered | Map | Unique keys | Allocator-aware
-容器属性：<font color = red>关联容器</font>，有序，元素类型&lt;key, value&gt;，key是唯一的，使用内存分配器动态管理内存 ；
-template &lt; class Key, // map::key_type
-class T, // map::mapped_type
-class Compare = less<Key>, // map::key_compare
-class Alloc = allocator&lt;pair&lt;const Key,T&gt; &gt; // map::allocator_type
-class map;</p>
-</blockquote>
-<p>map 是一个关联型容器，其元素类型是由 key 和 value 组成的 std::pair，实际上 map 中元素的数据类型正是 <code>typedef pair&lt;const Key, T&gt; value_type</code>;，这就看的很清楚了。</p>
-<p>所谓关联容器，是指<strong>对所有元素的检索都是通过元素的 key 进行的（而非元素的内存地址）</strong>，map 通过底层的「红黑树」数据结构来将所有的元素按照 key 的相对大小进行排序，所实现的排序效果也是严格弱序特性（strict weak ordering），为此，开发者需要重载 key 的&lt;运算符或者模板参数中的 class Compare。所提到的红黑树是一种自平衡二叉搜索树，它衍生自B树，这里推荐两篇文章（<a href="https://zhuanlan.zhihu.com/p/72505589"target="_blank" rel="external nofollow noopener noreferrer">记一次腾讯面试：有了二叉查找树、平衡树（AVL）为啥还需要红黑树？<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，<a href="https://zhuanlan.zhihu.com/p/273829162"target="_blank" rel="external nofollow noopener noreferrer">图解：什么是红黑树？<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>）作为更深入的参考。</p>
-<p>大体来说，map 访问元素的速度要稍慢于下文的 unordered_map，这是因为虽然都叫“map”，但两者的底层机制完全不一样。但是，相比于后者，map 支持在一个子集合上进行直接迭代器访问，原因在于 map 中的元素是被有序组织的。</p>
-<p>最后，map 也支持通过operator[]的方式来直接访问 value。</p>
-<h3 id="10-multimap">10. multimap</h3>
-<blockquote>
-<p>Container properties: Associative | Ordered | Map | Multiple equivalent keys | Allocator-aware
-容器属性: 关联容器，有序，元素类型&lt;key, value&gt;，允许不同元素key相同，使用内存分配器管理内存；
-template &lt; class Key, // map::key_type
-class T, // map::mapped_type
-class Compare = less<Key>, // map::key_compare
-class Alloc = allocator&lt;pair&lt;const Key,T&gt; &gt; // map::allocator_type
-class map;</p>
-</blockquote>
-<p><strong>map 中不允许出现 key 相同的两个元素，但 multimap 则可以这样做！</strong></p>
-<p>multimap 与 map 底层原理完全一样，都是使用「红黑树」对元素数据按 key 的比较关系，进行快速的插入、删除和检索操作；所不同的是 multimap 允许将具有相同 key 的不同元素插入容器（这个不同体现了 multimap 对红黑树的使用方式的差异）。在 multimap 容器中，元素的 key 与元素 value 的映射关系，是一对多的，因此，multimap 是多重映射容器。</p>
-<p>注意，在向 multimap 中新增元素时，multimap 只会判断 key 是否相同，而完全不会判断 value 是否相同！<font color=red>这意味着如果相同的 &lt;key, value&gt; 插入了多次，multimap 会对它们悉数保存！</font></p>
-<p>在使用中，我们可以通过迭代器配合 lower_bound() 和 upper_bound() 来访问一个 key 对应的所有 value，也可以使用equal_range()来访问一个 key 对应的所有 value，也可以通过find()配合count()来访问一个 key 对应的所有 value，个人认为前两种方法使用起来更方便一点。</p>
-<p>下文中将要提到的 multiset 之于 set 类似于这里的 multimap 之于 map。</p>
-<h3 id="11-set">11. set</h3>
-<blockquote>
-<p>Container properties: Associative | Ordered | Set | Unique keys | Allocator-aware
-容器属性：<font color=red>关联容器</font>，有序，元素自身即key，元素有唯一性，使用内存分配器动态管理内存；
-template &lt; class T, // set::key_type/value_type
-class Compare = less<T>, // set::key_compare/value_compare
-class Alloc = allocator<T> // set::allocator_type
-class set;</p>
-</blockquote>
-<p>set 是一个关联型容器，和 map 一样，它的底层结构是「红黑树」，但和 map 不一样的是，<strong>set 是直接保存 value 的</strong>，或者说，set 中的 value 就是 key。</p>
-<p><strong>set 中的元素必须是唯一的，不允许出现重复的元素</strong>，且元素不可更改，但可以自由插入或者删除。</p>
-<p>由于底层是红黑树，所以 set 中的元素也是严格弱序（strict weak ordering）排序的，因此<u>支持用迭代器做范围访问</u>（迭代器自加自减）。</p>
-<p>实际使用中，set 和 map 是近亲，性能相似，他们的差别是元素的 value 本身是否也作为 key 来标识自己。</p>
-<h3 id="12-multi_set">12. multi_set</h3>
-<blockquote>
-<p>Container properties: Associative | Ordered | Set | Multiple equivalent keys | Allocator-aware
-容器属性：<font color=red>关联容器</font>，有序，元素自身即key，允许不同元素值相同，使用内存分配器动态管理内存 ；
-template &lt; class T, // multiset::key_type/value_type
-class Compare = less<T>, // multiset::key_compare/value_compare
-class Alloc = allocator<T> &gt; // multiset::allocator_type
-class multiset;</p>
-</blockquote>
-<p>multiset 之于 set 就如同 multimap 之于 map：</p>
-<p>multiset 和 set 底层都是红黑树，multiset 相比于 set 支持保存多个相同的元素；</p>
-<p>multimap 和 map 底层都是红黑树，multimap 相比于 map 支持保存多个key相同的元素。</p>
-<p>鉴于以上近亲关系，multiset 的性能特点与其它三者相似，不再赘述。</p>
-<h3 id="13-unordered_map">13. unordered_map</h3>
-<blockquote>
-<p>Container properties: Associative | Unordered | Map | Unique keys | Allocator-aware
-容器属性：<font color = red>关联容器</font>，无序，元素类型&lt;key, value&gt;，key是唯一的，使用内存分配器动态管理内存 ； template &lt; class Key, // unordered_map::key_type
-class T, // unordered_map::mapped_type
-class Hash = hash<Key>, // unordered_map::hasher
-class Pred = equal_to<Key>, // unordered_map::key_equal
-class Alloc = allocator&lt; pair&lt;const Key,T&gt; &gt; // unordered_map::allocator_type
-class unordered_map;</p>
-</blockquote>
-<p>unordered_map 和 map 一样，都是关联容器，以键值对儿 &lt;key, value&gt; 作为元素进行存储；但是，除此之外，两者可以说是完全不一样！</p>
-<p>这是由底层的数据结构决定的，map 以红黑树作为底层结构组织数据，而 <strong>unordered_map 以哈希表(hash table)作为底层数据结构</strong>来组织数据，这造成了两点重要影响：
-1. unordered_map 不支持排序，<font color=red>在使用迭代器做范围访问时（迭代器自加自减）效率更低</font>；
-2. 但 unordered_map 直接访问元素的速度更快（尤其在规模很大时），因为它通过直接计算 key 的哈希值来访问元素，是O(1)复杂度！</p>
-<p>网络上有对 map VS unordered_map 效率对比的测试，通常 <strong>map 增删元素的效率更高，unordered_map 访问元素的效率更高</strong>，可以参见<a href="https://link.zhihu.com/?target=https%3A//blog.csdn.net/uniqsa/article/details/62442383"target="_blank" rel="external nofollow noopener noreferrer">这篇文章<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。另外，unordered_map 内存占用更高，因为底层的哈希表需要预分配足量的空间。</p>
-<p>综上，unordered_map 更适用于增删操作不多，但需要频繁访问，且内存资源充足的场合。</p>
-<blockquote>
-<p>比如在机器人领域的SLAM技术中，可以选择 unordered_map 来维护体素形式的 local map？ 当然 deque 应该也是不错的选择。</p>
-</blockquote>
-<h3 id="14-unordered_multimap">14. unordered_multimap</h3>
-<blockquote>
-<p>Container properties: Associative | Unordered | Map | Multiple equivalent keys | Allocator-aware
-容器属性：关联容器，无序，元素类型&lt;key, value&gt;，允许不同元素key相同，使用内存分配器管理内存 ；
-template &lt; class Key, // unordered_multimap::key_type
-class T, // unordered_multimap::mapped_type
-class Hash = hash<Key>, // unordered_multimap::hasher
-class Pred = equal_to<Key>, // unordered_multimap::key_equal
-class Alloc = allocator&lt; pair&lt;const Key,T&gt; &gt; // unordered_multimap::allocator_type
-class unordered_multimap;</p>
-</blockquote>
-<p>unordered_multimap 是对 unordered_map 的拓展，唯一区别在于 unordered_multimap 允许不同元素的 key 相同，但两者无论是在底层结构还是在容器特性上都是相通的，仅仅是对底层哈希表的使用方式稍有不同。</p>
-<p>在 unordered_multimap 中想要访问同一个 key 下对应的所有元素的话，可以使用equal_range()轻松做到；当然，也可以使用find()和count()配合的方式来访问。</p>
-<p>unordered_multimap 的容器特性参见 unordered_map，不再赘述。</p>
-<h3 id="15-unordered_set">15. unordered_set</h3>
-<blockquote>
-<p>Container properties: Associative | Unordered | Set | Unique keys | Allocator-aware
-容器属性：<font color=red>关联容器</font>，无序，元素自身即key，元素有唯一性，使用内存分配器动态管理内存 ；
-template &lt; class Key, // unordered_set::key_type/value_type
-class Hash = hash<Key>, // unordered_set::hasher
-class Pred = equal_to<Key>, // unordered_set::key_equal
-class Alloc = allocator<Key> // unordered_set::allocator_type
-class unordered_set;</p>
-</blockquote>
-<p>所有unordered_XXX类容器的特点都是以哈希表作为底层结构；所有 XXX_set 类容器的特点都是「元素自身也作为key」来标识自己。我们在把两类特性叠加到一起，就得到了 unordered_set。</p>
-<p>在 unordered_set 中，元素自身同时也作为 key 使用；既然是作为 key 使用，那么元素就不能被更改，也即 unordered_set 中的元素都是 constant 的，但我们可以自由的插入和删除元素，这也是所有XXX_set类容器的性质。既然底层结构是哈希表，意味着 unordered_set 中的元素是无序的，不能按照大小排序，这也是所有unordered_XXX类容器的性质。</p>
-<p>和所有的unordered_XXX类容器一样：
-1. unordered_set 直接用迭代器做范围访问时（迭代器自加自减）效率更低，低于 set；
-2. 但 unordered_set 直接访问元素的速度更快（尤其在规模很大时），因为它通过直接计算 key 的哈希值来访问元素，是O(1)复杂度！</p>
-<h3 id="16-unordered_multiset">16. unordered_multiset</h3>
-<blockquote>
-<p>Container properties: Associative | Unordered | Set | Multiple equivalent keys | Allocator-aware
-容器属性：<font color=red>关联容器</font>，无序，元素自身即key，允许不同元素值相同，使用内存分配器动态管理内存 ；
-template &lt; class Key, // unordered_multiset::key_type/value_type
-class Hash = hash<Key>, // unordered_multiset::hasher
-class Pred = equal_to<Key>, // unordered_multiset::key_equal
-class Alloc = allocator<Key> // unordered_multiset::allocator_type
-class unordered_multiset;</p>
-</blockquote>
-<p>unordered_multiset，顾名思义，就是集齐了“哈希表为底层结构”，“元素自身即key”，“允许不同元素值相同”这三个特性的容器，是对 unordered_set 的简单拓展。</p>
-<p>unordered_multiset 的效率特性与所有基于哈希表的容器相似，参见 unordered_set，不再赘述。</p>
-<h3 id="17-pair--tuple">17. pair &amp;&amp; tuple</h3>
-<blockquote>
-<p>template &lt;class&hellip; Types&gt; class tuple;
-template &lt;class T1, class T2&gt; struct pair;</p>
-</blockquote>
-<p><code>std::pair</code> 和 <code>std::tuple</code> 并不是stl容器库中的容器，不过鉴于经常用到，就顺便整理一下。先从 tuple 说起，pair 相当于 tuple 的特例。</p>
-<p>tuple 叫作元组，它可以把一组类型相同或不同的元素组合到一起，且元素的数量不限。tuple 的底层原理与 stl 中的容器完全不同，但在功能上，tuple 是对容器的有效补充，因为所有的容器都只能组合相同类型的元素，但tuple 可以组合任意不同类型的元素。在使用上，可以用std::make_tuple()来构造 tuple 对象，可以用std::get<index>()来获取 tuple 对象的某个元素，注意std::get<index>()返回的是 tuple 对象中某个元素的索引，因此是可以用作左值的！此外，也可以用std::tie()打包一组变量来作为左值接受 tuple 对象的赋值。</p>
-<p>tuple 的底层原理大概是一个层层继承的类，详情可以参考<a href="https://zhuanlan.zhihu.com/p/356954012"target="_blank" rel="external nofollow noopener noreferrer">这篇文章<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，写的非常透彻。</p>
-<p>pair 可以看作是把 tuple 的 size 限制为 2 的一个特例，pair 只能把一对儿元素组合到一起。在使用上，可以用std::make_pair()来直接构建 pair 对象，可以用std::get&lt;0&gt;()和std::get&lt;1&gt;()来分别获取 pair 对象的两个元素，但更方便的做法是直接访问 pair 类型的两个数据成员pair对象.first和pair对象.second来访问元素</p>
-<p>reference:
-[1]. <a href="https://zhuanlan.zhihu.com/p/542115773"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/542115773<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>C++ 基础知识[二]</title><link>https://jianye0428.github.io/posts/basics_two/</link><pubDate>Tue, 11 Jul 2023 19:39:15 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/basics_two/</guid><description><![CDATA[<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">c++ 八股文 第一部分</div>
-    </div>
-  </div>
-<h2 id="6-基础知识六">6 基础知识(六)</h2>
-<h3 id="61-构造函数为什么不能定义为虚函数-析构函数般写成虚函数的原因-">6.1 构造函数为什么不能定义为虚函数？ ⽽析构函数⼀般写成虚函数的原因 ？</h3>
-<p>构造函数不能声明为虚函数的原因是:</p>
-<blockquote>
-<p>1 构造一个对象的时候，必须知道对象的实际类型，而虚函数行为是在运行期间确定实际类型的。而在构造一个对象时，由于对象还未构造成功。编译器无法知道对象 的实际类型，是该类本身，还是该类的一个派生类，或是更深层次的派生类。无法确定。</br>
-2 虚函数的执行依赖于虚函数表。而虚函数表在构造函数中进行初始化工作，即初始化vptr，让他指向正确的虚函数表。而在构造对象期间，虚函数表还没有被初始化，将无法进行。</br></p>
-</blockquote>
-<p>虚函数的意思就是开启动态绑定，程序会根据对象的动态类型来选择要调用的方法。然而在构造函数运行的时候，这个对象的动态类型还不完整，没有办法确定它到底是什么类型，故构造函数不能动态绑定。（动态绑定是根据对象的动态类型而不是函数名，在调用构造函数之前，这个对象根本就不存在，它怎么动态绑定？）
-编译器在调用基类的构造函数的时候并不知道你要构造的是一个基类的对象还是一个派生类的对象。</p>
-<blockquote>
-<p>析构函数设为虚函数的作用:
-解释：在类的继承中，如果有基类指针指向派生类，那么用基类指针delete时，如果不定义成虚函数，派生类中派生的那部分无法析构。（如果基类的析构函数不是虚函数，那么在delete 基类指针时，只调用基类的析构函数，不会调用派生类的析构函数，故派生类部分不会被析构。）</p>
-</blockquote>
-<h3 id="62-cc中register关键字寄存器缓存内存">6.2 c/c++中register关键字（寄存器、缓存、内存）</h3>
-<p><a href="https://blog.csdn.net/u012484779/article/details/117514000"target="_blank" rel="external nofollow noopener noreferrer">c/c++中register关键字（寄存器、缓存、内存）<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>一般情况下，变量的值是存储在内存中的，CPU 每次使用数据都要从内存中读取。如果有一些变量使用非常频繁，从内存中读取就会消耗很多时间，例如 for 循环中的增量控制。</p>
-<p>为了解决这个问题，可以将使用频繁的变量放在CPU的通用寄存器中，这样使用该变量时就不必访问内存，直接从寄存器中读取，大大提高程序的运行效率。</p>
-<p><strong>寄存器、缓存、内存</strong></p>
-<p>为了加深对 register 变量的理解，这里有必要讲一下CPU寄存器。</p>
-<p>按照与CPU的远近来分，离CPU最近的是寄存器，然后是缓存，最后是内存。</p>
-<p>寄存器是最贴近CPU的，而且CPU只在寄存器中进行存取。<font color=green>寄存的意思是暂时存放数据，不用每次都从内存中读取，它是一个临时的存放数据的空间</font>。</p>
-<p>而寄存器的数据又来源于内存，于是 CPU &lt;&ndash; 寄存器 &lt;&ndash; 内存，这就是它们之间的信息交换。</p>
-<p><font color=red>那么为什么还需要缓存呢？</font>因为如果频繁地操作内存中同一地址上的数据会影响速度，于是就在寄存器和内存之间设置一个缓存，把使用频繁的数据暂时保存到缓存，如果寄存器需要读取内存中同一地址上的数据，就不用大老远地再去访问内存，直接从缓存中读取即可。</p>
-<p>缓存的速度远高于内存，价格也是如此。</p>
-<p>注意：缓存的容量是有限的，寄存器只能从缓存中读取到部分数据，对于使用不是很频繁的数据，会绕过缓存，直接到内存中读取。所以不是每次都能从缓存中得到数据，这就是缓存的命中率，能够从缓存中读取就命中，否则就没命中。</p>
-<p>关于缓存的命中率又是一门学问，哪些数据保留在缓存，哪些数据不保留，都有复杂的算法。</p>
-<p>注意：上面所说的CPU是指CPU核心，从市场上购买的CPU已是封装好的套件，附带了寄存器和缓存，插到主板上就可以用。</p>
-<p>从经济和速度的综合考虑，缓存又被分为一级缓存、二级缓存和三级缓存，它们的存取速度和价格依次降低，容量依次增加。购买到的CPU一般会标出三级缓存的容量。</p>
-<p><strong>register 变量</strong></p>
-<p>寄存器的数量是有限的，通常是把使用最频繁的变量定义为 register 的。</p>
-<p>关于寄存器变量有以下事项需要注意：</p>
-<ul>
-<li>为寄存器变量分配寄存器是动态完成的，因此，只有局部变量和形式参数才能定义为寄存器变量。</li>
-<li>局部静态变量不能定义为寄存器变量，因为一个变量只能声明为一种存储类别。</li>
-<li>寄存器的长度一般和机器的字长一致，所以，只有较短的类型如int、char、short等才适合定义为寄存器变量，诸如double等较大的类型，不推荐将其定义为寄存器类型。</li>
-<li>CPU的寄存器数目有限，因此，即使定义了寄存器变量，编译器可能并不真正为其分配寄存器，而是将其当做普通的auto变量来对待，为其分配栈内存。当然，有些优秀的编译器，能自动识别使用频繁的变量，如循环控制变量等，在有可用的寄存器时，即使没有使用 register 关键字，也自动为其分配寄存器，无须由程序员来指定。</li>
-</ul>
-<p><strong>c++中register</strong></p>
-<p>在早期c语言编译器不会对代码进行优化，因此使用register关键字修饰变量是很好的补充，大大提高的速度。</p>
-<p>register关键字请求让编译器将变量a直接放入寄存器里面，以提高读取速度，在C语言中register关键字修饰的变量不可以被取地址，但是c++中进行了优化。</p>
-<p>c++中依然支持register关键字，但是c++编译器也有自己的优化方式，即某些变量不用register关键字进行修饰，编译器也会将多次连续使用的变量优化放入寄存器中，例如入for循环的循环变量i。</p>
-<p>c++中也可以对register修饰的变量取地址，不过c++编译器发现程序中需要取register关键字修饰的变量的地址时，register关键字的声明将变得无效。</p>
-<h3 id="63-cc中进程和线程的区别">6.3 c/c++中进程和线程的区别</h3>
-<p><a href="https://blog.csdn.net/weixin_43956732/article/details/109736126"target="_blank" rel="external nofollow noopener noreferrer">c++多线程编程 &ndash; 进程与线程区别<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-<a href="https://zhuanlan.zhihu.com/p/616080301"target="_blank" rel="external nofollow noopener noreferrer">c++面试-操作系统篇<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-<a href="https://zhuanlan.zhihu.com/p/114453309"target="_blank" rel="external nofollow noopener noreferrer">面试必考 | 进程和线程的区别<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<ul>
-<li>
-<p>何为进程(process)?</p>
-<ul>
-<li>
-<p><strong>进程是一个应用程序被操作系统拉起来加载到内存之后从开始执行到执行结束的这样一个过程</strong>。简单来说，进程是程序（应用程序，可执行文件）的一次执行。进程通常由程序、数据和进程控制块（PCB）组成。比如双击打开一个桌面应用软件就是开启了一个进程。</p>
-</li>
-<li>
-<p>传统的进程有两个基本属性：可拥有资源的独立单位；可独立调度和分配的基本单位。对于这句话我的理解是：进程可以获取操作系统分配的资源，如内存等；进程可以参与操作系统的调度，参与CPU的竞争，得到分配的时间片，获得处理机（CPU）运行。</p>
-</li>
-<li>
-<p>进程在创建、撤销和切换中，系统必须为之付出较大的时空开销，因此在系统中开启的进程数不宜过多。比如你同时打开十几个应用软件试试，电脑肯定会卡死的。于是紧接着就引入了线程的概念。</p>
-</li>
-</ul>
-</li>
-<li>
-<p>何为线程(thread)?</p>
-<ul>
-<li>
-<p>线程是进程中的一个实体，是被系统独立分配和调度的基本单位。也有说，线程是CPU可执行调度的最小单位。也就是说，进程本身并不能获取CPU时间，只有它的线程才可以。</p>
-</li>
-<li>
-<p>引入线程之后，将传统进程的两个基本属性分开了，线程作为调度和分配的基本单位，进程作为独立分配资源的单位。我对这句话的理解是：线程参与操作系统的调度，参与CPU的竞争，得到分配的时间片，获得处理机（CPU）运行。而进程负责获取操作系统分配的资源，如内存。</p>
-</li>
-<li>
-<p>线程基本上不拥有资源，只拥有一点运行中必不可少的资源，它可与同属一个进程的其他线程共享进程所拥有的全部资源。</p>
-</li>
-<li>
-<p>线程具有许多传统进程所具有的特性，故称为“轻量型进程”。同一个进程中的多个线程可以并发执行。</br></p>
-</li>
-</ul>
-</li>
-<li>
-<p>进程和线程的区别？</p>
-<ul>
-<li>
-<p>线程分为<font color=red>用户级线程</font>和<font color=red>内核支持线程</font>两类，<strong>用户级线程</strong>不依赖于内核，该类线程的创建、撤销和切换都不利用系统调用来实现; <strong>内核支持线程</strong>依赖于内核，即无论是在用户进程中的线程，还是在系统中的线程，它们的创建、撤销和切换都利用系统调用来实现。</p>
-</li>
-<li>
-<p>但是，与线程不同的是，无论是系统进程还是用户进程，在进行切换时，都要依赖于内核中的进程(process)调度。因此，无论是什么进程都是与内核有关的，是在内核支持下进程切换的。尽管线程和进程表面上看起来相似，但是他们在本质上是不同的。</p>
-</li>
-<li>
-<p>根据操作系统中的知识，进程至少必须有一个线程，通常将此线程称为主线程。</p>
-</li>
-<li>
-<p><font color=red><u>进程要独立地占用系统资源（如内存），而同一进程的线程之间是共享资源的。进程本身并不能获取CPU时间，只有它的线程才可以。</u></font></p>
-</li>
-</ul>
-</li>
-<li>
-<p>其他</p>
-<ul>
-<li>进程在创建、撤销和切换过程中，系统的时空开销非常大。用户可以通过创建线程来完成任务，以减少程序并发执行时付出的时空开销。例如可以在一个进程中设置多个线程，当一个线程受阻时，第二个线程可以继续运行，当第二个线程受阻时，第三个线程可以继续运行&hellip;&hellip;。这样，对于拥有资源的基本单位（进程），不用频繁的切换，进一步提高了系统中各种程序的并发程度。</li>
-</ul>
-</li>
-</ul>
-<p>ref: </br>
-[1].https://blog.csdn.net/qq_41803340/category_10405604.html</p>
-<p>[待整理内容]</p>
-<h2 id="一常考c基础概念">一.常考C++基础概念</h2>
-<h3 id="1c三大特性封装继承多态">1.C++三大特性（封装、继承、多态）</h3>
-<p><strong>封装：</strong></p>
-<blockquote>
-<p>隐藏类的属性和实现细节，仅仅对外提供接口，
-封装性实际上是由编译器去识别关键字public、private和protected来实现的，
-体现在类的成员可以有<font color=red>公有成员(public)</font>，<font color=red>私有成员(private)</font>，<font color=red>保护成员(protected)</font>。
-私有成员是在封装体内被隐藏的部分，只有类体内声明的函数(类的成员函数)才可以访问私有成员，
-而在类体外的函数是不能访问的，<u>公有成员(public)是封装体与外界的一个接口</u>，
-类体外的函数可以访问公有成员，保护成员是只有该类的成员函数和<strong>该类的派生类</strong>才可以访问的。</p>
-</blockquote>
-<blockquote>
-<p>优点：隔离变化；便于使用；提高重用性；提高安全性
-缺点：如果封装太多，影响效率；使用者不能知道代码具体实现。</p>
-</blockquote>
-<p><strong>继承：</strong></p>
-<blockquote>
-<p>被继承的是父类（基类），继承出来的是子类（派生类），子类拥有父类的所有的特性。
-继承方式有<font color=red>公有继承</font>、<font color=red>私有继承</font>，<font color=red>保护继承</font>。默认是<strong>私有继承</strong></p>
-</blockquote>
-<blockquote>
-<p>*公有继承中父类的公有和保护成员在子类中不变，私有的在子类中不可访问。
-*私有继承中父类的公有和保护成员在子类中变为私有，但私有的在子类中不可访问。
-*保护继承中父类的公有和保护成员在子类中变为保护，但私有的在子类中不可访问。
-c++语言允许单继承和多继承</p>
-</blockquote>
-<blockquote>
-<p>优点：继承减少了重复的代码、继承是多态的前提、继承增加了类的耦合性；
-缺点：继承在编译时刻就定义了，无法在运行时刻改变父类继承的实现；</p>
-</blockquote>
-<blockquote>
-<p>父类通常至少定义了子类的部分行为，父类的改变都可能影响子类的行为；
-如果继承下来的子类不适合解决新问题，父类必须重写或替换，那么这种依赖关系就限制了灵活性，
-最终限制了复用性。</p>
-</blockquote>
-<blockquote>
-<p>虚继承：为了解决多重继承中的二义性问题，它维护了一张虚基类表。 (菱形继承问题)</p>
-</blockquote>
-<p><strong>多态:</strong></p>
-<p>ref: <a href="https://blog.csdn.net/weixin_42678507/article/details/97111466"target="_blank" rel="external nofollow noopener noreferrer">多态的四种表现形式<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<ul>
-<li>运行时多态(虚函数)</li>
-<li>编译时多态(模板)</li>
-<li>重载</li>
-<li>类型转换</li>
-</ul>
-<blockquote>
-<p>运行时多态(Subtype Polymorphism/Runtime Polymorphism)</p>
-</blockquote>
-<p>运行时多态就是派生类重写基类的虚函数，在调用函数里，参数为基类的指针或引用，会构成多态。我之前写过一篇多态的原理，就是在讲多态(运行时多态)在底层是怎么实现的
-<a href="https://blog.csdn.net/weixin_42678507/article/details/89467387"target="_blank" rel="external nofollow noopener noreferrer">多态的底层实现<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>举个例子：比如买票这个行为，成人去买就是全价，学生买就是半价票。但是不管成人还是学生都是人这个体系。所以我们需要根据谁来买票才能决定价格，这个时候就需要多态。</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">ticket</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="kt">void</span> <span class="n">price</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">adult</span> <span class="o">:</span> <span class="k">public</span> <span class="n">ticket</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="kt">void</span> <span class="n">price</span><span class="p">()</span> <span class="k">override</span>
-</span></span><span class="line"><span class="cl">	<span class="p">{</span>
-</span></span><span class="line"><span class="cl">		<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;成人全价！&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">student</span> <span class="o">:</span> <span class="k">public</span> <span class="n">ticket</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="kt">void</span> <span class="n">price</span><span class="p">()</span> <span class="k">override</span>
-</span></span><span class="line"><span class="cl">	<span class="p">{</span>
-</span></span><span class="line"><span class="cl">		<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;学生半价！&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">BuyTicket</span><span class="p">(</span><span class="n">ticket</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="n">t</span><span class="p">.</span><span class="n">price</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="n">adult</span> <span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">	<span class="n">student</span> <span class="n">s</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">	<span class="n">BuyTicket</span><span class="p">(</span><span class="n">a</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">	<span class="n">BuyTicket</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p>编译时多态(Parametric Polymorphism/Compile-Time Polymorphism)</p>
-</blockquote>
-<p>编译时多态就是模板。在程序编译时，编译器根据参数的类型，就将生成某种类型的函数或类。我之前关于模板的(总结)[https://blog.csdn.net/weixin_42678507/article/details/88658291]</p>
-<p>举个简单的例子：Add() 函数是一个非常简单的函数，但是如果你写一个整型的 Add 函数，那么我想加 double 型的呢？你再写一个 double 型的 Add 函数，那么我想加 char 型的呢？</p>
-<p>这个时候就用到了模板，我们先定义一个逻辑，具体类型等编译时再生成该类型的函数或类。</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="n">T</span> <span class="n">Add</span><span class="p">(</span><span class="n">T</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">T</span> <span class="n">rhs</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="n">lhs</span> <span class="o">+</span> <span class="n">rhs</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="n">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">	<span class="n">Add</span><span class="p">(</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">	<span class="n">Add</span><span class="p">(</span><span class="sc">&#39;a&#39;</span><span class="p">,</span> <span class="sc">&#39;b&#39;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p>重载(Ad-hoc Polymorphism/Overloading)</p>
-</blockquote>
-<p>函数名相同，参数不同就构成了重载。重载主要用于函数，当某个函数的功能无法处理某些参数的情况时，我们就可以重载一个函数来单独处理。</p>
-<p>举个例子：比如说上面的 Add 函数，当前内置类型都可以处理，但是如果我传两个字符串怎么办？就不可以像刚才那么加了。得重载一个函数单独处理。</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">Add</span><span class="p">(</span><span class="kt">int</span> <span class="n">lhs</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rhs</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="n">lhs</span> <span class="o">+</span> <span class="n">rhs</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">Add</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ans</span><span class="p">(</span><span class="n">lhs</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">	<span class="n">ans</span> <span class="o">+=</span> <span class="n">rhs</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="n">ans</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="n">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">	<span class="n">Add</span><span class="p">(</span><span class="s">&#34;abc&#34;</span><span class="p">,</span> <span class="s">&#34;def&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p>类型转换(Coercion Polymorphism/Casting)</p>
-</blockquote>
-<p>类型转换主要分为四种：</p>
-<ul>
-<li>static_cast: 相当于隐式类型转换。</li>
-<li>const_cast: 这个可以去除一个 const 变量的 const 性质，使可以改变它的值。</li>
-<li>reinterpret_cast: 相当于强制类型转换。</li>
-<li>dynamic_cast: 这个可以使子类指针或引用赋值给父类指针或引用。</li>
-</ul>
-<p>类型转换很简单，这里就不多赘述了。</p>
-<h3 id="2数组和链表的区别">2.数组和链表的区别</h3>
-<p>数组和链表是两种不同的数据存储方式</p>
-<p><strong><font color=purple>数组的定义</font></strong></p>
-<blockquote>
-<p>数组是一组具有相同数据类型的变量的集合，这些变量称之为集合的元素。
-每个元素都有一个编号，称之为下标，可以通过下标来区别并访问数组元素，数组元素的个数叫做数据的长度。</p>
-</blockquote>
-<p><strong><font color=purple>链表的定义</font></strong></p>
-<blockquote>
-<p>链表是一种<u>物理存储单元上非连续、非顺序的</u>存储结构,数据元素的逻辑顺序是通过链表中的指针链接次序实现的。
-链表的特性是在中间任意位置插入和删除元素都非常快，不需要移动其它元素。
-对于单向链表而言，链表中的每一个元素都要保存一个指向下一个元素的指针。
-对于双向链表而言，链表中的每个元素既要保存指向下一个元素的指针，又要保存指向上一个元素的指针。
-对于双向循环链表而言，链表中的最后一个元素保存一个指向第一个元素的指针。</p>
-</blockquote>
-<p><strong><font color=purple>数组和链表的区别主要表现在以下几个方面</font></strong></p>
-<table>
-<thead>
-<tr>
-<th>比较</th>
-<th>数组</th>
-<th>链表</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>逻辑结构</td>
-<td>(1) 数组在内存中连续；   (2)使用数组之前，必须事先固定数组长度，不支持动态改变数组大小；  (3) 数组元素增加时，有可能会数组越界；  (4) 数组元素减少时，会造成内存浪费；  （5）数组增删时需要移动其它元素</td>
-<td>(1) 链表采用动态内存分配的方式，在内存中不连续   (2)支持动态增加或者删除元素   (3) 需要时可以使用malloc或者new来申请内存，不用时使用free或者delete来释放内存</td>
-</tr>
-<tr>
-<td>内存结构</td>
-<td>数组从栈上分配内存，使用方便，但是自由度小</td>
-<td>链表从堆上分配内存，自由度大，但是要注意内存泄漏</td>
-</tr>
-<tr>
-<td>访问效率</td>
-<td>数组在内存中顺序存储，可通过下标访问，访问效率高</td>
-<td>链表访问效率低，如果想要访问某个元素，需要从头遍历</td>
-</tr>
-<tr>
-<td>越界问题</td>
-<td>数组的大小是固定的，所以存在访问越界的风险</td>
-<td>越界的风险	只要可以申请得到链表空间，链表就无越界风险</td>
-</tr>
-</tbody>
-</table>
-<p><strong><font color=purple>数组和链表的使用场景</font></strong></p>
-<table>
-<thead>
-<tr>
-<th>比较</th>
-<th>数组使用场景</th>
-<th>链表使用场景</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>空间</td>
-<td>数组的存储空间是栈上分配的，存储密度大，当要求存储的大小变化不大时，且可以事先确定大小，宜采用数组存储数据</td>
-<td>链表的存储空间是堆上动态申请的，当要求存储的长度变化较大时，且事先无法估量数据规模，宜采用链表存储</td>
-</tr>
-<tr>
-<td>时间</td>
-<td>数组访问效率高。当线性表的操作主要是进行查找，很少插入和删除时，宜采用数组结构</td>
-<td>链表插入、删除效率高，当线性表要求频繁插入和删除时，宜采用链表结构</td>
-</tr>
-</tbody>
-</table>
-<h3 id="3-智能指针">3. 智能指针</h3>
-<p>我们知道除了静态内存和栈内存外，每个程序还有一个<strong>内存池</strong>，这部分内存被称为自由空间或者堆。程序用堆来存储动态分配的对象即那些在程序运行时分配的对象，当动态对象不再使用时，我们的代码必须显式的销毁它们。</p>
-<p>在C++中，动态内存的管理是用一对运算符完成的：<strong>new</strong>和<strong>delete</strong>，new:在动态内存中为对象分配一块空间并返回一个指向该对象的指针，delete：指向一个动态独享的指针，销毁对象，并释放与之关联的内存。</p>
-<p>动态内存管理经常会出现两种问题：一种是忘记释放内存，会造成内存泄漏；一种是尚有指针引用内存的情况下就释放了它，就会产生引用非法内存的指针。</p>
-<p>为了更加容易（更加安全）的使用动态内存，引入了智能指针的概念。智能指针的行为类似常规指针，重要的区别是它负责自动释放所指向的对象。标准库提供的两种智能指针的区别在于管理底层指针的方法不同，<strong>shared_ptr允许多个指针指向同一个对象，unique_ptr则“独占”所指向的对象</strong>。标准库还定义了一种名为<strong>weak_ptr的伴随类</strong>，它是一种弱引用，指向shared_ptr所管理的对象，这三种智能指针都定义在memory头文件中。</p>
-<ul>
-<li>
-<p>1 智能指针的作用</p>
-<ul>
-<li>智能指针是一个类，用来存储指向动态分配对象的指针，负责自动释放动态分配的对象，防止堆内存泄漏。动态分配的资源，交给一个类对象去管理，当类对象生命周期结束时，自动调用析构函数释放资源</li>
-</ul>
-</li>
-<li>
-<p>2  智能指针的种类: shared_ptr、unique_ptr、weak_ptr、auto_ptr</p>
-<ul>
-<li><a href="https://blog.csdn.net/weixin_41969690/article/details/107912842"target="_blank" rel="external nofollow noopener noreferrer">四种指针详情<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ul>
-</li>
-</ul>
-<p>2.1 智能指针的实现原理</p>
-<p>智能指针的实现原理就是在一个类的内部封装了类对象的指针，然后在析构函数里对我们的类对象指针进行释放，因为类的析构是在类对象生命期结束时自动调用的，这样我们就省去了手动释放内存的操作，避免忘记手动释放导致的内存泄漏。</p>
-<p>2.2 C++11四种智能指针总结</p>
-<p>2.2.1 auto_ptr：</p>
-<pre><code>auto_ptr以前是用在C98中，C++11被抛弃，头文件一般用来作为独占指针
-
-auto_ptr被赋值或者拷贝后，失去对原指针的管理
-
-auto_ptr不能管理数组指针，因为auto_ptr的内部实现中，析构函数中删除对象使用delete而不是delete[]，释放内存的时候仅释放了数组的第一个元素的空间，会造成内存泄漏。
-
-auto_ptr不能作为容器对象，因为STL容器中的元素经常要支持拷贝，赋值等操作。
-</code></pre>
-<p>2.2.2 unique_ptr:</p>
-<pre><code>C++11中用来替代auto_ptr
-
-拷贝构造和赋值运算符被禁用，不能进行拷贝构造和赋值运算
-
-虽然禁用了拷贝构造和赋值运算符，但unique_ptr可以作为返回值，用于从某个函数中返回动态申请内存的所有权，本质上是移动拷贝，就是使用std:move()函数，将所有权转移。
-</code></pre>
-<p>2.2.3 share_ptr:</p>
-<pre><code>多个指针可以指向相同的对象，调用release()计数-1，计数0时资源释放
-
-.use_count()查计数
-
-.reset()放弃内部所有权
-
-share_ptr多次引用同一数据会导致内存多次释放
-
-循环引用会导致死锁，
-
-引用计数不是原子操作。
-</code></pre>
-<p><code>shared_ptr</code> 有两个数据成员，一个是指向 对象的指针 ptr，另一个是 ref_count 指针（包含vptr、use_count、weak_count、ptr等）；
-在这里插入图片描述
-</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Foo</span><span class="o">&gt;</span> <span class="n">x</span><span class="p">(</span><span class="k">new</span> <span class="n">Foo</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Foo</span><span class="o">&gt;</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>步骤一：</p>
-<pre><code>`y=x` 涉及两个成员的复制，这两步拷贝不会同时（原子）发生，中间步骤 1，复制 ptr 指针，中间步骤 2，复制 ref_count 指针，导致引用计数加 1
-</code></pre>
-<p>
-步骤二:
-</p>
-<p>因为是两步，如果没有 <code>mutex</code> 保护，那么在多线程里就有数据竞争。</p>
-<p>多线程读写同一个 <code>shared_ptr</code> 必须加锁。</p>
-<p>2.2.4 weak_ptr:</p>
-<pre><code>1.解决两个share_ptr互相引用产生死锁，计数永远降不到0，没办法进行资源释放，造成内存泄漏的问题。
-
-2.使用时配合share_ptr使用，把其中一个share_ptr更换为weak_ptr。
-</code></pre>
-<h3 id="4-重载重写重定义">4. 重载、重写、重定义</h3>
-<p>(1) 重载（overload）：
-指函数名相同，但是它的参数表列个数或顺序，类型不同。但是不能靠返回类型来判断。
-a 相同的范围（在同一个类中）
-b 函数名字相同、 参数不同
-c virtual关键字可有可无
-d 返回值可以不同；</p>
-<p>(2) 重写（覆盖override)是指派生类函数覆盖基类函数，特征是：
-a 不同的范围，分别位于基类和派生类中
-b 函数的名字相同、 参数相同
-c 基类函数必须有virtual关键字，不能有static
-d 返回值相同（或者协变），否则报错；
-e 重写函数的访问修饰符可以不同。尽管virtual是private的，派生类中重写改写为public, protected也是可以的</p>
-<p>(3) 重定义(隐藏redefine)是指派生类的函数屏蔽了与其同名的基类函数，特征是：
-a 不在同一个作用域（分别位于派生类与基类）
-b 函数名字相同
-c 返回值可以不同
-d 规则：</p>
-<p>如果派生类的函数和基类的函数同名，但是参数不同，此时，不管有无virtual，基类的函数被隐藏；</p>
-<p>如果派生类的函数与基类的函数同名，并且参数也相同，但是基类函数没有vitual关键字，此时，基类的函数被隐藏。</p>
-<p>ps: 多态性可以分为静态多态性（方法的重载，一个类）和动态多态性（方法的覆盖，有继承关系的类之间的行为）。进而多态性可以由重载和覆盖来实现。</p>
-<h3 id="5static与const区别和作用">5.static与const区别和作用</h3>
-<p>static:</p>
-<pre><code>1.**static局部变量**将一个变量声明为函数的局部变量，那么这个局部变量在函数执行完不会释放，而是继续保留在内存中；
-2.**static全局变量**表示一个变量在当前文件的全局可以访问；
-3.**static函数**表示一个函数只能在当前文件中被访问；
-4.**static类成员变量**表示这个成员为全类所共有；
-5.**static类成员函数**表示这个函数为全类所有，且只能访问成员变量。
-6.全局变量在整个工程文件内有效；静态全局变量只在定义它的文件中有效；
-7.静态局部变量只在定义它的函数内有效，且程序只分配一次内存，函数返回时不会释放，下次调用时不会重新赋值，还保留上次结果值；局部变量在函数返回时就释放掉；
-8.全局变量和静态变量编译器会默认初始化为0；局部变量的默认值未知；
-9.局部静态变量与全局变量共享全局数据，但是静态局部变量值在定义该变量的函数内部可见。
-10.静态成员（静态成员函数）与非静态成员（成员函数）的区别在于有无this指针；静态成员是静态存储，必须进行初始化；
-11.静态成员函数访问非静态成员报错: 静态成员在类加载时就已经分配内存，而此时非静态成员尚未分配内存，访问不存在的内存自然会报错；
-</code></pre>
-<p>const</p>
-<pre><code>1.&lt;font color=red&gt;const常量&lt;/font&gt; 定义时必须初始化，以后不能修改；
-2.&lt;font color=red&gt;const形参&lt;/font&gt; 该形参在函数里不能被修改；
-3.&lt;font color=red&gt;const修饰类成员函数&lt;/font&gt; 该函数对成员变量只能进行读操作；
-</code></pre>
-<p>static关键字作用</p>
-<pre><code>1.函数体内static变量的作用范围为该函数体，该变量的内存只被分配一次，因此该值在下次调用时还维持上一次的值；
-2.在模块内的static函数和变量可以被可以被模块内的函数访问，不能被模块外的函数访问；
-3.在类内的static成员变量为整个类所有，类的所有对象只有一份拷贝；
-4.在类内的static成员函数为整个类所有，这个函数不接收this指针，因此只能访问类的static成员变量；
-</code></pre>
-<p>const关键字</p>
-<pre><code>1.阻止一个变量被改变；
-2.声明常量指针和指针常量；
-3.const修饰形参，表示为输入参数，在函数体内不能修改该参数的值；
-4.const修饰成员函数，表明为一个常函数，不能修改成员变量的值；
-5.类的成员函数，有时必须返回const类型的值，使得返回值不能为左值。
-</code></pre>
-<p><strong>const修饰指针有三种情况</strong></p>
-<ol>
-<li>const修饰指针 &mdash; 常量指针 (const修饰的是指针,指针指向可以改,指针指向的值不可以更改)</li>
-</ol>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">    <span class="k">const</span> <span class="kt">int</span> <span class="o">*</span> <span class="n">p1</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">p1</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">b</span><span class="p">;</span> <span class="c1">//正确
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">//*p1 = 100; 报错
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol start="2">
-<li>const修饰常量 &mdash; 指针常量 (const修饰的是常量,指针指向不可以改,指针指向的值可以更改)</li>
-</ol>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="o">*</span> <span class="k">const</span> <span class="n">p2</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="c1">//p2 = &amp;b; //错误
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">*</span><span class="n">p2</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span> <span class="c1">//正确
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol start="3">
-<li>const即修饰指针,又修饰常量 (const既修饰指针又修饰常量，都不可以改)</li>
-</ol>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">const</span> <span class="kt">int</span> <span class="o">*</span> <span class="k">const</span> <span class="n">p3</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="c1">//p3 = &amp;b; //错误
-</span></span></span><span class="line"><span class="cl"><span class="c1">//*p3 = 100; //错误
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>技巧:看const右侧紧跟着的是指针还是常量, 是指针就是常指针,是常量就是指针常量</p>
-<h3 id="6-const与宏定义define区别和作用">6. const与宏定义（#define）区别和作用</h3>
-<p>const 定义的是变量不是常量，只是这个变量的值不允许改变，是常变量，带有类型。编译运行的时候起作用，存在类型检查。</p>
-<p>define 定义的是不带类型的常数，只进行简单的字符替换。在预编译的时候起作用，不存在类型检查。</p>
-<p>1、两者的区别
-(1) 编译器处理方式不同
-#define 宏是在预处理阶段展开。
-const 常量是编译运行阶段使用。</p>
-<p>(2) 类型和安全检查不同
-#define 宏没有类型，不做任何类型检查，仅仅是展开。
-const 常量有具体的类型，在编译阶段会执行类型检查。</p>
-<p>(3) 存储方式不同
-#define宏仅仅是展开，有多少地方使用，就展开多少次，不会分配内存。（宏定义不分配内存，变量定义分配内存。）
-const常量会在内存中分配(可以是堆中也可以是栈中)。</p>
-<p>(4) const 可以节省空间，避免不必要的内存分配。 例如：
-const 定义常量从汇编的角度来看，只是给出了对应的内存地址，而不是象 #define 一样给出的是立即数，所以，const 定义的常量在程序运行过程中只有一份拷贝（因为是全局的只读变量，存在静态区），而 #define 定义的常量在内存中有若干个拷贝。</p>
-<p>(5) 提高了效率。 编译器通常不为普通const常量分配存储空间，而是将它们保存在符号表中，这使得它成为一个编译期间的常量，没有了存储与读内存的操作，使得它的效率也很高。</p>
-<p>(6) 宏替换只作替换，不做计算，不做表达式求解;宏预编译时就替换了，程序运行时，并不分配内存。计算时注意边缘效应</p>
-<h3 id="7虚函数和纯虚函数区别">7.虚函数和纯虚函数区别</h3>
-<pre><code>1.虚函数和纯虚函数可以定义在同一个类中，含有纯虚函数的类被称为抽象类，而只含有虚函数的类不能被称为抽象类。
-2.虚函数可以被直接使用，也可以被子类重载以后，以多态的形式调用，而纯虚函数必须在子类中实现该函数才可以使用，因为纯虚函数在基类有声明而没有定义。
-3.虚函数和纯虚函数都可以在子类中被重载，以多态的形式被调用。
-4.虚函数和纯虚函数通常存在于抽象基类之中，被继承的子类重载，目的是提供一个统一的接口。
-5.虚函数的定义形式：virtual{};纯虚函数的定义形式：virtual  { } = 0;在虚函数和纯虚函数的定义中不能有static标识符，原因很简单，被static修饰的函数在编译时要求前期绑定,然而虚函数却是动态绑定，而且被两者修饰的函数生命周期也不一样。
-6.虚函数充分体现了面向对象思想中的继承和多态性这两大特性，在C++语言里应用极广。比如在微软的MFC类库中，你会发现很多函数都有virtual关键字，也就是说，它们都是虚函数。难怪有人甚至称虚函数是C++语言的精髓。
-7.定义纯虚函数就是为了让基类不可实例化，因为实例化这样的抽象数据结构本身并没有意义或者给出实现也没有意义。
-</code></pre>
-<p><font color=purple>纯虚函数只是一个接口，是个函数的声明而已，它要留到子类里去实现。</font></p>
-<p>虚函数在子类里面也可以不重载的；但纯虚必须在子类去实现，这就像Java的接口一样。通常我们把很多函数加上virtual，是一个好的习惯，虽然牺牲了一些性能，但是增加了面向对象的多态性，因为你很难预料到父类里面的这个函数不在子类里面不去修改它的实现</p>
-<p>虚函数: <a href="https://www.cnblogs.com/zkfopen/p/11061414.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/zkfopen/p/11061414.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h3 id="8-指针和引用的区别">8. 指针和引用的区别</h3>
-<p>1.指针和引用的定义和性质区别：</p>
-<p>(1) 指针：指针是一个变量，只不过这个变量存储的是一个地址，指向内存的一个存储单元；而引用跟原来的变量实质上是同一个东西，只不过是原变量的一个别名而已。如：</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="kt">int</span> <span class="o">*</span><span class="n">p</span><span class="o">=&amp;</span><span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="kt">int</span> <span class="o">&amp;</span><span class="n">b</span><span class="o">=</span><span class="n">a</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>上面定义了一个整形变量和一个指针变量p，该指针变量指向a的存储单元，即p的值是a存储单元的地址。</p>
-<p>而下面2句定义了一个整形变量a和这个整形a的引用b，事实上a和b是同一个东西，在内存占有同一个存储单元。</p>
-<p>(2)引用不可以为空，当被创建的时候，必须初始化，而指针可以是空值，可以在任何时候被初始化。</p>
-<p>(3)可以有const指针，但是没有const引用；</p>
-<p>(4)指针可以有多级，但是引用只能是一级（int **p；合法 而 int &amp;&amp;a是不合法的）</p>
-<p>(5)指针的值可以为空，但是引用的值不能为NULL，并且引用在定义的时候必须初始化；</p>
-<p>(6)指针的值在初始化后可以改变，即指向其它的存储单元，而引用在进行初始化后就不会再改变了。</p>
-<p>(7)&ldquo;sizeof引用&quot;得到的是所指向的变量(对象)的大小，而&quot;sizeof指针&quot;得到的是指针本身的大小；</p>
-<p>(8)指针和引用的自增(++)运算意义不一样；</p>
-<p>(9)如果返回动态内存分配的对象或者内存，必须使用指针，引用可能引起内存泄漏；</p>
-<h3 id="9-结构体赋值">9. 结构体赋值</h3>
-<p>(结构体赋值)[https://blog.csdn.net/datase/article/details/78988320]</p>
-<h3 id="10-c和c区别">10. C和C++区别</h3>
-<p>(C和C++区别)[https://blog.csdn.net/czc1997/article/details/81254971]</p>
-<h3 id="11-c和c传参方式区别">11. C和C++传参方式区别</h3>
-<p>C语言不支持引用传参，如果想要改变传入参数的值，只能用传入指针的方式。</p>
-<h3 id="12-深拷贝和浅拷贝区别">12. 深拷贝和浅拷贝区别</h3>
-<p>(深拷贝和浅拷贝区别)[https://blog.csdn.net/Situo/article/details/110225143]</p>
-<h3 id="13-避免头文件重复包含以及宏定义重定义">13. 避免头文件重复包含以及宏定义重定义</h3>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#ifndef LWIP_TCP_KEEPALIVE
-</span></span></span><span class="line"><span class="cl"><span class="cp">#define LWIP_TCP_KEEPALIVE
-</span></span></span><span class="line"><span class="cl"><span class="cp">#endif</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="14-你怎么理解虚拟类虚拟类可以实例化一个对象吗为什么它的作用和其他类的区别">14. 你怎么理解虚拟类？虚拟类可以实例化一个对象吗？为什么？它的作用和其他类的区别</h3>
-<p>答案：虚拟类可以派生对象，纯虚类不可以实例化对象。因为纯虚类存在未定义的函数，只是个概念，不可真实存在。虚拟类用做多态，纯虚类做接口。</p>
-<h3 id="15-内联函数怎么实现的什么时期处理的优缺点">15. 内联函数怎么实现的，什么时期处理的，优缺点</h3>
-<p>答案：在程序编译时，编译器将程序中出现的内联函数的调用表达式用内联函数的函数体来进行替换。
-优点：不会产生函数调用的开销
-缺点：增加目标程序的代码量，即增加空间开销</p>
-<h3 id="16-位运算按位与按位或异或">16 .位运算（按位与、按位或、异或）</h3>
-<p>按位与运算符（&amp;）</p>
-<p>参加运算的两个数，按二进制位进行“与”运算。</p>
-<p>运算规则：只有两个数的二进制同时为1，结果才为1，否则为0。（负数按补码形式参加按位与运算）</p>
-<p>即 0 &amp; 0= 0 ，0 &amp; 1= 0，1 &amp; 0= 0， 1 &amp; 1= 1。</p>
-<p>例：3 &amp;5  即 00000011 &amp; 00000101 = 00000001 ，所以 3 &amp; 5的值为1。</p>
-<p>按位或运算符（|）</p>
-<p>参加运算的两个数，按二进制位进行“或”运算。</p>
-<p>运算规则：参加运算的两个数只要两个数中的一个为1，结果就为1。</p>
-<p>即  0 | 0= 0 ,  1 | 0= 1  ， 0 | 1= 1  ,  1 | 1= 1 。</p>
-<p>例：2 | 4 即 00000010 | 00000100 = 00000110 ，所以2 | 4的值为 6 。
-异或运算符（^）</p>
-<p>参加运算的两个数，按二进制位进行“异或”运算。</p>
-<p>运算规则：参加运算的两个数，如果两个相应位为“异”（值不同），则该位结果为1，否则为0。</p>
-<p>即 0 ^ 0=0  ， 0 ^ 1= 1  ， 1 ^ 0= 1  ， 1 ^ 1= 0 。</p>
-<p>例： 2 ^ 4 即 00000010 ^ 00000100 =00000110 ，所以 2 ^ 4 的值为6 。</p>
-<h3 id="17-原码反码补码">17. 原码、反码、补码</h3>
-<blockquote>
-<p>原码：是最简单的机器数表示法。用最高位表示符号位，‘1’表示负号，‘0’表示正号。其他位存放该数的二进制的绝对值。</p>
-</blockquote>
-<blockquote>
-<p>反码：正数的反码还是等于原码
-负数的反码就是他的原码除符号位外，按位取反。</p>
-</blockquote>
-<blockquote>
-<p>补码：正数的补码等于他的原码
-负数的补码等于反码+1。</p>
-</blockquote>
-<h3 id="18--堆和栈">18 . 堆和栈</h3>
-<p>(堆和栈)[https://blog.csdn.net/qq_45856289/article/details/106473750]</p>
-<h3 id="19-类和对象">19. 类和对象</h3>
-<p>面向对象(Object Oriented,OO)。</p>
-<p>起初，“面向对象”是指在程序设计中采用封装、继承、多态等设计方法。现在，面向对象的思想已经涉及到软件开发的各个方面。如，面向对象的分析（OOA，ObjectOriented Analysis），面向对象的设计（OOD，Object Oriented Design）、以及面向对象的编程实现（OOP，Object Oriented Programming）。
-对象和类解释：</p>
-<p>1）对象：对象是人们要进行研究的任何事物，它不仅能表示具体的事物，还能表示抽象的规则、计划或事件。对象具有状态，一个对象用数据值来描述它的状态。对象还有操作，用于改变对象的状态，对象及其操作就是对象的行为。对象实现了数据和操作的结合，使数据和操作封装于对象的统一体中。</p>
-<p>2）类：具有相同特性（数据元素）和行为（功能）的对象的抽象就是类。因此，对象的抽象是类，类的具体化就是对象，也可以说类的实例是对象，类实际上就是一种数据类型。类具有属性，它是对象的状态的抽象，用数据结构来描述类的属性。类具有操作，它是对象的行为的抽象，用操作名和实现该操作的方法来描述。
-对象和类的关系：</p>
-<p>类与对象的关系就如模具和铸件的关系，类的实力化的结果就是对象，而对对象的抽象就是类，类描述了一组有相同特性（属性）和相同行为的对象。</p>
-<h3 id="20--new和malloc区别">20 . new和malloc区别</h3>
-<p>0.属性
-new/delete是C++关键字，需要编译器支持。malloc/free是库函数，需要头文件支持。</p>
-<p>1.参数
-使用new操作符申请内存分配时<u>无须指定内存块的大小</u>，编译器会根据类型信息自行计算。而malloc则需要<u>显式地指出所需内存的尺寸</u>。</p>
-<p>2.返回类型
-new操作符内存分配成功时，返回的是对象类型的指针，类型严格与对象匹配，无须进行类型转换，故new是符合类型安全性的操作符。
-而malloc内存分配成功则是返回void * ，需要通过强制类型转换将void*指针转换成我们需要的类型。</p>
-<p>3.分配失败
-new内存分配失败时，会抛出bac_alloc异常。malloc分配内存失败时返回NULL。</p>
-<p>4.自定义类型
-new会先调用operator new函数，申请足够的内存（通常底层使用malloc实现）。然后调用类型的构造函数，初始化成员变量，最后返回自定义类型指针。delete先调用析构函数，然后调用operator delete函数释放内存（通常底层使用free实现）。
-malloc/free是库函数，只能动态的申请和释放内存，无法强制要求其做自定义类型对象构造和析构工作。</p>
-<p>5.重载
-C++允许重载new/delete操作符，特别的，布局new的就不需要为对象分配内存，而是指定了一个地址作为内存起始区域，new在这段内存上为对象调用构造函数完成初始化工作，并返回此地址。而malloc不允许重载。</p>
-<p>6.内存区域
-new操作符从自由存储区（free store）上为对象动态分配内存空间，而malloc函数从堆上动态分配内存。自由存储区是C++基于new操作符的一个抽象概念，凡是通过new操作符进行内存申请，该内存即为自由存储区。而堆是操作系统中的术语，是操作系统所维护的一块特殊内存，用于程序的内存动态分配，C语言使用malloc从堆上分配内存，使用free释放已分配的对应内存。自由存储区不等于堆，如上所述，布局new就可以不位于堆中</p>
-<h3 id="21-内核链表与双向循环链表">21. 内核链表与双向循环链表</h3>
-<p>(内核链表与双向循环链表)[https://blog.csdn.net/liebao_han/article/details/53956609]</p>
-<h3 id="22-结构体和类的区别">22. 结构体和类的区别</h3>
-<p>1.结构体是一种值类型，而类是引用类型。值类型用于存储数据的值，引用类型用于存储对实际数据的引用。
-那么结构体就是当成值来使用的，类则通过引用来对实际数据操作。</p>
-<ol start="2">
-<li>结构体使用栈存储（Stack Allocation），而类使用堆存储（Heap Allocation)
-栈的空间相对较小.但是存储在栈中的数据访问效率相对较高.
-堆的空间相对较大.但是存储在堆中的数据的访问效率相对较低.</li>
-</ol>
-<p>3.类是反映现实事物的一种抽象，而结构体的作用只是一种包含了具体不同类别数据的一种包装，结构体不具备类的继承多态特性</p>
-<p>4.结构体赋值是 直接赋值的值. 而对象的指针 赋值的是对象的地址</p>
-<p>5.Struct变量使用完之后就自动解除内存分配，Class实例有垃圾回收机制来保证内存的回收处理。</p>
-<p>6.结构体的构造函数中，必须为结构体所有字段赋值，类的构造函数无此限制</p>
-<p>首先,关于隐式构造函数.我们知道,在1个类中如果我们没有为类写任意的构造函数,那么C++编译器在编译的时候会自动的为这个类生成1个无参数的构造函数.我们将这个构造函数称之为隐式构造函数 但是一旦我们为这个类写了任意的1个构造函数的时候,这个隐式的构造函数就不会自动生成了.在结构体中,就不是这样了,在结构体中隐式的构造函数无论如何都存在。所以程序员不能手动的为结构添加1个无参数的构造函数。</p>
-<p>7.结构体中声明的字段无法赋予初值，类可以:</p>
-<p>如何选择结构体还是类</p>
-<p>1． 堆栈的空间有限，对于大量的逻辑的对象，创建类要比创建结构好一些
-2． 结构表示如点、矩形和颜色这样的轻量对象，例如，如果声明一个含有 1000 个点对象的数组，则将为引用每个对象分配附加的内存。在此情况下，结构的成本较低。
-3． 在表现抽象和多级别的对象层次时，类是最好的选择
-4． 大多数情况下该类型只是一些数据时，结构时最佳的选择</p>
-<h3 id="23-结构体和联合体区别">23. 结构体和联合体区别</h3>
-<p>两者最大的区别在于内存利用</p>
-<p>一、结构体struct</p>
-<pre><code>各成员各自拥有自己的内存，各自使用互不干涉，同时存在的，遵循内存对齐原则。一个struct变量的总长度等于所有成员的长度之和。
-</code></pre>
-<p>二、联合体union</p>
-<p>各成员共用一块内存空间，并且同时只有一个成员可以得到这块内存的使用权(对该内存的读写)，各变量共用一个内存首地址。因而，联合体比结构体更节约内存。一个union变量的总长度至少能容纳最大的成员变量，而且要满足是所有成员变量类型大小的整数倍。</p>
-<h3 id="24-结构体和枚举">24. 结构体和枚举</h3>
-<p>一、结构体</p>
-<p>结构体:很像面向对象中的对象，但是结构体没有方法只有属性，一个结构体由不同类型的元素组成，而相较于数组来说，数组只能存储相同类型的元素。结构体占用的空间等于内部各元素占用空间的和，并且元素在内存中的地址（按照元素定义的顺序）是连续的。</p>
-<p>注意：结构体不能像面向对象中那样递归调用，自己包含自己，但是可以包含其他类型的结构体。</p>
-<p>二、枚举</p>
-<p>枚举:和面向对象中一样，枚举都是用来定义一些固定取值的常量,但是C中的枚举中的值是整数，默认按照0递增,也可以在定义枚举的时候赋值，那么后面的元素的值就会以这个元素为第一个元素递增</p>
-<h3 id="25--数组和指针的区别与联系">25 . 数组和指针的区别与联系</h3>
-<p>(数组和指针的区别与联系)[https://blog.csdn.net/cherrydreamsover/article/details/81741459]</p>
-<h3 id="26--函数指针指针函数">26 . 函数指针&amp;指针函数</h3>
-<p><a href="https://blog.csdn.net/baidu_37973494/article/details/83150266"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/baidu_37973494/article/details/83150266<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h3 id="27--const放在函数前后的区别">27 . const放在函数前后的区别</h3>
-<p>1、int GetY() const;
-2、const int * GetPosition();</p>
-<p>对于1
-该函数为只读函数，不允许修改其中的数据成员的值。</p>
-<p>对于2
-修饰的是返回值，表示返回的是指针所指向值是常量</p>
-<h3 id="28--goto语句">28 . goto语句</h3>
-<p>goto语句也称为无条件转移语句，其一般格式如下： goto 语句标号； 其中语句标号是按标识符规定书写的符号， 放在某一语句行的前面，标号后加冒号(：)。语句标号起标识语句的作用，与goto 语句配合使用。举个例子：</p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">goto</span> <span class="n">label</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;This is the&#34;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="29--extern关键字">29 . extern关键字</h3>
-<p>1、extern用在变量或者函数的声明前，用来说明“此变量/函数是在别处定义的，要在此处引用”。extern声明不是定义，即不分配存储空间。也就是说，在一个文件中定义了变量和函数， 在其他文件中要使用它们， 可以有两种方式：使用头文件，然后声明它们，然后其他文件去包含头文件；在其他文件中直接extern。</p>
-<p>2、extern C作用</p>
-<p>链接指示符extern C
-如果程序员希望调用其他程序设计语言尤其是C 写的函数，那么调用函数时必须告诉编译器使用不同的要求，例如当这样的函数被调用时函数名或参数排列的顺序可能不同，无论是C++函数调用它还是用其他语言写的函数调用它，程序员用链接指示符告诉编译器该函数是用其他的程序设计语言编写的，链接指示符有两种形式既可以是单一语句形式也可以是复合语句形式。
-// 单一语句形式的链接指示符
-extern &ldquo;C&rdquo; void exit(int);
-// 复合语句形式的链接指示符
-extern &ldquo;C&rdquo; {
-int printf( const char* &hellip; );
-int scanf( const char* &hellip; );
-}
-// 复合语句形式的链接指示符
-extern &ldquo;C&rdquo; {
-#include <cmath>
-}
-链接指示符的第一种形式由关键字extern 后跟一个字符串常量以及一个普通的函数，声明构成虽然函数是用另外一种语言编写的但调用它仍然需要类型检查例如编译器会检查传递给函数exit()的实参的类型是否是int 或者能够隐式地转换成int 型，多个函数声明可以用花括号包含在链接指示符复合语句中，这是链接指示符的第二种形式花扩号被用作分割符表示链接指示符应用在哪些声明上在其他意义上该花括号被忽略，所以在花括号中声明的函数名对外是可见的就好像函数是在复合语句外声明的一样，例如在前面的例子中复合语句extern &ldquo;C&quot;表示函数printf()和scanf()是在C 语言中写的，函数因此这个声明的意义就如同printf()和scanf()是在extern &ldquo;C&quot;复合语句外面声明的一样，当复合语句链接指示符的括号中含有#include 时，在头文件中的函数声明都被假定是用链接指示符的程序设计语言所写的，在前面的例子中在头文件<cmath>中声明的函数都是C函数链接指示符不能出现在函数体中下列代码段将会导致编译错误。</p>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 错误: 链接指示符不能出现在函数内
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">extern</span> <span class="s">&#34;C&#34;</span> <span class="kt">double</span> <span class="n">sqrt</span><span class="p">(</span> <span class="kt">double</span> <span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="mi">305</span> <span class="err">第七章函数</span>
-</span></span><span class="line"><span class="cl"><span class="kt">double</span> <span class="n">getValue</span><span class="p">();</span> <span class="c1">//ok
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">double</span> <span class="n">result</span> <span class="o">=</span> <span class="n">sqrt</span> <span class="p">(</span> <span class="n">getValue</span><span class="p">()</span> <span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="c1">//...
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="err">如果把链接指示符移到函数体外程序编译将无错误</span>
-</span></span><span class="line"><span class="cl"><span class="k">extern</span> <span class="s">&#34;C&#34;</span> <span class="kt">double</span> <span class="n">sqrt</span><span class="p">(</span> <span class="kt">double</span> <span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="kt">double</span> <span class="n">getValue</span><span class="p">();</span> <span class="c1">//ok
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">double</span> <span class="n">result</span> <span class="o">=</span> <span class="n">sqrt</span> <span class="p">(</span> <span class="n">getValue</span><span class="p">()</span> <span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="c1">//...
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="err">但是把链接指示符放在头文件中更合适，在那里函数声明描述了函数的接口所属，如果我们希望</span><span class="n">C</span><span class="o">++</span><span class="err">函数能够为</span><span class="n">C</span> <span class="err">程序所用又该怎么办呢我们也可以使用</span><span class="k">extern</span> <span class="s">&#34;C&#34;</span><span class="err">链接指示符来使</span><span class="n">C</span><span class="o">++</span><span class="err">函数为</span><span class="n">C</span> <span class="err">程序可用例如。</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 函数calc() 可以被C 程序调用
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">extern</span> <span class="s">&#34;C&#34;</span> <span class="kt">double</span> <span class="n">calc</span><span class="p">(</span> <span class="kt">double</span> <span class="n">dparm</span> <span class="p">)</span> <span class="p">{</span> <span class="cm">/* ... */</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="err">如果一个函数在同一文件中不只被声明一次则链接指示符可以出现在每个声明中它，也可以只出现在函数的第一次声明中，在这种情况下第二个及以后的声明都接受第一个声明中链接指示符指定的链接规则例如</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// ---- myMath.h ----
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">extern</span> <span class="s">&#34;C&#34;</span> <span class="kt">double</span> <span class="n">calc</span><span class="p">(</span> <span class="kt">double</span> <span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// ---- myMath.C ----
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 在Math.h 中的calc() 的声明
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#include</span> <span class="cpf">&#34;myMath.h&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="c1">// 定义了extern &#34;C&#34; calc() 函数
-</span></span></span><span class="line"><span class="cl"><span class="c1">// calc() 可以从C 程序中被调用
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">double</span> <span class="nf">calc</span><span class="p">(</span> <span class="kt">double</span> <span class="n">dparm</span> <span class="p">)</span> <span class="p">{</span> <span class="c1">// ...
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="err">在本节中我们只看到为</span><span class="n">C</span> <span class="err">语言提供的链接指示</span><span class="k">extern</span> <span class="s">&#34;C&#34;</span><span class="err">，</span><span class="k">extern</span> <span class="s">&#34;C&#34;</span><span class="err">是惟一被保证由所有</span><span class="n">C</span><span class="o">++</span><span class="err">实现都支持的，每个编译器实现都可以为其环境下常用的语言提供其他链接指示例如</span><span class="k">extern</span> <span class="s">&#34;Ada&#34;</span><span class="err">可以用来声明是用</span><span class="n">Ada</span> <span class="err">语言写的函数，</span><span class="k">extern</span> <span class="s">&#34;FORTRAN&#34;</span><span class="err">用来声明是用</span><span class="n">FORTRAN</span> <span class="err">语言写的函数，等等因为其他的链接指示随着具体实现的不同而不同所以建议读者查看编译器的用户指南以获得其他链接指示符的进一步信息。</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>总结 extern “C”
-extern “C” 不但具有传统的声明外部变量的功能，还具有告知C++链接器使用C函数规范来链接的功能。 还具有告知C++编译器使用C规范来命名的功能。</p>
-<h3 id="30--动态内存管理">30 . 动态内存管理</h3>
-<p>(动态内存管理)[https://blog.csdn.net/zgege/article/details/82054076]</p>
-<h3 id="31-数组链表哈希队列栈数据结构特点各自优点和缺点">31 .数组、链表、哈希、队列、栈数据结构特点，各自优点和缺点</h3>
-<p>数组(Array)：
-优点：查询快，通过索引直接查找；有序添加，添加速度快，允许重复；
-缺点：在中间部位添加、删除比较复杂，大小固定，只能存储一种类型的数据；
-如果应用需要快速访问数据，很少插入和删除元素，就应该用数组。</p>
-<p>链表(LinkedList)：
-优点：有序添加、增删改速度快，对于链表数据结构，增加和删除只要修改元素中的指针就可以了；
-缺点：查询慢，如果要访问链表中一个元素，就需要从第一个元素开始查找；
-如果应用需要经常插入和删除元素，就应该用链表。</p>
-<p>栈(Stack)：
-优点：提供后进先出的存储方式，添加速度快，允许重复；
-缺点：只能在一头操作数据，存取其他项很慢；</p>
-<p>队列(Queue)：
-优点：提供先进先出的存储方式，添加速度快，允许重复；
-缺点：只能在一头添加，另一头获取，存取其他项很慢；</p>
-<p>哈希(Hash)：
-特点：散列表，不允许重复；
-优点：如果关键字已知则存取速度极快；
-缺点：如果不知道关键字则存取很慢，对存储空间使用不充分；</p>
-<h3 id="32-友元函数">32. 友元函数</h3>
-<pre><code>引入友元函数的原因
-    类具有封装、继承、多态、信息隐藏的特性，只有类的成员函数才可以访问类的私有成员，非成员函数只能访问类的公有成员。为了使类的非成员函数访问类的成员，唯一的做法就是将成员定义为public，但这样做会破坏信息隐藏的特性。基于以上原因，引入友元函数解决。
-</code></pre>
-<p>(友元函数)[https://blog.csdn.net/qq_26337701/article/details/53996104]</p>
-<h3 id="33-设计模式之单例模式工厂模式发布订阅模式以及观察者模式">33. 设计模式之单例模式、工厂模式、发布订阅模式以及观察者模式</h3>
-<p>(设计模式)[https://blog.csdn.net/m0_37322399/article/details/108515158]</p>
-<h3 id="34-构造函数">34. 构造函数：</h3>
-<blockquote>
-<p>什么是构造函数？</p>
-</blockquote>
-<p>通俗的讲，在类中，函数名和类名相同的函数称为构造函数。它的作用是在建立一个对象时，做某些初始化的工作（例如对数据赋予初值）。C++允许同名函数，也就允许在一个类中有多个构造函数。如果一个都没有，编译器将为该类产生一个默认的构造函数。</p>
-<p>构造函数上惟一的语法限制是它不能指定返回类型，甚至void 也不行。</p>
-<p>不带参数的构造函数：一般形式为 类名 对象名(){函数体}</p>
-<p>带参数的构造函数：不带参数的构造函数，只能以固定不变的值初始化对象。带参数构造函数的初始化要灵活的多，通过传递给构造函数的参数，可以赋予对象不同的初始值。一般形式为：构造函数名（形参表）；</p>
-<p>创建对象使用时：类名 对象名（实参表）；</p>
-<p>构造函数参数的初始值：构造函数的参数可以有缺省值。当定义对象时，如果不给出参数，就自动把相应的缺省参数值赋给对象。一般形式为：
-构造函数名（参数=缺省值，参数=缺省值，……）;
-析构函数：</p>
-<p>当一个类的对象离开作用域时，析构函数将被调用(系统自动调用)。析构函数的名字和类名一样，不过要在前面加上 ~ 。对一个类来说，只能允许一个析构函数，析构函数不能有参数，并且也没有返回值。析构函数的作用是完成一个清理工作，如释放从堆中分配的内存。</p>
-<p>一个类中可以有多个构造函数，但析构函数只能有一个。对象被析构的顺序，与其建立时的顺序相反，即后构造的对象先析构。
-1、概念不同：</p>
-<p>析构函数：对象所在的函数已调用完毕时，系统自动执行析构函数。</p>
-<p>构造函数：是一种特殊的方法。特别的一个类可以有多个构造函数 ，可根据其参数个数的不同或参数类型的不同来区分它们 即构造函数的重载。
-2、作用不同：</p>
-<p>析构函数：析构函数被调用。</p>
-<hr>
-<p>构造函数：为对象成员变量赋初始值
-3、目的不同：</p>
-<p>析构函数：”清理善后” 的工作</p>
-<p>构造函数：主要用来在创建对象时初始化对象， 即为对象成员变量赋初始值，总与new运算符一起使用在创建对象的语句中。</p>
-<h3 id="35-c模板">35. C++模板</h3>
-<p><a href="https://blog.csdn.net/zhaizhaizhaiaaa/article/details/104091658"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhaizhaizhaiaaa/article/details/104091658<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h3 id="36-c-stl">36. C++ STL</h3>
-<p><a href="https://www.cnblogs.com/shiyangxt/archive/2008/09/11/1289493.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/shiyangxt/archive/2008/09/11/1289493.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>ref: <a href="https://blog.csdn.net/qq_52621551/article/details/122960158"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_52621551/article/details/122960158<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="c-八股文">c++ 八股文</h2>
-<h3 id="关键字与运算符">关键字与运算符</h3>
-<h4 id="1-指针与引">1. 指针与引⽤</h4>
-<p>指针：存放某个对象的地址，其本⾝就是变量（命了名的对象），本⾝就有地址，所以可以有指向指针的指针；可变，包括其所指向的地址的改变和其指向的地址中所存放的数据的改变 (地址可变，地址存储的值也可变)</p>
-<p>引⽤：就是变量的别名，从⼀⽽终，不可变，必须初始化， 不存在指向空值的引⽤，但是存在指向空值的指针</p>
-<h4 id="2-const-关键字">2. const 关键字</h4>
-<p>const的作⽤：被它修饰的值不能改变，是只读变量。必须在定义的时候就给它赋初值。</p>
-<p>顶层const: 表示指针本身是个常量
-底层const: 表示指针所指的对象是一个常量</p>
-<p>2.1 常量指针（<strong>底层const</strong>）（<strong>指针指的对象</strong>不可改变）</p>
-<p>常量指针：是指定义了⼀个指针，这个指针指向⼀个只读的对象，不能通过常量指针来改变这个对象的值。常量指针强调的是指针对其所指对象的不可改变性。
-特点：靠近变量名
-形式:</p>
-<ul>
-<li>const 数据类型 *指针变量 = 变量名</li>
-<li>数据类型 const *指针变量 = 变量名</li>
-<li>举例:
-<ul>
-<li>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">  int temp = 10;
-</span></span><span class="line"><span class="cl">  const int* a = &amp;temp;
-</span></span><span class="line"><span class="cl">  int const *a = &amp;temp;</span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-</li>
-</ul>
-<p>2.2 指针常量（<strong>顶层const</strong>）(<strong>指针</strong>不能改变)
-指针常量：指针常量是指定义了⼀个指针，这个指针的值只能在定义时初始化，其他地⽅不能改变。指针常量强调的是指针的不可改变性。
-特点: 靠近变量类型
-形式: 数据类型 * const 指针变量=变量名</p>
-<ul>
-<li>实例:
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span><span class="o">*</span> <span class="k">const</span> <span class="n">p</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">temp</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h4 id="3-define-和-typedef的区别">3. define 和 typedef的区别</h4>
-<p>ref : <a href="https://blog.csdn.net/CSSDCC/article/details/122049204"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/CSSDCC/article/details/122049204<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-ref : <a href="https://zhuanlan.zhihu.com/p/513450251"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/513450251<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>]]></description></item></channel></rss>
+<p><font color=green><strong>当面对容器时，STL给了你很多选项。如果你的视线超越了STL的范围，那就会有更多的选项。在选择一个容器前，要保证考虑了所有你的选项。</strong></font></p>]]></description></item></channel></rss>

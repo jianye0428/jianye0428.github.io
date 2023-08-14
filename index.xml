@@ -1,4 +1,530 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 11 Aug 2023 16:10:59 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [20] | 为指针的关联容器指定比较类型</title><link>https://jianye0428.github.io/posts/clause_20/</link><pubDate>Fri, 11 Aug 2023 16:10:59 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_20/</guid><description><![CDATA[<h2 id="example">Example</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 14 Aug 2023 08:13:21 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [22] | 避免原地修改set和multiset的键</title><link>https://jianye0428.github.io/posts/clause_22/</link><pubDate>Mon, 14 Aug 2023 08:13:21 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_22/</guid><description><![CDATA[<p><strong>所有标准关联容器，set和multiset保持它们的元素有序，这些容器的正确行为依赖于它们保持有序。</strong></p>
+<p>如果你改了关联容器里的一个元素的值（例如，把10变为1000），新值可能不在正确的位置，而且那将破坏容器的有序性。</p>
+<h2 id="修改map和multimap值">修改map和multimap值</h2>
+<p>试图改变这些容器里的一个键值的程序将不能编译:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">map</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">string</span><span class="o">&gt;</span> <span class="n">m</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">m</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">first</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="c1">// 错误！map键不能改变
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">multimap</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">string</span><span class="o">&gt;</span> <span class="n">mm</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">mm</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">first</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span> <span class="c1">// 错误！multimap键也不能改变
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition tip open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-lightbulb fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">因为<code>map&lt;K, V&gt;</code>或<code>multimap&lt;K, V&gt;</code>类型的对象中元素的类型是<code>pair&lt;const K, V&gt;</code>。因为键的类型const K，它不能改变。</div>
+    </div>
+  </div>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Key</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Tp</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Compare</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">less</span><span class="o">&lt;</span><span class="n">_Key</span><span class="o">&gt;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">_Alloc</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">allocator</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">_Key</span><span class="p">,</span> <span class="n">_Tp</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">map</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Key</span>     <span class="n">key_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Tp</span>     <span class="n">mapped_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">_Key</span><span class="p">,</span> <span class="n">_Tp</span><span class="o">&gt;</span>  <span class="n">value_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Compare</span>     <span class="n">key_compare</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Alloc</span>     <span class="n">allocator_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果你使用一个<code>const_cast</code>，或许能改变它，后面会讨论到。</p>
+<h2 id="修改set和multiset值">修改set和multiset值</h2>
+<p>对于<code>set&lt;T&gt;</code>或<code>multiset&lt;T&gt;</code>类型的对象来说，储存在容器里的元素类型只不过是<code>T</code>，并非<code>const T</code>。因此，<code>set</code>或<code>multiset</code>里的元素可能在你想要的任何时候改变。不需要映射。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Key</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Compare</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">less</span><span class="o">&lt;</span><span class="n">_Key</span><span class="o">&gt;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typename</span> <span class="n">_Alloc</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">allocator</span><span class="o">&lt;</span><span class="n">_Key</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">set</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// typedefs:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">///@{
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">/// Public typedefs.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">typedef</span> <span class="n">_Key</span>     <span class="n">key_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Key</span>     <span class="n">value_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Compare</span> <span class="n">key_compare</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Compare</span> <span class="n">value_compare</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typedef</span> <span class="n">_Alloc</span>   <span class="n">allocator_type</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">///@}
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>为什么set或multiset里的元素不是常数？</strong></p>
+<p>假设我们有一个雇员的类:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Employee</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl">  <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>       <span class="c1">// 获取雇员名
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="nf">setName</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span> <span class="c1">// 设置雇员名
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">getTitle</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>   <span class="c1">// 获取雇员头衔
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="nf">setTitle</span><span class="p">(</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">title</span><span class="p">);</span>     <span class="c1">// 设置雇员头衔
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">int</span> <span class="nf">idNumber</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>             <span class="c1">// 获取雇员ID号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>让我们做合理的假设，每个雇员有唯一的ID号，就是<code>idNumber</code>函数返回的数字。然后，建立一个雇员的<code>set</code>，很显然应该只以<code>ID</code>号来排序<code>set</code>:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">IDNumberLess</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="n">Employee</span><span class="p">,</span> <span class="n">Employee</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span> <span class="c1">// 参见条款40
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Employees</span> <span class="n">lhs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="n">Employee</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">lhs</span><span class="p">.</span><span class="n">idNumber</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">rhs</span><span class="p">.</span><span class="n">idNumber</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">set</span><span class="o">&lt;</span><span class="n">Employee</span><span class="p">,</span> <span class="n">IDNumberLess</span><span class="o">&gt;</span> <span class="n">EmpIDSet</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">EmpIDSet</span> <span class="n">se</span><span class="p">;</span> <span class="c1">// se是雇员的set， 按照ID号排序
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>实际上，雇员的<code>ID</code>号是<code>set</code>中元素的键。<strong>其余的雇员数据只是虚有其表</strong>。在这里，没有理由不能把一个特定雇员的头衔改成某个有趣的东西:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Employee</span> <span class="n">selectedID</span><span class="p">;</span> <span class="c1">// 容纳被选择的雇员
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span> <span class="c1">// ID号的变量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">EmpIDSet</span><span class="o">::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">se</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">selectedID</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">()){</span>
+</span></span><span class="line"><span class="cl">    <span class="n">i</span><span class="o">-&gt;</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 给雇员新头衔
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为在这里我们只是改变雇员的一个与set排序的方式无关的方面（一个雇员的非键部分），所以这段代码不会破坏set。那是它合法的原因。但它的合法排除了<code>set/multiset</code>的元素是<code>const</code>的可能。而且那是它们为什么不是的原因。</p>
+<p>因为<code>set</code>或<code>multiset</code>里的值不是<code>const</code>，所以试图改变它们可以编译。</p>
+<p><font color=red>如果你改变<code>set</code>或<code>multiset</code>里的元素， 你必须<strong>确保不改变一个键部分——影响容器有序性的元素部分</strong>。如果你做了，你会破坏容器，再使用那个容器将产生未定义的结果， 而且那是你的错误。另一方面，这个限制只应用于被包含对象的键部分。对被包含元素的所有其他部分来说，是开放的: 随便改变！</font></p>
+<h2 id="阻止修改set和multiset值">阻止修改set和multiset值</h2>
+<p>即使<code>set</code>和<code>multiset</code>的元素不是<code>const</code>，实现仍然有很多方式可以阻止它们被修改。</p>
+<p>例如，实现可以让用于<code>set&lt;T&gt;::iterator的operator*</code>返回一个常数<code>T&amp;</code>。即，它可以让<code>set</code>的迭代器解引用的结果是<code>set</code>元素的常量引用。</p>
+<p>在这样的实现下，将没有办法修改<code>set</code>或<code>multiset</code>的元素，因为所有访问那些元素的方法都将在让你访问之前加一个<code>const</code>。</p>
+<h2 id="要不要修改set和multiset值">要不要修改set和multiset值</h2>
+<ol>
+<li>如果<strong>不关心移植性</strong>，你想要改变set或multiset中元素的值，而且你的STL实现让你侥幸成功，继续做。只是要确定不要改变元素的键部分，即，会影响容器有序性的元素部分。</li>
+<li>如果<strong>在乎移植性</strong>，就认为set和multiset中的元素不能被修改，至少不能在没有映射的情况下</li>
+</ol>
+<p><strong>Solution: 映射到一个引用</strong></p>
+<p>有时候完全有理由改变<code>set</code>或<code>multiset</code>元素的非键部分。例如刚看的不能在一些实现下编译的<code>setTitle</code>调用:</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">EmpIDSet</span><span class="o">::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">se</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">selectedID</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">i</span><span class="o">-&gt;</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 有些STL实现会拒绝这样，因为*i是const
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>为了让它可以编译并且行为正确，我们必须映射掉*i的常量性。这是那么做的正确方法:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">const_cast</span><span class="o">&lt;</span><span class="n">Employee</span><span class="o">&amp;&gt;</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">).</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 映射掉*i的常量性
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>这可以得到i指向的对象，告诉你的编译器把映射的结果当作一个（非常数）Employee的引用，然后在那个引用上调用setTitle。</strong></p>
+<p><strong>错误版本的映射</strong></p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">()){</span>
+</span></span><span class="line"><span class="cl">  <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">Employee</span><span class="o">&gt;</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">).</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 把*i映射到一个Employee
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>它也等价于如下内容:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="p">((</span><span class="n">Employee</span><span class="p">)(</span><span class="o">*</span><span class="n">i</span><span class="p">)).</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 使用C映射语法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这两个都能编译，而且因为它们等价，所以它们错的原因也相同。</p>
+<p><strong>在运行期，它们不能修改<code>*i</code>！</strong></p>
+<p><strong>在这两个情况里，映射的结果是一个<code>*i</code>副本的临时匿名对象，而setTitle是在匿名的物体上调用，不在<code>*i</code>上<code>！*i</code>没被修改，因为setTitle从未在那个对象上调用，它在那个对象的副本上调用。</strong></p>
+<p>两个句法形式等价于这个:</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">()){</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Employee</span> <span class="nf">tempCopy</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">);</span> <span class="c1">// 把*i拷贝到tempCopy
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">tempCopy</span><span class="p">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 修改tempCopy
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过映射到引用，我们避免了建立一个新对象。</p>
+<p>取而代之的是，映射的结果是一个现有对象的引用，<code>i</code>指向的对象。</p>
+<p>当我们在有这个引用指定的对象上调用setTitle时，我们是在<code>*i</code>上调用setTitle，而且那正是我们想要的。</p>
+<p><strong>为什么不能去掉map和multimap的常量性</strong></p>
+<p>注意<code>map&lt;K, V&gt;</code>或<code>multimap&lt;K, V&gt;</code>包含<code>pair&lt;const K, V&gt;</code>类型的元素。</p>
+<p>那个<code>const</code>表明<code>pair</code>的第一个组件被定义为常量，而那意味着试图修改它是未定义的行为（即使映射掉它的常量性）。</p>
+<p>理论上，一个STL实现可能把这样的值写到一个只读的内存位置（比如，一旦写了就通过系统调用进行写保护的虚拟内存页），而且试图映射掉它的常量性，最多，没有效果。</p>
+<p>如果你是一个坚持遵循标准拟定的规则的人，你绝不会试图映射掉<code>map</code>或<code>multimap</code>键的常量性。</p>
+<h2 id="安全修改元素步骤">安全修改元素步骤</h2>
+<p>想要总是可以工作而且总是安全地改变set、multiset、map或multimap里的元素，按5个简单的步骤去做：</p>
+<ol>
+<li>定位你想要改变的容器元素。如果你不确定最好的方法， 条款45提供了关于怎样进行适当搜寻的指导。</li>
+<li>拷贝一份要被修改的元素。对map或multimap而言，确定不要把副本的第一个元素声明为const。毕竟，你想要改变它！</li>
+<li>修改副本，使它有你想要在容器里的值。</li>
+<li>从容器里删除元素，通常通过调用erase（参见条款9）。</li>
+<li>把新值插入容器。如果新元素在容器的排序顺序中的位置正好相同或相邻于删除的元素，使用insert的“提示”形式把插入的效率从对数时间改进到分摊的常数时间。使用你从第一步获得的迭代器作为提示。</li>
+</ol>
+<p><strong>一句话概括就是：先删除，再插入新的。</strong></p>
+<p><strong>Example:</strong></p>
+<p>这是同一个累人的雇员例子，这次以安全、可移植的方式写:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">EmpIDSet</span> <span class="n">se</span><span class="p">;</span> <span class="c1">// 同前，se是一个以ID号排序的雇员set
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Employee</span> <span class="n">selectedID</span><span class="p">;</span> <span class="c1">// 同前，selectedID是一个带有需要ID号的雇员
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">EmpIDSet</span><span class="o">::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">se</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">selectedID</span><span class="p">);</span> <span class="c1">// 第一步：找到要改变的元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">!=</span><span class="n">se</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Employee</span> <span class="nf">e</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">);</span> <span class="c1">// 第二步：拷贝这个元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">se</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="o">++</span><span class="p">);</span>  <span class="c1">// 第三步：删除这个元素；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                  <span class="c1">// 自增这个迭代器以
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                  <span class="c1">// 保持它有效（参见条款9）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">e</span><span class="p">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s">&#34;Corporate Deity&#34;</span><span class="p">);</span> <span class="c1">// 第四步：修改这个副本
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">se</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">e</span><span class="p">);</span>               <span class="c1">// 第五步：插入新值；提示它的位置和原先元素的一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>Effective STL [21] | 永远让比较函数对相等的值返回false</title><link>https://jianye0428.github.io/posts/clause_21/</link><pubDate>Fri, 11 Aug 2023 17:11:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_21/</guid><description><![CDATA[<h2 id="example-set">Example set</h2>
+<p>建立一个set，比较类型用<code>less_equal</code>，然后插入整型数字33(称为 $33_{A}$):</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">less_equal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">s</span><span class="p">;</span> <span class="c1">// s以“&lt;=”排序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">s</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">33</span><span class="p">);</span> <span class="c1">// 插入33
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在尝试再插入一次33(称为 $33_{B}$):</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">s</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">33</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>对于这个insert的调用，set必须先要判断出 $33_{A}$ 是否已经位于其中了，查找哪儿适合插入 $33_{B}$。最终，它总要检查 $33_{B}$是否与 $33_{A}$ 相同。</p>
+<p>关联容器对“相同”的定义是等价，因此set测试 $33_{B}$是否等价于 $33_{A}$。</p>
+<p>当执行这个测试时，它自然是使用set的比较函数。在这一例子里，是<code>operator&lt;=</code>，因为我们指定<code>set</code>的比较函数为<code>less_equal</code>，而<code>less_equal</code>意思就是<code>operator&lt;=</code>。</p>
+<p>可以看看<code>less_equal</code>的源码实现：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">/// One of the @link comparison_functors comparison functors@endlink.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Tp</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">less_equal</span> <span class="o">:</span> <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="n">_Tp</span><span class="p">,</span> <span class="n">_Tp</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">_GLIBCXX14_CONSTEXPR</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">  <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">_Tp</span><span class="o">&amp;</span> <span class="n">__x</span><span class="p">,</span> <span class="k">const</span> <span class="n">_Tp</span><span class="o">&amp;</span> <span class="n">__y</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span> <span class="k">return</span> <span class="n">__x</span> <span class="o">&lt;=</span> <span class="n">__y</span><span class="p">;</span> <span class="p">}</span> <span class="c1">// 此处是 &lt;=
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>于是，set将计算这个表达式是否为真:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">!</span><span class="p">(</span><span class="mi">33</span><span class="n">A</span> <span class="o">&lt;=</span> <span class="mi">33</span><span class="n">B</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="p">(</span><span class="mi">33</span><span class="n">B</span> <span class="o">&lt;=</span> <span class="mi">33</span><span class="n">A</span><span class="p">)</span> <span class="c1">// 测试33A和33B是否等价
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>$33_{A}$ 和 $33_{B}$ 都是33，因此， $33_{A}$&lt;=$33_{B}$ 肯定为真。同样清楚的是，$33_{B}$ &lt;= $33_{A}$。于是上述的表达式简化为:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">!</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>再简化就是</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="nb">false</span> <span class="o">&amp;&amp;</span> <span class="nb">false</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果当然是false。</p>
+<p>也就是说，set得出的结论是 $33_{B}$ 与 $33_{B}$ 不等价，因此不一样，于是它将 $33_{B}$ 插入容器中的旁边。</p>
+<p>在技术上而言，这个做法导致未定义的行为，但是通常的结果是set以拥有了两个为33的值的拷贝而告终，也就是说它不再是一个set了。通过使用less_equal作为我们的比较类型，我们破坏了容器！</p>
+<p><strong>测试</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">print</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span> <span class="n">t</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">t</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">less_equal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">snumber</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">snumber</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">33</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">snumber</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">33</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">for_each</span><span class="p">(</span><span class="n">snumber</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">snumber</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">print</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="mi">33</span>
+</span></span><span class="line"><span class="cl"><span class="mi">33</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="example-string">Example string*</h2>
+<p><code>条款20</code>描述了该如何写一个比较函数以使得容纳<code>string*</code>指针的容器根据string的值排序，而不是对指针的值排序。那个比较函数是按升序排序的，但现在假设你需要<code>string*</code>指针的容器的降序排序的比较函数。</p>
+<p>自然是抓现成的代码来修改了。如果不细心，可能会这么干:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">StringPtrGreater</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span> <span class="c1">// 这代码是有瑕疵的！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps2</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">!</span><span class="p">(</span><span class="o">*</span><span class="n">ps1</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">ps2</span><span class="p">);</span> <span class="c1">// 只是相反了旧的测试；这是不对的！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里的想法是通过将比较函数内部结果取反来达到反序的结果。很不幸，取反“&lt;”不会给你（你所期望的）“&gt;”，它给你的是 “&gt;=”。</p>
+<p>而你现在知道，因为它将对相等的值返回true，对关联容器来说，它是一个无效的比较函数。</p>
+<p>你真正需要的比较类型是这个:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">StringPtrGreater</span><span class="o">:</span> <span class="c1">// 对关联容器来说这是有效的比较类型
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">public</span> <span class="n">binary_function</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">*</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">*</span><span class="n">ps2</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="o">*</span><span class="n">ps2</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">ps1</span><span class="p">;</span> <span class="c1">// 返回*ps2是否大于*ps1（也就是交换操作数的顺序）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要避免掉入这个陷阱，你所要记住的就是比较函数的返回值表明的是在此函数定义的排序方式下，一个值是否大于另一个。</p>
+<p><strong>相等的值绝不该一个大于另一个，所以比较函数总应该对相等的值返回<code>false</code></strong></p>
+<h2 id="example-multiset">Example multiset</h2>
+<p>multiset和multimap那些容器可以容纳复本可能包含副本，如果容器认为两个值相等的对象不等价，它将会把两个都存储进去的，这正是multi系列容器的所要支持的事情。</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">multiset</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">less_equal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">msnum</span><span class="p">;</span> <span class="c1">// 仍然以“&lt;=”排序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">msnum</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">22</span><span class="p">);</span> <span class="c1">// 插入22A
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">msnum</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">22</span><span class="p">);</span> <span class="c1">// 插入22B
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">for_each</span><span class="p">(</span><span class="n">msnum</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">msnum</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">print</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="mi">22</span>
+</span></span><span class="line"><span class="cl"><span class="mi">22</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>s里有两个22的拷贝，<strong>因此我们期望如果我们在它上面做一个<code>equal_range</code>，我们将会得到一对指出包含这两个拷贝的范围的迭代器。但那是不可能的。</strong></p>
+<p><code>equal_range</code>，虽然叫这个名字，但不是指示出相等的值的范围，而是等价的值的范围。在这个例子中，s的比较函数说22A和22B是不等价的，所以不可能让它们同时出现在equal_range所指示的范围内。</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">pair</span><span class="o">&lt;</span><span class="n">multiset</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="p">,</span> <span class="n">multiset</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="o">&gt;</span> <span class="n">range2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//在 myvector 容器中找到所有的元素 22
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">range2</span> <span class="o">=</span> <span class="n">equal_range</span><span class="p">(</span><span class="n">msnum</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">msnum</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">22</span><span class="p">,</span> <span class="n">less_equal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{});</span>
+</span></span><span class="line"><span class="cl"><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;</span><span class="se">\n</span><span class="s">my multiset：&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="n">it</span> <span class="o">=</span> <span class="n">range2</span><span class="p">.</span><span class="n">first</span><span class="p">;</span> <span class="n">it</span> <span class="o">!=</span> <span class="n">range2</span><span class="p">.</span><span class="n">second</span><span class="p">;</span> <span class="o">++</span><span class="n">it</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">it</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; &#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果没有得到期望结果:</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">my multiset:</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果改为<code>less</code>比较:</p>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">range2</span> <span class="o">=</span> <span class="n">equal_range</span><span class="p">(</span><span class="n">msnum</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">msnum</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">22</span><span class="p">,</span> <span class="n">less</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{});</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果:</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">my</span> <span class="n">multiset</span><span class="err">：</span><span class="mi">22</span> <span class="mi">22</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><font color=red><strong>除非你的比较函数总是为相等的值返回false，你将会打破所有的标准关联型容器，不管它们是否允许存储复本。</strong></font></p>
+<h2 id="总结">总结</h2>
+<p>从技术上说，用于排序关联容器的比较函数必须在它们所比较的对象上定义一个“<strong>严格的弱序化(strict weakordering)</strong>”。（传给sort等算法（参见条款31）的比较函数也有同样的限制）。</p>
+<p><strong>任何一个定义了严格的弱序化的函数都必须在传入相同的值的两个拷贝时返回false。</strong></p>
+]]></description></item><item><title>Effective STL [20] | 为指针的关联容器指定比较类型</title><link>https://jianye0428.github.io/posts/clause_20/</link><pubDate>Fri, 11 Aug 2023 16:10:59 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_20/</guid><description><![CDATA[<h2 id="example">Example</h2>
 <p>假定你有一个string*指针的set，你把一些动物的名字插入进set:</p>
 <div class="highlight" id="id-1"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -6835,722 +7361,4 @@ $$</p>
 <p>另外，当<code>pivotValue</code>出了生存期，它会自动删除指向的<code>Widget</code>。这时sort调用返回了，<code>vector</code>的内容已经改变了，而且至少一个<code>Widget</code>已经被删除了。</p>
 <p>也可能有几个<code>vector</code>元素已经被设为<code>NULL</code>，而且几个<code>widget</code>已经被删除，因为快速排序是一种递归算法，递归的每一层都会拷贝一个主元。</p>
 <h2 id="结论">结论</h2>
-<p>智能指针的容器是很好的， 但是<code>auto_ptr</code><font color=red>完全不是那样的智能指针</font>。</p>]]></description></item><item><title>Effective STL [7] | 当使用new得指针的容器时，记得在销毁容器前delete那些指针</title><link>https://jianye0428.github.io/posts/clause_7/</link><pubDate>Wed, 26 Jul 2023 18:18:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_7/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="stl容器能够做的事情">STL容器能够做的事情</h2>
-<ul>
-<li>
-<p>提供了前向和逆向遍历的迭代器（通过<code>begin</code>、<code>end</code>、<code>rbegin</code>等）；</p>
-</li>
-<li>
-<p>能告诉你所容纳的对象类型（通过<code>value_type</code>的<code>ttypedef</code>）；</p>
-</li>
-<li>
-<p>在插入和删除中，负责任何需要的内存管理；</p>
-</li>
-<li>
-<p>报告容纳了多少对象和最多可能容纳的数量（分别通过<code>size</code>和<code>max_size</code>）；</p>
-</li>
-<li>
-<p>当容器自己被销毁时会自动销毁容纳的每个对象。</p>
-</li>
-</ul>
-<h2 id="容器内包含指针">容器内包含指针</h2>
-<p>虽然STL容器被销毁时，能够自动销毁容纳的每个对象，但是如果这些对象是通过new分配的对象的指针时，它不会调用<code>delete</code>，销毁指针所指向的对象。</p>
-<p><strong>Example</strong></p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;</span> <span class="n">vwp</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SOME_MAGIC_NUMBER</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">vwp</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// Widgets在这里泄漏！
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这段代码将直接导致内存泄露。</p>
-<p>当<code>vwp</code>结束其生命周期后，<code>vwp</code>的每个元素都被销毁，但不会<code>delete</code>每个<code>new</code>得到的对象。</p>
-<p>那样的删除是你的职责，而不是vector的。这是一个特性。只有你知道一个指针是否应该被删除。</p>
-<p>可以很简单地实现：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;</span> <span class="n">vwp</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">for</span> <span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">vwp</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">i</span> <span class="o">!=</span> <span class="n">vwp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="o">*</span><span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这段销毁的代码，仍然有2个问题：</p>
-<ul>
-<li>新的for循环代码比for_each多得多，没有使用for_each来的清楚</li>
-<li>这段代码不是异常安全的。如果在用指针填充了vwp的时候和你要删除它们之间抛出了一个异常，你会再次资源泄漏。</li>
-</ul>
-<p><strong>for_each删除对象</strong></p>
-<p>要把你的类似for_each的循环转化为真正使用for_each，你需要把delete转入一个函数对象中。</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">DeleteObject</span> <span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span> <span class="c1">// 这里有这个继承
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">void</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">ptr</span><span class="p">)</span> <span class="k">const</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="n">ptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>现在可以这么删除对象</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">HappyWork</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// work
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">for_each</span><span class="p">(</span><span class="n">vwp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vwp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DeleteObject</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>问题</strong></p>
-<p>如果有人编写了一个类，该类继承了 string</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecialString</span><span class="o">:</span> <span class="k">public</span> <span class="n">string</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这是很危险的行为，因为string，就像所有的标准STL容器，<strong>缺少虚析构函数</strong>，而从没有虚析构函数的类公有继承是一个大的C++禁忌。</p>
-<p>当他删除 SpecialString 时就会资源泄露</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">deque</span><span class="o">&lt;</span><span class="n">SpecialString</span><span class="o">*&gt;</span> <span class="n">dssp</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="n">for_each</span><span class="p">(</span><span class="n">dssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">dssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="c1">// 行为未定义！通过没有
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">DeleteObject</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">());</span> <span class="c1">// 虚析构函数的基类
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// 指针来删除派生对象
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>解决</strong></p>
-<p>可以通过编译器推断传给<code>DeleteObject::operator()</code>的指针的类型来消除这个错误（也减少DeleteObject的用户需要的击键次数）。</p>
-<p><strong>把模板化从DeleteObject移到它的operator()</strong>：</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">DeleteObject</span> <span class="p">{</span> <span class="c1">// 删除这里的
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 模板化和基类
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="c1">// 模板化加在这里
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">ptr</span><span class="p">)</span> <span class="k">const</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">     <span class="k">delete</span> <span class="n">ptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>通过传给<code>DeleteObject::operator()</code>的指针的类型，自动实例化一个<code>operator()</code>。这种类型演绎下降让我们放弃使<code>DeleteObject</code>可适配的能力</p>
-<p>现在删除 SpecialString 就会正常了</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">deque</span><span class="o">&lt;</span><span class="n">SpecialString</span><span class="o">*&gt;</span> <span class="n">dssp</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="n">for_each</span><span class="p">(</span><span class="n">dssp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">dssp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DeleteObject</span><span class="p">());</span> <span class="c1">// good！
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><font color=red>现在仍不是异常安全的。</font></p>
-<p>果在SpecialString被new但在调用for_each之前抛出一个异常，就会发生泄漏。</p>
-<p>这个问题可以以多种方式被解决，但最简单的可能是用<strong>智能指针的容器来代替指针的容器，典型的是引用计数指针</strong>。</p>
-<h2 id="boost库中的shared_ptr">Boost库中的shared_ptr</h2>
-<p>利用Boost的shared_ptr，本条款的原始例子可以重写为这样：</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">typedef</span> <span class="n">boost</span><span class="o">::</span><span class="n">shared_</span> <span class="n">ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">SPW</span><span class="p">;</span> <span class="c1">//SPW = &#34;shared_ptr to Widget&#34;
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">vector</span><span class="o">&lt;</span><span class="n">SPW</span><span class="o">&gt;</span> <span class="n">vwp</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SOME_MAGIC_NUMBER</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">     <span class="n">vwp</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">SPW</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">));</span> <span class="c1">// 从一个Widget建立SPW,然后进行一次push_back
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">...</span> <span class="c1">// work
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> <span class="c1">// 这里没有Widget泄漏，甚至在上面代码中抛出异常
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="结论">结论</h2>
-<p>STL容器很智能，但它们没有智能到知道是否应该删除它们所包含的指针。</p>
-<p>当你要删除指针的容器时要避免资源泄漏，你必须<strong>用智能引用计数指针对象</strong>（比如<code>Boost</code>的<code>shared_ptr</code>）来代替指针，或者你<strong>必须在容器销毁前手动删除容器中的每个指针</strong>。</p>]]></description></item><item><title>生成对抗网络GAN</title><link>https://jianye0428.github.io/posts/gan_1/</link><pubDate>Wed, 26 Jul 2023 10:03:45 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/gan_1/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="一gan的引入">一、GAN的引入</h2>
-<p></p>
-<p>GAN（Generative Adversarial Networks）是一种无监督的深度学习模型，提出于2014年，被誉为“近年来复杂分布上无监督学习最具前景的方法之一”。</p>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>Yann Lecun对其的评价是：对抗式训练是迄今为止最酷的一件事情。</p>
-<p>Adversarial training is the coolest thing since sliced bread.</p>
-</div>
-    </div>
-  </div>
-<p>我们来看下原文的标题：</p>
-<ul>
-<li>Generative：我们知道机器学习模型有两大类，第一个是分辨模型：对于一个数据去分辨它的类别，或者是预测一个实数值；另一类是生成模型，意思是怎么样生成这个数据本身。显然GAN是属于生成模型。</li>
-<li>Adversarial：对抗的，这里指的是GAN提出的这种 framework 采用对抗训练的方式来work。</li>
-<li>Nets：Network的简写。</li>
-</ul>
-<h2 id="二gan的应用举例">二、GAN的应用举例</h2>
-<ul>
-<li>数据生成：生成一些假的图像数据，比如海报中的人脸、文本生成图像等；</br></li>
-<li>数据增强：从分割图生成假的真实街景，比如可以方便训练无人汽车等；</br></li>
-<li>风格化和艺术的图像创造：比如转换图像风格、AI换脸、修补图像等；</br></li>
-<li>声音的转换：比如一个人的声音转为另一个的声音、去除噪声等；</br></li>
-<li>&hellip;&hellip;</br></li>
-</ul>
-<h2 id="三gan的快速概述">三、GAN的快速概述</h2>
-<p>比如人脸检测、图像识别、语音识别等，<strong>机器总是在现有事物的基础上，做出描述和判断</strong>。能不能创造这个世界不存在的东西？</p>
-<p>GAN就是为此而来，它包含三个部分：<strong>生成</strong>、<strong>判别</strong>、<strong>对抗</strong>。其中 <u>生成</u> 和 <u>判别</u> 是它的结构组成，<u>对抗</u>则是它的训练过程。</p>
-<ul>
-<li>生成：<strong>生成</strong> 和 <strong>判别</strong> 指的是两个独立的模型，生成器会根据随机向量产生假数据，这些假数据既可以是图片、也可以是文本，并<strong>试图</strong><font color=red>欺骗判别网络</font>；</li>
-<li>判别：<strong>判别器</strong>负责判断接受到的数据是否是真实的，即对生成数据进行<font color=red>真伪鉴别</font>，试图正确识别所有假数据，它其实是一个二分类问题，会给出一个概率，代表着内容的真实程度；两者使用哪种网络并没有明确的规定，所以原文中作者称其为framework。比如可以使用擅长处理图片的CNN、常见的全连接等等，只要能够完成相应的功能就可以了。</li>
-<li>对抗：这指的是 GAN 的交替训练过程。以图片生成为例，先让<font color=green><strong>生成器</strong></font>产生一些假图片，和收集到的真图片一起交给辨别器，让它学习区分两者，给真的高分，给假的低分，当判别器能够熟练判断现有数据后；再让 <font color=green><strong>生成器</strong></font> 以从 <font color=green><strong>判别器</strong></font> 处获得高分为目标，不断生成更好的假图片，直到能骗过判别器，重复进行这个过程，直到辨别器对任何图片的预测概率都接近0.5，也就是无法分辨图片的真假，就停止训练。</li>
-</ul>
-<p>也就是说在训练迭代的过程中，两个网络持续地进化和对抗，直到到达一个平衡状态，即判别网络无法识别真假。虽说是对抗，但是生成器和辨别器的关系更像是朋友，最初大家都是“无名之辈”，随着不断的训练“切磋”，共同成为“一代高手”。</p>
-<p>我们<font color=red><strong>训练GAN的最终目标</strong></font>是获得好用的生成器，也就是生成足够以假乱真的内容，能完成类似功能的还有波尔斯曼机、变分自编码器等，它们被称为生成模型。</p>
-<h2 id="四原文的摘要">四、原文的摘要</h2>
-<p></p>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">到底什么是GAN？</div>
-    </div>
-  </div>
-<p>首先作者提出一个新的framework，通过一个<strong>对抗过程</strong>来估计一个生成模型。</p>
-<p>同时会训练两个模型：</p>
-<ul>
-<li>第一个模型叫做 <mark><strong>生成模型G</strong></mark>，用来捕获整个数据的分布，其实就是通过 <font color=red>生成器</font> 去拟合和逼近真实的数据分布；</li>
-<li>第二个是 <mark><strong>辨别模型D</strong></mark>，它是用来估计一个样本是来自真正的数据、还是来自于<strong>G</strong>生成的。</li>
-</ul>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">这里稍微解释一下：<strong>生成模型</strong> 它就是对整个数据的分布进行建模，使得能够生成各种分布。这里“分布”是一个很一般化的词，比如生成图片、生成文本、生成视频等。在统计学眼里，整个世界是通过采样不同的分布来得到的，所以想要生成东西，目的就是要抓住整个数据的一个分布。</div>
-    </div>
-  </div>
-<p>生成模型的任务是尽量的想<strong>让辨别模型犯错</strong>，这个过程是一个<strong>最大最小的博弈</strong>。在任何函数空间的<strong>G</strong>和<strong>D</strong>里面，存在一个独一无二的解，这个解是代表：<strong>G</strong>能够找出训练数据的真实分布（生成的数据分布趋向于真实数据分布），此时辨别器就判别不出来了，所以概率值为$\frac{1}{2}$。</p>
-<p>如果<strong>G</strong>和<strong>D</strong>是一个MLP的话，那么整个系统就可以通过误差反向传播来进行训练。作者说这里不需要使用任何的马尔科夫链，或者说是对一个近似的推理过程展开（说白了意思好像就是和别人的方法比比较简单一点），最后就是说实验的效果非常好。</p>
-<h2 id="五原文的例子">五、原文的例子</h2>
-<p></p>
-<p>在对抗网络的框架里有两类模型：一个是<mark><strong>生成模型</strong></mark>、一个是<mark><strong>判别模型</strong></mark>：</p>
-<ul>
-<li>生成模型比喻成造假的人，它要去产生假币；</li>
-<li>判别模型比喻成警察，警察的任务就是很好的鉴别假币和真币；</li>
-</ul>
-<p>造假者和警察会不断的学习，造假者会提升自己的造假技能，警察也会提升自己判别真币和假币的性能。最后希望造假者能够赢，就是说造的假钱和真钱一模一样，然后警察没有能力去区分真币和假币，那么这个时候就可以使用生成器生成和真实数据一样的数据了。</p>
-<h2 id="六gan模型结构--训练gan的目的">六、GAN模型结构 &amp; 训练GAN的目的</h2>
-<p>摘要说的已经很清楚了，GAN由两部分组成：</p>
-<ul>
-<li>生成器G（Generator）；</li>
-<li>判别器D（Discriminator）；</li>
-</ul>
-<p>我们的最终目的是希望生成器<strong>G</strong>，能够<font color=purple>学习到样本的真实分布$P_{\text{data}}(x)$</font>，那么就能生成之前不存在的、但是却又很真实的样本。</p>
-<p>那再啰嗦的说明白一点就是：</p>
-<ul>
-<li>我们把随机向量（随机噪声）定义为 $z$，$z \in F$，可以是任意分布，比如正态分布、均匀分布。</li>
-<li>将随机噪声输入到 <strong>生成器G</strong> 中，<strong>G</strong>其实看成一个函数就可以，它可以是任意的一个神经网络，因为神经网络可以逼近任何形式的函数。</li>
-<li>随机噪声 $z$ 经过<strong>生成器G</strong>后会产生一个 $G(z)$，生成的这个新的向量 $G(z)$，它可以记为服从$P_G(x)$。但是$P_G(x)$这个分布不是我们想要的，我们想要的是<strong>生成器G</strong>生成一个满足于真实分布$P_{\text{data}}(x)$的数据。</li>
-<li>通过不断的训练迭代，更新调整生成器G的参数，使得$P_G(x)$近似于 $P_{\text{data}}(x)$。</li>
-</ul>
-<p>通过调整 <strong>生成器G</strong> 的参数，使得<font color=violet>它生成的分布和真实的分布尽可能的像</font>，这个就是最终要达到的目的，可以通过 生成器G 生成一些满足真实分布，但又不是真实存在的数据。</p>
-<p>我们以手写数字识别为例，图例如下：</p>
-<p></p>
-<p>GAN模型结构图如下示例：</p>
-<p></p>
-<ul>
-<li>我们将随机噪声输入到<strong>生成器G</strong>中，产生 $G(z)$，我们把它叫做$x_{\text{fake}}$，$x_{\text{fake}}$为生成的图片，就是假的图片；</li>
-<li>我们还有满足于真实分布$P_{\text{data}}(x)$的数据，记为$x_{\text{real}}$；</li>
-<li>我们把 $x_{\text{real}}$ 和 $x_{\text{fake}}$ 同时送到<strong>判别器D</strong>中去训练，做一个二分类任务，判断是真还是假；</li>
-</ul>
-<h2 id="七举例理解gan的原理">七、举例理解GAN的原理</h2>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">因为原文举的例子比较敏感，我们以李宏毅老师的例子（中央电视台鉴宝节目：一槌定音）来进行GAN原理的阐述。</div>
-    </div>
-  </div>
-<p></p>
-<p>假设现在有一个人，我们称它为小王，小王是一个收藏家，它的收藏室里收藏了很多“国宝”。但是小王不想只做一个收藏家，他还想高仿这些“国宝”，我们这里将高仿的赝品定义为“工艺品”。</p>
-<p>基于GAN的目标，我们知道：</p>
-<ul>
-<li>小王最终想成为一个水平很高的“工艺品大师”；</li>
-</ul>
-<p>但是如果想成为一个“工艺品”方面的专家，小王自己在家闭门造车肯定是行不通的，因为我们的总目标是想让小王成为一个高水平的、可以以假乱真的工艺品大师。为了达到这个目标，首先需要一个高水平的鉴赏专家（高水平的对手），其次小王本身就要是个高水平的工艺品大师。所以小王还需要找一个水平很高的国宝鉴赏专家。鉴赏专家负责辨别出真的“国宝”和小王的“工艺品”，小王负责高仿生产“工艺品”。</p>
-<p></p>
-<p>概述来说：<strong>小王需要先有一个高水平的专家，然后才可能成为一个高水平的大师。高水平的专家可以看成一种手段，成为高水平的大师才是我们的目标。</strong></p>
-<h2 id="八数学描述">八、数学描述</h2>
-<h3 id="81-相关符号">8.1 相关符号</h3>
-<p>基于上述鉴宝例子，我们来看一下GAN的数学描述，首先需要强调的是：</p>
-<ul>
-<li>工艺品经过鉴赏专家判断后，是会受到一个 feedback 的；</li>
-<li>对于鉴赏专家而言，它也会从工艺品受到一个 feedback ，当然这是潜在的；</li>
-</ul>
-<p>我们就来看一下，这个例子如何用数学符号去表示：</p>
-<ul>
-<li>
-<p>&ldquo;国宝&quot;是静态的，它相当于我们的真实样本 ${x_{\text{real}<em>i}}^N</em>{i=1}$ ，这里我们以 $P_{data}$ 表示；</p>
-</li>
-<li>
-<p>工艺品也是从一个概率分布里抽样出来的，我们将工艺品记作 ${x_{\text{fake}<em>i}}^N</em>{i=1}$ ，我们把这个概率分布称作 $P_g(x;\theta_{g})$，g就代表Generator的意思；</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">注意我们并不直接对 $P_g$ 建模，即不直接对生成模型本身进行建模，我们用一个神经网络去逼近这个分布，纯粹的神经网络它是不具备随机性的，所以我们会假设它有一个 $z$，就是前面提到的随机噪声，是来自于一个简单的分布，比如高斯分布： $z \sim P_Z(z)$ ；</div>
-    </div>
-  </div>
-</li>
-<li>
-<p>原始的GAN里，神经网络就用NN表示，它本身就是一个确定性变换，即是一个复杂函数，表示为 $G(z;\theta_{g})$；</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">$\theta_g$ 在NN里就是表示权重参数，在 $P_g$ 里就是代表概率分布参数。</div>
-    </div>
-  </div>
-</li>
-<li>
-<p>鉴赏专家也可以看成一个概率分布，我们也用一个NN来描述它：$D(x; \theta_{d})$，代表 $x$ 是国宝的概率</p>
-</li>
-</ul>
-<p></p>
-<p>对于鉴赏专家 <strong>(判别器D)</strong> 接收到的来说：</p>
-<ul>
-<li>可以是来自国宝、也可以是来自于工艺品，是无所谓的，重要的是本身是代表是国宝的概率。</li>
-</ul>
-<p>对于判别器D的输出来说：</p>
-<ul>
-<li>$D(x)$ 的值越趋近于1，说明它是国宝的概率就越大；越趋近于0，说明它是工艺品的概率就越大。</li>
-</ul>
-<p>上图又可简化为：</p>
-<p></p>
-<p>一方面是从 $P_{data}$ 里来的 $x_{real}$，一方面是 $z$ 输入到生成器后的输出 $x_{fake}$，$z$ 为噪声。</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">换句话说, $z$ 是从简单分布中采样，经过生成器后变成 $x$，此时生成的由的先验分布和生成器共同决定。</div>
-    </div>
-  </div>
-<h3 id="82高专家的目标函数">8.2、“高专家”的目标函数</h3>
-<p>符号描述表述清楚后，我们看一下GAN的目标函数，首先回顾一下GAN的目标：<u><strong>成为一个高水平的、可以以假乱真的大师</strong></u>。为了达到这个目标，我们又可以分为一个手段和一个目标：</p>
-<ul>
-<li>手段：<strong>需要一个高水平的鉴别专家</strong>；</li>
-<li>目标：<strong>成为高水平的工艺品大师</strong>。</li>
-</ul>
-<p>也就是说我们需要<u><strong>先成就一个高水平的专家，才有可能成就一个高水平的大师</strong></u>，所以它们的关系是：(高大师(高专家))。</p>
-<p>首先看高专家，高专家水平高体现在：国宝判别为真、工艺品判别为假：</p>
-<p>$$
-高专家：
-\begin{equation}
-\left{
-\begin{aligned}
-%\nonumber
-if \ x \ is \ from \ P_{data}, \ then D(x) \uparrow\
-if \ x \ is \ from \ P_{g}, \ then D(x) \downarrow\
-(z \ is \ from \ P_{z}) \
-\end{aligned}
-\right.
-\end{equation}
-$$</p>
-<p>为了将式子统一起来，我们改写为：</p>
-<p>$$
-高专家：
-\begin{equation}
-\left{
-\begin{aligned}
-%\nonumber
-if \ x \ is \ from \ P_{data}, \ then D(x) \uparrow\
-if \ x \ is \ from \ P_{g}, \ then \ 1-D(x) \uparrow\
-(z \ is \ from \ P_{z}) \
-\end{aligned}
-\right.
-\end{equation}
-$$</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">因为 $D(x)$ 是一个概率值分布，范围是0~1， $D(x)$ 偏小， $1-D(x)$ 则相应的就偏大。</div>
-    </div>
-  </div>
-<p>对于工艺品，$x$ 是从<strong>生成器G</strong>来的，所以可以表示成 $G(z)$：</p>
-<p>$$
-高专家：
-\begin{equation}
-\left{
-\begin{aligned}
-%\nonumber
-if \ x \ is \ from \ P_{data}, \ then D(x) \uparrow\
-if \ x \ is \ from \ P_{g}, \ then \ 1 - D(G(z)) \uparrow\
-(z \ is \ from \ P_{z}) \
-\end{aligned}
-\right.
-\end{equation}
-$$</p>
-<p>为了使目标函数更容易表达，或者说计算更加方便，我们加上，所以进一步表达为：
-$$
-高专家：
-\begin{equation}
-\left{
-\begin{aligned}
-%\nonumber
-if \ x \ is \ from \ P_{data}, \ then \ \log{D(x)} \uparrow\
-if \ x \ is \ from \ P_{g}, \ then \ \log{(1 - D(G(z)))} \uparrow\
-(z \ is \ from \ P_{z}) \
-\end{aligned}
-\right.
-\end{equation}
-$$</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">$\log$ 为增函数，$\log(x)$ 与 $x$ 的增减性保持一致，在极大化参数的时候，与原始求解是一样的。</div>
-    </div>
-  </div>
-<p>所以对于成就一个高专家来说，目标函数如下：</p>
-<p>$$\max_{D} E_{x \sim P_{data}}[\log{D(x)}] + E_{z \sim P_{z}}[\log (1 - D(G(z)))]$$</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>可能有同学不明白为什么原文这里用期望，其实很简单，我们假设数据分布总共有个样本，那么它的期望可以表示为：</p>
-<p>$$E_{x \sim P_{data}}[\log(D(x))] = \frac{1}{N} \sum_{i=1}^{N} \log(D(x_i)), x_i \sim P_{data}$$</p>
-</div>
-    </div>
-  </div>
-<h3 id="83高大师的目标函数">8.3、“高大师”的目标函数</h3>
-<p>我们再来看高大师的目标函数，<strong>高大师是建立在高专家的水平之上</strong>，对于高大师来讲，希望高专家将所有的工艺品都判断为真：</p>
-<p>$$高大师: if \ x \ from \ P_g,\ then \ D(G(z)) \uparrow $$</p>
-<p>为了统一起来，我们改写为:</p>
-<p>$$高大师: if \ x \ from \ P_g,\ then \ (1 - D(G(z))) \downarrow $$</p>
-<p>所以对于高大师来讲，目标函数为:</p>
-<p>$$\min_{G} E_{z \sim P_z}[\log (1 - D(G(z)))]$$</p>
-<h3 id="84总目标函数">8.4、总目标函数</h3>
-<p>本着<strong>先成就 高专家, 再成就 高大师</strong>的原则，GAN的目标函数为：</p>
-<p>$$\min_{G} \max_{D} V(D, G) = \mathbb{E_{x\sim p_{data}(x)}}[\log(D(x))] + \mathbb{E_{z\sim p_{z}(z)}}[\log(1 - D(G(z)))]$$</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">通过目标函数我们也能看出，GAN模型的复杂度，不在于模型的定义，而在于模型的traning，也就是D和G的学习。</div>
-    </div>
-  </div>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">还有一点需要强调的是，自始至终我们都没有去直接面对 $P_g$，我们实际上使用一个可微神经网络 $G(z)$ 去逼近这个 $P_g$ ，而且是从采样的角度去逼近，换句话说，对于生成网络 $P_g$，GAN是绕过了它，并没有直接去解决 $P_g$，而是从采样的角度去逼近它。所以GAN又被称做：Implicit Density Model.</div>
-    </div>
-  </div>
-<p>公式比较多，所以对目标函数再啰嗦的介绍下：</p>
-<p>我们可以得出，它实际上就要对价值函数 $V(D, G)$ 进行min、max的博弈，还有需要注意的是：$D(x)$ 是判别器的输出，它要做二分类，所以经过sigmoid之后 $D(x) \in [0, 1]$；</p>
-<p>我们来看一下它是怎么工作的：</p>
-<ul>
-<li>首先固定住G不动，通过调整D的参数，来最大化价值函数 $V(D, G)$：
-<ul>
-<li>要想最大化 $V$ ，左边的 $D(x)$ 要趋近于1（这样才能保证log的值尽可能大），同时要让右边的 $D(G(z))$ 趋近于0（这样才能保证 $log(1-D(G(z)))$ 尽可能大）；</li>
-<li>$\max V(D, G)$ 其实就是把真实数据和假数据区分的一个过程.
-$$\min_{G} \max_{D} V(D, G) = \mathbb{E_{x\sim p_{data}(x)}}[\log(D(x))] + \mathbb{E_{z\sim p_{z}(z)}}[\log(1 - D(G(z)))]$$</li>
-</ul>
-</li>
-<li>然后固定住D不动，此时公式的左部分已经是个定值了，我们<strong>调整G的参数</strong>，来最小化价值函数 $V(D, G)$：
-<ul>
-<li>要让 $V(D, G)$ 最小，那么就要让 $D(G(z))$ 趋近于1，只有 $V(G(z))$ 趋近于1的时候，定义域里的值才能趋近于0，也就是log会变得越来越小，达到最小化 $V$ 的过程；</li>
-<li>这个过程就是想让 $D(G(z))$ 趋近于1，z满足生成数据的分布，它是假的，那么 $min_G$ 的过程就是想要调整生成器，来骗过判别器，从而<strong>使得假数据被判别为真</strong>。
-$$\min_{G} \max_{D} V(D, G) = \mathbb{E_{x\sim p_{data}(x)}}[\log(D(x))] + \mathbb{E_{z\sim p_{z}(z)}}[\log(1 - D(G(z)))]$$</li>
-</ul>
-</li>
-</ul>
-<p>总结如下：</p>
-<ul>
-<li>固定G, 调整D, 最大化 $V(D, G)$, 导致 $D(x) \rightarrow 1, D(G(z)) \rightarrow 0$</li>
-<li>固定D, 调整G, 最小化 $\max_{D}V(D, G)$, 导致 $D(G(z)) \rightarrow 1$</li>
-</ul>
-<p>想必肯定有同学会发现这里出现的一个矛盾：上面的趋近于0，下面的趋近于1，这个矛盾、冲突，就理解为GAN中的<strong>对抗</strong>的意思。</p>
-<h2 id="九全局最优解推导">九、全局最优解推导</h2>
-<p>因为公式多、篇幅长，所以在推导最优解之前，我们先回顾一下GAN里的三个角色：</p>
-<ul>
-<li>真实样本分布$P_{data}$；</li>
-<li><strong>生成器 Generator</strong> 对应概率分布为:$P_g$，即代表生成器生成数据的概率分布；</li>
-<li><strong>判别器 Discriminator</strong> 对应的条件概率分布是离散的，就是0-1分布（伯努利分布），给定x的情况下，1代表正品、0代表工艺品（赝品）；</li>
-</ul>
-<p>我们的最终目标，就<strong>是想让生成器生成的样本的概率分布$P_g$无限的接近于$P_{data}$</strong>，即：$P_g \rightarrow P_{data}$；</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>我们常规的生成模型（不是GAN），是直接对$P_g$进行建模: $P_g \rightarrow \theta_{g}$, 极大似然估计表示如下：</p>
-<p>$$\theta_g = \argmax_{\theta_g} \sum_{i=1}^N \log{P_g}(x_i) = \argmin KL(P_{data} || P_g)$$</p>
-<p>从距离的角度讲，是最小化KL散度，最终想让$P_{data} = P_g$，这就是原先如何把参数求出来的策略。</p>
-</div>
-    </div>
-  </div>
-<h3 id="91关于-d-的最大值">9.1、关于 D 的最大值</h3>
-<p>GAN从<strong>对抗学习</strong>的角度去构造目标函数，我们上面构造的目标函数，只是从逻辑上觉得它没有问题，那么我们可能会考虑：</p>
-<ul>
-<li>这个最大最小问题，它的最优解存在不存在？</li>
-<li>如果最优解 $P_g$（就是G）存在，那么全局最优的情况下，$P_g$是否等于$P_{data}$？</li>
-</ul>
-<p>如果这个不成立的话，那么其实这个目标函数是没有意义的，我们来看一下，方便记作，直接用论文中的符号来描述：</p>
-<p></p>
-<p>我们记：</p>
-<p>$$V(D, G) = \mathbb{E}<em>{x\sim p</em>{data}(x)}[\log{D(x)}] + \mathbb{E}<em>{z\sim p</em>{z}}[\log{1 - D(G(z))}]$$</p>
-<p>我们先求max，根据期望的定义：$E_{x \sim P(x)} = \int_x p(x)f(x)dx$，将其展为积分的形式：</p>
-<p>$\quad For \quad fixed \quad G, 求： \max_D(V(D, G))$
-$$
-\begin{align}
-\max_D V(D, G) &amp;= \int P_{data} \cdot \log D dx + \int P_g \cdot \log (1 - D) dx \
-&amp;= \int {[P_{data} \cdot \log D + P_g \cdot \log(1 - D)]} dx
-\end{align}
-$$</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">这里两个积分中的x确实是不同的变量，但是积分微元的符号可以做任意变换，不用纠结这里。</div>
-    </div>
-  </div>
-<p>我们要求里面函数关于x积分的最大值，那么就看一下它的导数：</p>
-<p>$$
-\begin{align}
-\frac{\partial}{\partial{D}}(\max V(D, G)) &amp;= \frac{\partial}{\partial D}\int {[P_{data} \cdot \log D + P_g \cdot \log(1 - D)]} \
-&amp;= \int \frac{\partial}{\partial D} {[P_{data} \cdot \log D + P_g \cdot \log(1 - D)]} \
-&amp;= \int {[P_{data} \cdot \frac{1}{D} + P_g \cdot \frac{-1}{\log(1 - D)}]} \Longleftrightarrow 0\
-\end{align}
-$$</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>因为积分是对x积的，求导是对D求的，两者互不干扰可以交换词序。</p>
-<p>最优的时候导数为0。</p>
-</div>
-    </div>
-  </div>
-<p>$$\therefore P_{data} \cdot \frac{1}{D} = P_g \cdot \frac{1}{1-D}$$</p>
-<p>所以当固定G时，最优的D为:</p>
-<p>$$D^*<em>G = \frac{P</em>{data}}{P_{data} + P_g}$$</p>
-<h3 id="92-关于-g-的最小值">9.2 关于 G 的最小值</h3>
-<p>最大值求出来之后，我们再来看关于G的最小值，我们将$D^*$带进去：</p>
-<p>$$
-\begin{align}
-\min_G \max_D V(D, G) &amp;= \min_G V(D^*<em>G, G) \
-&amp;= \min_G E</em>{x \sim P_{data}}[\log(\frac{P_{data}}{P_{data} + P_g})] + E_{x \sim P_{g}}[\log(1 - \frac{P_{data}}{P_{data} + P_g})] \
-&amp;= \min_G E_{x \sim P_{data}}[\log(\frac{P_{data}}{P_{data} + P_g})] + E_{x \sim P_{g}}[\log(\frac{P_{g}}{P_{data} + P_g})]\
-\end{align}
-$$</p>
-<p>这里 $P_{data}$ 和 $P_g$，和KL散度的定义非常类似，KL divergence定义：</p>
-<p>$$KL(P||Q) = E_{x \sim P}[\log(\frac{P(x)}{Q(x)})]$$</p>
-<p>但是我们不能直接这么写，我们需要保证分子和分母必须同时为两个概率分布，但是分母是$P_{data} + P_g$，是两个概率分布相加，那它的取值就变成[0, 2]了。</p>
-<p>所以我们给它再除以个2就可以了，取值范围就又变成[0, 1]了。换句话说，可以把它看成概率密度函数，具体什么样子无所谓，它的取值在[0, 1]之间，并且是连续的。</p>
-<p>$$
-\begin{align}
-\min_G \max_D V(D, G) &amp;= \min_G V(D^*<em>G, G) \
-&amp;= \min_G E</em>{x \sim P_{data}}[\log(\frac{P_{data}}{P_{data} + P_g})] + E_{x \sim P_{g}}[\log(1 - \frac{P_{data}}{P_{data} + P_g})] \
-&amp;= \min_G E_{x \sim P_{data}}[\log(\frac{P_{data}}{P_{data} + P_g})] + E_{x \sim P_{g}}[\log(\frac{P_{g}}{P_{data} + P_g})]\
-&amp;= \min_G E_{x \sim P_{data}}[\log(\frac{P_{data}}{(P_{data} + P_g)/2} \cdot\frac{1}{2})] + E_{x \sim P_{g}}[\log(\frac{P_{g}}{(P_{data} + P_g)/2}\cdot\frac{1}{2})]\
-&amp;= \min_{G} KL (P_{data} || \frac{P_{data} + P_g}{2}) + KL (P_{g} || \frac{P_{data} + P_g}{2}) - \log4\
-\end{align}
-$$</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">将两个$\log(\frac{1}{2})$拿出去，$\log(\frac{1}{2}) = \log1 - \log2 = -\log2,$，$-\log2$的期望就是它自己，两个就是$-\log2-\log2 = -\log4$</div>
-    </div>
-  </div>
-<p>我们得出上式，发现它又满足 JS divergence 的定义：</p>
-<p>$$JSD(P||Q) = \frac{1}{2} KL(P || M) + \frac{1}{2} KL (Q||M), 其中 M = \frac{P + Q}{2}$$</p>
-<p>所以上式又可写成：</p>
-<p>$$\min_G - \log 4 + 2 JSP(P_{data}||P_g)$$</p>
-<p>JS divergence是衡量两个分布之间的距离，所以只有当这两个分布越来越相等的时候，就找到这个式子的最小值了，故：</p>
-<p>当$P_g(x) = P_{data}(x)$时，上式可得最小值。</p>
-<p>所以我们只需要优化：</p>
-<p>$$\min_G\max_D V(D, G) = \mathbb{E}<em>{x\sim{p</em>{data}(x)}}[\log D(x)] + \mathbb{E}<em>{z\sim{p</em>{z}(z)}}[1 - \log D(G(z))]$$</p>
-<p>就可以得到$P_g(x) = P_{data}(x)$.</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">另外，当 $P_g(x) = P_{data}(x)$ 时，又因为 $D^<em><em>G = \frac{P</em>{data}}{P_{data} + P_g}$， 所以此时 $D^</em> = \frac{1}{2}$ 。意思是，在最优的情况下，鉴赏专家已经没有分辨真假的能力了，概率都0.5，这个时候判别器对于生成器而言，已经没有继续学习的必要了。</div>
-    </div>
-  </div>
-<h2 id="十原文给出的训练步骤">十、原文给出的训练步骤</h2>
-<p></p>
-<ul>
-<li>在每一个step里先采样m个噪音样本；</li>
-<li>再采样m个来自于真实数据的样本；这样就组成了一个大小为2m的小批量；</li>
-<li>将样本分别放到 <strong>生成器</strong> 和 <strong>辨别器</strong> 去求梯度，更新 <strong>辨别器</strong> 参数；</li>
-</ul>
-<p>做完之后：</p>
-<ul>
-<li>再采样m个噪音样本，放到公式的第二项里面（因为我们要<strong>更新生成器</strong>，生成器与第一项无关），算出它的梯度；</li>
-<li>然后对生成器进行参数更新。</li>
-</ul>
-<p>这样就完成了一次迭代，可以看到每次迭代里，我们是<strong>先更新辨别器，再更新生成器</strong>。</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>k是一个超参数，不能太小也不能太大，要保证辨别器有足够的更新，但也不要更新太好了。如果没有足够好的更新，就是生成器变换了之后，没有把辨别器更新的足够好，</p>
-<p>
-G已经做了变化，但是D没有做什么改变，再更新G来糊弄D，其实意义不大。</p>
-<p>反过来讲，如果一更新就把D训练到完美，那么1-D就会变成0，对一个0的东西求导，那么就会在生成模型上更新有困难。</p>
-<p>回到原文的例子，辨别器是警察，生成器就是造假者，假设警察特别厉害，造假者产一点假钞出来就被连锅端了，那造假者就没能力改进和提升自己了，但反过来讲，如果警察无力，造假者随便造点东西，警察也看不出来，那造假者就不会有动力去改进和提升自己。</p>
-<p>所以最好是两者实力相当、相爱相杀，大家一起进步。所以k的调参，要使得D的更新和G的更新进度都差不多。</p>
-</div>
-    </div>
-  </div>
-<h2 id="十一gan原理及训练过程总结">十一、GAN原理及训练过程总结</h2>
-<h3 id="111gan原理总结">11.1、GAN原理总结</h3>
-<p>GAN主要包括了两部分：</p>
-<ul>
-<li><mark>生成器（Generator）</mark>：生成器主要用来学习真实数据的分布，从而让自身生成的数据更加真实，骗过判别器；</li>
-<li><mark>判别器（Discriminator）</mark>：判别器则需要对接受的数据进行真假判断。</li>
-</ul>
-<p>在训练过程中，生成器努力地让生成的数据更加真实，而判别器则努力地去识别出数据的真假，这个过程相当于一个二人博弈，随着时间的推移，生成器和判别器在不断的进行对抗，这就是它对抗的含义。</p>
-<p>最终两个网络达到了一个动态均衡：生成器生成的数据接近于真实数据分布，而判别器识别不出真假数据，对于给定数据的预测为真的概率基本接近0.5（相当于随机猜测类别）。</p>
-<p>GAN设计的关键在于损失函数的处理：</p>
-<ul>
-<li>对于判别模型，损失函数是容易定义的，判断一张图片是真实的还是生成的，显然是一个二分类问题。</li>
-<li>对于生成模型，损失函数的定义就不是那么容易，我们希望生成器可以生成接近于真实的图片，对于生成的图片是否像真实的，我们人类肉眼容易判断，但具体到代码中，是一个抽象的，难以数学公里化定义的范式。</li>
-</ul>
-<p>针对这个问题，我们不妨把生成模型的输出，交给判别模型处理，让判别器判断这是一个真实的图像还是假的图像，因为深度学习模型很适合做分类，这样就将生成器和判别器紧密地联合在了一起。</p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">假如我们直接用生成器训练，它的训练结果并不会得到一个真实的图像，而会得到一个比较模糊的图像，因为我们无法构建一个合适的损失去判断它是否像真实图片，所以它会将所有训练样本做平均，产生一个比较糊的图片。这就是为什么要将生成器的样本交给判别器来构建损失。</div>
-    </div>
-  </div>
-<h3 id="112gan算法流程总结">11.2、GAN算法流程总结</h3>
-<ul>
-<li>$G$ 是一个生成图片的网络，它接收一个随机的噪声z，通过这个噪声生成图片$G(z)$，记作；</li>
-<li>$D$ 是一个判别网络，判别一张图片是不是“真实的”，它的输入参数是x，x代表一张图片，输出$D(x)$，代表x为真实图片的概率，如果为1，就代表100%是真实的图片，输出为0，就代表不是真实图片。</li>
-</ul>
-<p>在训练过程中，将随机噪声输入生成网络G，得到生成的图片；判别器接受生成的图片和真实的图片，并尽量将两者区分开来。在这个计算过程中，能否正确区分生成的图片和真实的图片将作为判别器的损失；而能否生成近似真实的图片、并使得判别器将生成的图片判定为真，将作为生成器的损失。</p>
-<p>生成器的损失是通过判别器的输出来计算的，而判别器的输出是一个概率值，我们可以通过交叉熵来计算。</p>
-<h2 id="十二torch复现">十二、torch复现</h2>
-<p><a href="https://wangguisen.blog.csdn.net/article/details/127820071"target="_blank" rel="external nofollow noopener noreferrer">https://wangguisen.blog.csdn.net/article/details/127820071<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-ref:</br>
-[1]. <a href="https://arxiv.org/abs/1406.2661"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/1406.2661<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://www.bilibili.com/video/BV1eE411g7xc"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1eE411g7xc<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[3]. <a href="https://www.bilibili.com/video/BV1rb4y187vD"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1rb4y187vD<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[4]. <a href="https://www.bilibili.com/video/BV1HD4y1S7Pe"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1HD4y1S7Pe<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item></channel></rss>
+<p>智能指针的容器是很好的， 但是<code>auto_ptr</code><font color=red>完全不是那样的智能指针</font>。</p>]]></description></item></channel></rss>
