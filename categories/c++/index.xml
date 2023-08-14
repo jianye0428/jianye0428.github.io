@@ -1,4 +1,294 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 14 Aug 2023 08:13:21 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [22] | 避免原地修改set和multiset的键</title><link>https://jianye0428.github.io/posts/clause_22/</link><pubDate>Mon, 14 Aug 2023 08:13:21 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_22/</guid><description><![CDATA[<p><strong>所有标准关联容器，set和multiset保持它们的元素有序，这些容器的正确行为依赖于它们保持有序。</strong></p>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 14 Aug 2023 19:13:32 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [23] | 考虑用有序vector代替关联容器</title><link>https://jianye0428.github.io/posts/clause_23/</link><pubDate>Mon, 14 Aug 2023 19:13:32 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_23/</guid><description><![CDATA[<p>当需要一个提供快速查找的数据结构时，很多STL程序员立刻会想到标准关联容器：<code>set</code>、<code>multiset</code>、<code>map</code>和<code>multimap</code>。</p>
+<p>如果使用了合适的散列函数，则可以认为散列容器提供了常数时间的查找。</p>
+<p>对于多数应用，被认为是常数时间查找的散列容器要好于保证了对数时间查找的<code>set</code>、<code>map</code>和它们的<code>multi</code>同事。</p>
+<p>即使你需要的就只是==对数时间==查找的保证，标准关联容器仍然可能不是你的最佳选择。和直觉相反，对于标准关联容器，所提供的性能也经常劣于本该比较次的<code>vector</code>。</p>
+<h2 id="关联容器数据结构">关联容器数据结构</h2>
+<p>标准关联容器的典型实现是<strong>平衡二叉查找树</strong>。</p>
+<p>一个平衡二叉查找树是一个对<strong>插入</strong>、<strong>删除</strong>和<strong>查找</strong>的混合操作优化的数据结构。</p>
+<p>换句话说，它被设计为应用于进行一些插入，然后一些查找，然后可能再进行一些插入，然后也许一些删除，然后再来一些查找，然后更多的插入或删除，然后更多的查找等。这个事件序列的关键特征是插入、删除和查找都是混合在一起的。</p>
+<p>一般来说，没有办法预测对树的下一个操作是什么。</p>
+<p><strong>使用数据结构的3阶段</strong></p>
+<ol>
+<li><strong>建立</strong>。通过插入很多元素建立一个新的数据结构。在这个阶段，几乎所有的操作都是插入和删除。几乎没有或根本没有查找。</li>
+<li><strong>查找</strong>。在数据结构中查找指定的信息片。在这个阶段，几乎所有的操作都是查找。几乎没有或根本没有插入和删除。</li>
+<li><strong>重组</strong>。修改数据结构的内容，通过删除所有现有数据和在原地插入新数据。从动作上说，这个阶段等价于阶段1。一旦这个阶段完成，应用程序返回阶段2。</li>
+</ol>
+<h2 id="有序vector更高效">有序vector更高效</h2>
+<p>一个vector可能比一个关联容器能提供更高的性能（时间和空间上都是）。</p>
+<p>但不是任意的<code>vector</code>都会，只有有序vector。因为只有有序容器才能正确地使用查找算法——<code>binary_search</code>、<code>lower_bound</code>、<code>equal_range</code>等。</p>
+<p>Q: 为什么一个（有序的）vector的二分法查找比一个二叉树的二分法查找提供了更好的性能？</p>
+<p>A: 其中的一个是<strong>大小问题</strong>，其中的一个是<strong>引用局部性问题</strong>。</p>
+<p><strong>大小问题</strong></p>
+<p>假设我们需要一个容器来容纳Widget对象，而且，因为查找速度对我们很重要，我们考虑一个Widget的关联容器和一个有序<code>vector&lt;Widget&gt;</code>。</p>
+<p><strong>关联容器数据结构</strong></p>
+<p>如果选择一个关联容器，我们几乎确定了要使用平衡二叉树。这样的树是由树节点组成，每个都不仅容纳了一个Widget，而且保存了一个该节点到左孩子的指针，一个到它右孩子的指针，和（典型的）一个到它父节点的指针。</p>
+<p>这意味着<strong>在关联容器中用于存储一个Widget的空间开销至少会是三个指针</strong>。</p>
+<p><strong>vector数据结构</strong></p>
+<p>与之相对的是，当在vector中存储Widget并没有开销：简单地存储一个Widget。</p>
+<p>当然，<strong>vector本身有开销</strong>，在vector结尾也可能有空的（保留）空间，但是每个vector开销是可以忽略的（通常是三个机器字，比如，三个指针或两个指针和一个int），而且如果必要的话，末尾空的空间可以通过“交换技巧”去掉。即使这个附加的空间没有去掉，也并不影响下面的分析，因为当查找时不会引用那段内存。</p>
+<p><strong>内存大小</strong></p>
+<p>假设我们的数据结构足够大，它们可以分成多个内存页面，但是vector比关联容器需要的页面要少。</p>
+<p>因为vector不需要每个Widget的开销，而关联容器给每个Widget上附加了三个指针。</p>
+<p>假设在你使用的系统上一个Widget的大小是12个字节，指针是4个字节，一个内存页面是4096（4K）字节。</p>
+<p>忽略每个容器的开销，当用vector保存时，你可以在一页面上放置341个Widget $(4096\div12\approx341)$，但使用关联容器时你最多只能放170个 $4096\div(12+4\times3)\approx170)$。</p>
+<p><strong>因此关联容器和vector比起来，你将会使用大约两倍的内存。</strong></p>
+<p>如果你使用的环境可以用<strong>虚拟内存</strong>，就很可以容易地看出那会<strong>造成大量的页面错误，因此一个系统会因为大数据量而明显慢下来</strong>。</p>
+<p><strong>引用局部性问题</strong></p>
+<p>假设在二叉树中的节点都群集在一个相关的小内存页面集中，实际情况下关联容器很乐观的。</p>
+<p><strong>大部分STL实现使用自定义内存管理器来达到这样的群集，但是如果你的STL实现没有改进树节点中的引用局部性，这些节点会分散在所有你的内存空间。那会导致更多的页面错误。</strong></p>
+<p>即使使用了自定义群集内存管理器，关联容器也会导致很多页面错误，因为，不像连续内存容器，比如vector，<strong>基于节点的容器更难保证在容器的遍历顺序中一个挨着一个的元素在物理内存上也是一个挨着一个。</strong></p>
+<p><strong>当进行二分查找时那种内存组织方式（译注：遍历顺序中一个挨着一个的元素在物理内存上也是一个挨着一个）正好是页面错误最少的。</strong></p>
+<h2 id="vector的缺点">vector的缺点</h2>
+<p><font color=red>有序vector的大缺点是必须保持有序！</font></p>
+<p>因为vector中所有的元素都必须拷贝，所以：</p>
+<ol>
+<li>
+<p>当一个新元素插入时，大于这个新元素的所有东西都必须向上移一位，非常昂贵；</p>
+</li>
+<li>
+<p>如果vector必须重新分配它的内在内存，则会更昂贵；</p>
+</li>
+<li>
+<p>如果一个元素从vector中被删除，所有大于它的元素都要向下移动。</p>
+</li>
+</ol>
+<p>vector的插入和删除都很昂贵，但是关联容器的插入和删除则很轻量。</p>
+<p>这就是为什么只有当你知道你的数据结构使用的时候查找几乎不和插入和删除混合时，使用有序vector代替关联容器才有意义。</p>
+<p><strong>概要</strong></p>
+<ol>
+<li>
+<p>在有序vector中存储数据很有可能比在标准关联容器中保存相同的数据消耗更少的内存；</p>
+</li>
+<li>
+<p>当页面错误值得重视的时候，在有序vector中通过二分法查找可能比在一个标准关联容器中查找更快。</p>
+</li>
+</ol>
+<h2 id="example">Example</h2>
+<blockquote>
+<p>vector代替set</p>
+</blockquote>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"> <span class="c1">// 代替set&lt;Widget&gt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">vw</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 建立阶段：很多插入，几乎没有查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 结束建立阶段。（当模拟一个multiset时，你可能更喜欢用stable_sort 来代替；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 用于查找的值的对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span><span class="c1">// 开始查找阶段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过binary_search查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">binary_search</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">w</span><span class="p">))...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过lower_bound查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">lower_bound</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">w</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 条款19解释了“!(w &lt; *i)”测试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="p">(</span><span class="n">w</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">i</span><span class="p">))...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过equal_range查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pair</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="o">&gt;</span> <span class="n">range</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">                       <span class="n">equal_range</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">w</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">range</span><span class="p">.</span><span class="n">first</span> <span class="o">!=</span> <span class="n">range</span><span class="p">.</span><span class="n">second</span><span class="p">)...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 结束查找阶段，开始重组阶段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 开始新的查找阶段...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>里面最难的东西就是<strong>怎么在搜索算法中做出选择</strong>（比如，<code>binary_search</code>、<code>lower_bound</code>等）</p>
+<blockquote>
+<p>vector代替map或multimap</p>
+</blockquote>
+<p>当你决定用vector代替map或multimap时，事情会变得更有趣，因为<strong>vector必须容纳pair对象</strong>。</p>
+<p>但是要注意，如果你声明一个map&lt;K, V&gt;的对象（或者等价的multimap），保存在map中的元素类型是<code>pair&lt;const K, V&gt;</code>。</p>
+<p>如果要用vector模拟<code>map</code>或者<code>multimap</code>，<strong>必须去掉const</strong>，因为当你对vector排序时，元素的值将会通过赋值移动，那意味着pair的两个组件都必须是可赋值的。</p>
+<p>当使用vector来模拟map&lt;K, V&gt;时，<strong>保存在vector中数据的类型将是<code>pair&lt;K, V&gt;</code></strong>，而不是<code>pair&lt;const K, V&gt;</code>。</p>
+<p>map和multimap以顺序的方式保存他们的元素，但<strong>用于排序目的时它们只作用于元素的key部分</strong>（pair的第一个组件），所以当排序vector时你必须做一样的事情。</p>
+<p>你需要为你的pair写一个自定义比较函数，因为<code>pair</code>的<code>operator&lt;</code>作用于pair的两个组件。</p>
+<p><strong>2个比较函数来进行查找</strong></p>
+<p>用来排序的比较函数将作用于两个pair对象，但是查找只用到key值。</p>
+<p>必须传给用于查找的比较函数一个key类型的对象（要查找的值）和一个pair（存储在vector中的一个pair）——两个不同的类型。</p>
+<p>还有一个附加的麻烦，你不会知道key还是pair是作为第一个实参传递的，所以你真的需要两个用于查找的比较函数：<strong>一个key值先传递，一个pair先传递</strong></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="n">Data</span><span class="p">;</span> <span class="c1">// 在这个例子里&#34;map&#34;容纳的类型
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DataCompare</span> <span class="p">{</span> <span class="c1">// 用于比较的类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 用于排序的比较函数keyLess在下面
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Data</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Data</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nf">keyLess</span><span class="p">(</span><span class="n">lhs</span><span class="p">.</span><span class="n">first</span><span class="p">,</span> <span class="n">rhs</span><span class="p">.</span><span class="n">first</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">// 用于查找的比较函数（形式1）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Data</span><span class="o">&amp;</span> <span class="n">Ihs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Data</span><span class="o">::</span><span class="n">first_type</span><span class="o">&amp;</span> <span class="n">k</span><span class="p">)</span> <span class="k">const</span>  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">keyLess</span><span class="p">(</span><span class="n">lhs</span><span class="p">.</span><span class="n">first</span><span class="p">,</span> <span class="n">k</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">// 用于查找的比较函数（形式2）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Data</span><span class="o">::</span><span class="n">first_type</span><span class="o">&amp;</span> <span class="n">k</span><span class="p">,</span>  <span class="k">const</span> <span class="n">Data</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">keyLessfk</span><span class="p">,</span> <span class="n">rhs</span><span class="p">.</span><span class="n">first</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// “真的”比较函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="n">keyLess</span><span class="p">(</span><span class="k">const</span> <span class="n">Data</span><span class="o">::</span><span class="n">first_type</span><span class="o">&amp;</span> <span class="n">k1</span><span class="p">,</span> <span class="k">const</span> <span class="n">Data</span><span class="o">::</span><span class="n">first_type</span><span class="o">&amp;</span> <span class="n">k2</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">k1</span> <span class="o">&lt;</span> <span class="n">k2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们假设有序vector将模拟<code>map&lt;string, int&gt;</code>。</p>
+<p>这段代码几乎是上面讨论的字面转换，除了存在成员函数<code>keyLess</code>。</p>
+<p>那个函数的存在是用来<strong>保证几个不同的<code>operator()</code>函数之间的一致性</strong>。</p>
+<p>每个这样的函数只是简单地比较两个key的值，所以我们把这个测试放在keyLess中并让operator()函数返回keyLess所做的事情，这比复制那个逻辑要好。</p>
+<p>这个软件工程中绝妙的动作增强了<code>DataCompare</code>的可维护性，但<strong>有一个小缺点，它提供了有不同参数类型的operator()函数，这将导致函数对象无法适配。</strong></p>
+<p>把有序vector用作map本质上和用作set一样。</p>
+<p><strong>唯一大的区别是必须把DataCompare对象用作比较函数:</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 代替map&lt;string, int&gt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Data</span><span class="o">&gt;</span> <span class="n">vd</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> <span class="c1">// 建立阶段：很多插入，几乎没有查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 结束建立阶段。（当模拟multimap时，你可能更喜欢用stable_sort来代替）；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DataCompare</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 用于查找的值的对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span> <span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 开始查找阶段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过binary_search查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">binary_search</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s</span><span class="p">,</span> <span class="n">DataCompare</span><span class="p">()))...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 再次通过lower_bound查找，
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Data</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">lower_bound</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s</span><span class="p">,</span> <span class="n">DataCompare</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 条款45解释了“!DataCompare()(s, *i)”测试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">DataCompare</span><span class="p">()(</span><span class="n">s</span><span class="p">,</span> <span class="o">*</span><span class="n">i</span><span class="p">))...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过equal_range查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pair</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Data</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">Data</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="o">&gt;</span> <span class="n">range</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">    <span class="n">equal_range</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s</span><span class="p">,</span> <span class="n">DataCompare</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">range</span><span class="p">.</span><span class="n">first</span> <span class="o">!=</span> <span class="n">range</span><span class="p">.</span><span class="n">second</span><span class="p">)...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 结束查找阶段，开始重组阶段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 开始新的查找阶段...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DataCompare</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>正如你所见，一旦你写了DataCompare，东西都很好地依序排列了。</p>
+<p>而一旦位置合适了，它们往往比相应的使用真的map的设计运行得更快而且使用更少内存。</p>
+<p>如果你的程序不是按照阶段的方式操作数据结构，那么使用有序vector代替标准关联容器几乎可以确定是在浪费时间。</p>
+]]></description></item><item><title>Effective STL [22] | 避免原地修改set和multiset的键</title><link>https://jianye0428.github.io/posts/clause_22/</link><pubDate>Mon, 14 Aug 2023 08:13:21 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_22/</guid><description><![CDATA[<p><strong>所有标准关联容器，set和multiset保持它们的元素有序，这些容器的正确行为依赖于它们保持有序。</strong></p>
 <p>如果你改了关联容器里的一个元素的值（例如，把10变为1000），新值可能不在正确的位置，而且那将破坏容器的有序性。</p>
 <h2 id="修改map和multimap值">修改map和multimap值</h2>
 <p>试图改变这些容器里的一个键值的程序将不能编译:</p>
@@ -6724,220 +7014,4 @@ const成员函数有2个好处：(1). 明确理解函数是否修改对象内容
 <p>在这种情况下，你的客户&quot;list&quot;可能更应该用&quot;vector&quot;或&quot;deque&quot;来实现</p>
 <p>当你决定作这种更改的时候，你仍然<strong>必须检查每个CustomerList的成员函数和每个友元，看看他们受影响的程度（根据性能和迭代器/指针/引用失效的情况等等）</strong>。</p>
 <p>但如果你做好了对CustomerList地实现细节做好封装的话，那对CustomerList的客户的影响将会很小。</p>
-]]></description></item><item><title>Effective STL [1] | 仔细选择你的容器</title><link>https://jianye0428.github.io/posts/clause_1/</link><pubDate>Wed, 19 Jul 2023 08:51:49 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_1/</guid><description><![CDATA[<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">选择容器需要注意的几个方面</div>
-    </div>
-  </div>
-<h2 id="迭代器">迭代器</h2>
-<ol>
-<li>输入迭代器</li>
-</ol>
-<ul>
-<li>每个迭代位置<strong>只能被读1次</strong>的只读迭代器，通常表现为 istream_iterator</li>
-</ul>
-<ol start="2">
-<li>输出迭代器</li>
-</ol>
-<ul>
-<li>每个迭代位置<strong>只能被写1次</strong>的只写迭代器，通常表现为 ostream_iterator</li>
-</ul>
-<ol start="3">
-<li>前向迭代器</li>
-</ol>
-<ul>
-<li>
-<p>有<strong>输入</strong>和<strong>输出</strong>迭代器的能力，可以反复读写1个位置，<u>不支持 operator&ndash;</u>，可以高效地向前移动任意次数</p>
-</li>
-<li>
-<p>散列容器的一种设计可以产生前向迭代器；</p>
-</li>
-<li>
-<p>单链表容器也提供前向迭代器</p>
-</li>
-</ul>
-<ol start="4">
-<li>双向迭代器</li>
-</ol>
-<ul>
-<li>像前向迭代器一样，后退很容易。标准关联容器都提供双向迭代器，list也有</li>
-</ul>
-<ol start="5">
-<li>随机访问迭代器</li>
-</ol>
-<ul>
-<li>
-<p>可以做双向迭代器一样的事情，但也提供“迭代器算术”，即迭代器有一步向前或向后跳的能力。</p>
-</li>
-<li>
-<p>vector、string 和 deque 都提供随机访问迭代器。</p>
-</li>
-<li>
-<p>指针数组的指针可以作为数组的随机访问迭代器。</p>
-</li>
-</ul>
-<h2 id="容器">容器</h2>
-<p>STL有<font color=red><strong>迭代器</strong></font>、<font color=red><strong>算法</strong></font>和<font color=red><strong>函数对象</strong></font>，但对于大多数C++程序员，容器是最突出的。</p>
-<p>它们比数组更强大更灵活，可以动态增长（也常是缩减），可以管理属于它们自己的内存，可以跟踪它们拥有的对象数目，可以限制它们支持操作的算法复杂度等等。</p>
-<p><strong>分类</strong></p>
-<table>
-<thead>
-<tr>
-<th style="text-align:left">类别</th>
-<th style="text-align:left">说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left">标准STL序列容器</td>
-<td style="text-align:left">vector、string、deque和list</td>
-</tr>
-<tr>
-<td style="text-align:left">标准STL关联容器</td>
-<td style="text-align:left">set、multiset、map和multimap</td>
-</tr>
-<tr>
-<td style="text-align:left">非标准序列容器slist和rope</td>
-<td style="text-align:left">slist是一个单向链表，rope本质上是一个重型字符串。(&ldquo;绳子(rope)&ldquo;是重型的&quot;线(string)&rdquo;)</td>
-</tr>
-<tr>
-<td style="text-align:left">非标准关联容器</td>
-<td style="text-align:left">hash_set、hash_multiset、hash_map和hash_multimap</td>
-</tr>
-<tr>
-<td style="text-align:left">vector	可以作为string的替代品</td>
-<td style="text-align:left">vector作为标准关联容器的替代品</br>	有时候vector可以在时间和空间上都表现得比标准关联容器好</td>
-</tr>
-<tr>
-<td style="text-align:left">标准非STL容器</td>
-<td style="text-align:left">包括数组、bitset、valarray、stack、queue和priority_queue 。</br>值得注意的是，数组可以和STL算法配合，因为指针可以当作数组的迭代器使用</td>
-</tr>
-</tbody>
-</table>
-<p><code>vector</code>、<code>list</code>和<code>deque</code>提供给程序员不同的复杂度，因此应该这么用：</p>
-<ul>
-<li>vector是一种可以默认使用的序列类型</br></li>
-<li>当很频繁地对序列中部进行插入和删除时应该用list</br></li>
-<li>当大部分插入和删除发生在序列的头或尾时可以选择deque这种数据结构</br></li>
-</ul>
-<p><strong>连续内存容器和基于节点的容器的区别</strong></p>
-<ul>
-<li><strong>连续内存容器（也叫做基于数组的容器）</strong>
-<ul>
-<li>
-<p>在一个或多个（动态分配）的内存块中保存它们的元素。</p>
-</li>
-<li>
-<p>如果一个新元素被查入或者已存元素被删除，其他在同一个内存块的元素就必须向上或者向下移动来为新元素提供空间或者填充原来被删除的元素所占的空间。</p>
-</li>
-<li>
-<p>这种移动影响了效率和异常安全。</p>
-</li>
-<li>
-<p>标准的连续内存容器是vector、string和deque。</p>
-</li>
-<li>
-<p>非标准的rope也是连续内存容器。</p>
-</li>
-</ul>
-</li>
-<li><strong>基于节点的容器</strong>
-<ul>
-<li>
-<p>在每个内存块（动态分配）中只保存一个元素。</p>
-</li>
-<li>
-<p>容器元素的插入或删除只影响指向节点的指针，而不是节点自己的内容。</p>
-</li>
-<li>
-<p>所以当有东西插入或删除时，元素值不需要移动。</p>
-</li>
-<li>
-<p>表现为链表的容器——比如list和slist——是基于节点的，所有的标准关联容器也是（它们的典型实现是平衡树）。</p>
-</li>
-<li>
-<p>非标准的散列容器使用不同的基于节点的实现。</p>
-</li>
-</ul>
-</li>
-</ul>
-<h2 id="如何选择容器">如何选择容器?</h2>
-<ol>
-<li>你需要“可以在容器的任意位置插入一个新元素”的能力吗？
-<ul>
-<li>如果是，你需要<strong>序列容器</strong>，关联容器做不到。
-</br></li>
-</ul>
-</li>
-<li>你关心元素在容器中的顺序吗？
-<ul>
-<li><strong>如果不，散列容器就是可行的选择</strong>。否则，你要避免使用散列容器。
-</br></li>
-</ul>
-</li>
-<li>必须使用标准C++中的容器吗?
-<ul>
-<li>如果是，就可以除去散列容器、slist和rope。
-</br></li>
-</ul>
-</li>
-<li>你需要哪一类迭代器？
-<ul>
-<li>如果必须是<strong>随机访问迭代器</strong>，在技术上你就只能限于<code>vector</code>、<code>deque</code>和<code>string</code>，但你也可能会考虑<code>rope</code>。</li>
-<li>如果需要<strong>双向迭代器</strong>，你就<strong>用不了</strong><code>slist </code>和<code>散列容器</code>的一般实现。
-</br></li>
-</ul>
-</li>
-<li>当插入或者删除数据时，是否非常在意容器内现有元素的移动？
-<ul>
-<li>如果是，你就必须<strong>放弃连续内存容器</strong>。
-</br></li>
-</ul>
-</li>
-<li>容器中的数据的内存布局需要兼容C吗？
-<ul>
-<li>如果是，你就只能用vector。
-</br></li>
-</ul>
-</li>
-<li>查找速度很重要吗？
-<ul>
-<li>如果是，你就应该看看散列容器，排序的vector和标准的关联容器——大概是这个顺序。
-</br></li>
-</ul>
-</li>
-<li>你介意如果容器的底层使用了引用计数吗？
-<ul>
-<li>如果是，你就得避开string，因为很多string的实现是用引用计数。</li>
-<li>你也<strong>不能用rope</strong>，因为<strong>权威的rope实现是基于引用计数的</strong>。</li>
-<li>于是你得重新审核你的string，你可以考虑使用vector<char>
-</br></li>
-</ul>
-</li>
-<li>你需要插入和删除的事务性语义吗？也就是说，你需要有可靠地回退插入和删除的能力吗？
-<ul>
-<li>如果是，你就需要使用<strong>基于节点的容器</strong>。</li>
-<li>如果你需要<strong>多元素插入</strong>（比如，以范围的方式）的事务性语义，你就应该选择<code>list</code>，因为<strong>list是唯一提供多元素插入事务性语义的标准容器</strong>。</li>
-<li>事务性语义对于有兴趣写异常安全代码的程序员来说非常重要。（事务性语义也可以在连续内存容器上实现，但会有一个性能开销，而且代码不那么直观）
-</br></li>
-</ul>
-</li>
-<li>你要把迭代器、指针和引用的失效次数减到最少吗？
-<ul>
-<li>如果是，你就应该<strong>使用基于节点的容器</strong>，因为在这些容器上进行插入和删除不会使迭代器、指针和引用失效（除非它们指向你删除的元素）。</li>
-<li>一般来说，<strong>在连续内存容器上插入和删除会使所有指向容器的迭代器、指针和引用失效</strong>。
-</br></li>
-</ul>
-</li>
-<li>你需要具有以下特性的序列容器吗：1） 可以使用随机访问迭代器；2） 只要没有删除而且插入只发生在容器结尾，指针和引用的数据就不会失效？
-<ul>
-<li>这个一个非常特殊的情况，但如果你遇到这种情况，<strong>deque就是你梦想的容器</strong>。</li>
-<li>有趣的是，<strong>当插入只在容器结尾时，deque的迭代器也可能会失效</strong>，<code>deque</code>是**唯一一个“在迭代器失效时不会使它的指针和引用失效”**的标准STL容器。</li>
-</ul>
-</li>
-</ol>
-<h2 id="结语">结语</h2>
-<p><font color=green><strong>当面对容器时，STL给了你很多选项。如果你的视线超越了STL的范围，那就会有更多的选项。在选择一个容器前，要保证考虑了所有你的选项。</strong></font></p>]]></description></item></channel></rss>
+]]></description></item></channel></rss>

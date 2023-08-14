@@ -708,280 +708,7 @@ $$</p>
 </ul>
 <p>如你所见，与仅仅调用erase相比，有效地删除容器元素有更多的东西。</p>
 <p><strong>解决问题的最好方法取决于你是怎样鉴别出哪个对象是要被去掉的，储存它们的容器的类型，和当你删除它们的时候你还想要做什么（如果有的话）。</strong></p>
-<p>这仅对带有迭代器实参的<code>erase</code>形式是正确的。关联容器也提供一个带有一个值的实参的<code>erase</code>形式，而那种形式返回被删掉的元素个数。但这里，我们只关心通过迭代器删除东西。</p>]]></description></item><item><title>Transformer 详解</title><link>https://jianye0428.github.io/posts/transformerdetailedexplanation/</link><pubDate>Mon, 24 Jul 2023 17:37:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerdetailedexplanation/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"></div>
-    </div>
-  </div> -->
-<p>ref:
-[1]. <a href="https://www.bilibili.com/video/BV1mk4y1q7eK?p=1"target="_blank" rel="external nofollow noopener noreferrer">B站讲解视频<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2]. <a href="https://wmathor.com/index.php/archives/1438/"target="_blank" rel="external nofollow noopener noreferrer">https://wmathor.com/index.php/archives/1438/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[3]. <a href="https://wmathor.com/index.php/archives/1455/"target="_blank" rel="external nofollow noopener noreferrer">Transformer的pytorch实现<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="transformer-详解">Transformer 详解</h2>
-<p>Transformer 是谷歌大脑在 2017 年底发表的论文 <a href="https://arxiv.org/pdf/1706.03762.pdf"target="_blank" rel="external nofollow noopener noreferrer">attention is all you need<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中所提出的 seq2seq 模型。现在已经取得了大范围的应用和扩展，而 BERT 就是从 Transformer 中衍生出来的预训练语言模型</p>
-<p>这篇文章分为以下几个部分</p>
-<ul>
-<li>Transformer 直观认识</br></li>
-<li>Positional Encoding</br></li>
-<li>Self Attention Mechanism</br></li>
-<li>残差连接和 Layer Normalization</br></li>
-<li>Transformer Encoder 整体结构</br></li>
-<li>Transformer Decoder 整体结构</br></li>
-<li>总结</br></li>
-<li>参考文章</br></li>
-</ul>
-<h3 id="0-transformer-直观认识">0. Transformer 直观认识</h3>
-<p>Transformer 和 LSTM 的最大区别，就是 LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字。而 Transformer 的训练时并行的，即所有字是同时训练的，这样就大大增加了计算效率。<font color=green>Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序</font>，使用自注意力机制（Self Attention Mechanism）和全连接层进行计算，这些后面会讲到</p>
-<p>Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<font color=red>Encoder 负责把输入（语言序列）隐射成隐藏层（下图中第 2 步用九宫格代表的部分），然后解码器再把隐藏层映射为自然语言序列</font>。例如下图机器翻译的例子（Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token）</p>
-<p></p>
-<p>本篇文章大部分内容在于解释 Encoder 部分，即把自然语言序列映射为隐藏层的数学表达的过程。理解了 Encoder 的结构，再理解 Decoder 就很简单了</p>
-<p></p>
-<p>上图为 Transformer Encoder Block 结构图，注意：下面的内容标题编号分别对应着图中 1,2,3,4 个方框的序号</p>
-<h3 id="1-positional-encoding">1. Positional Encoding</h3>
-<p>由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能识别出语言中的顺序关系。</p>
-<p>现在定义一个<strong>位置嵌入</strong>的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成</p>
-<p>注意，我们一般以字为单位训练 Transformer 模型。首先初始化字编码的大小为 [vocab_size, embedding_dimension]，vocab_size 为字库中所有字的数量，embedding_dimension 为字向量的维度，对应到 PyTorch 中，其实就是 nn.Embedding(vocab_size, embedding_dimension)</p>
-<p>论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:</p>
-<p>$$\left{\begin{aligned}
-PE(pos, 2i) = \sin (pos/10000^{2i/d_{model}}) \
-PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \
-\end{aligned}\right.$$</p>
-<p>上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max_sequence_length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding_dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值</p>
-<p>上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到<strong>位置之间的依赖关系和自然语言的时序特性</strong>。</p>
-<p>如果不理解这里为何这么设计，可以看这篇文章 <a href="https://wmathor.com/index.php/archives/1453/"target="_blank" rel="external nofollow noopener noreferrer">Transformer 中的 Positional Encoding<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>下面画一下位置嵌入，纵向观察，可见随着 embedding_dimension​序号增大，位置嵌入函数的周期变化越来越平缓</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">math</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">get_positional_encoding</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># 初始化一个positional encoding</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># embed_dim: 字嵌入的维度</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># max_seq_len: 最大的序列长度</span>
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-</span></span><span class="line"><span class="cl">            <span class="p">[</span><span class="n">pos</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">i</span> <span class="o">/</span> <span class="n">embed_dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)]</span>
-</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">)])</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># dim 2i 偶数</span>
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># dim 2i+1 奇数</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">positional_encoding</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">positional_encoding</span> <span class="o">=</span> <span class="n">get_positional_encoding</span><span class="p">(</span><span class="n">max_seq_len</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">    <span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&#34;Sinusoidal Function&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&#34;hidden dimension&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&#34;sequence length&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 1&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 2&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 3&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&#34;Sequence length&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&#34;Period of Positional Encoding&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<h3 id="2-self-attention-mechanism">2. Self Attention Mechanism</h3>
-<p>对于输入的句子 $ X $，通过 WordEmbedding 得到该句子中每个字的字向量，同时通过 Positional Encoding 得到所有字的位置向量，将其相加（维度相同，可以直接相加），得到该字真正的向量表示。第 $ t $ 个字的向量记作 $ x_t $。</p>
-<p>接着我们定义三个矩阵 $ W_Q $, $ W_K $, $ W_V $，使用这三个矩阵分别对所有的字向量进行三次线性变换，于是所有的字向量又衍生出三个新的向量 $ q_t $, $ k_t $, $ v_t $。我们将所有的 $ q_t $ 向量拼成一个大矩阵，记作查询矩阵 $ Q $ ，将所有的 $ k_t $ 向量拼成一个大矩阵，记作键矩阵 $ K $  ，将所有的 $ v_t $ 向量拼成一个大矩阵，记作值矩阵 $ V $ （见下图）</p>
-<p></p>
-<p>为了获得第一个字的注意力权重，我们需要用第一个字的查询向量 $ q_1 $ 乘以键矩阵 $ K $（见下图）</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">                [0, 4, 2]
-</span></span><span class="line"><span class="cl">    [1, 0, 2] x [1, 4, 3] = [2, 4, 4]
-</span></span><span class="line"><span class="cl">                [1, 0, 1]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>之后还需要将得到的值经过 softmax，使得它们的和为 1（见下图）</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"> softmax([2, 4, 4]) = [0.0, 0.5, 0.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>有了权重之后，将权重其分别乘以对应字的值向量 $ v_t $（见下图）</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">    0.0 * [1, 2, 3] = [0.0, 0.0, 0.0]
-</span></span><span class="line"><span class="cl">    0.5 * [2, 8, 0] = [1.0, 4.0, 0.0]
-</span></span><span class="line"><span class="cl">    0.5 * [2, 6, 3] = [1.0, 3.0, 1.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>最后将这些<strong>权重化后的值向量求和</strong>，得到第一个字的输出（见下图）</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">      [0.0, 0.0, 0.0]
-</span></span><span class="line"><span class="cl">    + [1.0, 4.0, 0.0]
-</span></span><span class="line"><span class="cl">    + [1.0, 3.0, 1.5]
-</span></span><span class="line"><span class="cl">    -----------------
-</span></span><span class="line"><span class="cl">    = [2.0, 7.0, 1.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>对其它的输入向量也执行相同的操作，即可得到通过 self-attention 后的所有输出</p>
-<p></p>
-<p><strong>矩阵计算</strong></p>
-<p>上面介绍的方法需要一个循环遍历所有的字$ x_t $，我们可以把上面的向量计算变成矩阵的形式，从而一次计算出所有时刻的输出</p>
-<p>第一步就不是计算某个时刻的$ q_t $, $ k_t $, $ v_t $了，而是一次计算所有时刻的 $
-Q $, $ K $, $ V $。计算过程如下图所示，这里的输入是一个矩阵 $ X $，矩阵第 $ t $ 行为第 $ t $ 个词的向量表示 $x_t$</p>
-<p></p>
-<p>接下来将 $ Q $ 和 $K_T$ 相乘，然后除以 $ \sqrt{d_k} $（这是论文中提到的一个 trick），经过 softmax 以后再乘以 $ V $ 得到输出</p>
-<p></p>
-<p><strong>Multi-Head Attention</strong></p>
-<p>这篇论文还提出了 Multi-Head Attention 的概念。其实很简单，前面定义的一组 $Q $, $ K $, $ V $, 可以让一个词 attend to 相关的词，我们可以定义多组 $Q $, $ K $, $ V $，让它们分别关注不同的上下文。计算 $Q $, $ K $, $ V $ 的过程还是一样，只不过线性变换的矩阵从一组 $ W^Q $, $ W^K $, $ W^V $ 变成了多组$ W^Q_0 $, $ W^K_0 $, $ W^V_0 $  ，$ W^Q_1 $, $ W^K_1 $, $ W^V_1 $ ，… 如下图所示:</p>
-<p></p>
-<p>对于输入矩阵 $ X $ ，每一组 $ Q $ 、$ K $ 和 $ V $ 都可以得到一个输出矩阵 $ Z $ 。如下图所示</p>
-<p></p>
-<p><strong>Padding Mask</strong>
-</p>
-<p>上面 Self Attention 的计算过程中，我们通常使用 mini-batch 来计算，也就是一次计算多句话，即 $ X $ 的维度是 <code>[batch_size, sequence_length]</code>，sequence_length​是句长，而一个 mini-batch 是由多个不等长的句子组成的，我们需要按照这个 mini-batch 中最大的句长对剩余的句子进行补齐，一般用 0 进行填充，这个过程叫做 padding</p>
-<p>但这时在进行 softmax 就会产生问题。回顾 softmax 函数 $\sigma(z_i) = \frac{e^{z_i}}{\sum_K^{j=i} e^{z_j}}$，$e^0$ 是 1，是有值的，这样的话 softmax 中被 padding 的部分就参与了运算，相当于让无效的部分参与了运算，这可能会产生很大的隐患。因此需要做一个 mask 操作，让这些无效的区域不参与运算，一般是给无效区域加一个很大的负数偏置，即</p>
-<p>$$\left{\begin{aligned}
-Z_{illegal} = Z_{illegal} + bias_{illegal} \
-bias_{illegal}-&gt; -\infin \
-\end{aligned}\right.$$</p>
-<h3 id="3-残差连接和-layer-normalization">3. 残差连接和 Layer Normalization</h3>
-<p><strong>残差连接</strong></p>
-<p>我们在上一步得到了经过 self-attention 加权之后输出，也就是$\text{Self-Attention(Q, K, V)}$，然后把他们加起来做残差连接</p>
-<p>$$X_{\text{embedding}} + \text{Self-Attention(Q, K, V)}$$</p>
-<p><strong>Layer Normalization</strong></p>
-<p>Layer Normalization 的作用是<strong>把神经网络中隐藏层归一为标准正态分布</strong>，也就是 $i.i.d$ 独立同分布，以起到<strong>加快训练速度，加速收敛</strong>的作用</p>
-<p>$$\mu_j = \frac{1}{m} \sum^{i}<em>{i=1} x</em>{ij}$$</p>
-<p>上式以矩阵的列（column）为单位求均值；</p>
-<p>$$\sigma^2_{j} = \frac{1}{m}\sum^m_{i=1}(x_{ij} - \mu_j)^2$$</p>
-<p>上式以矩阵的列（column）为单位求方差</p>
-<p>$$LayerNorm(x) = \frac{x_{ij} - \mu_{j}}{\sqrt{\sigma^2 + \epsilon}}$$</p>
-<p>然后用每一列的每一个元素减去这列的均值，再除以这列的标准差，从而得到归一化后的数值，加 $\epsilon$ 是为了防止分母为 0。</p>
-<p></p>
-<p>下图展示了更多细节：输入 $x_1, x_2$ 经 self-attention 层之后变成 $z_1, z_2$，然后和输入 $x_1, x_2$ 进行残差连接，经过 LayerNorm 后输出给全连接层。全连接层也有一个残差连接和一个 LayerNorm，最后再输出给下一个 Encoder（每个 Encoder Block 中的 FeedForward 层权重都是共享的）</p>
-<p></p>
-<h3 id="4-transformer-encoder-整体结构">4. Transformer Encoder 整体结构</h3>
-<p>经过上面 3 个步骤，我们已经基本了解了 Encoder 的主要构成部分，下面我们用公式把一个 Encoder block 的计算过程整理一下：</p>
-<p>(1). 字向量与位置编码</p>
-<p>$$X = \text{Embedding-Lookup(X)} + \text{Positional-Encoding}$$</p>
-<p>(2). 自注意力机制</p>
-<p>$$Q = Linear_{q}(X) = XW_{Q}$$
-$$K = Linear_{k}(X) = XW_{K}$$
-$$V = Linear_{v}(X) = XW_{V}$$
-$$X_{attention} = \text{Self-Attention(Q, K, V)}$$</p>
-<p>(3). self-attention 残差连接与 Layer Normalization</p>
-<p>$$X_{attention} = X + X_{attention}$$
-$$X_{attention} = LayerNorm(attention)$$</p>
-<p>(4). 下面进行 Encoder block 结构图中的第 4 部分，也就是 FeedForward，其实就是两层线性映射并用激活函数激活，比如说 $ReLU$</p>
-<p>$$X_{hidden} = Linear(ReLU(Linear(X_{attention})))$$</p>
-<p>(5). FeedForward 残差连接与 Layer Normalization</p>
-<p>$$X_{hidden} = X_{attention} + X_{hidden}$$
-$$X_{hidden} = LayerNorm(X_{hidden})$$</p>
-<p>其中
-$$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
-<h3 id="5-transformer-decoder-整体结构">5. Transformer Decoder 整体结构</h3>
-<p>我们先从 HighLevel 的角度观察一下 Decoder 结构，从下到上依次是：</p>
-<ul>
-<li>Masked Multi-Head Self-Attention</li>
-<li>Multi-Head Encoder-Decoder Attention</li>
-<li>FeedForward Network</li>
-</ul>
-<p>和 Encoder 一样，上面三个部分的每一个部分，都有一个残差连接，后接一个 Layer Normalization。Decoder 的中间部件并不复杂，大部分在前面 Encoder 里我们已经介绍过了，但是 Decoder 由于其特殊的功能，因此在训练时会涉及到一些细节</p>
-<p></p>
-<p><strong>Masked Self-Attention</strong></p>
-<p>具体来说，传统 Seq2Seq 中 Decoder 使用的是 RNN 模型，因此在训练过程中输入 $t$ 时刻的词，模型无论如何也看不到未来时刻的词，因为循环神经网络是时间驱动的，只有当 $t$ 时刻运算结束了，才能看到 $t + 1$ 时刻的词。而 Transformer Decoder 抛弃了 RNN，改为 Self-Attention，由此就产生了一个问题，<font color=red>在训练过程中，整个 ground truth 都暴露在 Decoder 中</font>，这显然是不对的，我们需要对 Decoder 的输入进行一些处理，该处理被称为 Mask
-</br>
-举个例子，Decoder 的 ground truth 为 &ldquo;<start> I am fine&rdquo;，我们将这个句子输入到 Decoder 中，经过 WordEmbedding 和 Positional Encoding 之后，将得到的矩阵做三次线性变换 $(W_Q, W_K, W_V)$。然后进行 self-attention 操作，首先通过得到 Scaled Scores，接下来非常关键，我们要<strong>对 Scaled Scores 进行 Mask</strong>，举个例子，当我们输入 &ldquo;I&rdquo; 时，模型目前仅知道包括 &ldquo;I&rdquo; 在内之前所有字的信息，即 &ldquo;<start>&rdquo; 和 &ldquo;I&rdquo; 的信息，不应该让其知道 &ldquo;I&rdquo; 之后词的信息。道理很简单，我们做预测的时候是按照顺序一个字一个字的预测，怎么能这个字都没预测完，就已经知道后面字的信息了呢？Mask 非常简单，首先生成一个下三角全 0，上三角全为负无穷的矩阵，然后将其与 Scaled Scores 相加即可</p>
-<p></p>
-<p>之后再做 softmax，就能将 - inf 变为 0，得到的这个矩阵即为每个字之间的权重</p>
-<p></p>
-<p>Multi-Head Self-Attention 无非就是并行的对上述步骤多做几次，前面 Encoder 也介绍了，这里就不多赘述了</p>
-<p><strong>Masked Encoder-Decoder Attention</strong></p>
-<p>其实这一部分的计算流程和前面 Masked Self-Attention 很相似，结构一模一样，唯一不同的是这里的 K, V为 Encoder 的输出，Q 为 Decoder 中 Masked Self-Attention 的输出</p>
-<p></p>
-<h3 id="6-总结">6. 总结</h3>
-<p>到此为止，Transformer 中 95% 的内容已经介绍完了，我们用一张图展示其完整结构。不得不说，Transformer 设计的十分巧夺天工</p>
-<p></p>
-<p>下面有几个问题，是我从网上找的，感觉看完之后能对 Transformer 有一个更深的理解</p>
-<p><font color=red>Transformer 为什么需要进行 Multi-head Attention？</font></p>
-<ul>
-<li>原论文中说到进行 Multi-head Attention 的原因是将模型分为多个头，形成多个子空间，可以让模型去关注不同方面的信息，最后再将各个方面的信息综合起来。其实直观上也可以想到，如果自己设计这样的一个模型，必然也不会只做一次 attention，多次 attention 综合的结果至少能够起到增强模型的作用，也可以类比 CNN 中同时使用多个卷积核的作用，直观上讲，多头的注意力有助于网络捕捉到更丰富的特征 / 信息</li>
-</ul>
-<p><font color=red>Transformer 相比于 RNN/LSTM，有什么优势？为什么？</font></p>
-<ul>
-<li>RNN 系列的模型，无法并行计算，因为 T 时刻的计算依赖 T-1 时刻的隐层计算结果，而 T-1 时刻的计算依赖 T-2 时刻的隐层计算结果</li>
-<li>Transformer 的特征抽取能力比 RNN 系列的模型要好</li>
-</ul>
-<p><font color=red>为什么说 Transformer 可以代替 seq2seq？</font></p>
-<ul>
-<li>这里用代替这个词略显不妥当，seq2seq 虽已老，但始终还是有其用武之地，seq2seq 最大的问题在于<strong>将Encoder端的所有信息压缩到一个固定长度的向量中</strong>，并将其作为 Decoder 端首个隐藏状态的输入，来预测 Decoder 端第一个单词 (token) 的隐藏状态。在输入序列比较长的时候，这样做显然会损失 Encoder 端的很多信息，而且这样一股脑的把该固定向量送入 Decoder 端，Decoder 端不能够关注到其想要关注的信息。</li>
-<li>Transformer 不但对 seq2seq 模型这两点缺点有了实质性的改进 (多头交互式 attention 模块)，而且还引入了 self-attention 模块，让源序列和目标序列首先 “自关联” 起来，这样的话，源序列和目标序列自身的 embedding 表示所蕴含的信息更加丰富，而且后续的 FFN 层也增强了模型的表达能力，并且 Transformer 并行计算的能力远远超过了 seq2seq 系列模型</li>
-</ul>
-<h3 id="7-参考文章">7. 参考文章</h3>
-<ul>
-<li><a href="http://mantchs.com/2019/09/26/NLP/Transformer/"target="_blank" rel="external nofollow noopener noreferrer">Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="http://jalammar.github.io/illustrated-transformer/"target="_blank" rel="external nofollow noopener noreferrer">The Illustrated Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="http://www.peterbloem.nl/blog/transformers"target="_blank" rel="external nofollow noopener noreferrer">TRANSFORMERS FROM SCRATCH<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="https://medium.com/@bgg/seq2seq-pay-attention-to-self-attention-part-2-%E4%B8%AD%E6%96%87%E7%89%88-ef2ddf8597a4"target="_blank" rel="external nofollow noopener noreferrer">Seq2seq pay Attention to Self Attention: Part 2<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ul>]]></description></item><item><title>Effective STL [6] | 警惕C++最令人恼怒的解析</title><link>https://jianye0428.github.io/posts/clause_6/</link><pubDate>Mon, 24 Jul 2023 13:15:53 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_6/</guid><description><![CDATA[<!-- <div class="details admonition quote">
+<p>这仅对带有迭代器实参的<code>erase</code>形式是正确的。关联容器也提供一个带有一个值的实参的<code>erase</code>形式，而那种形式返回被删掉的元素个数。但这里，我们只关心通过迭代器删除东西。</p>]]></description></item><item><title>Effective STL [6] | 警惕C++最令人恼怒的解析</title><link>https://jianye0428.github.io/posts/clause_6/</link><pubDate>Mon, 24 Jul 2023 13:15:53 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_6/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
@@ -5658,4 +5385,322 @@ ref: <a href="https://www.cnblogs.com/zmlctt/p/4222621.html"target="_blank" rel=
 </span></span><span class="line"><span class="cl">        <span class="n">pin_memory</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 </span></span><span class="line"><span class="cl">    <span class="p">)</span></span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item></channel></rss>
+</div>]]></description></item><item><title>PyTorch Notes</title><link>https://jianye0428.github.io/posts/pytorchnotes/</link><pubDate>Sat, 15 Jul 2023 18:15:53 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/pytorchnotes/</guid><description><![CDATA[<h2 id="torch-基本函数">Torch 基本函数</h2>
+<h3 id="1-torcheinsum">1. <strong><code>torch.einsum()</code></strong></h3>
+<p><code>torch.einsum(equation, *operands)-&gt;Tensor</code>:爱因斯坦求和
+ref1: 算子部署: <a href="https://blog.csdn.net/HW140701/article/details/120654252"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/HW140701/article/details/120654252<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+ref2: 例子: <a href="https://zhuanlan.zhihu.com/p/361209187"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/361209187<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p><strong>三条基本规则:</strong></p>
+<ul>
+<li><strong>规则一:</strong> equation 箭头左边，在不同输入之间<font color=red>重复出现的索引</font>表示，把输入张量沿着该维度做乘法操作，比如还是以上面矩阵乘法为例， &ldquo;ik,kj-&gt;ij&rdquo;，k 在输入中重复出现，所以就是把 a 和 b 沿着 k 这个维度作相乘操作；</li>
+<li><strong>规则二:</strong> 只出现在 equation 箭头左边的索引，表示中间计算结果需要在这个维度上求和，也就是上面提到的求和索引；</li>
+<li><strong>规则三:</strong> equation 箭头右边的索引顺序可以是任意的，比如上面的 &ldquo;ik,kj-&gt;ij&rdquo; 如果写成 &ldquo;ik,kj-&gt;ji&rdquo;，那么就是返回输出结果的转置，用户只需要定义好索引的顺序，转置操作会在 einsum 内部完成</li>
+</ul>
+<p><strong>特殊规则:</strong></p>
+<ul>
+<li>equation 可以不写包括箭头在内的右边部分，那么在这种情况下，输出张量的维度会根据默认规则推导。就是把输入中只出现一次的索引取出来，然后按字母表顺序排列，比如上面的矩阵乘法 &ldquo;ik,kj-&gt;ij&rdquo; 也可以简化为 &ldquo;ik,kj&rdquo;，根据默认规则，输出就是 &ldquo;ij&rdquo; 与原来一样；</li>
+<li>equation 中支持 &ldquo;&hellip;&rdquo; 省略号，用于表示用户并不关心的索引。比如只对一个高维张量的最后两维做转置可以这么写：
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nv">a</span> <span class="o">=</span> torch.randn<span class="o">(</span>2,3,5,7,9<span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># i = 7, j = 9</span>
+</span></span><span class="line"><span class="cl"><span class="nv">b</span> <span class="o">=</span> torch.einsum<span class="o">(</span><span class="s1">&#39;...ij-&gt;...ji&#39;</span>, <span class="o">[</span>a<span class="o">])</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="2-torchpermutetorchtranspose">2. <strong><code>torch.permute()/torch.transpose()</code></strong></h3>
+<p><code>torch.permute(dim0, dim1, dim2)</code>:用于调换不同维度的顺序
+<code>torch.transpose(input, dim0, dim1)</code>:交换矩阵的两个维度</p>
+<h3 id="3-torchrand">3. <strong><code>torch.rand()</code></strong></h3>
+<p><code>torch.rand(dim0, dim1)</code>:生成dim0 x dim1的tensor</p>
+<h3 id="4-torchsizetorchshape">4. <strong><code>torch.size()/torch.shape</code></strong></h3>
+<p><code>torch.size()</code>:返回tensor的size
+<code>torch.shape</code>:返回tensor的size</p>
+<h3 id="5-torchtensordot">5. <strong><code>torch.tensordot()</code></strong></h3>
+<p>ref: tensordot()和einsum()的区别: <a href="https://blog.csdn.net/Eric_1993/article/details/105670381"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/Eric_1993/article/details/105670381<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<code>torch.tensordot(tensor1， tensor2， axes=([dim1,dim2],[dim0, dim1]))</code>: 将axes指定的子数组进行点乘, axes 指定具体的维度.</p>
+<h3 id="6-torchtranspose">6. <strong><code>torch.transpose()</code></strong></h3>
+<p><code>torch.transpose(tensor, dim0, dim2) —&gt; Tensor</code>:在dim0和dim1方向上转置</p>
+<p>###7. <strong><code>torch.index_add_()</code></strong></p>
+<p><code> Tensor.index_add_(dim, index, source, *, alpha=1) → Tensor</code></p>
+<p>demo:</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">index</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">index_add_</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">tensor</span><span class="p">([[</span>  <span class="mf">2.</span><span class="p">,</span>   <span class="mf">3.</span><span class="p">,</span>   <span class="mf">4.</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>  <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>  <span class="mf">8.</span><span class="p">,</span>   <span class="mf">9.</span><span class="p">,</span>  <span class="mf">10.</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>  <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>  <span class="mf">5.</span><span class="p">,</span>   <span class="mf">6.</span><span class="p">,</span>   <span class="mf">7.</span><span class="p">]])</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">index_add_</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">tensor</span><span class="p">([[</span>  <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>  <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>  <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>  <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>  <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">,</span>   <span class="mf">1.</span><span class="p">]])</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="torch-nn-module">Torch NN Module</h2>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">torch</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">nn</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">functional</span> <span class="k">as</span> <span class="n">F</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="1-nnconv1d">1. <strong><code>nn.Conv1d()</code></strong></h3>
+<p><code>torch.nn.Conv1d(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros', device=None, dtype=None)</code></p>
+<p><strong>Shape:</strong>
+- Input: $(N, C_{in}, L_{in})$ or $(C_{in}, L_{in})$
+- Output: $(N, C_{in}, L_{in})$ or $(C_{in}, L_{in})$, where
+$$L_{out} = \frac{L_{in} + 2 \cdot \text{padding} - \text{dilation} \cdot (\text{kernel_size} - 1) - 1}{stride}$$</p>
+<p><strong>Demo:</strong></p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv1d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span> <span class="c1"># B x C x H or N x C x L</span>
+</span></span><span class="line"><span class="cl"><span class="n">output</span> <span class="o">=</span> <span class="n">m</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="c1"># torch.Size([20, 33, 24])</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="2-nnconv2d">2. <strong><code>nn.Conv2d()</code></strong></h3>
+<p><code>torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros', device=None, dtype=None)</code></p>
+<p><strong>Shape:</strong></p>
+<ul>
+<li>Input: $(N, C_{\text in}, H_{\text in}, W_{\text in})$ or $(C_{\text in}, H_{\text in}, W_{\text in})$
+- Output: $(N, C_{\text out}, H_{\text out}, W_{\text out})$ or $(C_{\text out}, H_{\text out}, W_{\text out})$, where
+$$
+H_{out} = \frac{H_{in} + 2 \cdot \text{padding[0]} - \text{dilation[0]} \cdot (\text{kernel_size[0]} - 1) - 1}{stride[0]} + 1
+$$
+$$
+W_{out} = \frac{W_{in} + 2 \cdot \text{padding[1]} - \text{dilation[1]} \cdot (\text{kernel_size[1]} - 1) - 1}{stride[1]} + 1
+$$</li>
+</ul>
+<p><strong>Demo:</strong></p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="c1"># With square kernels and equal stride</span>
+</span></span><span class="line"><span class="cl">  <span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># non-square kernels and unequal stride and with padding</span>
+</span></span><span class="line"><span class="cl">  <span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">stride</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">padding</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> <span class="c1"># output.shape: 20 x 33 x 28 x 100</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># non-square kernels and unequal stride and with padding and dilation</span>
+</span></span><span class="line"><span class="cl">  <span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">stride</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">padding</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">dilation</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># output.shape: 20 x 33 x 26 x 100</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">output</span> <span class="o">=</span> <span class="n">m</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span> <span class="c1">#</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="3-nnfunctionalinterpolate">3. <strong><code>nn.functional.interpolate()</code></strong></h3>
+<p><code>torch.nn.functional.interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False)</code></p>
+<h3 id="4-nnfunctionalrelu">4. <strong><code>nn.functional.ReLU()</code></strong></h3>
+<p>$$ \text{ReLU} = (x)^+ = \max {(0,x)}$$</p>
+<p><code>torch.nn.ReLU(inplace=False)</code></p>
+<p><strong>作用:</strong></p>
+<ul>
+<li>
+<p>Sigmoid的导数只有在0附近的时候有比较好的激活性，在正负饱和区的梯度都接近于0，所以这会造成梯度弥散，而ReLU函数在大于0的部分梯度为常数，所以不会产生梯度弥散现象。</p>
+</li>
+<li>
+<p>ReLU函数在负半区的导数为0 ，所以一旦神经元激活值进入负半区，那么梯度就会为0，而正值不变，这种操作被成为单侧抑制。（也就是说：<strong>在输入是负值的情况下，它会输出0，那么神经元就不会被激活。这意味着同一时间只有部分神经元会被激活，从而使得网络很稀疏，进而对计算来说是非常有效率的。</strong>）<u>正因为有了这单侧抑制，才使得神经网络中的神经元也具有了稀疏激活性。</u>尤其体现在深度神经网络模型(如CNN)中，当模型增加N层之后，理论上ReLU神经元的激活率将降低2的N次方倍。</p>
+</li>
+<li>
+<p>relu函数的导数<strong>计算更快</strong>，程序实现就是一个if-else语句，而sigmoid函数要进行浮点四则运算。</p>
+</li>
+</ul>
+<p><strong>Shape:</strong></p>
+<ul>
+<li>Input: $(∗)$, where $*$ means any number of dimensions.</li>
+<li>Output: $(∗)$, same shape as the input.</li>
+</ul>
+<p></p>
+<p><strong>Demo:</strong></p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">output</span> <span class="o">=</span> <span class="n">m</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># An implementation of CReLU - https://arxiv.org/abs/1603.05201</span>
+</span></span><span class="line"><span class="cl"><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">m</span><span class="p">(</span><span class="nb">input</span><span class="p">),</span><span class="n">m</span><span class="p">(</span><span class="o">-</span><span class="nb">input</span><span class="p">)))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="5-nnmaxpool2d">5. <strong><code>nn.MaxPool2d()</code></strong></h3>
+<p><code>torch.nn.MaxPool2d(kernel_size, stride=None, padding=0, dilation=1, return_indices=False, ceil_mode=False)</code></p>
+<p><strong>Shape:</strong></p>
+<ul>
+<li>Input: $(N, C, H_{in}, W_{in})$ or $(C, H_{in}, W_{in})$</li>
+<li>Output: $(N, C, H_{out}, W_{out})$ or $(C, H_{out}, W_{out})$</li>
+</ul>
+<p>where,</p>
+<p>$$ H_{out} = \frac{H_{in} + 2 * \text{padding}[0] - \text{dilation}[0] * (\text{kernel_size}[0]-1) - 1}{\text{stride}[0]} + 1$$</p>
+<p>$$ W_{out} = \frac{W_{in} + 2 * \text{padding}[1] - \text{dilation}[1] * (\text{kernel_size}[1]-1) - 1}{\text{stride}[1]} + 1$$</p>
+<p><strong>demo:</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># pool of square window of size=3, stride=2</span>
+</span></span><span class="line"><span class="cl"><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">MaxPool2d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># pool of non-square window</span>
+</span></span><span class="line"><span class="cl"><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">MaxPool2d</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">stride</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">output</span> <span class="o">=</span> <span class="n">m</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span> <span class="c1"># 20 16 24 31</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="6-nnavgpool2d">6. <strong><code>nn.AvgPool2d()</code></strong></h3>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">torch.nn.AvgPool2d(kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None)</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>Shape:</strong></p>
+<ul>
+<li>Input: $(N, C, H_{in}, W_{in})$ or $(C, H_{in}, W_{in})$</li>
+<li>Output: $(N, C, H_{out}, W_{out})$ or $(C, H_{out}, W_{out})$</li>
+</ul>
+<p>where,</p>
+<p>$$ H_{out} = \frac{H_{in} + 2 * \text{padding}[0] -  (\text{kernel_size}[0])}{\text{stride}[0]} + 1$$</p>
+<p>$$ W_{out} = \frac{W_{in} + 2 * \text{padding}[1] - (\text{kernel_size}[1])}{\text{stride}[1]} + 1$$</p>
+<p><strong>demo:</strong></p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># pool of square window of size=3, stride=2</span>
+</span></span><span class="line"><span class="cl"><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">AvgPool2d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># pool of non-square window</span>
+</span></span><span class="line"><span class="cl"><span class="n">m</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">AvgPool2d</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">stride</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">output</span> <span class="o">=</span> <span class="n">m</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span> <span class="c1"># 20 16, 24 31</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="torchcuda">torch.cuda</h2>
+<p>ref link: <a href="https://zhuanlan.zhihu.com/p/76908135"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/76908135<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<ol>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#current_device"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.current_device()</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>: 返回当前选择的设备的索引</p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#current_stream"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.current_stream()</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>: 返回参数设备的当前的<a href="https://pytorch.org/docs/stable/cuda.html#torch.cuda.Stream"target="_blank" rel="external nofollow noopener noreferrer">Stream<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#current_stream"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.default_stream()</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>: 返回当前参数设备的<a href="https://pytorch.org/docs/stable/cuda.html#torch.cuda.Stream"target="_blank" rel="external nofollow noopener noreferrer">Stream<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</li>
+<li>
+<p><em>CLASS</em> <a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#device"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.device</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>: 可以改变选择的设备的上下文管理器
+Parameters：device (torch.device or int) – device index to select. It’s a no-op if this argument is a negative integer or None.</p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#device_count"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.device_count()</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>: 返回可使用GPU的数量</p>
+</li>
+<li>
+<p><em>CLASS</em> <a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#device_of"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.device_of(obj)</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+Context-manager 将参数对象的设备改成当前的设备。你可以使用张量或者存储作为参数。如果传入的对象没有分配在GPU上，这个操作是无效的。</p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#empty_cache"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.empty_cache()</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+释放caching allocator当前持有的所有未占用的cached memory，使其可以用在其他GPU应用且可以在 nvidia-smi可视化。</p>
+<blockquote>
+<blockquote>
+<p>注意：<a href="https://pytorch.org/docs/stable/cuda.html#torch.cuda.empty_cache"target="_blank" rel="external nofollow noopener noreferrer">empty_cache()<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 并不会增加PyTorch可以使用的GPU显存的大小。 查看 <a href="https://pytorch.org/docs/stable/notes/cuda.html#cuda-memory-management"target="_blank" rel="external nofollow noopener noreferrer">Memory management<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 来获取更多的GPU显存管理的信息。</p>
+</blockquote>
+</blockquote>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#get_device_capability"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.get_device_capability(device=None)</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+Gets the cuda capability of a device.</p>
+<p>Parameters：device (torch.device or int, optional) – device for which to return the device capability. This function is a no-op if this argument is a negative integer. It uses the current device, given bycurrent_device(), if device is None (default).</p>
+<p>Returns：the major and minor cuda capability of the device</p>
+<p>Return type ： tuple(int, int)</p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#get_device_name"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.get_device_name(device=None)</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#init"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.init()</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+初始化PyTorch的CUDA状态。如果你通过C API与PyTorch进行交互，你可能需要显式调用这个方法。只有CUDA的初始化完成，CUDA的功能才会绑定到Python。用户一般不应该需要这个，因为所有PyTorch的CUDA方法都会自动在需要的时候初始化CUDA。如果CUDA的状态已经初始化了，将不起任何作用。</p>
+</li>
+<li>
+<p>[<code>torch.cuda.is_available()</code>]</p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#max_memory_allocated"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.max_memory_allocated(device=None)</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+Returns the maximum GPU memory occupied by tensors in bytes for a given device.</p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#max_memory_cached"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.max_memory_cached(device=None)</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#memory_allocated"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.memory_allocated(device=None)</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+Parameters：device (torch.device or int, optional) – selected device. Returns statistic for the current device, given by current_device(), if device is None (default).</p>
+</li>
+<li>
+<p><a href="https://pytorch.org/docs/stable/_modules/torch/cuda.html#memory_cached"target="_blank" rel="external nofollow noopener noreferrer"><code>torch.cuda.memory_cached(devide=None)</code><i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</li>
+<li>
+<p>[``]</p>
+</li>
+</ol>
+]]></description></item></channel></rss>

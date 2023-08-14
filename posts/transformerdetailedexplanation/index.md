@@ -1,17 +1,6 @@
 # Transformer 详解
 
 
-<!-- {{< admonition quote "quote" false >}}
-
-{{< /admonition >}} -->
-
-<!--more-->
-
-ref:
-[1]. [B站讲解视频](https://www.bilibili.com/video/BV1mk4y1q7eK?p=1)
-[2]. https://wmathor.com/index.php/archives/1438/
-[3]. [Transformer的pytorch实现](https://wmathor.com/index.php/archives/1455/)
-
 ## Transformer 详解
 
 Transformer 是谷歌大脑在 2017 年底发表的论文 [attention is all you need](https://arxiv.org/pdf/1706.03762.pdf) 中所提出的 seq2seq 模型。现在已经取得了大范围的应用和扩展，而 BERT 就是从 Transformer 中衍生出来的预训练语言模型
@@ -28,9 +17,9 @@ Transformer 是谷歌大脑在 2017 年底发表的论文 [attention is all you 
 
 ### 0. Transformer 直观认识
 
-Transformer 和 LSTM 的最大区别，就是 LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字。而 Transformer 的训练时并行的，即所有字是同时训练的，这样就大大增加了计算效率。<font color=green>Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序</font>，使用自注意力机制（Self Attention Mechanism）和全连接层进行计算，这些后面会讲到
+Transformer 和 LSTM 的最大区别，就是 <font color=green>LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字</font>。而 Transformer 的训练时**并行**的，即所有字是同时训练的，这样就大大增加了计算效率。<font color=green>Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序</font>，使用自注意力机制(Self Attention Mechanism)和全连接层进行计算，这些后面会讲到。
 
-Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<font color=red>Encoder 负责把输入（语言序列）隐射成隐藏层（下图中第 2 步用九宫格代表的部分），然后解码器再把隐藏层映射为自然语言序列</font>。例如下图机器翻译的例子（Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token）
+Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<font color=red>Encoder 负责把输入(语言序列)映射成隐藏层(下图中第 2 步用九宫格代表的部分)，然后解码器再把隐藏层映射为自然语言序列</font>。例如下图机器翻译的例子(Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token)。
 
 ![general architecture](images/Transformer_xiangjie_1.png#center)
 
@@ -42,7 +31,7 @@ Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<fo
 
 ### 1. Positional Encoding
 
-由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能识别出语言中的顺序关系。
+由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能<font color=red>识别出语言中的顺序关系</font>。
 
 现在定义一个**位置嵌入**的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成
 
@@ -51,11 +40,11 @@ Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<fo
 论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:
 
 $$\left\{\begin{aligned}
-PE(pos, 2i) = \sin (pos/10000^{2i/d_{model}}) \\
-PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \\
+PE(pos, 2i) = \sin (pos/10000^{2i/d_{model}}) \cr
+PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \cr
 \end{aligned}\right.$$
 
-上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max\_sequence\_length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding\_dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值
+上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max \_ sequence\_ length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding\_ dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值
 
 上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到**位置之间的依赖关系和自然语言的时序特性**。
 
@@ -107,13 +96,13 @@ PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \\
 
 ### 2. Self Attention Mechanism
 
-对于输入的句子 $ X $，通过 WordEmbedding 得到该句子中每个字的字向量，同时通过 Positional Encoding 得到所有字的位置向量，将其相加（维度相同，可以直接相加），得到该字真正的向量表示。第 $ t $ 个字的向量记作 $ x_t $。
+对于输入的句子 $ X $，通过 WordEmbedding 得到该句子中每个字的字向量，同时通过 Positional Encoding 得到所有字的位置向量，将其相加(维度相同，可以直接相加)，得到该字真正的向量表示。第 $ t $ 个字的向量记作 $ x_t $。
 
-接着我们定义三个矩阵 $ W_Q $, $ W_K $, $ W_V $，使用这三个矩阵分别对所有的字向量进行三次线性变换，于是所有的字向量又衍生出三个新的向量 $ q_t $, $ k_t $, $ v_t $。我们将所有的 $ q_t $ 向量拼成一个大矩阵，记作查询矩阵 $ Q $ ，将所有的 $ k_t $ 向量拼成一个大矩阵，记作键矩阵 $ K $  ，将所有的 $ v_t $ 向量拼成一个大矩阵，记作值矩阵 $ V $ （见下图）
+接着我们定义三个矩阵 $ W_Q $, $ W_K $, $ W_V $，使用这三个矩阵分别对所有的字向量进行三次线性变换，于是所有的字向量又衍生出三个新的向量 $ q_t $, $ k_t $, $ v_t $。我们将所有的 $ q_t $ 向量拼成一个大矩阵，记作查询矩阵 $ Q $ ，将所有的 $ k_t $ 向量拼成一个大矩阵，记作键矩阵 $ K $  ，将所有的 $ v_t $ 向量拼成一个大矩阵，记作值矩阵 $ V $ (见下图)
 
 ![q k v](images/Transformer_xiangjie_5.gif#center)
 
-为了获得第一个字的注意力权重，我们需要用第一个字的查询向量 $ q_1 $ 乘以键矩阵 $ K $（见下图）
+为了获得第一个字的注意力权重，我们需要用第一个字的查询向量 $ q_1 $ 乘以键矩阵 $ K $(见下图)
 
 ```
                 [0, 4, 2]
@@ -123,7 +112,7 @@ PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \\
 
 ![q k v](images/Transformer_xiangjie_6.gif#center)
 
-之后还需要将得到的值经过 softmax，使得它们的和为 1（见下图）
+之后还需要将得到的值经过 softmax，使得它们的和为 1(见下图)
 
 ```
  softmax([2, 4, 4]) = [0.0, 0.5, 0.5]
@@ -131,7 +120,7 @@ PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \\
 
 ![q k v](images/Transformer_xiangjie_7.png#center)
 
-有了权重之后，将权重其分别乘以对应字的值向量 $ v_t $（见下图）
+有了权重之后，将权重其分别乘以对应字的值向量 $ v_t $(见下图)
 
 ```
     0.0 * [1, 2, 3] = [0.0, 0.0, 0.0]
@@ -141,7 +130,7 @@ PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \\
 
 ![q k v](images/Transformer_xiangjie_8.gif#center)
 
-最后将这些**权重化后的值向量求和**，得到第一个字的输出（见下图）
+最后将这些**权重化后的值向量求和**，得到第一个字的输出(见下图)
 
 ```
       [0.0, 0.0, 0.0]
@@ -167,7 +156,7 @@ Q $, $ K $, $ V $。计算过程如下图所示，这里的输入是一个矩阵
 ![q k v](images/Transformer_xiangjie_11.png#center)
 
 
-接下来将 $ Q $ 和 $K_T$ 相乘，然后除以 $ \sqrt{d_k} $（这是论文中提到的一个 trick），经过 softmax 以后再乘以 $ V $ 得到输出
+接下来将 $ Q $ 和 $K_T$ 相乘，然后除以 $ \sqrt{d_k} $(这是论文中提到的一个 trick)，经过 softmax 以后再乘以 $ V $ 得到输出
 
 ![q k v](images/Transformer_xiangjie_12.png#center)
 
@@ -190,11 +179,10 @@ Q $, $ K $, $ V $。计算过程如下图所示，这里的输入是一个矩阵
 
 但这时在进行 softmax 就会产生问题。回顾 softmax 函数 $\sigma(z_i) = \frac{e^{z_i}}{\sum_K^{j=i} e^{z_j}}$，$e^0$ 是 1，是有值的，这样的话 softmax 中被 padding 的部分就参与了运算，相当于让无效的部分参与了运算，这可能会产生很大的隐患。因此需要做一个 mask 操作，让这些无效的区域不参与运算，一般是给无效区域加一个很大的负数偏置，即
 
-$$\left\{\begin{aligned}
-Z_{illegal} = Z_{illegal} + bias_{illegal} \\
-bias_{illegal}-> -\infin \\
-\end{aligned}\right.$$
-
+$$
+\left\{\begin{aligned}Z_{illegal}&=Z_{illegal}+bias_{illegal}\cr
+&bias_{illegal} \rightarrow-\infty\end{aligned}\right.
+$$
 
 ### 3. 残差连接和 Layer Normalization
 
@@ -208,13 +196,13 @@ $$X_{\text{embedding}} + \text{Self-Attention(Q, K, V)}$$
 
 Layer Normalization 的作用是**把神经网络中隐藏层归一为标准正态分布**，也就是 $i.i.d$ 独立同分布，以起到**加快训练速度，加速收敛**的作用
 
-$$\mu_j = \frac{1}{m} \sum^{i}_{i=1} x_{ij}$$
+$$\mu_{j} = \frac{1}{m} \sum^{i}_{i=1} x_{ij}$$
 
-上式以矩阵的列（column）为单位求均值；
+上式以矩阵的列(column)为单位求均值；
 
 $$\sigma^2_{j} = \frac{1}{m}\sum^m_{i=1}(x_{ij} - \mu_j)^2$$
 
-上式以矩阵的列（column）为单位求方差
+上式以矩阵的列(column)为单位求方差
 
 $$LayerNorm(x) = \frac{x_{ij} - \mu_{j}}{\sqrt{\sigma^2 + \epsilon}}$$
 
@@ -222,7 +210,7 @@ $$LayerNorm(x) = \frac{x_{ij} - \mu_{j}}{\sqrt{\sigma^2 + \epsilon}}$$
 
 ![LayerNorm mechanism](images/Transformer_xiangjie_16.png)
 
-下图展示了更多细节：输入 $x_1, x_2$ 经 self-attention 层之后变成 $z_1, z_2$，然后和输入 $x_1, x_2$ 进行残差连接，经过 LayerNorm 后输出给全连接层。全连接层也有一个残差连接和一个 LayerNorm，最后再输出给下一个 Encoder（每个 Encoder Block 中的 FeedForward 层权重都是共享的）
+下图展示了更多细节：输入 $x_1, x_2$ 经 self-attention 层之后变成 $z_1, z_2$，然后和输入 $x_1, x_2$ 进行残差连接，经过 LayerNorm 后输出给全连接层。全连接层也有一个残差连接和一个 LayerNorm，最后再输出给下一个 Encoder(每个 Encoder Block 中的 FeedForward 层权重都是共享的)
 
 ![LayerNorm mechanism](images/Transformer_xiangjie_17.png)
 
@@ -256,7 +244,7 @@ $$X_{hidden} = X_{attention} + X_{hidden}$$
 $$X_{hidden} = LayerNorm(X_{hidden})$$
 
 其中
-$$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$
+$$X_{hidden} \in \mathbb{R}^{batch\_size * seq\_len * embed\_dim}$$
 
 ### 5. Transformer Decoder 整体结构
 我们先从 HighLevel 的角度观察一下 Decoder 结构，从下到上依次是：
@@ -291,7 +279,7 @@ Multi-Head Self-Attention 无非就是并行的对上述步骤多做几次，前
 ![Decoder 4](images/Transformer_xiangjie_21.png)
 
 ### 6. 总结
-到此为止，Transformer 中 95% 的内容已经介绍完了，我们用一张图展示其完整结构。不得不说，Transformer 设计的十分巧夺天工
+到此为止，Transformer 中 95% 的内容已经介绍完了，我们用一张图展示其完整结构。不得不说，Transformer 设计的十分巧夺天工。
 
 ![Decoder 5](images/Transformer_xiangjie_22.png)
 
@@ -309,15 +297,17 @@ Multi-Head Self-Attention 无非就是并行的对上述步骤多做几次，前
 - 这里用代替这个词略显不妥当，seq2seq 虽已老，但始终还是有其用武之地，seq2seq 最大的问题在于**将Encoder端的所有信息压缩到一个固定长度的向量中**，并将其作为 Decoder 端首个隐藏状态的输入，来预测 Decoder 端第一个单词 (token) 的隐藏状态。在输入序列比较长的时候，这样做显然会损失 Encoder 端的很多信息，而且这样一股脑的把该固定向量送入 Decoder 端，Decoder 端不能够关注到其想要关注的信息。
 - Transformer 不但对 seq2seq 模型这两点缺点有了实质性的改进 (多头交互式 attention 模块)，而且还引入了 self-attention 模块，让源序列和目标序列首先 “自关联” 起来，这样的话，源序列和目标序列自身的 embedding 表示所蕴含的信息更加丰富，而且后续的 FFN 层也增强了模型的表达能力，并且 Transformer 并行计算的能力远远超过了 seq2seq 系列模型
 
-
-
-
-
 ### 7. 参考文章
 - [Transformer](http://mantchs.com/2019/09/26/NLP/Transformer/)
 - [The Illustrated Transformer](http://jalammar.github.io/illustrated-transformer/)
 - [TRANSFORMERS FROM SCRATCH](http://www.peterbloem.nl/blog/transformers)
 - [Seq2seq pay Attention to Self Attention: Part 2](https://medium.com/@bgg/seq2seq-pay-attention-to-self-attention-part-2-%E4%B8%AD%E6%96%87%E7%89%88-ef2ddf8597a4)
+
+
+ref:</br>
+[1]. [B站讲解视频](https://www.bilibili.com/video/BV1mk4y1q7eK?p=1)</br>
+[2]. https://wmathor.com/index.php/archives/1438/</br>
+[3]. [Transformer的pytorch实现](https://wmathor.com/index.php/archives/1455/)</br>
 
 
 ---

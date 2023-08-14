@@ -1,4 +1,294 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 14 Aug 2023 08:13:21 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [22] | 避免原地修改set和multiset的键</title><link>https://jianye0428.github.io/posts/clause_22/</link><pubDate>Mon, 14 Aug 2023 08:13:21 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_22/</guid><description><![CDATA[<p><strong>所有标准关联容器，set和multiset保持它们的元素有序，这些容器的正确行为依赖于它们保持有序。</strong></p>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 14 Aug 2023 19:13:32 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [23] | 考虑用有序vector代替关联容器</title><link>https://jianye0428.github.io/posts/clause_23/</link><pubDate>Mon, 14 Aug 2023 19:13:32 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_23/</guid><description><![CDATA[<p>当需要一个提供快速查找的数据结构时，很多STL程序员立刻会想到标准关联容器：<code>set</code>、<code>multiset</code>、<code>map</code>和<code>multimap</code>。</p>
+<p>如果使用了合适的散列函数，则可以认为散列容器提供了常数时间的查找。</p>
+<p>对于多数应用，被认为是常数时间查找的散列容器要好于保证了对数时间查找的<code>set</code>、<code>map</code>和它们的<code>multi</code>同事。</p>
+<p>即使你需要的就只是==对数时间==查找的保证，标准关联容器仍然可能不是你的最佳选择。和直觉相反，对于标准关联容器，所提供的性能也经常劣于本该比较次的<code>vector</code>。</p>
+<h2 id="关联容器数据结构">关联容器数据结构</h2>
+<p>标准关联容器的典型实现是<strong>平衡二叉查找树</strong>。</p>
+<p>一个平衡二叉查找树是一个对<strong>插入</strong>、<strong>删除</strong>和<strong>查找</strong>的混合操作优化的数据结构。</p>
+<p>换句话说，它被设计为应用于进行一些插入，然后一些查找，然后可能再进行一些插入，然后也许一些删除，然后再来一些查找，然后更多的插入或删除，然后更多的查找等。这个事件序列的关键特征是插入、删除和查找都是混合在一起的。</p>
+<p>一般来说，没有办法预测对树的下一个操作是什么。</p>
+<p><strong>使用数据结构的3阶段</strong></p>
+<ol>
+<li><strong>建立</strong>。通过插入很多元素建立一个新的数据结构。在这个阶段，几乎所有的操作都是插入和删除。几乎没有或根本没有查找。</li>
+<li><strong>查找</strong>。在数据结构中查找指定的信息片。在这个阶段，几乎所有的操作都是查找。几乎没有或根本没有插入和删除。</li>
+<li><strong>重组</strong>。修改数据结构的内容，通过删除所有现有数据和在原地插入新数据。从动作上说，这个阶段等价于阶段1。一旦这个阶段完成，应用程序返回阶段2。</li>
+</ol>
+<h2 id="有序vector更高效">有序vector更高效</h2>
+<p>一个vector可能比一个关联容器能提供更高的性能（时间和空间上都是）。</p>
+<p>但不是任意的<code>vector</code>都会，只有有序vector。因为只有有序容器才能正确地使用查找算法——<code>binary_search</code>、<code>lower_bound</code>、<code>equal_range</code>等。</p>
+<p>Q: 为什么一个（有序的）vector的二分法查找比一个二叉树的二分法查找提供了更好的性能？</p>
+<p>A: 其中的一个是<strong>大小问题</strong>，其中的一个是<strong>引用局部性问题</strong>。</p>
+<p><strong>大小问题</strong></p>
+<p>假设我们需要一个容器来容纳Widget对象，而且，因为查找速度对我们很重要，我们考虑一个Widget的关联容器和一个有序<code>vector&lt;Widget&gt;</code>。</p>
+<p><strong>关联容器数据结构</strong></p>
+<p>如果选择一个关联容器，我们几乎确定了要使用平衡二叉树。这样的树是由树节点组成，每个都不仅容纳了一个Widget，而且保存了一个该节点到左孩子的指针，一个到它右孩子的指针，和（典型的）一个到它父节点的指针。</p>
+<p>这意味着<strong>在关联容器中用于存储一个Widget的空间开销至少会是三个指针</strong>。</p>
+<p><strong>vector数据结构</strong></p>
+<p>与之相对的是，当在vector中存储Widget并没有开销：简单地存储一个Widget。</p>
+<p>当然，<strong>vector本身有开销</strong>，在vector结尾也可能有空的（保留）空间，但是每个vector开销是可以忽略的（通常是三个机器字，比如，三个指针或两个指针和一个int），而且如果必要的话，末尾空的空间可以通过“交换技巧”去掉。即使这个附加的空间没有去掉，也并不影响下面的分析，因为当查找时不会引用那段内存。</p>
+<p><strong>内存大小</strong></p>
+<p>假设我们的数据结构足够大，它们可以分成多个内存页面，但是vector比关联容器需要的页面要少。</p>
+<p>因为vector不需要每个Widget的开销，而关联容器给每个Widget上附加了三个指针。</p>
+<p>假设在你使用的系统上一个Widget的大小是12个字节，指针是4个字节，一个内存页面是4096（4K）字节。</p>
+<p>忽略每个容器的开销，当用vector保存时，你可以在一页面上放置341个Widget $(4096\div12\approx341)$，但使用关联容器时你最多只能放170个 $4096\div(12+4\times3)\approx170)$。</p>
+<p><strong>因此关联容器和vector比起来，你将会使用大约两倍的内存。</strong></p>
+<p>如果你使用的环境可以用<strong>虚拟内存</strong>，就很可以容易地看出那会<strong>造成大量的页面错误，因此一个系统会因为大数据量而明显慢下来</strong>。</p>
+<p><strong>引用局部性问题</strong></p>
+<p>假设在二叉树中的节点都群集在一个相关的小内存页面集中，实际情况下关联容器很乐观的。</p>
+<p><strong>大部分STL实现使用自定义内存管理器来达到这样的群集，但是如果你的STL实现没有改进树节点中的引用局部性，这些节点会分散在所有你的内存空间。那会导致更多的页面错误。</strong></p>
+<p>即使使用了自定义群集内存管理器，关联容器也会导致很多页面错误，因为，不像连续内存容器，比如vector，<strong>基于节点的容器更难保证在容器的遍历顺序中一个挨着一个的元素在物理内存上也是一个挨着一个。</strong></p>
+<p><strong>当进行二分查找时那种内存组织方式（译注：遍历顺序中一个挨着一个的元素在物理内存上也是一个挨着一个）正好是页面错误最少的。</strong></p>
+<h2 id="vector的缺点">vector的缺点</h2>
+<p><font color=red>有序vector的大缺点是必须保持有序！</font></p>
+<p>因为vector中所有的元素都必须拷贝，所以：</p>
+<ol>
+<li>
+<p>当一个新元素插入时，大于这个新元素的所有东西都必须向上移一位，非常昂贵；</p>
+</li>
+<li>
+<p>如果vector必须重新分配它的内在内存，则会更昂贵；</p>
+</li>
+<li>
+<p>如果一个元素从vector中被删除，所有大于它的元素都要向下移动。</p>
+</li>
+</ol>
+<p>vector的插入和删除都很昂贵，但是关联容器的插入和删除则很轻量。</p>
+<p>这就是为什么只有当你知道你的数据结构使用的时候查找几乎不和插入和删除混合时，使用有序vector代替关联容器才有意义。</p>
+<p><strong>概要</strong></p>
+<ol>
+<li>
+<p>在有序vector中存储数据很有可能比在标准关联容器中保存相同的数据消耗更少的内存；</p>
+</li>
+<li>
+<p>当页面错误值得重视的时候，在有序vector中通过二分法查找可能比在一个标准关联容器中查找更快。</p>
+</li>
+</ol>
+<h2 id="example">Example</h2>
+<blockquote>
+<p>vector代替set</p>
+</blockquote>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"> <span class="c1">// 代替set&lt;Widget&gt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">vw</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 建立阶段：很多插入，几乎没有查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 结束建立阶段。（当模拟一个multiset时，你可能更喜欢用stable_sort 来代替；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 用于查找的值的对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span><span class="c1">// 开始查找阶段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过binary_search查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">binary_search</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">w</span><span class="p">))...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过lower_bound查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">lower_bound</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">w</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 条款19解释了“!(w &lt; *i)”测试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="p">(</span><span class="n">w</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">i</span><span class="p">))...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过equal_range查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pair</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="o">&gt;</span> <span class="n">range</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">                       <span class="n">equal_range</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">w</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">range</span><span class="p">.</span><span class="n">first</span> <span class="o">!=</span> <span class="n">range</span><span class="p">.</span><span class="n">second</span><span class="p">)...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 结束查找阶段，开始重组阶段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 开始新的查找阶段...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>里面最难的东西就是<strong>怎么在搜索算法中做出选择</strong>（比如，<code>binary_search</code>、<code>lower_bound</code>等）</p>
+<blockquote>
+<p>vector代替map或multimap</p>
+</blockquote>
+<p>当你决定用vector代替map或multimap时，事情会变得更有趣，因为<strong>vector必须容纳pair对象</strong>。</p>
+<p>但是要注意，如果你声明一个map&lt;K, V&gt;的对象（或者等价的multimap），保存在map中的元素类型是<code>pair&lt;const K, V&gt;</code>。</p>
+<p>如果要用vector模拟<code>map</code>或者<code>multimap</code>，<strong>必须去掉const</strong>，因为当你对vector排序时，元素的值将会通过赋值移动，那意味着pair的两个组件都必须是可赋值的。</p>
+<p>当使用vector来模拟map&lt;K, V&gt;时，<strong>保存在vector中数据的类型将是<code>pair&lt;K, V&gt;</code></strong>，而不是<code>pair&lt;const K, V&gt;</code>。</p>
+<p>map和multimap以顺序的方式保存他们的元素，但<strong>用于排序目的时它们只作用于元素的key部分</strong>（pair的第一个组件），所以当排序vector时你必须做一样的事情。</p>
+<p>你需要为你的pair写一个自定义比较函数，因为<code>pair</code>的<code>operator&lt;</code>作用于pair的两个组件。</p>
+<p><strong>2个比较函数来进行查找</strong></p>
+<p>用来排序的比较函数将作用于两个pair对象，但是查找只用到key值。</p>
+<p>必须传给用于查找的比较函数一个key类型的对象（要查找的值）和一个pair（存储在vector中的一个pair）——两个不同的类型。</p>
+<p>还有一个附加的麻烦，你不会知道key还是pair是作为第一个实参传递的，所以你真的需要两个用于查找的比较函数：<strong>一个key值先传递，一个pair先传递</strong></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="n">Data</span><span class="p">;</span> <span class="c1">// 在这个例子里&#34;map&#34;容纳的类型
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DataCompare</span> <span class="p">{</span> <span class="c1">// 用于比较的类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 用于排序的比较函数keyLess在下面
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Data</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Data</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nf">keyLess</span><span class="p">(</span><span class="n">lhs</span><span class="p">.</span><span class="n">first</span><span class="p">,</span> <span class="n">rhs</span><span class="p">.</span><span class="n">first</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">// 用于查找的比较函数（形式1）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Data</span><span class="o">&amp;</span> <span class="n">Ihs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Data</span><span class="o">::</span><span class="n">first_type</span><span class="o">&amp;</span> <span class="n">k</span><span class="p">)</span> <span class="k">const</span>  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">keyLess</span><span class="p">(</span><span class="n">lhs</span><span class="p">.</span><span class="n">first</span><span class="p">,</span> <span class="n">k</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">// 用于查找的比较函数（形式2）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Data</span><span class="o">::</span><span class="n">first_type</span><span class="o">&amp;</span> <span class="n">k</span><span class="p">,</span>  <span class="k">const</span> <span class="n">Data</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">keyLessfk</span><span class="p">,</span> <span class="n">rhs</span><span class="p">.</span><span class="n">first</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// “真的”比较函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">bool</span> <span class="n">keyLess</span><span class="p">(</span><span class="k">const</span> <span class="n">Data</span><span class="o">::</span><span class="n">first_type</span><span class="o">&amp;</span> <span class="n">k1</span><span class="p">,</span> <span class="k">const</span> <span class="n">Data</span><span class="o">::</span><span class="n">first_type</span><span class="o">&amp;</span> <span class="n">k2</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">k1</span> <span class="o">&lt;</span> <span class="n">k2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们假设有序vector将模拟<code>map&lt;string, int&gt;</code>。</p>
+<p>这段代码几乎是上面讨论的字面转换，除了存在成员函数<code>keyLess</code>。</p>
+<p>那个函数的存在是用来<strong>保证几个不同的<code>operator()</code>函数之间的一致性</strong>。</p>
+<p>每个这样的函数只是简单地比较两个key的值，所以我们把这个测试放在keyLess中并让operator()函数返回keyLess所做的事情，这比复制那个逻辑要好。</p>
+<p>这个软件工程中绝妙的动作增强了<code>DataCompare</code>的可维护性，但<strong>有一个小缺点，它提供了有不同参数类型的operator()函数，这将导致函数对象无法适配。</strong></p>
+<p>把有序vector用作map本质上和用作set一样。</p>
+<p><strong>唯一大的区别是必须把DataCompare对象用作比较函数:</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 代替map&lt;string, int&gt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Data</span><span class="o">&gt;</span> <span class="n">vd</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> <span class="c1">// 建立阶段：很多插入，几乎没有查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 结束建立阶段。（当模拟multimap时，你可能更喜欢用stable_sort来代替）；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DataCompare</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 用于查找的值的对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span> <span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 开始查找阶段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过binary_search查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">binary_search</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s</span><span class="p">,</span> <span class="n">DataCompare</span><span class="p">()))...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 再次通过lower_bound查找，
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Data</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">lower_bound</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s</span><span class="p">,</span> <span class="n">DataCompare</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 条款45解释了“!DataCompare()(s, *i)”测试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">DataCompare</span><span class="p">()(</span><span class="n">s</span><span class="p">,</span> <span class="o">*</span><span class="n">i</span><span class="p">))...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过equal_range查找
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pair</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Data</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">Data</span><span class="o">&gt;::</span><span class="n">iterator</span><span class="o">&gt;</span> <span class="n">range</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">    <span class="n">equal_range</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s</span><span class="p">,</span> <span class="n">DataCompare</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">range</span><span class="p">.</span><span class="n">first</span> <span class="o">!=</span> <span class="n">range</span><span class="p">.</span><span class="n">second</span><span class="p">)...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 结束查找阶段，开始重组阶段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 开始新的查找阶段...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">DataCompare</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>正如你所见，一旦你写了DataCompare，东西都很好地依序排列了。</p>
+<p>而一旦位置合适了，它们往往比相应的使用真的map的设计运行得更快而且使用更少内存。</p>
+<p>如果你的程序不是按照阶段的方式操作数据结构，那么使用有序vector代替标准关联容器几乎可以确定是在浪费时间。</p>
+]]></description></item><item><title>Effective STL [22] | 避免原地修改set和multiset的键</title><link>https://jianye0428.github.io/posts/clause_22/</link><pubDate>Mon, 14 Aug 2023 08:13:21 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_22/</guid><description><![CDATA[<p><strong>所有标准关联容器，set和multiset保持它们的元素有序，这些容器的正确行为依赖于它们保持有序。</strong></p>
 <p>如果你改了关联容器里的一个元素的值（例如，把10变为1000），新值可能不在正确的位置，而且那将破坏容器的有序性。</p>
 <h2 id="修改map和multimap值">修改map和multimap值</h2>
 <p>试图改变这些容器里的一个键值的程序将不能编译:</p>
@@ -7163,202 +7453,4 @@ $$</p>
 [5]. <a href="https://www.bilibili.com/video/av15889450/?p=33"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/av15889450/?p=33<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [6]. <a href="https://gregorygundersen.com/blog/2018/04/29/reparameterization/"target="_blank" rel="external nofollow noopener noreferrer">https://gregorygundersen.com/blog/2018/04/29/reparameterization/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 </br>
-[7]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486014&amp;idx=1&amp;sn=2ff34f72c869907408ed1b08bec1a238&amp;chksm=c337b7a7f4403eb14a1b5cdc3e1a1b11dca6f957591957cc29a4c270f0ace0a4674a7ae33214&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486014&idx=1&sn=2ff34f72c869907408ed1b08bec1a238&chksm=c337b7a7f4403eb14a1b5cdc3e1a1b11dca6f957591957cc29a4c270f0ace0a4674a7ae33214&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>]]></description></item><item><title>Effective STL [8] | 永不建立auto_ptr的容器</title><link>https://jianye0428.github.io/posts/clause_8/</link><pubDate>Thu, 27 Jul 2023 07:45:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_8/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="拷贝一个auto_ptr将改变它的值">拷贝一个auto_ptr将改变它的值</h2>
-<p>当你拷贝一个<code>auto_ptr</code>时，<code>auto_ptr</code>所指向对象的所有权被转移到拷贝的<code>auto_ptr</code>，而被拷贝的<code>auto_ptr</code>被设为<code>NULL</code>。</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">explicit</span> <span class="n">Widget</span><span class="p">(</span><span class="kt">int</span> <span class="n">in</span><span class="p">)</span> <span class="o">:</span> <span class="n">randy</span><span class="p">(</span><span class="n">in</span><span class="p">)</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="n">Widget</span><span class="o">&amp;</span> <span class="n">in</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">randy</span> <span class="o">&lt;</span> <span class="n">in</span><span class="p">.</span><span class="n">randy</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">randy</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw1</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span> <span class="c1">// pw1指向一个Widget
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw2</span><span class="p">(</span><span class="n">pw1</span><span class="p">);</span> <span class="c1">// pw2指向pw1的Widget; pw1被设为NULL。（Widget的所有权从pw1转移到pw2。）
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pw1</span> <span class="o">=</span> <span class="n">pw2</span><span class="p">;</span> <span class="c1">// pw1现在再次指向Widget； pw2被设为NULL
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>有意思的是，如果你建立一个<code>auto_ptr&lt;Widget&gt;</code>的<code>vector</code>，然后使用一个指向的<code>Widget</code>的值的函数对它进行排序：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">widgetAPCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">return</span> <span class="o">*</span><span class="n">lhs</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">rhs</span><span class="p">;</span> <span class="c1">// 假设Widget 存在operator&lt;
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">w1</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">(</span><span class="mi">3</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">w2</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl"><span class="n">widgets</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">w1</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">widgets</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">w2</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">widgets</span><span class="p">;</span> <span class="c1">// 建立一个vector，然后用Widget的auto_ptr填充它；
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 记住这将不能编译！
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">widgets</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">widgetAPCompare</span><span class="p">);</span><span class="c1">// 排序这个vector
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这段代码将不能编译</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">warning: ‘template&lt;class&gt; class std::auto_ptr’ is deprecated <span class="o">[</span>-Wdeprecated-declarations<span class="o">]</span>
-</span></span><span class="line"><span class="cl">   <span class="m">30</span> <span class="p">|</span>   std::vector&lt;auto_ptr&lt;Widget&gt; &gt;
-</span></span><span class="line"><span class="cl">      <span class="p">|</span>               ^~~~~~~~
-</span></span><span class="line"><span class="cl">In file included from /usr/include/c++/9/memory:80,
-</span></span><span class="line"><span class="cl">                 from temp.cpp:10:
-</span></span><span class="line"><span class="cl">/usr/include/c++/9/bits/unique_ptr.h:53:28: note: declared here
-</span></span><span class="line"><span class="cl">   <span class="m">53</span> <span class="p">|</span>   template&lt;typename&gt; class auto_ptr<span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">|</span>                            ^~~~~~~~
-</span></span><span class="line"><span class="cl">temp.cpp:33:3: warning: ‘template&lt;class&gt; class std::auto_ptr’ is deprecated <span class="o">[</span>-Wdeprecated-declarations<span class="o">]</span>
-</span></span><span class="line"><span class="cl">   <span class="m">33</span> <span class="p">|</span>   auto_ptr&lt;Widget&gt; w1<span class="o">(</span>new Widget<span class="o">(</span>3<span class="o">))</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">|</span>   ^~~~~~~~</span></span></code></pre></td></tr></table>
-</div>
-</div><p>从概念上看所有东西也都很合理，但结果却完全不合理。例如，在排序过程中widgets中的一个或多个auto_ptr可能已经被设为NULL。</p>
-<p>排序这个vector的行为可能已经改变了它的内容！</p>
-<h2 id="剖析">剖析</h2>
-<p>实现<code>sort</code>的方法是使用了<strong>快速排序算法</strong>的某种变体。</p>
-<p>排序一个容器的<strong>基本思想</strong>是，选择容器的某个元素作为“主元”，然后对大于和小于或等于主元的值进行递归排序。</p>
-<p>在sort内部，这样的方法看起来像这样：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">RandomAccessIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Compare</span><span class="o">&gt;</span><span class="c1">// 这个sort的声明直接来自于标准
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="n">sort</span><span class="p">(</span><span class="n">RandomAccessIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomAccessIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Compare</span> <span class="n">comp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 这个typedef在下面解释
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">typedef</span> <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span> <span class="n">ElementType</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">RandomAccessIterator</span> <span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// 让i指向主元
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">ElementType</span> <span class="n">pivotValue</span><span class="p">(</span><span class="o">*</span><span class="p">);</span> <span class="c1">// 把主元拷贝到一个局部临时变量中；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">...</span> <span class="c1">// wor
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>源码为：</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_RandomAccessIterator</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Compare</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kr">inline</span> <span class="kt">void</span>
-</span></span><span class="line"><span class="cl"><span class="n">sort</span><span class="p">(</span><span class="n">_RandomAccessIterator</span> <span class="n">__first</span><span class="p">,</span> <span class="n">_RandomAccessIterator</span> <span class="n">__last</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"> <span class="n">_Compare</span> <span class="n">__comp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// concept requirements
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">__glibcxx_function_requires</span><span class="p">(</span><span class="n">_Mutable_RandomAccessIteratorConcept</span><span class="o">&lt;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">_RandomAccessIterator</span><span class="o">&gt;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_function_requires</span><span class="p">(</span><span class="n">_BinaryPredicateConcept</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span><span class="o">&gt;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_requires_valid_range</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_requires_irreflexive_pred</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span> <span class="n">__comp</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">__sort</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__ops</span><span class="o">::</span><span class="n">__iter_comp_iter</span><span class="p">(</span><span class="n">__comp</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 上面 __gnu_cxx::__ops::__iter_comp_iter(__comp) 的实现如下
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Compare</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Iterator</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">    <span class="kr">inline</span> <span class="n">_Iter_comp_to_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span> <span class="n">_Iterator</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">__iter_comp_iter</span><span class="p">(</span><span class="n">_Iter_comp_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="o">&gt;</span> <span class="n">__comp</span><span class="p">,</span> <span class="n">_Iterator</span> <span class="n">__it</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">_Iter_comp_to_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span> <span class="n">_Iterator</span><span class="o">&gt;</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">   <span class="n">_GLIBCXX_MOVE</span><span class="p">(</span><span class="n">__comp</span><span class="p">.</span><span class="n">_M_comp</span><span class="p">),</span> <span class="n">__it</span><span class="p">);</span> <span class="c1">// 这里有move
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>当涉及<code>iterator_traits&lt;RandomAccessIterator&gt;::value_type</code>时，必须在它前面写上<code>typename</code>，因为它是一个<strong>依赖于模板参数类型的名字</strong>，在这里是<code>RandomAccessIterator</code>。</p>
-<p>上面代码中棘手的是这一行:</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ElementType</span> <span class="nf">pivotValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>因为它把一个元素从保存的区间拷贝到局部临时对象中。</p>
-<p>在例子里，这个元素是一个<code>auto_ptr&lt;Widget&gt;</code>，所以这个拷贝操作默默地把被拷贝的<code>auto_ptr——vector</code>中的那个——设为<code>NULL</code>。</p>
-<p>另外，当<code>pivotValue</code>出了生存期，它会自动删除指向的<code>Widget</code>。这时sort调用返回了，<code>vector</code>的内容已经改变了，而且至少一个<code>Widget</code>已经被删除了。</p>
-<p>也可能有几个<code>vector</code>元素已经被设为<code>NULL</code>，而且几个<code>widget</code>已经被删除，因为快速排序是一种递归算法，递归的每一层都会拷贝一个主元。</p>
-<h2 id="结论">结论</h2>
-<p>智能指针的容器是很好的， 但是<code>auto_ptr</code><font color=red>完全不是那样的智能指针</font>。</p>]]></description></item></channel></rss>
+[7]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486014&amp;idx=1&amp;sn=2ff34f72c869907408ed1b08bec1a238&amp;chksm=c337b7a7f4403eb14a1b5cdc3e1a1b11dca6f957591957cc29a4c270f0ace0a4674a7ae33214&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486014&idx=1&sn=2ff34f72c869907408ed1b08bec1a238&chksm=c337b7a7f4403eb14a1b5cdc3e1a1b11dca6f957591957cc29a4c270f0ace0a4674a7ae33214&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>]]></description></item></channel></rss>
