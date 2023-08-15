@@ -1,20 +1,16 @@
 # 友情鏈接
 
 
-<!--
-> 暫時不接受友鏈！
-> Warn: 超過兩年為更新或長期挂掉的站點將被取消！
--->
 
 {{< link href="https://lruihao.cn/friends/opml.xml" content=":(far fa-star fa-fw): Subscribe ours" download="opml.xml" card=true >}}
 
 ## 基本資訊
 
 ```yaml
-- nickname: 菠菜眾長
-  avatar: https://lruihao.cn/images/avatar.jpg
-  url: https://lruihao.cn
-  description: 不怕萬人阻擋，只怕自己投降
+- nickname: jian
+  avatar: 
+  url: 
+  description: 
 ```
 
 ## 友情提醒
