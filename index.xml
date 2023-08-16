@@ -1,4 +1,227 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Tue, 15 Aug 2023 08:10:23 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [24] | 当关乎效率时应该在map::operator[]和map-insert之间仔细选择</title><link>https://jianye0428.github.io/posts/clause_24/</link><pubDate>Tue, 15 Aug 2023 08:10:23 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_24/</guid><description><![CDATA[<h2 id="example-map插入">Example map插入</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 16 Aug 2023 19:06:25 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
+<p>每个标准容器类都提供4种迭代器类型:<code>iterator</code>,<code>const_iterator</code>，<code>reverse_iterator</code>和<code>const_reverse_iterator</code></p>
+<p>对于<code>container&lt;T&gt;</code>而言，<code>iterator</code>的作用相当于<code>T*</code>，而<code>const_iterator</code>则相当于<code>const T*</code>。</p>
+<p>增加一个<code>iterator</code>或者<code>const_iterator</code>可以在一个从容器开头趋向尾部的遍历中让你移动到容器的下一个元素。</p>
+<p><code>reverse_iterator</code>与<code>const_reverse_iterator</code>同样相当于对应的<code>T</code>和<code>const T</code>，所不同的是，增加<code>reverse_iterator</code>或者<code>const_reverse_iterator</code>会在从尾到头的遍历中让你移动到容器的下一个元素。</p>
+<h2 id="vectort的insert和erase的样式">vector<T>的insert和erase的样式</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">insert</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">rangeBegin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">rangeEnd</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这些方法只接受<code>iterator</code>类型的参数，而不是<code>const_iterator</code>、<code>reverse_iterator</code>或<code>const_reverse_iterator</code>。总是<code>iterator</code>。</p>
+<h2 id="迭代器之间存在的转换关系">迭代器之间存在的转换关系</h2>
+<p></p>
+<p>图中显示了从<code>iterator</code>到<code>const_iterator</code>、从<code>iterator</code>到<code>reverse_iterator</code>和从<code>reverse_iterator</code>到<code>const_reverse_iterator</code>可以进行隐式转换。</p>
+<p>并且，<code>reverse_iterator</code>可以通过调用其<code>base成员函数</code>转换为<code>iterator</code>。<code>const_reverse_iterator</code>也可以类似地通过<code>base</code>转换成为<code>const_iterator</code>。</p>
+<p>通过base得到的也许并非你所期待的iterator。</p>
+<p>而且，<strong>没有办法从一个const_iterator转换得到一个iterator，也无法从const_reverse_iterator得到reverse_iterator</strong>。</p>
+<p>所以，当你需要指出插入位置或删除的元素时，const迭代器几乎没有用。</p>
+<h2 id="尽量使用iterator取代const或者reverse类型的迭代器">尽量使用iterator取代const或者reverse类型的迭代器</h2>
+<ol>
+<li>
+<p><code>insert</code>和<code>erase</code>的一些版本要求<code>iterator</code>。如果你需要调用这些函数，你就必须产生<code>iterator</code>，而不能用<code>const</code>或<code>reverse iterators</code>。</p>
+</li>
+<li>
+<p>不可能把<code>const_iterator</code>隐式转换成<code>iterator</code>。从一个<code>const_iterator</code>产生一个<code>iterator</code>的技术并不普遍适用，而且不保证高效。</p>
+</li>
+<li>
+<p>从<code>reverse_iterator</code>转换而来的<code>iterator</code>在转换之后可能需要相应的调整。</p>
+</li>
+</ol>
+<p><code>iterator</code>与<code>reverse_iterator</code>之间的选择显而易见——依赖于从前到后或从后到前的遍历。</p>
+<p><strong>迭代器比较</strong></p>
+<p>当在<code>iterator</code>和<code>const_iterator</code>之间作选择的时候，你有更充分的理由选择<code>iterator</code>，即使<code>const_iterator</code>同样可行而且即使你并不需要调用容器类的任何成员函数。其中的令人讨厌的原因包括<code>iterator</code>与<code>const_iterator</code>之间的比较：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// typedef可以极大地简化STL容器类和iterator的操作。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 同一个容器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">ci</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 比较iterator和const_iterator
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>唯一的变化是等号的一边的类型是<code>iterator</code>，而另一边的类型是<code>const_iterator</code>。</p>
+<p><strong>因为<code>iterator</code>应该在比较之前隐式的转换成<code>const_iterator</code>，真正的比较应该在两个<code>const_iterator</code>之间进行。</strong></p>
+<p><strong>如果一些实现将<code>const_iterator</code>的<code>operator==</code>作为<code>const_iterator</code>的一个成员函数而不是非成员函数。</strong></p>
+<p>而问题的解决之道显得非常有趣：只要像这样交换两个<code>iterator</code>的位置：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">ci</span> <span class="o">==</span> <span class="n">i</span><span class="p">)...</span> <span class="c1">// 当上面比较无法通过编译时的解决方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代器混用</strong></p>
+<p>不仅是比较是否相等，只要你在同一个表达式中混用<code>iterator</code>和<code>const_iterator</code>（或者<code>reverse_iterator</code>和<code>const_reverse_iterator</code>），这样的问题就可能会出现:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 如果i与ci之间至少有三个元素...
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果迭代器的类型不同，你的正确的代码可能会被错误地拒绝。</p>
+<p>本例中最简单的解决方法是<strong>通过一个（安全的）映射把iterator转换为const_iterator</strong>:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 当上面的代码无法通过编译时的解决方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>避免这类问题的最简单的方法是减少混用不同类型的迭代器的机会。</strong></p>
+]]></description></item><item><title>Effective STL [25] | 熟悉非标准散列容器</title><link>https://jianye0428.github.io/posts/clause_25/</link><pubDate>Wed, 16 Aug 2023 08:21:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_25/</guid><description><![CDATA[<p><strong>STL没有散列表。</strong></p>
+<p>兼容STL的散列关联容器可以从多个来源获得，而且它们甚至有事实上的标准名字：<code>hash_set</code>、<code>hash_multiset</code>、<code>hash_map</code>和<code>hash_multimap</code>。在C++标准委员会的议案中，散列容器的名字是<code>unordered_set</code>、 <code>unordered_multiset</code>、<code>unordered_map</code>和<code>unordered_multimap</code>。</p>
+<p><strong>它们在接口、能力、内在数据结构和支持操作的相关效率方面不同。</strong></p>
+<p>最常见的两个来自<code>SGI</code>和<code>Dinkumware</code>，<code>STLport</code>也提供散列容器，但是<code>STLport</code>的散列容器是基于来自<code>SGI</code>的。</p>
+<p>散列容器是关联容器，它们需要知道储存在容器中的对象类型，用于这些对象的比较函数，以及用于这些对象的分配器。</p>
+<h2 id="散列容器声明">散列容器声明</h2>
+<p>散列容器需要散列函数的说明。下面是散列容器声明：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">HashFunction</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">CompareFunction</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_container</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这非常接近于散列容器的SGI声明，主要差别是SGI为HashFunction和CompareFunction提供了默认类型。</p>
+<p><strong>SGI 设计举例</strong></p>
+<p><code>hash_set</code>的SGI声明看起来基本上像这样：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">HashFunction</span> <span class="o">=</span> <span class="n">hash</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">CompareFunction</span> <span class="o">=</span> <span class="n">equa_to</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_set</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>SGI</code>设计的一个值得注意的方面是使用<code>equal_to</code>作为默认比较函数。<strong>这违背标准关联容器的约定——默认比较函数是less。</strong></p>
+<p><code>SGI</code>的散列容器确定在一个散列容器中的两个对象是否有相同的值是通过相等测试，而不是等价。</p>
+<p>因为散列关联容器，不像它们在标准中的（通常基于树）兄弟，不需要保持有序。</p>
+<p><strong>Dinkumware 设计举例</strong></p>
+<p>Dinkumware设计的散列容器采取一些不同的策略。它仍然允许你指定对象类型、散列函数类型、比较函数类型和分配器类型，但是<strong>它把默认的散列和比较函数移进一个单独的类似特性的叫做hash_compare的类</strong>，而且它把<code>hash_compare</code>作为容器模板的<code>HashingInfo</code>实参的默认值。</p>
+<p>这是<code>Dinkumware</code>的hash_set声明（再次为演示而调整过）:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">CompareFunction</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_compare</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="k">typename</span> <span class="n">HashingInfo</span> <span class="o">=</span> <span class="n">hash_compare</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">less</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_set</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这种接口设计有趣的地方是<code>HashingInfo</code>的使用。</p>
+<p><strong>容器的散列和比较函数储存在<code>HashingInfo</code>中，但HashingInfo类型也容纳了控制表中桶（bucket）最小数量，以及容器元素对桶的最大允许比率的枚举。</strong></p>
+<p>当这比率被超过时，表中桶的数量就增加，而表中的一些元素需要重新散列。（SGI提供具有类似控制表中桶和表中元素对桶比率的成员函数。）</p>
+<p><strong>hash_compare</strong></p>
+<p><code>hash_compare</code>（HashingInfo的默认值）看起来或多或少像这样:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">CompareFunction</span> <span class="o">=</span> <span class="n">less</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_compare</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">enum</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">bucket_size</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="c1">// 元素对桶的最大比率
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">min_buckets</span> <span class="o">=</span> <span class="mi">8</span> <span class="c1">// 桶的最小数量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">};</span>
+</span></span><span class="line"><span class="cl">    <span class="n">size_t</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> <span class="c1">// 散列函数比较函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// 忽略一些东西，包括 CompareFunction的使用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>重载<code>operator()</code>（在这里是实现散列和比较函数）是比你可以想象的更经常出现的一个策略。</p>
+<p><code>Dinkumware</code>设计允许你写你自己的类似hash_compare的类（也许通过从<code>hash_compare</code>本身派生而来），而且只要你的类定义了<code>bucket_size</code>、<code>min_buckets</code>、两个<code>operator()</code>函数（一个带有一个实参，一个带有两个），加上已经省去的一些东西，就能使用它来控制Dinkumware的<code>hash_set</code>或<code>hash_multiset</code>的配置和行为。</p>
+<p><code>hash_map</code>和<code>hash_multimap</code>的配置控制也相似。</p>
+<h2 id="决策留给实现">决策留给实现</h2>
+<p>注意不管是SGI还是Dinkumware的设计，你都能把全部决策留给实现:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 建立一个int的散列表
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">hash_set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">intTable</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要让这个可以编译，散列表必须容纳一个整数类型（例如int），因为<strong>默认散列函数一般局限于整数类型。</strong></p>
+<p><strong>实现方法不同</strong></p>
+<p>在后端，SGI和Dinkumware的实现方法非常不同。</p>
+<ol>
+<li>SGI利用常用的一个元素的单链表的指针数组（桶）组成的开放散列法。</li>
+<li>Dinkumware也利用了开放散列法，但是它的设计是基于一种新颖的数据结构——由迭代器（本质是桶）的数组组成的元素双向链表，迭代器的相邻对表示在每个桶里元素的范围。</li>
+</ol>
+<p><strong>链表不同</strong></p>
+<ol>
+<li>SGI实现在<strong>单链表</strong>中储存表的元素</li>
+<li>Dinkumware实现使用一个双向链表</li>
+</ol>
+<p><strong>迭代器种类不同</strong></p>
+<ol>
+<li>SGI的散列容器提供了前向迭代器，因此你得放弃进行反向迭代的能力：在SGI的散列容器中没有rbegin或者rend成员函数。</li>
+<li>用于Dinkumware散列容器的迭代器是双向的，所以它们可以提供前向和反向遍历。</li>
+</ol>
+<p><strong>内存使用量方面不同</strong></p>
+<p>SGI的设计比Dinkumware的节俭一点点。</p>
+<h2 id="结论">结论</h2>
+<p>虽然STL本身缺乏散列容器，兼容STL的散列容器（有不同的接口、能力和行为权衡）不难得到。就SGI和STLport的实现而言，你甚至可以免费下载得到它们。</p>
+]]></description></item><item><title>Effective STL [24] | 当关乎效率时应该在map::operator[]和map-insert之间仔细选择</title><link>https://jianye0428.github.io/posts/clause_24/</link><pubDate>Tue, 15 Aug 2023 08:10:23 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_24/</guid><description><![CDATA[<h2 id="example-map插入">Example map插入</h2>
 <p>假设有一个支持默认构造函数以及从一个double构造和赋值的Widget类:</p>
 <div class="highlight" id="id-1"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -6373,903 +6596,4 @@ copy构造函数用来定义一个type的值传递具体实现。</li>
 </div>
 </div><p>在这个例子里，很重要的一点是「<strong>Heap1和Heap2是类型而不是对象</strong>」。</p>
 <p>STL为用不同的分配器对象初始化相同类型的不同STL容器提供了语法。那是「<strong>因为如果Heap1和Heap2是对象而不是类型，那么它们将是不等价的分配器，那就违反了分配器的等价约束</strong>」。</p>
-<p>只要遵循「<strong>相同类型的所有分配器都一定等价的限制条件</strong>」，你将毫不费力地使用自定义分配器来「<strong>控制一般内存管理策略，群集关系和使用共享内存以及其他特殊的堆</strong>」。</p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [1]</title><link>https://jianye0428.github.io/posts/partone/</link><pubDate>Sat, 29 Jul 2023 18:51:19 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partone/</guid><description><![CDATA[<h1 id="序言">序言</h1>
-<p>这本C++的经典之作，作者是大佬<code>Scott Meyers</code>👉<a href="https://www.aristeia.com/books.html"target="_blank" rel="external nofollow noopener noreferrer">大佬主页<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，还写过其他几本影响深远的C++经典，例如<code>《Effective STL》</code>,<code>《More Effective C++》</code>,<code>《Effective Mordern C++》</code>,<code>《Overview of the New C++(C++11/14)》</code>等等。本人看的是中文版，侯捷老师翻译的，精读分析并实践推敲后，整理成博客记录下来。</p>
-<blockquote>
-<p>(Effective-C++总结系列分为四部分，本文为第一部分，涉及原书第1~2章，内容范围Rule01~12。为方便书写，Rule01简写为R01)。</p>
-</blockquote>
-<div class="details admonition Note">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Effective-C++系列List<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">本博客站点系列内容如下：</br>
-💡 <a href="https://jianye0428.github.io/posts/partone/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(一)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-💡 <a href="https://jianye0428.github.io/posts/parttwo/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(二)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-💡 <a href="https://jianye0428.github.io/posts/partthree/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(三)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-💡 <a href="https://jianye0428.github.io/posts/partfour/"target="_blank" rel="external nofollow noopener noreferrer">Effective C++(第3版)精读总结(四)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></div>
-    </div>
-  </div>
-<h2 id="ch1让自己习惯c">CH1.让自己习惯C++</h2>
-<h3 id="r01-视c为一个语言联邦">R01 视C++为一个语言联邦</h3>
-<p>如今的C++已经是个多重范式(multiparadigm)语言，同时支持面向过程形式、面向对象形式、函数形式、泛型形式、元编程形式。 要理解这么多特性，可以简单的归结为<code>四种次语言</code>(sublanguage)组成：</p>
-<ul>
-<li><strong>C语言:</strong> <code>C++仍以C为基础</code>。C++是C的超集, 仍然以 C 为基础。<font color=green>区块</font>、<font color=green>语句</font>、<font color=green>预处理器</font>、<font color=green>内置数据类型</font> 、<font color=green>数组</font>、<font color=green>指针</font>等统统来自C，许多时候C++对问题的解决其实不过就是较高级的 C 解法，但当你C++内的 C 成分工作时，高效编程守则映照出 C 语言的<font color=red>局限</font>：没有模板(template) ，没有异常(exceptions)，没有重载(overloading)……</li>
-<li><strong>Object-Oriented C++:</strong> 面向对象特性。这部分也就是 C with classes 所诉求的: <strong>classes</strong>(包括构造函数和析构函数)，<strong>封装</strong>(encapsulation)、<strong>继承</strong>(inheritance)、<strong>多态</strong>(polymorhpism)、<strong>virtual函数</strong>(动态绑定)……等等，这一部分是面向对象设计之古典守则在C++ 上的直接实施。</li>
-<li><strong>Template C++:</strong> C++的泛型(generic)编程的部分，也带来了黑魔法-模板元编程(TMP,Metaprogramming)；</li>
-<li><strong>STL：</strong> STL(Standard Temlate Library)即标准模板库，它是template程序库。封装了各类容器(container)、配置器(allocator)、迭代器(iterator)、算法以及常用对象。</li>
-</ul>
-<p><strong>总结:</strong>
-C++高效编程守则视状况而变化，取决于你使用C++的哪一部分</p>
-<h3 id="r02-尽量以constenuminline替换define">R02 尽量以<code>const</code>,<code>enum</code>,<code>inline</code>替换<code>#define</code></h3>
-<ul>
-<li><strong>对于宏定义的常量，建议用const常量或者枚举enum替换</strong>
-这样做的好处是方便调试，因为宏报错就是个常数值，没有符号表；并且宏不具有封装性(宏的作用域是在编译时是其定义之事)。
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 举例：MAX_DATA_COUNT在预处理阶段就会被替换，编译器不会见到它，所以一旦有相关报错，给的是100这个值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#define MAX_DATA_COUNT   100
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="k">const</span> <span class="kt">int</span> <span class="n">MAX_DATA_COUNT</span> <span class="o">=</span> <span class="mi">100</span> <span class="p">;</span><span class="c1">// 常量只有一份，宏会导致多份常量值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Buffer</span><span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span><span class="c1">//...类其他部分省略
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">static</span> <span class="k">const</span> <span class="kt">double</span> <span class="n">factor_</span> <span class="p">;</span><span class="c1">// static常量,类内声明
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span>  <span class="n">times_</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span><span class="c1">// int类型允许类内初始化,规范上还是建议拿到类外
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">ArrLength</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">arr</span><span class="p">[</span><span class="n">ArrLength</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="kt">double</span> <span class="n">Buffer</span><span class="o">::</span><span class="n">factor_</span>  <span class="o">=</span> <span class="mf">0.1</span><span class="p">;</span><span class="c1">// 类外初始化,一般写在实现文件*.cpp,*.cc中
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div>如果编译器不允许声明时&quot;in-class初值设定&quot;,如果是整形常量，可以让枚举值来替代，而且<font color=red><code>枚举值不能被取地址</code></font>。</li>
-<li><strong>对于宏定义的函数，建议用内联inline函数替换</strong>
-宏函数没办法单行debug调试，而内联函数可以；
-宏的写法即使小心翼翼的加好了括号，也可能造成意想不到的<font color=red><code>宏函数重复计算</code></font>的问题。
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#define  GET_MAX(a,b)   ((a)&gt;(b) ? (a) :(b))
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">GET_MAX</span><span class="p">(</span><span class="o">++</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">);</span>    <span class="c1">// a累加二次
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">GET_MAX</span><span class="p">(</span><span class="o">++</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">+</span><span class="mi">10</span><span class="p">);</span> <span class="c1">// a累加一次
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 定义个inline函数就不会有这个问题,(a,b)作为函数入参就只会计算一次
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>上述情况，从纯C语言角度，想避免“宏函数重复计算”，其实还有个方法，就是使用GNU C 扩展的 typeof 或 GCC 的 <code>__auto_type</code> 关键字，详细可参考GCC官方文档页面。2者都适用于GCC和Clang，都不适用MSVC），示例如下：</p>
-<div class="highlight" id="id-17"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="cp">#define  GET_MAX_ONCE(a,b) \
-</span></span></span><span class="line"><span class="cl"><span class="cp">      ( {typeof(a) _a = (a);   \
-</span></span></span><span class="line"><span class="cl"><span class="cp">         typeof(b) _b = (b);   \
-</span></span></span><span class="line"><span class="cl"><span class="cp">         (_a) &gt; (_b) ? (_a) : (_b); } )</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>测试代码如下：</p>
-<div class="highlight" id="id-18"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C" data-lang="C"><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="nf">GET_MAX</span><span class="p">(</span><span class="o">++</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="o">++</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;a = &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">a</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;, b = &#34;</span><span class="o">&lt;&lt;</span> <span class="n">b</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;, c = &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">c</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">a</span> <span class="o">=</span> <span class="mi">10</span> <span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">c</span> <span class="o">=</span> <span class="nf">GET_MAX_ONCE</span><span class="p">(</span><span class="o">++</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="o">++</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;a = &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">a</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;, b = &#34;</span><span class="o">&lt;&lt;</span> <span class="n">b</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;, c = &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">c</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>测试代码输出：</p>
-<div class="highlight" id="id-19"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="nv">a</span> <span class="o">=</span> 11, <span class="nv">b</span> <span class="o">=</span> 22, <span class="nv">c</span> <span class="o">=</span> <span class="m">21</span>
-</span></span><span class="line"><span class="cl"><span class="nv">a</span> <span class="o">=</span> 11, <span class="nv">b</span> <span class="o">=</span> 21, <span class="nv">c</span> <span class="o">=</span> <span class="m">20</span></span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p>🤔 <code>使用 __auto_type</code> 来取代时要赋初值，关键的 typeof 那行用法改为<code>__auto_type _a = (a);</code> 。
-__auto_type 比 typeof 的优势之处在于面对变长数组(VLA)，只解析1次；以及面对嵌套宏定义时也是只严格解析一次。</p>
-</blockquote>
-</div>
-    </div>
-  </div></li>
-</ul>
-<h3 id="r03-尽可能用const">R03 尽可能用const</h3>
-<p>说起const，先复习个面试高频题😁</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//类型char在哪里没关系，关键看const和*的相对位置：
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">//const在*左边，指针所指物为常量;
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">//const在*右边，指针为常量；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">p</span><span class="p">;</span> <span class="c1">// 指针p所指的字符串为常量，但是p可以修改
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">char</span><span class="o">*</span> <span class="k">const</span> <span class="n">p</span><span class="p">;</span> <span class="c1">// 指针p是常量，指向的字符串可修改
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>const修饰函数返回值时的防御性
-const修饰函数的返回值，可以避免一些错误，如下：
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">const</span> <span class="n">Rational</span> <span class="k">operator</span><span class="o">*</span> <span class="p">(</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span><span class="k">const</span> <span class="n">Rational</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="c1">//存在Rational a,b,c;
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span><span class="p">(</span><span class="n">a</span><span class="o">*</span><span class="n">b</span> <span class="o">=</span> <span class="n">c</span><span class="p">)</span> <span class="c1">//例如手误 &#34;==&#34;打成了&#34;=&#34;，编译器会直接报错
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>const成员函数的限制
-const成员函数有2个好处：(1). 明确理解函数是否修改对象内容；(2). 使“操作const对象”成为可能。
-可以通过const特性让对象自动调用正确的版本：
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">TextBlock</span><span class="p">{</span><span class="c1">//...类其他部分省略
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">const</span> <span class="kt">char</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">index</span><span class="p">)</span> <span class="k">const</span><span class="p">{</span> <span class="k">return</span> <span class="n">text</span><span class="p">[</span><span class="n">index</span><span class="p">];}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">char</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">index</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">text</span><span class="p">[</span><span class="n">index</span><span class="p">];}</span>
-</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">text</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">print</span><span class="p">(</span><span class="k">const</span> <span class="n">TextBlock</span><span class="o">&amp;</span> <span class="n">ctb</span><span class="p">){</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">ctb</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">;</span><span class="c1">//根据const特性，调用 const TextBlock::operator[]
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div>思考：const成员函数不修改成员对象，那么，如果成员对象为指针<code>char *p</code>，仅修改<code>p</code>指向的内容，那它还是<code>const</code>成员函数吗？
-实测：const成员函数是允许<code>p[2]= 'x'</code>这一操作的，但是不允许p++；
-<ul>
-<li><code>bitwise-constness</code>(又称为physical constness)理念认为不是，不能更改任何对象内的任何一个bit。这种说法也有纰漏，const函数返回一个引用就失控了,外部可改；</li>
-<li><code>logical-constness</code>理念则允许const成员函数修改成员变量的bits，但只有在客户端侦测不出的情况下;</li>
-<li><code>const成员函数</code>如果一定要修改成员变量，成员变量使用 <code>mutable</code> 修饰即可.</li>
-</ul>
-</li>
-<li>const与non-const的成员函数实现完全相同时
-这种情况，如何去除代码冗余是个问题。不要封装出一个private函数然后一起调用，多了层调用。
-正确做法👉 <code>使用转型,让non-const调用const成员函数</code>，如下为示例：</li>
-</ul>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Rawdata</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">Rawdata</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">src</span><span class="p">)</span><span class="o">:</span><span class="n">p_</span><span class="p">(</span><span class="n">src</span><span class="p">),</span><span class="n">length_</span><span class="p">(</span><span class="n">strlen</span><span class="p">(</span><span class="n">src</span><span class="p">))</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">GetLength</span><span class="p">()</span><span class="k">const</span><span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">p_</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;a&#39;</span><span class="p">;</span><span class="c1">//为求简便,不作检查了。p_内容修改编译器是允许的.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span> <span class="n">length_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="nf">GetLength</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="k">const_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&amp;&gt;</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">            <span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">Rawdata</span><span class="o">&amp;&gt;</span><span class="p">(</span><span class="o">*</span><span class="k">this</span><span class="p">)).</span><span class="n">GetLength</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="o">*</span><span class="n">p_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">length_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="r04-确定对象使用前先初始化">R04 确定对象使用前先初始化</h3>
-<p>分清&quot;赋值&quot;和&quot;初始化&quot;，在类的构造函数体内使用等号&quot;=&ldquo;赋值并非&quot;初始化”。成员变量的初始化是在构造函数的<u>成员初始化列表</u>实现，效率更高。</p>
-<p><code>C++初始化的次序:</code></p>
-<ol>
-<li>Base class总是早于Derived Class被初始化；</li>
-<li>Class内的成员变量总是以声明次序被初始化；
-举例: 下图中的代码初始化顺序为声明顺序&quot;age_$\rightarrow$name_$\rightarrow$gender_ $\rightarrow$isVip_&rdquo;
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"> <span class="k">class</span> <span class="nc">Customer</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span> <span class="c1">//这里只是为了验证，如果是实际工程代码，建议初值列表尽量和声明顺序保持一致
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>     <span class="n">Customer</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">gender</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">age</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">isVip</span> <span class="o">=</span> <span class="nb">false</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">         <span class="o">:</span><span class="n">isVip_</span><span class="p">(</span><span class="n">isVip</span><span class="p">),</span> <span class="n">gender_</span><span class="p">(</span><span class="n">gender</span><span class="p">),</span> <span class="n">name_</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">age_</span><span class="p">(</span><span class="n">age</span><span class="p">)</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">     <span class="kt">uint8_t</span> <span class="n">age_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">gender_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">     <span class="kt">bool</span> <span class="n">isVip_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"> <span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><pre><code>💡：任何一个成员变量a的初始化流程：类内声明赋初值(C++11)-&gt;构造函数初始化列表-&gt;构造函数体内赋值.
-</code></pre>
-</div>
-    </div>
-  </div></li>
-<li>函数体外static变量称为<code>non-local static</code>变量，这种变量可以在各自的编译单元正常工作，但C++无法保证初始化次序，当编译单元之间需要共享变量时，而该变量依赖non-local static，就可能会出问题。
-<strong>解决办法</strong>是将这样的变量放回函数体内，成为local static，因为C++确保在函数被调用时一定会初始化这个static变量。</li>
-</ol>
-<h2 id="ch2构造析构赋值运算">CH2.构造/析构/赋值运算</h2>
-<h3 id="r05-了解c默认编写并调用哪些函数">R05 了解C++默认编写并调用哪些函数</h3>
-<p>编译器可以暗自为Class创建<code>default构造函数</code>，<code>copy构造函数(复制构造)</code>，<code>copy assigment(赋值构造)操作符</code>，以及<code>default析构函数</code>。</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">EmptyClass</span><span class="p">{};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>等价于:</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">EmptyClass</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">EmptyClass</span><span class="p">()</span> <span class="p">{}</span>        <span class="c1">// default构造函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">EmptyClass</span><span class="p">(</span><span class="k">const</span> <span class="n">EmptyClass</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{}</span><span class="c1">//copy构造函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="o">~</span><span class="n">EmptyClass</span><span class="p">()</span> <span class="p">{}</span><span class="c1">//default析构函数，注意是non-virtual
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">EmptyClass</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">EmptyClass</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{}</span><span class="c1">//copy assignment操作符
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>
-<p>如果一个非空Class自行声明了构造函数，编译器就不再为它创建default构造函数;</p>
-</li>
-<li>
-<p>如果一个Class内有引用变量或const变量，编译器不会为其生成copy-assignment函数，需要自己实现.</p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">NameObject</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">NameObject</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">value</span><span class="p">)</span> <span class="o">:</span><span class="n">nameValue_</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">objectVal_</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">nameValue_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="kt">int</span> <span class="n">objectVal_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span><span class="c1">//考虑以下应用代码
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">(</span><span class="s">&#34;Mike&#34;</span><span class="p">),</span> <span class="n">name2</span><span class="p">(</span><span class="s">&#34;Nicky&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">NameObject</span> <span class="nf">nObj</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="mi">22</span><span class="p">),</span> <span class="n">nObj2</span><span class="p">(</span><span class="n">name2</span><span class="p">,</span><span class="mi">33</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">nObj2</span> <span class="o">=</span> <span class="n">nObj</span><span class="p">;</span><span class="c1">//这一句会导致编译失败，因为引用不能指向2个对象，且const不可改
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="r06-不想编译器的自动生成的函数明确拒绝">R06 不想编译器的自动生成的函数,明确拒绝</h3>
-<p>某些场景，类对象本身是认为独一无二的，比如描述人物性格的类Personality(可能不恰当)，不同的人性格不同，肯定是不希望能复制/赋值的。
-如果不想编译器自动生成那几个函数，比如不想要复制构造或赋值构造，就明确在代码中禁止，也防止外部用户使用。</p>
-<ul>
-<li>技巧1：可以声明为private函数但是不给出实现，让编译器报错；</li>
-<li>技巧2：可以设立基类Base，让复制构造和赋值构造都为private函数，让目标类继承于Base类。</li>
-</ul>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>C++11针对此类情况，给予了delete关键字一个新功能，在成员函数后面新增&quot;=delete&quot;，即可显式地拒绝这个函数的生成和调用.举例如下:</p>
-<div class="highlight" id="id-20"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">A</span><span class="p">(</span><span class="k">const</span> <span class="n">A</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span> <span class="c1">// 拷贝构造
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">A</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">A</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span> <span class="c1">// 拷贝赋值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div></div>
-    </div>
-  </div>
-<h3 id="r07-为多态基类声明virtual析构函数">R07 为多态基类声明<code>virtual</code>析构函数</h3>
-<ul>
-<li>针对<code>Base* pBase= new DerivedObj()</code>，释放pBase时，如果Base基类的析构函数<code>None-Virtual</code>，则会导致Derived的析构函数不会被调用，造成<code>内存不完全释放</code>，即内存泄漏；</li>
-<li>Non-Virtual的Class不要做基类；</li>
-<li>如果不做基类，就不要声明析构函数为virtual函数，避免虚表为其分配vptr造成浪费；</li>
-<li>如果想要抽象类，又暂时没有合适接口，可以让先虚析构成为纯虚函数，例如
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">RawData</span><span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="o">~</span><span class="n">RawData</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 这里特殊的是，需要为这个纯虚函数提供定义
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">~</span><span class="n">RawData</span><span class="o">::</span><span class="n">RawData</span><span class="p">(){}</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="r08-别让异常逃离析构函数">R08 别让异常逃离析构函数</h3>
-<ul>
-<li>
-<p>析构函数最好不要吐出异常</br>
-对于某个Widget类，如果析构函数抛出异常，那么<code>vector&lt;widget&gt;</code>析构时可能连续抛出多个异常以至于无法处理，直接导致提前程序结束或者未定义行为。</p>
-</li>
-<li>
-<p>如果有某个函数可能会抛出异常，并需要对异常做出反应，应该提供一个非析构的函数来处理</br>
-注意，在析构中抛异常并吞下(catch后go-on-execute)，会掩盖错误，也不是个好办法;抛异常后catch住并std::abort()反而可以提前终结『未定义行为』。</p>
-</li>
-</ul>
-<h3 id="r09-绝不在构造和析构过程中调用virtual函数">R09 绝不在构造和析构过程中调用<code>virtual</code>函数</h3>
-<ul>
-<li>在Derived-Class的Base-Class构造期间，对象的类型是Base-Class，而非Derived，即使<code>dynamic_cast</code>也是这样认为的，因为此时virtual函数不会下降到Derived-Class的阶层；换句话说==&gt; “<code>在Base-Class构造期间，virtual函数不是virtual函数</code>”；</li>
-<li>在析构的时候也是类似道理，也不要在析构函数中调用virtual函数，间接调用也不行(比如non-Virtual-&gt;virtual)；</li>
-<li>那么替代方案是？</br>
-如果有这样一种情况，希望在子类构造时能调用父类的foo函数(下方logTransaction函数)，那么将foo改为non-Virtual函数，并且子类构造时调用父类构造函数，有参数时一并传过去；</li>
-</ul>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Transaction</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">explict</span> <span class="n">Transaction</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">,</span><span class="kt">int</span> <span class="n">id</span><span class="p">)</span><span class="o">:</span><span class="n">id_</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="p">{</span> <span class="n">logTransaction</span><span class="p">(</span><span class="n">info</span><span class="p">);</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">logTransaction</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">info</span><span class="p">.</span><span class="n">c_str</span><span class="p">();</span> <span class="p">}</span><span class="c1">//non-Virtual函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">id_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BuyTransaction</span> <span class="o">:</span><span class="k">public</span> <span class="n">Transaction</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>  <span class="c1">//将log信息传递给 基类Transaction构造函数； 并初始化了基类成员
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">BuyTransaction</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">,</span> <span class="kt">int</span> <span class="n">id</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">        <span class="o">:</span><span class="n">Transaction</span><span class="p">(</span><span class="n">info</span><span class="p">,</span><span class="n">id</span><span class="p">)</span> <span class="p">{</span><span class="cm">/**/</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>By the way<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>上述代码中，如果有几个Base构造函数，就得写几个Derived构造函数传参。为了简化这一步骤， 在现代C++11，推出了继承构造函数(Inheriting Constructor)，子类可以一个都不用写，直接写一句using声明即可，使用<code>using BaseClass::BaseClass</code>的形式，如下👇</p>
-<div class="highlight" id="id-21"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BuyTransaction</span> <span class="o">:</span><span class="k">public</span> <span class="n">Transaction</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">using</span> <span class="n">Transaction</span><span class="o">::</span><span class="n">Transaction</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">//其他
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div></div>
-    </div>
-  </div>
-<h3 id="r10-令operator返回一个reference-to-this">R10 令<code>operator=</code>返回一个reference to *this</h3>
-<ul>
-<li>关于赋值操作符<code>operator=</code>，主流做法是:
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">Widget</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span> <span class="o">&amp;</span><span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="c1">//... do some thing
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div>上述做法不局限于operator=，还有<code>operator += ,-=,*=,/=</code>等其他赋值运算符。</br>
-该主流协议/做法不是强制性的，只是个建议，因为这样可以允许<strong>连续赋值</strong>($x=y=z$的形式)。</br>
-该协议被内置类型，以及STL的类型(如string,vector,complex,shared_ptr)共同遵守。</br></li>
-</ul>
-<h3 id="r11-在operator中处理自我赋值">R11 在<code>operator=</code>中处理&quot;自我赋值&quot;</h3>
-<p>一个对象赋值给自己，这种看起来有点傻的做法，有时候会比较难以发觉。比如：<code>a[i] = a[j]</code>，如果 $i$ 和 $j$ 相等，就是“自我赋值”的经典场景了。
-所以，我们需要一个尽量完备的赋值操作符函数🤔。
-考虑如下类<code>MapWidget</code>，内有数据裸指针<code>BitMap *pb_</code>，在赋值时同时考虑<strong>异常安全</strong>和 <strong>“自我赋值”</strong> 安全(认同测试保障自我赋值安全)，是一个相对不错的实现。但是，认同测试会降低运行效率，根据实际工程实践情况(自我赋值概率极低 )可以酌情去掉。</p>
-<div class="highlight" id="id-14"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BitMap</span> <span class="p">{</span><span class="cm">/*省略类声明&amp;实现*/</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MapWidget</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">BitMap</span> <span class="o">*</span> <span class="n">pb_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="k">explicit</span> <span class="n">MapWidget</span><span class="p">(</span><span class="n">BitMap</span> <span class="o">*</span><span class="n">pb</span><span class="p">)</span> <span class="o">:</span><span class="n">pb_</span><span class="p">(</span><span class="n">pb</span><span class="p">)</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">MapWidget</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">MapWidget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="k">this</span> <span class="o">==</span> <span class="o">&amp;</span><span class="n">rhs</span><span class="p">)</span> <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span> <span class="c1">//这一句为认同测试(identity test)
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">BitMap</span> <span class="o">*</span><span class="n">pOrig</span> <span class="o">=</span> <span class="n">pb_</span><span class="p">;</span><span class="c1">//不要一上来就delete，而是保存this-&gt;pb_
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">pb_</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BitMap</span><span class="p">(</span><span class="o">*</span><span class="n">rhs</span><span class="p">.</span><span class="n">pb_</span><span class="p">);</span><span class="c1">//因为这一句可能抛异常
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">delete</span> <span class="n">pOrig</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>Copy and Swap技术 上文中保障<strong>异常安全</strong>和 **“自我赋值”**安全的技术手段，另外一个办法，就是Copy and Swap技术。这个技术的关键在于“修改对象数据的副本，然后在一个不抛异常的函数中将修改的数据和原件置换 ”。
-<div class="highlight" id="id-15"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">MapWidget</span><span class="o">::</span><span class="n">Swap</span><span class="p">(</span><span class="n">MapWidget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">){</span><span class="n">std</span><span class="o">::</span><span class="n">swap</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">pb_</span><span class="p">,</span><span class="n">pb_</span><span class="p">);}</span>
-</span></span><span class="line"><span class="cl"><span class="n">MapWidget</span><span class="o">&amp;</span> <span class="n">MapWidget</span><span class="o">::</span><span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">MapWidget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">MapWidget</span> <span class="nf">temp</span><span class="p">(</span><span class="n">rhs</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">Swap</span><span class="p">(</span><span class="n">temp</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="r12-复制对象时别忘记其每一个成分">R12 复制对象时别忘记其每一个成分</h3>
-<ul>
-<li>
-<p>编写类的Copying函数时需要做到2点
-这里的Copying函数是指有copy属性的特殊函数==&gt; copy构造函数和copy赋值操作符。</p>
-<ol>
-<li>复制所有Local成员变量
-如果成员复制的时候有遗漏，编译器并不会有怨言，这就埋下了隐患。如果新增了成员，要对应修改Copying函数。</li>
-<li>调用所有Base-Class内部的适当的Copy函数
-具体代码的推荐实现 如下👇：</li>
-</ol>
-<div class="highlight" id="id-16"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Customer</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">Customer</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">,</span> <span class="kt">float</span> <span class="n">money</span><span class="p">)</span><span class="o">:</span><span class="n">name_</span><span class="p">(</span><span class="n">name</span><span class="p">),</span><span class="n">money_</span><span class="p">(</span><span class="n">money</span><span class="p">)</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">float</span> <span class="n">money_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">VipCustomer</span> <span class="o">:</span><span class="k">public</span> <span class="n">Customer</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>  <span class="c1">//注意：派生类要复制基类那部分的成员变量
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">using</span> <span class="n">Customer</span><span class="o">::</span><span class="n">Customer</span><span class="p">;</span> <span class="c1">//参考R09
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">VipCustomer</span><span class="p">(</span><span class="k">const</span> <span class="n">VipCustomer</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">        <span class="o">:</span><span class="n">priority_</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">priority_</span><span class="p">),</span><span class="n">Customer</span><span class="p">(</span><span class="n">rhs</span><span class="p">){}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">VipCustomer</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">VipCustomer</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">){</span>
-</span></span><span class="line"><span class="cl">        <span class="n">Customer</span><span class="o">::</span><span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="n">rhs</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">        <span class="n">priority_</span> <span class="o">=</span> <span class="n">rhs</span><span class="p">.</span><span class="n">priority_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">setPriority</span><span class="p">(</span><span class="kt">int</span> <span class="n">priority</span><span class="p">)</span> <span class="p">{</span> <span class="n">priority_</span> <span class="o">=</span> <span class="n">priority</span><span class="p">;</span> <span class="p">};</span>
-</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">priority_</span><span class="p">;</span><span class="c1">//子类独有成员可以单独set函数赋值，或者构造函数初始化列表赋值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p>不要用一个Copying函数去实现另一个
-令copy-assignment操作符调用copy构造函数是不合理的；反之，后者调用前者也是无意义的。 如果2者有大量的代码是相同的，可以剥离一个类内private类型的<code>init</code>函数出来，提供给上述2者调用。</p>
-</li>
-</ul>
-<h2 id="refbr">ref:</br></h2>
-<p>[1]. <a href="https://blog.csdn.net/cltcj/category_12098441.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/cltcj/category_12098441.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective STL [9] | 在删除选项中仔细选择</title><link>https://jianye0428.github.io/posts/clause_9/</link><pubDate>Fri, 28 Jul 2023 07:59:27 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_9/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="删除指定值对象">删除指定值对象</h2>
-<p>假定你有一个容纳<code>int</code>标准STL容器:</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Container</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>而你想把c中所有值为2023的对象都去掉。</p>
-<p>令人吃惊的是，完成这项任务的方法因不同的容器类型而不同：没有一种方法是通用的。</p>
-<ul>
-<li>当c是连续内存容器（vector、deque或string），最好的方法是erase-remove惯用法</li>
-</ul>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">2023</span><span class="p">),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 当c是vector、string或deque时，
-</span></span></span><span class="line"><span class="cl"><span class="c1">// erase-remove惯用法是去除特定值的元素的最佳方法
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition Note">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><ul>
-<li>STL 和 vector中的remove的作用是<strong>将等于value的元素放到vector的尾部</strong>，但并不减少vector的size；</li>
-<li>vector中erase的作用是删除掉某个位置position或一段区域(begin, end)中的元素，减少其size，返回被删除元素下一个元素的位置。</li>
-</ul>
-</div>
-    </div>
-  </div>
-<ul>
-<li>这方法也适合于<code>list</code>，但是<code>list</code>的成员函数<code>remove</code>更高效：</li>
-</ul>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 当c是list时，remove成员函数是去除特定值的元素的最佳方法
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">1963</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>当c是标准关联容器（即<code>set</code>、<code>multiset</code>、<code>map</code>或<code>multimap</code>）时，使用任何叫做<code>remove</code>的东西都是完全错误的。这样的容器没有叫做remove的成员函数，而且使用remove算法可能覆盖容器值，潜在地破坏容器。对于关联容器，解决问题的适当方法是调用erase：</li>
-</ul>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 当c是标准关联容器时,erase成员函数是去除特定值的元素的最佳方法
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="mi">2023</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这很高效，只花费对数时间，<strong>序列容器的基于删除的技术需要线性时间</strong>。并且，关联容器的<code>erase</code>成员函数有基于等价而不是相等的优势。</p>
-<h2 id="消除判断式">消除判断式</h2>
-<p>消除下面判断式，返回真的每个对象:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">badValue</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">);</span> <span class="c1">// 返回x是否是“bad”
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>对于序列容器（<code>vector</code>、<code>string</code>、<code>deque</code>和<code>list</code>），把每个<code>remove</code>替换为<code>remove_if</code>：</li>
-</ul>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove_if</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">badValue</span><span class="p">),</span> <span class="c1">// 当c是vector、string或deque时
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 这是去掉badValue返回真的对象的最佳方法
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">remove_if</span><span class="p">(</span><span class="n">badValue</span><span class="p">);</span> <span class="c1">// 当c是list时这是去掉badValue返回真的对象的最佳方法
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>对于标准关联容器，有两种方法处理该问题，一个更容易编码，另一个更高效。</li>
-</ul>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span> <span class="c1">// c现在是一种标准关联容器
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">goodValues</span><span class="p">;</span> <span class="c1">// 用于容纳不删除的值的临时容器
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"><span class="n">remove_copy_if</span><span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">inserter</span><span class="p">(</span><span class="n">goodValues</span><span class="p">,</span> <span class="n">goodValues</span><span class="p">.</span><span class="n">end</span><span class="p">()),</span> <span class="n">badValue</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">c</span><span class="p">.</span><span class="n">swap</span><span class="p">(</span><span class="n">goodValues</span><span class="p">);</span> <span class="c1">// 交换c和goodValues的内容
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>对这种方法的<strong>缺点</strong>是它拷贝了所有不删除的元素。</p>
-<p>因为关联容器没有提供类似<code>remove_if</code>的成员函数，所以必须写一个循环来迭代c中的元素，和原来一样删除元素。不幸的是，那些正确工作的代码很少是跃出脑海的代码。例如，这是很多程序员首先想到的：</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span><span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>  <span class="c1">// 清晰，直截了当而漏洞百出的,用于删除c中badValue返回真的每个元素的代码
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="c1">// 不要这么做！
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这有未定义的行为。当容器的一个元素被删时，<strong>指向那个元素的所有迭代器都失效了</strong>。</p>
-<p>当<code>c.erase(i)</code>返回时，<code>i</code>已经失效。那对于这个循环是个坏消息，因为在<code>erase</code>返回后，<code>i</code>通过for循环的<code>++i</code>部分自增。为了避免这个问题，我们必须保证在调用<code>erase</code>之前就得到了c中下一元素的迭代器。最容易的方法是当我们调用时在i上使用后置递增：</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();</span><span class="cm">/*nothing*/</span> <span class="p">){</span><span class="c1">// for循环的第三部分是空的；i现在在下面自增
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="o">++</span><span class="p">);</span> <span class="c1">// 对于坏的值，把当前的i传给erase，然后作为副作用增加i；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="o">++</span><span class="n">i</span><span class="p">;</span> <span class="c1">// 对于好的值，只增加i
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>精髓的地方在于：这种调用<code>erase</code>的解决方法可以工作，因为表达式i++的值是i的旧值，但作为副作用，i增加了。</p>
-<p>因此，我们把i的旧值（没增加的）传给<code>erase</code>，但在<code>erase</code>开始执行前i已经自增了。</p>
-<p>现在不仅删除<code>badValue</code>返回真的每个元素，而且每当一个元素被删掉时，我们也想把一条消息写到日志文件中。</p>
-<ul>
-<li>可以通过<strong>直接从原容器删除元素来避开拷贝</strong>。</li>
-<li>“更容易但效率较低”的解决方案用<code>remove_copy_if</code><strong>把需要的值拷贝到一个新容器中，然后把原容器的内容和新的交换</strong>：</li>
-</ul>
-<p>对于<strong>关联容器</strong>，这说多容易就有多容易，因为只需要对刚才开发的循环做一个微不足道的修改就行了：</p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ofstream</span> <span class="n">logFile</span><span class="p">;</span> <span class="c1">// 要写入的日志文件
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">c</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">AssocContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span><span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();){</span><span class="c1">// 循环条件和前面一样
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">)){</span>
-</span></span><span class="line"><span class="cl">        <span class="n">logFile</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;Erasing &#34;</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">i</span> <span class="o">&lt;&lt;</span><span class="sc">&#39;\n&#39;</span><span class="p">;</span> <span class="c1">// 写日志文件
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="o">++</span><span class="p">);</span> <span class="c1">// 删除元素
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="o">++</span><span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>现在是<code>vector</code>、<code>string</code>和<code>deque</code>不能再使用<code>erase-remove</code>惯用法，因为没有办法让<code>erase</code>或<code>remove</code>写日志文件。</p>
-<p>而且，我们不能使用刚刚为关联容器开发的循环，因为它为<code>vector</code>、<code>string</code>和<code>deque</code>产生未定义的行为！</p>
-<p>要记得对于那样的容器，<strong>调用<code>erase</code>不仅使所有指向被删元素的迭代器失效，也使被删元素之后的所有迭代器失效</strong>。</p>
-<p>包括所有i之后的迭代器。我们写<code>i++</code>，<code>++i</code>或你能想起的其它任何东西都没有用，因为没有能导致迭代器有效的。必须利用erase的返回值。那个返回值正是我们需要的：<strong>一旦删除完成，它就是指向紧接在被删元素之后的元素的有效迭代器。</strong></p>
-<p>我们这么写：</p>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="n">SeqContainer</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">c</span><span class="p">.</span><span class="n">end</span><span class="p">();){</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">badValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">)){</span>
-</span></span><span class="line"><span class="cl">        <span class="n">logFile</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;Erasing &#34;</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">i</span> <span class="o">&lt;&lt;</span> <span class="sc">&#39;\n&#39;</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">        <span class="n">i</span> <span class="o">=</span> <span class="n">c</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">i</span><span class="p">);</span> <span class="c1">// 通过把erase的返回值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span> <span class="c1">// 赋给i来保持i有效
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">       <span class="o">++</span><span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong><font color=blue>这可以很好地工作，但只用于标准序列容器</font></strong>。</p>
-<p>标准关联容器的<code>erase</code>的返回类型是<code>void</code>。对于那些容器，你必须使用“<strong>后置递增你要传给erase的迭代器</strong>”技术。为了避免你奇怪<code>list</code>的适当方法是什么，事实表明对于迭代和删除，你可以像<code>vector/string/deque</code>一样或像关联容器一样对待list；两种方法都可以为list工作。</p>
-<h2 id="结论">结论</h2>
-<ol>
-<li><strong>去除一个容器中有特定值的所有对象</strong>：</li>
-</ol>
-<ul>
-<li>如果容器是<code>vector</code>、<code>string</code>或<code>deque</code>，使用<code>erase-remove</code>惯用法</li>
-<li>如果容器是<code>list</code>，使用<code>list::remove</code></li>
-<li>如果容器是标准关联容器，使用它的<code>erase</code>成员函数</li>
-</ul>
-<ol start="2">
-<li><strong>去除一个容器中满足一个特定判定式的所有对象</strong>：</li>
-</ol>
-<ul>
-<li>如果容器是<code>vector</code>、<code>string</code>或<code>deque</code>，使用<code>erase-remove_if</code>惯用法</li>
-<li>如果容器是<code>list</code>，使用<code>list::remove_if</code></li>
-<li>如果容器是标准关联容器，使用<code>remove_copy_if</code>和<code>swap</code>，或写一个循环来遍历容器元素，当你把迭代器传给<code>erase</code>时记得后置递增它</li>
-</ul>
-<ol start="3">
-<li><strong>在循环内做某些事情（除了删除对象之外）</strong>：</li>
-</ol>
-<ul>
-<li>如果容器是标准<strong>序列容器</strong>，写一个循环来遍历容器元素，<strong>每当调用<code>erase</code>时记得都用它的返回值更新你的迭代器</strong>。</li>
-<li>如果容器是标准<strong>关联容器</strong>，写一个循环来遍历容器元素，当<strong>你把迭代器传给<code>erase</code>时记得后置递增它</strong>。</li>
-</ul>
-<p>如你所见，与仅仅调用erase相比，有效地删除容器元素有更多的东西。</p>
-<p><strong>解决问题的最好方法取决于你是怎样鉴别出哪个对象是要被去掉的，储存它们的容器的类型，和当你删除它们的时候你还想要做什么（如果有的话）。</strong></p>
-<p>这仅对带有迭代器实参的<code>erase</code>形式是正确的。关联容器也提供一个带有一个值的实参的<code>erase</code>形式，而那种形式返回被删掉的元素个数。但这里，我们只关心通过迭代器删除东西。</p>]]></description></item></channel></rss>
+<p>只要遵循「<strong>相同类型的所有分配器都一定等价的限制条件</strong>」，你将毫不费力地使用自定义分配器来「<strong>控制一般内存管理策略，群集关系和使用共享内存以及其他特殊的堆</strong>」。</p>]]></description></item></channel></rss>

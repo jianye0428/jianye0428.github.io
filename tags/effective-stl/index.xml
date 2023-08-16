@@ -1,4 +1,227 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective-stl/</link><description>Effective STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Tue, 15 Aug 2023 08:10:23 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective-stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [24] | 当关乎效率时应该在map::operator[]和map-insert之间仔细选择</title><link>https://jianye0428.github.io/posts/clause_24/</link><pubDate>Tue, 15 Aug 2023 08:10:23 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_24/</guid><description><![CDATA[<h2 id="example-map插入">Example map插入</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective-stl/</link><description>Effective STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 16 Aug 2023 19:06:25 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective-stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
+<p>每个标准容器类都提供4种迭代器类型:<code>iterator</code>,<code>const_iterator</code>，<code>reverse_iterator</code>和<code>const_reverse_iterator</code></p>
+<p>对于<code>container&lt;T&gt;</code>而言，<code>iterator</code>的作用相当于<code>T*</code>，而<code>const_iterator</code>则相当于<code>const T*</code>。</p>
+<p>增加一个<code>iterator</code>或者<code>const_iterator</code>可以在一个从容器开头趋向尾部的遍历中让你移动到容器的下一个元素。</p>
+<p><code>reverse_iterator</code>与<code>const_reverse_iterator</code>同样相当于对应的<code>T</code>和<code>const T</code>，所不同的是，增加<code>reverse_iterator</code>或者<code>const_reverse_iterator</code>会在从尾到头的遍历中让你移动到容器的下一个元素。</p>
+<h2 id="vectort的insert和erase的样式">vector<T>的insert和erase的样式</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">insert</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">rangeBegin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">rangeEnd</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这些方法只接受<code>iterator</code>类型的参数，而不是<code>const_iterator</code>、<code>reverse_iterator</code>或<code>const_reverse_iterator</code>。总是<code>iterator</code>。</p>
+<h2 id="迭代器之间存在的转换关系">迭代器之间存在的转换关系</h2>
+<p></p>
+<p>图中显示了从<code>iterator</code>到<code>const_iterator</code>、从<code>iterator</code>到<code>reverse_iterator</code>和从<code>reverse_iterator</code>到<code>const_reverse_iterator</code>可以进行隐式转换。</p>
+<p>并且，<code>reverse_iterator</code>可以通过调用其<code>base成员函数</code>转换为<code>iterator</code>。<code>const_reverse_iterator</code>也可以类似地通过<code>base</code>转换成为<code>const_iterator</code>。</p>
+<p>通过base得到的也许并非你所期待的iterator。</p>
+<p>而且，<strong>没有办法从一个const_iterator转换得到一个iterator，也无法从const_reverse_iterator得到reverse_iterator</strong>。</p>
+<p>所以，当你需要指出插入位置或删除的元素时，const迭代器几乎没有用。</p>
+<h2 id="尽量使用iterator取代const或者reverse类型的迭代器">尽量使用iterator取代const或者reverse类型的迭代器</h2>
+<ol>
+<li>
+<p><code>insert</code>和<code>erase</code>的一些版本要求<code>iterator</code>。如果你需要调用这些函数，你就必须产生<code>iterator</code>，而不能用<code>const</code>或<code>reverse iterators</code>。</p>
+</li>
+<li>
+<p>不可能把<code>const_iterator</code>隐式转换成<code>iterator</code>。从一个<code>const_iterator</code>产生一个<code>iterator</code>的技术并不普遍适用，而且不保证高效。</p>
+</li>
+<li>
+<p>从<code>reverse_iterator</code>转换而来的<code>iterator</code>在转换之后可能需要相应的调整。</p>
+</li>
+</ol>
+<p><code>iterator</code>与<code>reverse_iterator</code>之间的选择显而易见——依赖于从前到后或从后到前的遍历。</p>
+<p><strong>迭代器比较</strong></p>
+<p>当在<code>iterator</code>和<code>const_iterator</code>之间作选择的时候，你有更充分的理由选择<code>iterator</code>，即使<code>const_iterator</code>同样可行而且即使你并不需要调用容器类的任何成员函数。其中的令人讨厌的原因包括<code>iterator</code>与<code>const_iterator</code>之间的比较：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// typedef可以极大地简化STL容器类和iterator的操作。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 同一个容器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">ci</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 比较iterator和const_iterator
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>唯一的变化是等号的一边的类型是<code>iterator</code>，而另一边的类型是<code>const_iterator</code>。</p>
+<p><strong>因为<code>iterator</code>应该在比较之前隐式的转换成<code>const_iterator</code>，真正的比较应该在两个<code>const_iterator</code>之间进行。</strong></p>
+<p><strong>如果一些实现将<code>const_iterator</code>的<code>operator==</code>作为<code>const_iterator</code>的一个成员函数而不是非成员函数。</strong></p>
+<p>而问题的解决之道显得非常有趣：只要像这样交换两个<code>iterator</code>的位置：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">ci</span> <span class="o">==</span> <span class="n">i</span><span class="p">)...</span> <span class="c1">// 当上面比较无法通过编译时的解决方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代器混用</strong></p>
+<p>不仅是比较是否相等，只要你在同一个表达式中混用<code>iterator</code>和<code>const_iterator</code>（或者<code>reverse_iterator</code>和<code>const_reverse_iterator</code>），这样的问题就可能会出现:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 如果i与ci之间至少有三个元素...
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果迭代器的类型不同，你的正确的代码可能会被错误地拒绝。</p>
+<p>本例中最简单的解决方法是<strong>通过一个（安全的）映射把iterator转换为const_iterator</strong>:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 当上面的代码无法通过编译时的解决方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>避免这类问题的最简单的方法是减少混用不同类型的迭代器的机会。</strong></p>
+]]></description></item><item><title>Effective STL [25] | 熟悉非标准散列容器</title><link>https://jianye0428.github.io/posts/clause_25/</link><pubDate>Wed, 16 Aug 2023 08:21:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_25/</guid><description><![CDATA[<p><strong>STL没有散列表。</strong></p>
+<p>兼容STL的散列关联容器可以从多个来源获得，而且它们甚至有事实上的标准名字：<code>hash_set</code>、<code>hash_multiset</code>、<code>hash_map</code>和<code>hash_multimap</code>。在C++标准委员会的议案中，散列容器的名字是<code>unordered_set</code>、 <code>unordered_multiset</code>、<code>unordered_map</code>和<code>unordered_multimap</code>。</p>
+<p><strong>它们在接口、能力、内在数据结构和支持操作的相关效率方面不同。</strong></p>
+<p>最常见的两个来自<code>SGI</code>和<code>Dinkumware</code>，<code>STLport</code>也提供散列容器，但是<code>STLport</code>的散列容器是基于来自<code>SGI</code>的。</p>
+<p>散列容器是关联容器，它们需要知道储存在容器中的对象类型，用于这些对象的比较函数，以及用于这些对象的分配器。</p>
+<h2 id="散列容器声明">散列容器声明</h2>
+<p>散列容器需要散列函数的说明。下面是散列容器声明：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">HashFunction</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">CompareFunction</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_container</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这非常接近于散列容器的SGI声明，主要差别是SGI为HashFunction和CompareFunction提供了默认类型。</p>
+<p><strong>SGI 设计举例</strong></p>
+<p><code>hash_set</code>的SGI声明看起来基本上像这样：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">HashFunction</span> <span class="o">=</span> <span class="n">hash</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">CompareFunction</span> <span class="o">=</span> <span class="n">equa_to</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_set</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>SGI</code>设计的一个值得注意的方面是使用<code>equal_to</code>作为默认比较函数。<strong>这违背标准关联容器的约定——默认比较函数是less。</strong></p>
+<p><code>SGI</code>的散列容器确定在一个散列容器中的两个对象是否有相同的值是通过相等测试，而不是等价。</p>
+<p>因为散列关联容器，不像它们在标准中的（通常基于树）兄弟，不需要保持有序。</p>
+<p><strong>Dinkumware 设计举例</strong></p>
+<p>Dinkumware设计的散列容器采取一些不同的策略。它仍然允许你指定对象类型、散列函数类型、比较函数类型和分配器类型，但是<strong>它把默认的散列和比较函数移进一个单独的类似特性的叫做hash_compare的类</strong>，而且它把<code>hash_compare</code>作为容器模板的<code>HashingInfo</code>实参的默认值。</p>
+<p>这是<code>Dinkumware</code>的hash_set声明（再次为演示而调整过）:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">CompareFunction</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_compare</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="k">typename</span> <span class="n">HashingInfo</span> <span class="o">=</span> <span class="n">hash_compare</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">less</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_set</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这种接口设计有趣的地方是<code>HashingInfo</code>的使用。</p>
+<p><strong>容器的散列和比较函数储存在<code>HashingInfo</code>中，但HashingInfo类型也容纳了控制表中桶（bucket）最小数量，以及容器元素对桶的最大允许比率的枚举。</strong></p>
+<p>当这比率被超过时，表中桶的数量就增加，而表中的一些元素需要重新散列。（SGI提供具有类似控制表中桶和表中元素对桶比率的成员函数。）</p>
+<p><strong>hash_compare</strong></p>
+<p><code>hash_compare</code>（HashingInfo的默认值）看起来或多或少像这样:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">CompareFunction</span> <span class="o">=</span> <span class="n">less</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_compare</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">enum</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">bucket_size</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="c1">// 元素对桶的最大比率
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">min_buckets</span> <span class="o">=</span> <span class="mi">8</span> <span class="c1">// 桶的最小数量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">};</span>
+</span></span><span class="line"><span class="cl">    <span class="n">size_t</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> <span class="c1">// 散列函数比较函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// 忽略一些东西，包括 CompareFunction的使用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>重载<code>operator()</code>（在这里是实现散列和比较函数）是比你可以想象的更经常出现的一个策略。</p>
+<p><code>Dinkumware</code>设计允许你写你自己的类似hash_compare的类（也许通过从<code>hash_compare</code>本身派生而来），而且只要你的类定义了<code>bucket_size</code>、<code>min_buckets</code>、两个<code>operator()</code>函数（一个带有一个实参，一个带有两个），加上已经省去的一些东西，就能使用它来控制Dinkumware的<code>hash_set</code>或<code>hash_multiset</code>的配置和行为。</p>
+<p><code>hash_map</code>和<code>hash_multimap</code>的配置控制也相似。</p>
+<h2 id="决策留给实现">决策留给实现</h2>
+<p>注意不管是SGI还是Dinkumware的设计，你都能把全部决策留给实现:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 建立一个int的散列表
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">hash_set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">intTable</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要让这个可以编译，散列表必须容纳一个整数类型（例如int），因为<strong>默认散列函数一般局限于整数类型。</strong></p>
+<p><strong>实现方法不同</strong></p>
+<p>在后端，SGI和Dinkumware的实现方法非常不同。</p>
+<ol>
+<li>SGI利用常用的一个元素的单链表的指针数组（桶）组成的开放散列法。</li>
+<li>Dinkumware也利用了开放散列法，但是它的设计是基于一种新颖的数据结构——由迭代器（本质是桶）的数组组成的元素双向链表，迭代器的相邻对表示在每个桶里元素的范围。</li>
+</ol>
+<p><strong>链表不同</strong></p>
+<ol>
+<li>SGI实现在<strong>单链表</strong>中储存表的元素</li>
+<li>Dinkumware实现使用一个双向链表</li>
+</ol>
+<p><strong>迭代器种类不同</strong></p>
+<ol>
+<li>SGI的散列容器提供了前向迭代器，因此你得放弃进行反向迭代的能力：在SGI的散列容器中没有rbegin或者rend成员函数。</li>
+<li>用于Dinkumware散列容器的迭代器是双向的，所以它们可以提供前向和反向遍历。</li>
+</ol>
+<p><strong>内存使用量方面不同</strong></p>
+<p>SGI的设计比Dinkumware的节俭一点点。</p>
+<h2 id="结论">结论</h2>
+<p>虽然STL本身缺乏散列容器，兼容STL的散列容器（有不同的接口、能力和行为权衡）不难得到。就SGI和STLport的实现而言，你甚至可以免费下载得到它们。</p>
+]]></description></item><item><title>Effective STL [24] | 当关乎效率时应该在map::operator[]和map-insert之间仔细选择</title><link>https://jianye0428.github.io/posts/clause_24/</link><pubDate>Tue, 15 Aug 2023 08:10:23 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_24/</guid><description><![CDATA[<h2 id="example-map插入">Example map插入</h2>
 <p>假设有一个支持默认构造函数以及从一个double构造和赋值的Widget类:</p>
 <div class="highlight" id="id-1"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
