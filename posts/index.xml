@@ -1,4 +1,496 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 16 Aug 2023 19:06:25 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>Effective STL [25] | 熟悉非标准散列容器</title><link>https://jianye0428.github.io/posts/clause_25/</link><pubDate>Wed, 16 Aug 2023 08:21:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_25/</guid><description><![CDATA[<p><strong>STL没有散列表。</strong></p>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 17 Aug 2023 07:54:00 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>Transformer 详解</title><link>https://jianye0428.github.io/posts/transformerdetailedexplanation/</link><pubDate>Mon, 24 Jul 2023 17:37:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerdetailedexplanation/</guid><description><![CDATA[<h2 id="transformer-详解">Transformer 详解</h2>
+<p>Transformer 是谷歌大脑在 2017 年底发表的论文 <a href="https://arxiv.org/pdf/1706.03762.pdf"target="_blank" rel="external nofollow noopener noreferrer">attention is all you need<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中所提出的 seq2seq 模型。现在已经取得了大范围的应用和扩展，而 BERT 就是从 Transformer 中衍生出来的预训练语言模型</p>
+<p>这篇文章分为以下几个部分</p>
+<ul>
+<li>Transformer 直观认识</br></li>
+<li>Positional Encoding</br></li>
+<li>Self Attention Mechanism</br></li>
+<li>残差连接和 Layer Normalization</br></li>
+<li>Transformer Encoder 整体结构</br></li>
+<li>Transformer Decoder 整体结构</br></li>
+<li>总结</br></li>
+<li>参考文章</br></li>
+</ul>
+<h3 id="0-transformer-直观认识">0. Transformer 直观认识</h3>
+<p>Transformer 和 LSTM 的最大区别，就是 <font color=green>LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字</font>。而 Transformer 的训练时<strong>并行</strong>的，即所有字是同时训练的，这样就大大增加了计算效率。<font color=green>Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序</font>，使用自注意力机制(Self Attention Mechanism)和全连接层进行计算，这些后面会讲到。</p>
+<p>Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<font color=red>Encoder 负责把输入(语言序列)映射成隐藏层(下图中第 2 步用九宫格代表的部分)，然后解码器再把隐藏层映射为自然语言序列</font>。例如下图机器翻译的例子(Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token)。</p>
+<p></p>
+<p>本篇文章大部分内容在于解释 Encoder 部分，即把自然语言序列映射为隐藏层的数学表达的过程。理解了 Encoder 的结构，再理解 Decoder 就很简单了</p>
+<p></p>
+<p>上图为 Transformer Encoder Block 结构图，注意：下面的内容标题编号分别对应着图中 1,2,3,4 个方框的序号</p>
+<h3 id="1-positional-encoding">1. Positional Encoding</h3>
+<p>由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能<font color=red>识别出语言中的顺序关系</font>。</p>
+<p>现在定义一个<strong>位置嵌入</strong>的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成</p>
+<p>注意，我们一般以字为单位训练 Transformer 模型。首先初始化字编码的大小为 [vocab_size, embedding_dimension]，vocab_size 为字库中所有字的数量，embedding_dimension 为字向量的维度，对应到 PyTorch 中，其实就是 nn.Embedding(vocab_size, embedding_dimension)</p>
+<p>论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:</p>
+<p>$$\left{\begin{aligned}
+PE(pos, 2i) = \sin (pos/10000^{2i/d_{model}}) \cr
+PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \cr
+\end{aligned}\right.$$</p>
+<p>上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max _ sequence_ length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding_ dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值</p>
+<p>上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到<strong>位置之间的依赖关系和自然语言的时序特性</strong>。</p>
+<p>如果不理解这里为何这么设计，可以看这篇文章 <a href="https://wmathor.com/index.php/archives/1453/"target="_blank" rel="external nofollow noopener noreferrer">Transformer 中的 Positional Encoding<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>下面画一下位置嵌入，纵向观察，可见随着 embedding_dimension​序号增大，位置嵌入函数的周期变化越来越平缓</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">math</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">get_positional_encoding</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># 初始化一个positional encoding</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># embed_dim: 字嵌入的维度</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># max_seq_len: 最大的序列长度</span>
+</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+</span></span><span class="line"><span class="cl">            <span class="p">[</span><span class="n">pos</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">i</span> <span class="o">/</span> <span class="n">embed_dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)]</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">)])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># dim 2i 偶数</span>
+</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># dim 2i+1 奇数</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">positional_encoding</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">positional_encoding</span> <span class="o">=</span> <span class="n">get_positional_encoding</span><span class="p">(</span><span class="n">max_seq_len</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&#34;Sinusoidal Function&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&#34;hidden dimension&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&#34;sequence length&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 1&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 2&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 3&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&#34;Sequence length&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&#34;Period of Positional Encoding&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p></p>
+<h3 id="2-self-attention-mechanism">2. Self Attention Mechanism</h3>
+<p>对于输入的句子 $ X $，通过 WordEmbedding 得到该句子中每个字的字向量，同时通过 Positional Encoding 得到所有字的位置向量，将其相加(维度相同，可以直接相加)，得到该字真正的向量表示。第 $ t $ 个字的向量记作 $ x_t $。</p>
+<p>接着我们定义三个矩阵 $ W_Q $, $ W_K $, $ W_V $，使用这三个矩阵分别对所有的字向量进行三次线性变换，于是所有的字向量又衍生出三个新的向量 $ q_t $, $ k_t $, $ v_t $。我们将所有的 $ q_t $ 向量拼成一个大矩阵，记作查询矩阵 $ Q $ ，将所有的 $ k_t $ 向量拼成一个大矩阵，记作键矩阵 $ K $  ，将所有的 $ v_t $ 向量拼成一个大矩阵，记作值矩阵 $ V $ (见下图)</p>
+<p></p>
+<p>为了获得第一个字的注意力权重，我们需要用第一个字的查询向量 $ q_1 $ 乘以键矩阵 $ K $(见下图)</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">                [0, 4, 2]
+</span></span><span class="line"><span class="cl">    [1, 0, 2] x [1, 4, 3] = [2, 4, 4]
+</span></span><span class="line"><span class="cl">                [1, 0, 1]</span></span></code></pre></td></tr></table>
+</div>
+</div><p></p>
+<p>之后还需要将得到的值经过 softmax，使得它们的和为 1(见下图)</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"> softmax([2, 4, 4]) = [0.0, 0.5, 0.5]</span></span></code></pre></td></tr></table>
+</div>
+</div><p></p>
+<p>有了权重之后，将权重其分别乘以对应字的值向量 $ v_t $(见下图)</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">    0.0 * [1, 2, 3] = [0.0, 0.0, 0.0]
+</span></span><span class="line"><span class="cl">    0.5 * [2, 8, 0] = [1.0, 4.0, 0.0]
+</span></span><span class="line"><span class="cl">    0.5 * [2, 6, 3] = [1.0, 3.0, 1.5]</span></span></code></pre></td></tr></table>
+</div>
+</div><p></p>
+<p>最后将这些<strong>权重化后的值向量求和</strong>，得到第一个字的输出(见下图)</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">      [0.0, 0.0, 0.0]
+</span></span><span class="line"><span class="cl">    + [1.0, 4.0, 0.0]
+</span></span><span class="line"><span class="cl">    + [1.0, 3.0, 1.5]
+</span></span><span class="line"><span class="cl">    -----------------
+</span></span><span class="line"><span class="cl">    = [2.0, 7.0, 1.5]</span></span></code></pre></td></tr></table>
+</div>
+</div><p></p>
+<p>对其它的输入向量也执行相同的操作，即可得到通过 self-attention 后的所有输出</p>
+<p></p>
+<p><strong>矩阵计算</strong></p>
+<p>上面介绍的方法需要一个循环遍历所有的字$ x_t $，我们可以把上面的向量计算变成矩阵的形式，从而一次计算出所有时刻的输出</p>
+<p>第一步就不是计算某个时刻的$ q_t $, $ k_t $, $ v_t $了，而是一次计算所有时刻的 $
+Q $, $ K $, $ V $。计算过程如下图所示，这里的输入是一个矩阵 $ X $，矩阵第 $ t $ 行为第 $ t $ 个词的向量表示 $x_t$</p>
+<p></p>
+<p>接下来将 $ Q $ 和 $K_T$ 相乘，然后除以 $ \sqrt{d_k} $(这是论文中提到的一个 trick)，经过 softmax 以后再乘以 $ V $ 得到输出</p>
+<p></p>
+<p><strong>Multi-Head Attention</strong></p>
+<p>这篇论文还提出了 Multi-Head Attention 的概念。其实很简单，前面定义的一组 $Q $, $ K $, $ V $, 可以让一个词 attend to 相关的词，我们可以定义多组 $Q $, $ K $, $ V $，让它们分别关注不同的上下文。计算 $Q $, $ K $, $ V $ 的过程还是一样，只不过线性变换的矩阵从一组 $ W^Q $, $ W^K $, $ W^V $ 变成了多组$ W^Q_0 $, $ W^K_0 $, $ W^V_0 $  ，$ W^Q_1 $, $ W^K_1 $, $ W^V_1 $ ，… 如下图所示:</p>
+<p></p>
+<p>对于输入矩阵 $ X $ ，每一组 $ Q $ 、$ K $ 和 $ V $ 都可以得到一个输出矩阵 $ Z $ 。如下图所示</p>
+<p></p>
+<p><strong>Padding Mask</strong>
+</p>
+<p>上面 Self Attention 的计算过程中，我们通常使用 mini-batch 来计算，也就是一次计算多句话，即 $ X $ 的维度是 <code>[batch_size, sequence_length]</code>，sequence_length​是句长，而一个 mini-batch 是由多个不等长的句子组成的，我们需要按照这个 mini-batch 中最大的句长对剩余的句子进行补齐，一般用 0 进行填充，这个过程叫做 padding</p>
+<p>但这时在进行 softmax 就会产生问题。回顾 softmax 函数 $\sigma(z_i) = \frac{e^{z_i}}{\sum_K^{j=i} e^{z_j}}$，$e^0$ 是 1，是有值的，这样的话 softmax 中被 padding 的部分就参与了运算，相当于让无效的部分参与了运算，这可能会产生很大的隐患。因此需要做一个 mask 操作，让这些无效的区域不参与运算，一般是给无效区域加一个很大的负数偏置，即</p>
+<p>$$
+\begin{aligned}Z_{illegal}&amp;=Z_{illegal}+bias_{illegal}\cr
+bias_{illegal}&amp;\to-\infty\end{aligned}
+$$</p>
+<h3 id="3-残差连接和-layer-normalization">3. 残差连接和 Layer Normalization</h3>
+<p><strong>残差连接</strong></p>
+<p>我们在上一步得到了经过 self-attention 加权之后输出，也就是$\text{Self-Attention(Q, K, V)}$，然后把他们加起来做残差连接</p>
+<p>$$X_{\text{embedding}} + \text{Self-Attention(Q, K, V)}$$</p>
+<p><strong>Layer Normalization</strong></p>
+<p>Layer Normalization 的作用是<strong>把神经网络中隐藏层归一为标准正态分布</strong>，也就是 $i.i.d$ 独立同分布，以起到<strong>加快训练速度，加速收敛</strong>的作用</p>
+<p>$$\mu_j=\frac1m\sum_{i=1}^mx_{ij}$$</p>
+<p>上式以矩阵的列(column)为单位求均值；</p>
+<p>$$\sigma^2_{j} = \frac{1}{m}\sum^m_{i=1}(x_{ij} - \mu_j)^2$$</p>
+<p>上式以矩阵的列(column)为单位求方差</p>
+<p>$$LayerNorm(x) = \frac{x_{ij} - \mu_{j}}{\sqrt{\sigma^2 + \epsilon}}$$</p>
+<p>然后用每一列的每一个元素减去这列的均值，再除以这列的标准差，从而得到归一化后的数值，加 $\epsilon$ 是为了防止分母为 0。</p>
+<p></p>
+<p>下图展示了更多细节：输入 $x_1, x_2$ 经 self-attention 层之后变成 $z_1, z_2$，然后和输入 $x_1, x_2$ 进行残差连接，经过 LayerNorm 后输出给全连接层。全连接层也有一个残差连接和一个 LayerNorm，最后再输出给下一个 Encoder(每个 Encoder Block 中的 FeedForward 层权重都是共享的)</p>
+<p></p>
+<h3 id="4-transformer-encoder-整体结构">4. Transformer Encoder 整体结构</h3>
+<p>经过上面 3 个步骤，我们已经基本了解了 Encoder 的主要构成部分，下面我们用公式把一个 Encoder block 的计算过程整理一下：</p>
+<p>(1). 字向量与位置编码</p>
+<p>$$X = \text{Embedding-Lookup(X)} + \text{Positional-Encoding}$$</p>
+<p>(2). 自注意力机制</p>
+<p>$$Q = Linear_{q}(X) = XW_{Q}$$
+$$K = Linear_{k}(X) = XW_{K}$$
+$$V = Linear_{v}(X) = XW_{V}$$
+$$X_{attention} = \text{Self-Attention(Q, K, V)}$$</p>
+<p>(3). self-attention 残差连接与 Layer Normalization</p>
+<p>$$X_{attention} = X + X_{attention}$$
+$$X_{attention} = LayerNorm(attention)$$</p>
+<p>(4). 下面进行 Encoder block 结构图中的第 4 部分，也就是 FeedForward，其实就是两层线性映射并用激活函数激活，比如说 $ReLU$</p>
+<p>$$X_{hidden} = Linear(ReLU(Linear(X_{attention})))$$</p>
+<p>(5). FeedForward 残差连接与 Layer Normalization</p>
+<p>$$X_{hidden} = X_{attention} + X_{hidden}$$
+$$X_{hidden} = LayerNorm(X_{hidden})$$</p>
+<p>其中
+$$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
+<h3 id="5-transformer-decoder-整体结构">5. Transformer Decoder 整体结构</h3>
+<p>我们先从 HighLevel 的角度观察一下 Decoder 结构，从下到上依次是：</p>
+<ul>
+<li>Masked Multi-Head Self-Attention</li>
+<li>Multi-Head Encoder-Decoder Attention</li>
+<li>FeedForward Network</li>
+</ul>
+<p>和 Encoder 一样，上面三个部分的每一个部分，都有一个残差连接，后接一个 Layer Normalization。Decoder 的中间部件并不复杂，大部分在前面 Encoder 里我们已经介绍过了，但是 Decoder 由于其特殊的功能，因此在训练时会涉及到一些细节</p>
+<p></p>
+<p><strong>Masked Self-Attention</strong></p>
+<p>具体来说，传统 Seq2Seq 中 Decoder 使用的是 RNN 模型，因此在训练过程中输入 $t$ 时刻的词，模型无论如何也看不到未来时刻的词，因为循环神经网络是时间驱动的，只有当 $t$ 时刻运算结束了，才能看到 $t + 1$ 时刻的词。而 Transformer Decoder 抛弃了 RNN，改为 Self-Attention，由此就产生了一个问题，<font color=red>在训练过程中，整个 ground truth 都暴露在 Decoder 中</font>，这显然是不对的，我们需要对 Decoder 的输入进行一些处理，该处理被称为 Mask
+</br>
+举个例子，Decoder 的 ground truth 为 &ldquo;<start> I am fine&rdquo;，我们将这个句子输入到 Decoder 中，经过 WordEmbedding 和 Positional Encoding 之后，将得到的矩阵做三次线性变换 $(W_Q, W_K, W_V)$。然后进行 self-attention 操作，首先通过得到 Scaled Scores，接下来非常关键，我们要<strong>对 Scaled Scores 进行 Mask</strong>，举个例子，当我们输入 &ldquo;I&rdquo; 时，模型目前仅知道包括 &ldquo;I&rdquo; 在内之前所有字的信息，即 &ldquo;<start>&rdquo; 和 &ldquo;I&rdquo; 的信息，不应该让其知道 &ldquo;I&rdquo; 之后词的信息。道理很简单，我们做预测的时候是按照顺序一个字一个字的预测，怎么能这个字都没预测完，就已经知道后面字的信息了呢？Mask 非常简单，首先生成一个下三角全 0，上三角全为负无穷的矩阵，然后将其与 Scaled Scores 相加即可</p>
+<p></p>
+<p>之后再做 softmax，就能将 - inf 变为 0，得到的这个矩阵即为每个字之间的权重</p>
+<p></p>
+<p>Multi-Head Self-Attention 无非就是并行的对上述步骤多做几次，前面 Encoder 也介绍了，这里就不多赘述了</p>
+<p><strong>Masked Encoder-Decoder Attention</strong></p>
+<p>其实这一部分的计算流程和前面 Masked Self-Attention 很相似，结构一模一样，唯一不同的是这里的 K, V为 Encoder 的输出，Q 为 Decoder 中 Masked Self-Attention 的输出</p>
+<p></p>
+<h3 id="6-总结">6. 总结</h3>
+<p>到此为止，Transformer 中 95% 的内容已经介绍完了，我们用一张图展示其完整结构。不得不说，Transformer 设计的十分巧夺天工。</p>
+<p></p>
+<p>下面有几个问题，是我从网上找的，感觉看完之后能对 Transformer 有一个更深的理解</p>
+<p><font color=red>Transformer 为什么需要进行 Multi-head Attention？</font></p>
+<ul>
+<li>原论文中说到进行 Multi-head Attention 的原因是将模型分为多个头，形成多个子空间，可以让模型去关注不同方面的信息，最后再将各个方面的信息综合起来。其实直观上也可以想到，如果自己设计这样的一个模型，必然也不会只做一次 attention，多次 attention 综合的结果至少能够起到增强模型的作用，也可以类比 CNN 中同时使用多个卷积核的作用，直观上讲，多头的注意力有助于网络捕捉到更丰富的特征 / 信息</li>
+</ul>
+<p><font color=red>Transformer 相比于 RNN/LSTM，有什么优势？为什么？</font></p>
+<ul>
+<li>RNN 系列的模型，无法并行计算，因为 T 时刻的计算依赖 T-1 时刻的隐层计算结果，而 T-1 时刻的计算依赖 T-2 时刻的隐层计算结果</li>
+<li>Transformer 的特征抽取能力比 RNN 系列的模型要好</li>
+</ul>
+<p><font color=red>为什么说 Transformer 可以代替 seq2seq？</font></p>
+<ul>
+<li>这里用代替这个词略显不妥当，seq2seq 虽已老，但始终还是有其用武之地，seq2seq 最大的问题在于<strong>将Encoder端的所有信息压缩到一个固定长度的向量中</strong>，并将其作为 Decoder 端首个隐藏状态的输入，来预测 Decoder 端第一个单词 (token) 的隐藏状态。在输入序列比较长的时候，这样做显然会损失 Encoder 端的很多信息，而且这样一股脑的把该固定向量送入 Decoder 端，Decoder 端不能够关注到其想要关注的信息。</li>
+<li>Transformer 不但对 seq2seq 模型这两点缺点有了实质性的改进 (多头交互式 attention 模块)，而且还引入了 self-attention 模块，让源序列和目标序列首先 “自关联” 起来，这样的话，源序列和目标序列自身的 embedding 表示所蕴含的信息更加丰富，而且后续的 FFN 层也增强了模型的表达能力，并且 Transformer 并行计算的能力远远超过了 seq2seq 系列模型</li>
+</ul>
+<h3 id="7-参考文章">7. 参考文章</h3>
+<ul>
+<li><a href="http://mantchs.com/2019/09/26/NLP/Transformer/"target="_blank" rel="external nofollow noopener noreferrer">Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="http://jalammar.github.io/illustrated-transformer/"target="_blank" rel="external nofollow noopener noreferrer">The Illustrated Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="http://www.peterbloem.nl/blog/transformers"target="_blank" rel="external nofollow noopener noreferrer">TRANSFORMERS FROM SCRATCH<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://medium.com/@bgg/seq2seq-pay-attention-to-self-attention-part-2-%E4%B8%AD%E6%96%87%E7%89%88-ef2ddf8597a4"target="_blank" rel="external nofollow noopener noreferrer">Seq2seq pay Attention to Self Attention: Part 2<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+</ul>
+<p>ref:</br>
+[1]. <a href="https://www.bilibili.com/video/BV1mk4y1q7eK?p=1"target="_blank" rel="external nofollow noopener noreferrer">B站讲解视频<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://wmathor.com/index.php/archives/1438/"target="_blank" rel="external nofollow noopener noreferrer">https://wmathor.com/index.php/archives/1438/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3]. <a href="https://wmathor.com/index.php/archives/1455/"target="_blank" rel="external nofollow noopener noreferrer">Transformer的pytorch实现<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
+]]></description></item><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
+<p>每个标准容器类都提供4种迭代器类型:<code>iterator</code>,<code>const_iterator</code>，<code>reverse_iterator</code>和<code>const_reverse_iterator</code></p>
+<p>对于<code>container&lt;T&gt;</code>而言，<code>iterator</code>的作用相当于<code>T*</code>，而<code>const_iterator</code>则相当于<code>const T*</code>。</p>
+<p>增加一个<code>iterator</code>或者<code>const_iterator</code>可以在一个从容器开头趋向尾部的遍历中让你移动到容器的下一个元素。</p>
+<p><code>reverse_iterator</code>与<code>const_reverse_iterator</code>同样相当于对应的<code>T</code>和<code>const T</code>，所不同的是，增加<code>reverse_iterator</code>或者<code>const_reverse_iterator</code>会在从尾到头的遍历中让你移动到容器的下一个元素。</p>
+<h2 id="vectort的insert和erase的样式">vector<T>的insert和erase的样式</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">insert</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">rangeBegin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">rangeEnd</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这些方法只接受<code>iterator</code>类型的参数，而不是<code>const_iterator</code>、<code>reverse_iterator</code>或<code>const_reverse_iterator</code>。总是<code>iterator</code>。</p>
+<h2 id="迭代器之间存在的转换关系">迭代器之间存在的转换关系</h2>
+<p></p>
+<p>图中显示了从<code>iterator</code>到<code>const_iterator</code>、从<code>iterator</code>到<code>reverse_iterator</code>和从<code>reverse_iterator</code>到<code>const_reverse_iterator</code>可以进行隐式转换。</p>
+<p>并且，<code>reverse_iterator</code>可以通过调用其<code>base成员函数</code>转换为<code>iterator</code>。<code>const_reverse_iterator</code>也可以类似地通过<code>base</code>转换成为<code>const_iterator</code>。</p>
+<p>通过base得到的也许并非你所期待的iterator。</p>
+<p>而且，<strong>没有办法从一个const_iterator转换得到一个iterator，也无法从const_reverse_iterator得到reverse_iterator</strong>。</p>
+<p>所以，当你需要指出插入位置或删除的元素时，const迭代器几乎没有用。</p>
+<h2 id="尽量使用iterator取代const或者reverse类型的迭代器">尽量使用iterator取代const或者reverse类型的迭代器</h2>
+<ol>
+<li>
+<p><code>insert</code>和<code>erase</code>的一些版本要求<code>iterator</code>。如果你需要调用这些函数，你就必须产生<code>iterator</code>，而不能用<code>const</code>或<code>reverse iterators</code>。</p>
+</li>
+<li>
+<p>不可能把<code>const_iterator</code>隐式转换成<code>iterator</code>。从一个<code>const_iterator</code>产生一个<code>iterator</code>的技术并不普遍适用，而且不保证高效。</p>
+</li>
+<li>
+<p>从<code>reverse_iterator</code>转换而来的<code>iterator</code>在转换之后可能需要相应的调整。</p>
+</li>
+</ol>
+<p><code>iterator</code>与<code>reverse_iterator</code>之间的选择显而易见——依赖于从前到后或从后到前的遍历。</p>
+<p><strong>迭代器比较</strong></p>
+<p>当在<code>iterator</code>和<code>const_iterator</code>之间作选择的时候，你有更充分的理由选择<code>iterator</code>，即使<code>const_iterator</code>同样可行而且即使你并不需要调用容器类的任何成员函数。其中的令人讨厌的原因包括<code>iterator</code>与<code>const_iterator</code>之间的比较：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// typedef可以极大地简化STL容器类和iterator的操作。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 同一个容器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">ci</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 比较iterator和const_iterator
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>唯一的变化是等号的一边的类型是<code>iterator</code>，而另一边的类型是<code>const_iterator</code>。</p>
+<p><strong>因为<code>iterator</code>应该在比较之前隐式的转换成<code>const_iterator</code>，真正的比较应该在两个<code>const_iterator</code>之间进行。</strong></p>
+<p><strong>如果一些实现将<code>const_iterator</code>的<code>operator==</code>作为<code>const_iterator</code>的一个成员函数而不是非成员函数。</strong></p>
+<p>而问题的解决之道显得非常有趣：只要像这样交换两个<code>iterator</code>的位置：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">ci</span> <span class="o">==</span> <span class="n">i</span><span class="p">)...</span> <span class="c1">// 当上面比较无法通过编译时的解决方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>迭代器混用</strong></p>
+<p>不仅是比较是否相等，只要你在同一个表达式中混用<code>iterator</code>和<code>const_iterator</code>（或者<code>reverse_iterator</code>和<code>const_reverse_iterator</code>），这样的问题就可能会出现:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 如果i与ci之间至少有三个元素...
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果迭代器的类型不同，你的正确的代码可能会被错误地拒绝。</p>
+<p>本例中最简单的解决方法是<strong>通过一个（安全的）映射把iterator转换为const_iterator</strong>:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 当上面的代码无法通过编译时的解决方法
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>避免这类问题的最简单的方法是减少混用不同类型的迭代器的机会。</strong></p>
+]]></description></item><item><title>Effective STL [27] | 用distance和advance把const_iterator转化成iterator</title><link>https://jianye0428.github.io/posts/clause_27/</link><pubDate>Thu, 17 Aug 2023 07:54:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_27/</guid><description><![CDATA[<h2 id="把const_iterator转化为iterator">把const_iterator转化为iterator</h2>
+<p>有些容器成员函数只接受iterator作为参数，而不是const_iterator。如果你只有一个const_iterator，要在它所指向的容器位置上插入新元素呢？</p>
+<p>上一条款说并不存在从const_iterator到iterator之间的隐式转换，那该怎么办？</p>
+<p>看看当你把一个const_iterator映射为iterator时会发生什么:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// 方便的typedef
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span> <span class="c1">// ci是const_iterator
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">(</span><span class="n">ci</span><span class="p">);</span> <span class="c1">// 错误！没有从const_iterator 到iterator隐式转换的途径
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Iter</span> <span class="nf">i</span><span class="p">(</span><span class="k">const_cast</span><span class="o">&lt;</span><span class="n">Iter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ci</span><span class="p">));</span> <span class="c1">// 仍是个错误！不能从const_iterator 映射为iterator！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里只是以deque为例，但是用其它容器类——list、set、multiset、map、multimap甚至条款25描述的散列表容器——的结果一样。使用映射的行也许在vector或string的代码时能够编译，但这是我们马上要讨论的非常特殊的情形。</p>
+<p>上述代码不能通过编译的原因在于，对于这些容器而言，<font color=red>iterator和const_iterator是完全不同的类。</font></p>
+<p>在两个毫无关联的类之间进行<code>const_cast</code>映射是荒谬的，所以<code>reinterpret_cast</code>、<code>static_cast</code>甚至C风格的映射也会导致同样的结果。</p>
+<p><strong>不能编译的代码对于vector和string容器来说也许能够通过编译</strong></p>
+<p>那是因为通常情况下大多数实现都会采用真实的指针作为那些容器的迭代器。</p>
+<p>就这种实现而言，<code>vector&lt;T&gt;::iterator</code>是<code>T*</code>的<code>typedef</code>，而<code>vector&lt;T&gt;::const_iterator</code>是<code>const T*</code>的<code>typedef</code>，<code>string::iterator</code>是<code>char</code>的<code>typedef</code>，而<code>string::const_iterator</code>是<code>const char*</code>的<code>typedef</code>。</p>
+<p>在这种实现的情况下，用<code>const_cast</code>把<code>const_iterator</code>映射成<code>iterator</code>当然可以编译而且没有问题，因为<code>const_iterator</code>与<code>iterator</code>之间的<code>const_cast</code>映射被最终解释成<code>const T*</code>到<code>T*</code>的映射。但是，即使是在这种实现中，<code>reverse_iterator</code>和<code>const_reverse_iterator</code>也是真正的类，所以你仍然不能直接用<code>const_cast</code>把<code>const_reverse_iterator</code>映射成<code>reverse_iterator</code>。</p>
+<p>而且这些实现通常只会在Release模式时才使用指针表示vector和string的迭代器。</p>
+<p>所有这些事实表明，把const迭代器映射为迭代器是病态的，即使是对vector和string来说也时，因为移植性很值得怀疑。</p>
+<h2 id="const_iterator转换为iterator">const_iterator转换为iterator</h2>
+<p>有一种安全的、可移植的方法获取它所对应的iterator，而且，用不着陷入类型系统的转换。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;deque&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iterator&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// 和以前一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">IntDeque</span> <span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 让ci指向d
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Iter</span> <span class="n">i</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">begin</span><span class="p">());</span> <span class="c1">// 初始化i为d.begin()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span> <span class="c1">// 把i移到指向ci位置（但请留意下面关于为什么在它编译前要调整的原因）
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要得到与const_iterator指向同一位置的iterator:</p>
+<ol>
+<li>将iterator指向容器的起始位置，</li>
+<li>把它向前移到和const_iterator距离容器起始位置的偏移量一样的位置即可</li>
+</ol>
+<p>这个任务得到了两个函数模板advance和distance的帮助，它们都在<iterator>中声明:</p>
+<ul>
+<li>distance返回两个指向同一个容器的iterator之间的距离；</li>
+<li>advance则用于将一个iterator移动指定的距离。</li>
+</ul>
+<p>如果<code>i</code>和<code>ci</code>指向同一个容器，那么表达式<code>advance(i, distance(i, ci))</code>会将<code>i</code>移动到与<code>ci</code>相同的位置上。</p>
+<p>上述代码编译存在问题。</p>
+<p>先来看看distance的定义：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_InputIterator</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="n">_GLIBCXX17_CONSTEXPR</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_InputIterator</span><span class="o">&gt;::</span><span class="n">difference_type</span>
+</span></span><span class="line"><span class="cl">  <span class="n">distance</span><span class="p">(</span><span class="n">_InputIterator</span> <span class="n">__first</span><span class="p">,</span> <span class="n">_InputIterator</span> <span class="n">__last</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// concept requirements -- taken care of in __distance
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">__distance</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">__iterator_category</span><span class="p">(</span><span class="n">__first</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当遇到<code>distance</code>调用时，你的编译器需要根据使用的实参类型推断出<code>InputIterator</code>的类型。</p>
+<p>再来看看我所说的不太正确的<code>distance</code>调用:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span> <span class="c1">// 调整i，指向ci位置
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>有两个参数传递给distance，i和ci。i的类型是Iter，即<code>deque&lt;int&gt;::iterator</code>的typedef。</p>
+<p>对编译器来说，这表明调用<code>distance</code>的<code>InputIterator</code>是<code>deque::iterator</code>。但<code>ci</code>是<code>ConstIter</code>，即<code>deque::const_iterator</code>的<code>typedef</code>。</p>
+<p>表明那个<code>InputIterator</code>是<code>deque&lt;int&gt;::const_iterator</code>。</p>
+<p><code>InputIterator</code>不可能同时有两种不同的类型，所以调用<code>distance</code>失败。</p>
+<p>一般会造成一些冗长的出错信息，可能会也可能不会说明是编译器无法得出<code>InputIterator</code>是什么类型。</p>
+<p>要顺利地调用<code>distance</code>，你需要排除歧义。</p>
+<p>最简单的办法就是显式的指明<code>distance</code>调用的模板参数类型，从而避免编译器自己得出它们的类型:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们现在知道了怎么通过<code>advance</code>和<code>distance</code>获取<code>const_iterator</code>相应的<code>iterator</code>了。</p>
+<p><strong>效率如何？</strong></p>
+<p>答案很简单。<strong>取决于你所转换的究竟是什么样的迭代器。</strong></p>
+<p>对于<strong>随机访问的迭代器</strong>（比如<code>vector</code>、<code>string</code>和<code>deque</code>的）而言，这是<strong>常数时间</strong>的操作。</p>
+<p>对于<strong>双向迭代器</strong>（也就是，所有其它容器和包括散列容器的一些实现）而言，这是<strong>线性时间</strong>的操作。</p>
+<p>因为它可能花费线性时间的代价来产生一个和<code>const_iterator</code>等价的<code>iterator</code>，并且因为如果不能访问<code>const_iterator</code>所属的容器这个操作就无法完成。</p>
+<p>从这个角度出发，也许你需要重新审视你从<code>const_iterator</code>产生<code>iterator</code>的设计。</p>
+<p>当处理容器时尽量用<code>iterator</code>代替<code>const</code>和<code>reverse</code>迭代器。</p>
+]]></description></item><item><title>Effective STL [25] | 熟悉非标准散列容器</title><link>https://jianye0428.github.io/posts/clause_25/</link><pubDate>Wed, 16 Aug 2023 08:21:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_25/</guid><description><![CDATA[<p><strong>STL没有散列表。</strong></p>
 <p>兼容STL的散列关联容器可以从多个来源获得，而且它们甚至有事实上的标准名字：<code>hash_set</code>、<code>hash_multiset</code>、<code>hash_map</code>和<code>hash_multimap</code>。在C++标准委员会的议案中，散列容器的名字是<code>unordered_set</code>、 <code>unordered_multiset</code>、<code>unordered_map</code>和<code>unordered_multimap</code>。</p>
 <p><strong>它们在接口、能力、内在数据结构和支持操作的相关效率方面不同。</strong></p>
 <p>最常见的两个来自<code>SGI</code>和<code>Dinkumware</code>，<code>STLport</code>也提供散列容器，但是<code>STLport</code>的散列容器是基于来自<code>SGI</code>的。</p>
@@ -128,99 +620,6 @@
 <p>SGI的设计比Dinkumware的节俭一点点。</p>
 <h2 id="结论">结论</h2>
 <p>虽然STL本身缺乏散列容器，兼容STL的散列容器（有不同的接口、能力和行为权衡）不难得到。就SGI和STLport的实现而言，你甚至可以免费下载得到它们。</p>
-]]></description></item><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
-<p>每个标准容器类都提供4种迭代器类型:<code>iterator</code>,<code>const_iterator</code>，<code>reverse_iterator</code>和<code>const_reverse_iterator</code></p>
-<p>对于<code>container&lt;T&gt;</code>而言，<code>iterator</code>的作用相当于<code>T*</code>，而<code>const_iterator</code>则相当于<code>const T*</code>。</p>
-<p>增加一个<code>iterator</code>或者<code>const_iterator</code>可以在一个从容器开头趋向尾部的遍历中让你移动到容器的下一个元素。</p>
-<p><code>reverse_iterator</code>与<code>const_reverse_iterator</code>同样相当于对应的<code>T</code>和<code>const T</code>，所不同的是，增加<code>reverse_iterator</code>或者<code>const_reverse_iterator</code>会在从尾到头的遍历中让你移动到容器的下一个元素。</p>
-<h2 id="vectort的insert和erase的样式">vector<T>的insert和erase的样式</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">insert</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">rangeBegin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">rangeEnd</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这些方法只接受<code>iterator</code>类型的参数，而不是<code>const_iterator</code>、<code>reverse_iterator</code>或<code>const_reverse_iterator</code>。总是<code>iterator</code>。</p>
-<h2 id="迭代器之间存在的转换关系">迭代器之间存在的转换关系</h2>
-<p></p>
-<p>图中显示了从<code>iterator</code>到<code>const_iterator</code>、从<code>iterator</code>到<code>reverse_iterator</code>和从<code>reverse_iterator</code>到<code>const_reverse_iterator</code>可以进行隐式转换。</p>
-<p>并且，<code>reverse_iterator</code>可以通过调用其<code>base成员函数</code>转换为<code>iterator</code>。<code>const_reverse_iterator</code>也可以类似地通过<code>base</code>转换成为<code>const_iterator</code>。</p>
-<p>通过base得到的也许并非你所期待的iterator。</p>
-<p>而且，<strong>没有办法从一个const_iterator转换得到一个iterator，也无法从const_reverse_iterator得到reverse_iterator</strong>。</p>
-<p>所以，当你需要指出插入位置或删除的元素时，const迭代器几乎没有用。</p>
-<h2 id="尽量使用iterator取代const或者reverse类型的迭代器">尽量使用iterator取代const或者reverse类型的迭代器</h2>
-<ol>
-<li>
-<p><code>insert</code>和<code>erase</code>的一些版本要求<code>iterator</code>。如果你需要调用这些函数，你就必须产生<code>iterator</code>，而不能用<code>const</code>或<code>reverse iterators</code>。</p>
-</li>
-<li>
-<p>不可能把<code>const_iterator</code>隐式转换成<code>iterator</code>。从一个<code>const_iterator</code>产生一个<code>iterator</code>的技术并不普遍适用，而且不保证高效。</p>
-</li>
-<li>
-<p>从<code>reverse_iterator</code>转换而来的<code>iterator</code>在转换之后可能需要相应的调整。</p>
-</li>
-</ol>
-<p><code>iterator</code>与<code>reverse_iterator</code>之间的选择显而易见——依赖于从前到后或从后到前的遍历。</p>
-<p><strong>迭代器比较</strong></p>
-<p>当在<code>iterator</code>和<code>const_iterator</code>之间作选择的时候，你有更充分的理由选择<code>iterator</code>，即使<code>const_iterator</code>同样可行而且即使你并不需要调用容器类的任何成员函数。其中的令人讨厌的原因包括<code>iterator</code>与<code>const_iterator</code>之间的比较：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// typedef可以极大地简化STL容器类和iterator的操作。
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 同一个容器
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">ci</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 比较iterator和const_iterator
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>唯一的变化是等号的一边的类型是<code>iterator</code>，而另一边的类型是<code>const_iterator</code>。</p>
-<p><strong>因为<code>iterator</code>应该在比较之前隐式的转换成<code>const_iterator</code>，真正的比较应该在两个<code>const_iterator</code>之间进行。</strong></p>
-<p><strong>如果一些实现将<code>const_iterator</code>的<code>operator==</code>作为<code>const_iterator</code>的一个成员函数而不是非成员函数。</strong></p>
-<p>而问题的解决之道显得非常有趣：只要像这样交换两个<code>iterator</code>的位置：</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">ci</span> <span class="o">==</span> <span class="n">i</span><span class="p">)...</span> <span class="c1">// 当上面比较无法通过编译时的解决方法
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>迭代器混用</strong></p>
-<p>不仅是比较是否相等，只要你在同一个表达式中混用<code>iterator</code>和<code>const_iterator</code>（或者<code>reverse_iterator</code>和<code>const_reverse_iterator</code>），这样的问题就可能会出现:</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 如果i与ci之间至少有三个元素...
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果迭代器的类型不同，你的正确的代码可能会被错误地拒绝。</p>
-<p>本例中最简单的解决方法是<strong>通过一个（安全的）映射把iterator转换为const_iterator</strong>:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 当上面的代码无法通过编译时的解决方法
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>避免这类问题的最简单的方法是减少混用不同类型的迭代器的机会。</strong></p>
 ]]></description></item><item><title>Effective STL [24] | 当关乎效率时应该在map::operator[]和map-insert之间仔细选择</title><link>https://jianye0428.github.io/posts/clause_24/</link><pubDate>Tue, 15 Aug 2023 08:10:23 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_24/</guid><description><![CDATA[<h2 id="example-map插入">Example map插入</h2>
 <p>假设有一个支持默认构造函数以及从一个double构造和赋值的Widget类:</p>
 <div class="highlight" id="id-1"><div class="chroma">
@@ -464,272 +863,6 @@
 <h2 id="结论">结论</h2>
 <p>当关乎效率时应该在map::operator[]和map-insert之间仔细选择。</p>
 <p><font color=red>如果你要更新已存在的map元素，operator[]更好，但如果你要增加一个新元素，insert则有优势。</font></p>
-]]></description></item><item><title>Transformer 详解</title><link>https://jianye0428.github.io/posts/transformerdetailedexplanation/</link><pubDate>Mon, 24 Jul 2023 17:37:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerdetailedexplanation/</guid><description><![CDATA[<h2 id="transformer-详解">Transformer 详解</h2>
-<p>Transformer 是谷歌大脑在 2017 年底发表的论文 <a href="https://arxiv.org/pdf/1706.03762.pdf"target="_blank" rel="external nofollow noopener noreferrer">attention is all you need<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中所提出的 seq2seq 模型。现在已经取得了大范围的应用和扩展，而 BERT 就是从 Transformer 中衍生出来的预训练语言模型</p>
-<p>这篇文章分为以下几个部分</p>
-<ul>
-<li>Transformer 直观认识</br></li>
-<li>Positional Encoding</br></li>
-<li>Self Attention Mechanism</br></li>
-<li>残差连接和 Layer Normalization</br></li>
-<li>Transformer Encoder 整体结构</br></li>
-<li>Transformer Decoder 整体结构</br></li>
-<li>总结</br></li>
-<li>参考文章</br></li>
-</ul>
-<h3 id="0-transformer-直观认识">0. Transformer 直观认识</h3>
-<p>Transformer 和 LSTM 的最大区别，就是 <font color=green>LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字</font>。而 Transformer 的训练时<strong>并行</strong>的，即所有字是同时训练的，这样就大大增加了计算效率。<font color=green>Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序</font>，使用自注意力机制(Self Attention Mechanism)和全连接层进行计算，这些后面会讲到。</p>
-<p>Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<font color=red>Encoder 负责把输入(语言序列)映射成隐藏层(下图中第 2 步用九宫格代表的部分)，然后解码器再把隐藏层映射为自然语言序列</font>。例如下图机器翻译的例子(Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token)。</p>
-<p></p>
-<p>本篇文章大部分内容在于解释 Encoder 部分，即把自然语言序列映射为隐藏层的数学表达的过程。理解了 Encoder 的结构，再理解 Decoder 就很简单了</p>
-<p></p>
-<p>上图为 Transformer Encoder Block 结构图，注意：下面的内容标题编号分别对应着图中 1,2,3,4 个方框的序号</p>
-<h3 id="1-positional-encoding">1. Positional Encoding</h3>
-<p>由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能<font color=red>识别出语言中的顺序关系</font>。</p>
-<p>现在定义一个<strong>位置嵌入</strong>的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成</p>
-<p>注意，我们一般以字为单位训练 Transformer 模型。首先初始化字编码的大小为 [vocab_size, embedding_dimension]，vocab_size 为字库中所有字的数量，embedding_dimension 为字向量的维度，对应到 PyTorch 中，其实就是 nn.Embedding(vocab_size, embedding_dimension)</p>
-<p>论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:</p>
-<p>$$\left{\begin{aligned}
-PE(pos, 2i) = \sin (pos/10000^{2i/d_{model}}) \cr
-PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \cr
-\end{aligned}\right.$$</p>
-<p>上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max _ sequence_ length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding_ dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值</p>
-<p>上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到<strong>位置之间的依赖关系和自然语言的时序特性</strong>。</p>
-<p>如果不理解这里为何这么设计，可以看这篇文章 <a href="https://wmathor.com/index.php/archives/1453/"target="_blank" rel="external nofollow noopener noreferrer">Transformer 中的 Positional Encoding<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>下面画一下位置嵌入，纵向观察，可见随着 embedding_dimension​序号增大，位置嵌入函数的周期变化越来越平缓</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
-</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">math</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">get_positional_encoding</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># 初始化一个positional encoding</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># embed_dim: 字嵌入的维度</span>
-</span></span><span class="line"><span class="cl">        <span class="c1"># max_seq_len: 最大的序列长度</span>
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-</span></span><span class="line"><span class="cl">            <span class="p">[</span><span class="n">pos</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">i</span> <span class="o">/</span> <span class="n">embed_dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)]</span>
-</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_seq_len</span><span class="p">)])</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># dim 2i 偶数</span>
-</span></span><span class="line"><span class="cl">        <span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># dim 2i+1 奇数</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">positional_encoding</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">positional_encoding</span> <span class="o">=</span> <span class="n">get_positional_encoding</span><span class="p">(</span><span class="n">max_seq_len</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">    <span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&#34;Sinusoidal Function&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&#34;hidden dimension&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&#34;sequence length&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 1&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 2&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">positional_encoding</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&#34;dimension 3&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&#34;Sequence length&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&#34;Period of Positional Encoding&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<h3 id="2-self-attention-mechanism">2. Self Attention Mechanism</h3>
-<p>对于输入的句子 $ X $，通过 WordEmbedding 得到该句子中每个字的字向量，同时通过 Positional Encoding 得到所有字的位置向量，将其相加(维度相同，可以直接相加)，得到该字真正的向量表示。第 $ t $ 个字的向量记作 $ x_t $。</p>
-<p>接着我们定义三个矩阵 $ W_Q $, $ W_K $, $ W_V $，使用这三个矩阵分别对所有的字向量进行三次线性变换，于是所有的字向量又衍生出三个新的向量 $ q_t $, $ k_t $, $ v_t $。我们将所有的 $ q_t $ 向量拼成一个大矩阵，记作查询矩阵 $ Q $ ，将所有的 $ k_t $ 向量拼成一个大矩阵，记作键矩阵 $ K $  ，将所有的 $ v_t $ 向量拼成一个大矩阵，记作值矩阵 $ V $ (见下图)</p>
-<p></p>
-<p>为了获得第一个字的注意力权重，我们需要用第一个字的查询向量 $ q_1 $ 乘以键矩阵 $ K $(见下图)</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">                [0, 4, 2]
-</span></span><span class="line"><span class="cl">    [1, 0, 2] x [1, 4, 3] = [2, 4, 4]
-</span></span><span class="line"><span class="cl">                [1, 0, 1]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>之后还需要将得到的值经过 softmax，使得它们的和为 1(见下图)</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"> softmax([2, 4, 4]) = [0.0, 0.5, 0.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>有了权重之后，将权重其分别乘以对应字的值向量 $ v_t $(见下图)</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">    0.0 * [1, 2, 3] = [0.0, 0.0, 0.0]
-</span></span><span class="line"><span class="cl">    0.5 * [2, 8, 0] = [1.0, 4.0, 0.0]
-</span></span><span class="line"><span class="cl">    0.5 * [2, 6, 3] = [1.0, 3.0, 1.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>最后将这些<strong>权重化后的值向量求和</strong>，得到第一个字的输出(见下图)</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">      [0.0, 0.0, 0.0]
-</span></span><span class="line"><span class="cl">    + [1.0, 4.0, 0.0]
-</span></span><span class="line"><span class="cl">    + [1.0, 3.0, 1.5]
-</span></span><span class="line"><span class="cl">    -----------------
-</span></span><span class="line"><span class="cl">    = [2.0, 7.0, 1.5]</span></span></code></pre></td></tr></table>
-</div>
-</div><p></p>
-<p>对其它的输入向量也执行相同的操作，即可得到通过 self-attention 后的所有输出</p>
-<p></p>
-<p><strong>矩阵计算</strong></p>
-<p>上面介绍的方法需要一个循环遍历所有的字$ x_t $，我们可以把上面的向量计算变成矩阵的形式，从而一次计算出所有时刻的输出</p>
-<p>第一步就不是计算某个时刻的$ q_t $, $ k_t $, $ v_t $了，而是一次计算所有时刻的 $
-Q $, $ K $, $ V $。计算过程如下图所示，这里的输入是一个矩阵 $ X $，矩阵第 $ t $ 行为第 $ t $ 个词的向量表示 $x_t$</p>
-<p></p>
-<p>接下来将 $ Q $ 和 $K_T$ 相乘，然后除以 $ \sqrt{d_k} $(这是论文中提到的一个 trick)，经过 softmax 以后再乘以 $ V $ 得到输出</p>
-<p></p>
-<p><strong>Multi-Head Attention</strong></p>
-<p>这篇论文还提出了 Multi-Head Attention 的概念。其实很简单，前面定义的一组 $Q $, $ K $, $ V $, 可以让一个词 attend to 相关的词，我们可以定义多组 $Q $, $ K $, $ V $，让它们分别关注不同的上下文。计算 $Q $, $ K $, $ V $ 的过程还是一样，只不过线性变换的矩阵从一组 $ W^Q $, $ W^K $, $ W^V $ 变成了多组$ W^Q_0 $, $ W^K_0 $, $ W^V_0 $  ，$ W^Q_1 $, $ W^K_1 $, $ W^V_1 $ ，… 如下图所示:</p>
-<p></p>
-<p>对于输入矩阵 $ X $ ，每一组 $ Q $ 、$ K $ 和 $ V $ 都可以得到一个输出矩阵 $ Z $ 。如下图所示</p>
-<p></p>
-<p><strong>Padding Mask</strong>
-</p>
-<p>上面 Self Attention 的计算过程中，我们通常使用 mini-batch 来计算，也就是一次计算多句话，即 $ X $ 的维度是 <code>[batch_size, sequence_length]</code>，sequence_length​是句长，而一个 mini-batch 是由多个不等长的句子组成的，我们需要按照这个 mini-batch 中最大的句长对剩余的句子进行补齐，一般用 0 进行填充，这个过程叫做 padding</p>
-<p>但这时在进行 softmax 就会产生问题。回顾 softmax 函数 $\sigma(z_i) = \frac{e^{z_i}}{\sum_K^{j=i} e^{z_j}}$，$e^0$ 是 1，是有值的，这样的话 softmax 中被 padding 的部分就参与了运算，相当于让无效的部分参与了运算，这可能会产生很大的隐患。因此需要做一个 mask 操作，让这些无效的区域不参与运算，一般是给无效区域加一个很大的负数偏置，即</p>
-<p>$$
-\left{\begin{aligned}Z_{illegal}&amp;=Z_{illegal}+bias_{illegal}\cr
-&amp;bias_{illegal} \rightarrow-\infty\end{aligned}\right.
-$$</p>
-<h3 id="3-残差连接和-layer-normalization">3. 残差连接和 Layer Normalization</h3>
-<p><strong>残差连接</strong></p>
-<p>我们在上一步得到了经过 self-attention 加权之后输出，也就是$\text{Self-Attention(Q, K, V)}$，然后把他们加起来做残差连接</p>
-<p>$$X_{\text{embedding}} + \text{Self-Attention(Q, K, V)}$$</p>
-<p><strong>Layer Normalization</strong></p>
-<p>Layer Normalization 的作用是<strong>把神经网络中隐藏层归一为标准正态分布</strong>，也就是 $i.i.d$ 独立同分布，以起到<strong>加快训练速度，加速收敛</strong>的作用</p>
-<p>$$\mu_{j} = \frac{1}{m} \sum^{i}<em>{i=1} x</em>{ij}$$</p>
-<p>上式以矩阵的列(column)为单位求均值；</p>
-<p>$$\sigma^2_{j} = \frac{1}{m}\sum^m_{i=1}(x_{ij} - \mu_j)^2$$</p>
-<p>上式以矩阵的列(column)为单位求方差</p>
-<p>$$LayerNorm(x) = \frac{x_{ij} - \mu_{j}}{\sqrt{\sigma^2 + \epsilon}}$$</p>
-<p>然后用每一列的每一个元素减去这列的均值，再除以这列的标准差，从而得到归一化后的数值，加 $\epsilon$ 是为了防止分母为 0。</p>
-<p></p>
-<p>下图展示了更多细节：输入 $x_1, x_2$ 经 self-attention 层之后变成 $z_1, z_2$，然后和输入 $x_1, x_2$ 进行残差连接，经过 LayerNorm 后输出给全连接层。全连接层也有一个残差连接和一个 LayerNorm，最后再输出给下一个 Encoder(每个 Encoder Block 中的 FeedForward 层权重都是共享的)</p>
-<p></p>
-<h3 id="4-transformer-encoder-整体结构">4. Transformer Encoder 整体结构</h3>
-<p>经过上面 3 个步骤，我们已经基本了解了 Encoder 的主要构成部分，下面我们用公式把一个 Encoder block 的计算过程整理一下：</p>
-<p>(1). 字向量与位置编码</p>
-<p>$$X = \text{Embedding-Lookup(X)} + \text{Positional-Encoding}$$</p>
-<p>(2). 自注意力机制</p>
-<p>$$Q = Linear_{q}(X) = XW_{Q}$$
-$$K = Linear_{k}(X) = XW_{K}$$
-$$V = Linear_{v}(X) = XW_{V}$$
-$$X_{attention} = \text{Self-Attention(Q, K, V)}$$</p>
-<p>(3). self-attention 残差连接与 Layer Normalization</p>
-<p>$$X_{attention} = X + X_{attention}$$
-$$X_{attention} = LayerNorm(attention)$$</p>
-<p>(4). 下面进行 Encoder block 结构图中的第 4 部分，也就是 FeedForward，其实就是两层线性映射并用激活函数激活，比如说 $ReLU$</p>
-<p>$$X_{hidden} = Linear(ReLU(Linear(X_{attention})))$$</p>
-<p>(5). FeedForward 残差连接与 Layer Normalization</p>
-<p>$$X_{hidden} = X_{attention} + X_{hidden}$$
-$$X_{hidden} = LayerNorm(X_{hidden})$$</p>
-<p>其中
-$$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
-<h3 id="5-transformer-decoder-整体结构">5. Transformer Decoder 整体结构</h3>
-<p>我们先从 HighLevel 的角度观察一下 Decoder 结构，从下到上依次是：</p>
-<ul>
-<li>Masked Multi-Head Self-Attention</li>
-<li>Multi-Head Encoder-Decoder Attention</li>
-<li>FeedForward Network</li>
-</ul>
-<p>和 Encoder 一样，上面三个部分的每一个部分，都有一个残差连接，后接一个 Layer Normalization。Decoder 的中间部件并不复杂，大部分在前面 Encoder 里我们已经介绍过了，但是 Decoder 由于其特殊的功能，因此在训练时会涉及到一些细节</p>
-<p></p>
-<p><strong>Masked Self-Attention</strong></p>
-<p>具体来说，传统 Seq2Seq 中 Decoder 使用的是 RNN 模型，因此在训练过程中输入 $t$ 时刻的词，模型无论如何也看不到未来时刻的词，因为循环神经网络是时间驱动的，只有当 $t$ 时刻运算结束了，才能看到 $t + 1$ 时刻的词。而 Transformer Decoder 抛弃了 RNN，改为 Self-Attention，由此就产生了一个问题，<font color=red>在训练过程中，整个 ground truth 都暴露在 Decoder 中</font>，这显然是不对的，我们需要对 Decoder 的输入进行一些处理，该处理被称为 Mask
-</br>
-举个例子，Decoder 的 ground truth 为 &ldquo;<start> I am fine&rdquo;，我们将这个句子输入到 Decoder 中，经过 WordEmbedding 和 Positional Encoding 之后，将得到的矩阵做三次线性变换 $(W_Q, W_K, W_V)$。然后进行 self-attention 操作，首先通过得到 Scaled Scores，接下来非常关键，我们要<strong>对 Scaled Scores 进行 Mask</strong>，举个例子，当我们输入 &ldquo;I&rdquo; 时，模型目前仅知道包括 &ldquo;I&rdquo; 在内之前所有字的信息，即 &ldquo;<start>&rdquo; 和 &ldquo;I&rdquo; 的信息，不应该让其知道 &ldquo;I&rdquo; 之后词的信息。道理很简单，我们做预测的时候是按照顺序一个字一个字的预测，怎么能这个字都没预测完，就已经知道后面字的信息了呢？Mask 非常简单，首先生成一个下三角全 0，上三角全为负无穷的矩阵，然后将其与 Scaled Scores 相加即可</p>
-<p></p>
-<p>之后再做 softmax，就能将 - inf 变为 0，得到的这个矩阵即为每个字之间的权重</p>
-<p></p>
-<p>Multi-Head Self-Attention 无非就是并行的对上述步骤多做几次，前面 Encoder 也介绍了，这里就不多赘述了</p>
-<p><strong>Masked Encoder-Decoder Attention</strong></p>
-<p>其实这一部分的计算流程和前面 Masked Self-Attention 很相似，结构一模一样，唯一不同的是这里的 K, V为 Encoder 的输出，Q 为 Decoder 中 Masked Self-Attention 的输出</p>
-<p></p>
-<h3 id="6-总结">6. 总结</h3>
-<p>到此为止，Transformer 中 95% 的内容已经介绍完了，我们用一张图展示其完整结构。不得不说，Transformer 设计的十分巧夺天工。</p>
-<p></p>
-<p>下面有几个问题，是我从网上找的，感觉看完之后能对 Transformer 有一个更深的理解</p>
-<p><font color=red>Transformer 为什么需要进行 Multi-head Attention？</font></p>
-<ul>
-<li>原论文中说到进行 Multi-head Attention 的原因是将模型分为多个头，形成多个子空间，可以让模型去关注不同方面的信息，最后再将各个方面的信息综合起来。其实直观上也可以想到，如果自己设计这样的一个模型，必然也不会只做一次 attention，多次 attention 综合的结果至少能够起到增强模型的作用，也可以类比 CNN 中同时使用多个卷积核的作用，直观上讲，多头的注意力有助于网络捕捉到更丰富的特征 / 信息</li>
-</ul>
-<p><font color=red>Transformer 相比于 RNN/LSTM，有什么优势？为什么？</font></p>
-<ul>
-<li>RNN 系列的模型，无法并行计算，因为 T 时刻的计算依赖 T-1 时刻的隐层计算结果，而 T-1 时刻的计算依赖 T-2 时刻的隐层计算结果</li>
-<li>Transformer 的特征抽取能力比 RNN 系列的模型要好</li>
-</ul>
-<p><font color=red>为什么说 Transformer 可以代替 seq2seq？</font></p>
-<ul>
-<li>这里用代替这个词略显不妥当，seq2seq 虽已老，但始终还是有其用武之地，seq2seq 最大的问题在于<strong>将Encoder端的所有信息压缩到一个固定长度的向量中</strong>，并将其作为 Decoder 端首个隐藏状态的输入，来预测 Decoder 端第一个单词 (token) 的隐藏状态。在输入序列比较长的时候，这样做显然会损失 Encoder 端的很多信息，而且这样一股脑的把该固定向量送入 Decoder 端，Decoder 端不能够关注到其想要关注的信息。</li>
-<li>Transformer 不但对 seq2seq 模型这两点缺点有了实质性的改进 (多头交互式 attention 模块)，而且还引入了 self-attention 模块，让源序列和目标序列首先 “自关联” 起来，这样的话，源序列和目标序列自身的 embedding 表示所蕴含的信息更加丰富，而且后续的 FFN 层也增强了模型的表达能力，并且 Transformer 并行计算的能力远远超过了 seq2seq 系列模型</li>
-</ul>
-<h3 id="7-参考文章">7. 参考文章</h3>
-<ul>
-<li><a href="http://mantchs.com/2019/09/26/NLP/Transformer/"target="_blank" rel="external nofollow noopener noreferrer">Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="http://jalammar.github.io/illustrated-transformer/"target="_blank" rel="external nofollow noopener noreferrer">The Illustrated Transformer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="http://www.peterbloem.nl/blog/transformers"target="_blank" rel="external nofollow noopener noreferrer">TRANSFORMERS FROM SCRATCH<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li><a href="https://medium.com/@bgg/seq2seq-pay-attention-to-self-attention-part-2-%E4%B8%AD%E6%96%87%E7%89%88-ef2ddf8597a4"target="_blank" rel="external nofollow noopener noreferrer">Seq2seq pay Attention to Self Attention: Part 2<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ul>
-<p>ref:</br>
-[1]. <a href="https://www.bilibili.com/video/BV1mk4y1q7eK?p=1"target="_blank" rel="external nofollow noopener noreferrer">B站讲解视频<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://wmathor.com/index.php/archives/1438/"target="_blank" rel="external nofollow noopener noreferrer">https://wmathor.com/index.php/archives/1438/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[3]. <a href="https://wmathor.com/index.php/archives/1455/"target="_blank" rel="external nofollow noopener noreferrer">Transformer的pytorch实现<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
 ]]></description></item><item><title>Effective STL [17] | 使用“交换技巧”来修整过剩容量(仅适用于vector和string)</title><link>https://jianye0428.github.io/posts/clause_17/</link><pubDate>Tue, 08 Aug 2023 08:48:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_17/</guid><description><![CDATA[<blockquote>
 <p>注意: 这里的容量指的是capacity</p>
 </blockquote>
@@ -11297,7 +11430,140 @@ $\downarrow$ out = out_linear.view(len(displ), 1, -1, self.config[&rsquo;num_pre
 </span></span><span class="line"><span class="cl">                1, 1, 1, -1
 </span></span><span class="line"><span class="cl">            )</span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
+</div>]]></description></item><item><title>Effective STL [27] | 用distance和advance把const_iterator转化成iterator</title><link>https://jianye0428.github.io/posts/clause_27/</link><pubDate>Thu, 17 Aug 2023 07:54:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_27/</guid><description><![CDATA[<h2 id="把const_iterator转化为iterator">把const_iterator转化为iterator</h2>
+<p>有些容器成员函数只接受iterator作为参数，而不是const_iterator。如果你只有一个const_iterator，要在它所指向的容器位置上插入新元素呢？</p>
+<p>上一条款说并不存在从const_iterator到iterator之间的隐式转换，那该怎么办？</p>
+<p>看看当你把一个const_iterator映射为iterator时会发生什么:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// 方便的typedef
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span> <span class="c1">// ci是const_iterator
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">(</span><span class="n">ci</span><span class="p">);</span> <span class="c1">// 错误！没有从const_iterator 到iterator隐式转换的途径
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Iter</span> <span class="nf">i</span><span class="p">(</span><span class="k">const_cast</span><span class="o">&lt;</span><span class="n">Iter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ci</span><span class="p">));</span> <span class="c1">// 仍是个错误！不能从const_iterator 映射为iterator！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里只是以deque为例，但是用其它容器类——list、set、multiset、map、multimap甚至条款25描述的散列表容器——的结果一样。使用映射的行也许在vector或string的代码时能够编译，但这是我们马上要讨论的非常特殊的情形。</p>
+<p>上述代码不能通过编译的原因在于，对于这些容器而言，<font color=red>iterator和const_iterator是完全不同的类。</font></p>
+<p>在两个毫无关联的类之间进行<code>const_cast</code>映射是荒谬的，所以<code>reinterpret_cast</code>、<code>static_cast</code>甚至C风格的映射也会导致同样的结果。</p>
+<p><strong>不能编译的代码对于vector和string容器来说也许能够通过编译</strong></p>
+<p>那是因为通常情况下大多数实现都会采用真实的指针作为那些容器的迭代器。</p>
+<p>就这种实现而言，<code>vector&lt;T&gt;::iterator</code>是<code>T*</code>的<code>typedef</code>，而<code>vector&lt;T&gt;::const_iterator</code>是<code>const T*</code>的<code>typedef</code>，<code>string::iterator</code>是<code>char</code>的<code>typedef</code>，而<code>string::const_iterator</code>是<code>const char*</code>的<code>typedef</code>。</p>
+<p>在这种实现的情况下，用<code>const_cast</code>把<code>const_iterator</code>映射成<code>iterator</code>当然可以编译而且没有问题，因为<code>const_iterator</code>与<code>iterator</code>之间的<code>const_cast</code>映射被最终解释成<code>const T*</code>到<code>T*</code>的映射。但是，即使是在这种实现中，<code>reverse_iterator</code>和<code>const_reverse_iterator</code>也是真正的类，所以你仍然不能直接用<code>const_cast</code>把<code>const_reverse_iterator</code>映射成<code>reverse_iterator</code>。</p>
+<p>而且这些实现通常只会在Release模式时才使用指针表示vector和string的迭代器。</p>
+<p>所有这些事实表明，把const迭代器映射为迭代器是病态的，即使是对vector和string来说也时，因为移植性很值得怀疑。</p>
+<h2 id="const_iterator转换为iterator">const_iterator转换为iterator</h2>
+<p>有一种安全的、可移植的方法获取它所对应的iterator，而且，用不着陷入类型系统的转换。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;deque&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iterator&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// 和以前一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">IntDeque</span> <span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 让ci指向d
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Iter</span> <span class="n">i</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">begin</span><span class="p">());</span> <span class="c1">// 初始化i为d.begin()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span> <span class="c1">// 把i移到指向ci位置（但请留意下面关于为什么在它编译前要调整的原因）
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要得到与const_iterator指向同一位置的iterator:</p>
+<ol>
+<li>将iterator指向容器的起始位置，</li>
+<li>把它向前移到和const_iterator距离容器起始位置的偏移量一样的位置即可</li>
+</ol>
+<p>这个任务得到了两个函数模板advance和distance的帮助，它们都在<iterator>中声明:</p>
+<ul>
+<li>distance返回两个指向同一个容器的iterator之间的距离；</li>
+<li>advance则用于将一个iterator移动指定的距离。</li>
+</ul>
+<p>如果<code>i</code>和<code>ci</code>指向同一个容器，那么表达式<code>advance(i, distance(i, ci))</code>会将<code>i</code>移动到与<code>ci</code>相同的位置上。</p>
+<p>上述代码编译存在问题。</p>
+<p>先来看看distance的定义：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_InputIterator</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="n">_GLIBCXX17_CONSTEXPR</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_InputIterator</span><span class="o">&gt;::</span><span class="n">difference_type</span>
+</span></span><span class="line"><span class="cl">  <span class="n">distance</span><span class="p">(</span><span class="n">_InputIterator</span> <span class="n">__first</span><span class="p">,</span> <span class="n">_InputIterator</span> <span class="n">__last</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// concept requirements -- taken care of in __distance
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">__distance</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">__iterator_category</span><span class="p">(</span><span class="n">__first</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当遇到<code>distance</code>调用时，你的编译器需要根据使用的实参类型推断出<code>InputIterator</code>的类型。</p>
+<p>再来看看我所说的不太正确的<code>distance</code>调用:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span> <span class="c1">// 调整i，指向ci位置
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>有两个参数传递给distance，i和ci。i的类型是Iter，即<code>deque&lt;int&gt;::iterator</code>的typedef。</p>
+<p>对编译器来说，这表明调用<code>distance</code>的<code>InputIterator</code>是<code>deque::iterator</code>。但<code>ci</code>是<code>ConstIter</code>，即<code>deque::const_iterator</code>的<code>typedef</code>。</p>
+<p>表明那个<code>InputIterator</code>是<code>deque&lt;int&gt;::const_iterator</code>。</p>
+<p><code>InputIterator</code>不可能同时有两种不同的类型，所以调用<code>distance</code>失败。</p>
+<p>一般会造成一些冗长的出错信息，可能会也可能不会说明是编译器无法得出<code>InputIterator</code>是什么类型。</p>
+<p>要顺利地调用<code>distance</code>，你需要排除歧义。</p>
+<p>最简单的办法就是显式的指明<code>distance</code>调用的模板参数类型，从而避免编译器自己得出它们的类型:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们现在知道了怎么通过<code>advance</code>和<code>distance</code>获取<code>const_iterator</code>相应的<code>iterator</code>了。</p>
+<p><strong>效率如何？</strong></p>
+<p>答案很简单。<strong>取决于你所转换的究竟是什么样的迭代器。</strong></p>
+<p>对于<strong>随机访问的迭代器</strong>（比如<code>vector</code>、<code>string</code>和<code>deque</code>的）而言，这是<strong>常数时间</strong>的操作。</p>
+<p>对于<strong>双向迭代器</strong>（也就是，所有其它容器和包括散列容器的一些实现）而言，这是<strong>线性时间</strong>的操作。</p>
+<p>因为它可能花费线性时间的代价来产生一个和<code>const_iterator</code>等价的<code>iterator</code>，并且因为如果不能访问<code>const_iterator</code>所属的容器这个操作就无法完成。</p>
+<p>从这个角度出发，也许你需要重新审视你从<code>const_iterator</code>产生<code>iterator</code>的设计。</p>
+<p>当处理容器时尽量用<code>iterator</code>代替<code>const</code>和<code>reverse</code>迭代器。</p>
+]]></description></item><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
 <p>每个标准容器类都提供4种迭代器类型:<code>iterator</code>,<code>const_iterator</code>，<code>reverse_iterator</code>和<code>const_reverse_iterator</code></p>
 <p>对于<code>container&lt;T&gt;</code>而言，<code>iterator</code>的作用相当于<code>T*</code>，而<code>const_iterator</code>则相当于<code>const T*</code>。</p>
 <p>增加一个<code>iterator</code>或者<code>const_iterator</code>可以在一个从容器开头趋向尾部的遍历中让你移动到容器的下一个元素。</p>
@@ -17707,192 +17973,4 @@ copy构造函数用来定义一个type的值传递具体实现。</li>
 </ul>
 <p>ref:</br>
 [1]. <a href="https://blog.csdn.net/cltcj/category_12098441.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/cltcj/category_12098441.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective STL [11] | 理解自定义分配器的正确用法</title><link>https://jianye0428.github.io/posts/clause_11/</link><pubDate>Sun, 30 Jul 2023 09:21:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_11/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="自定义分配器">自定义分配器</h2>
-<p>很多时候，你会有建立自定义分配器的想法：</p>
-<ul>
-<li><code>allocator&lt;T&gt;</code>对线程安全采取了措拖，但是你只对单线程的程序感兴趣，你不想花费不需要的同步开销</li>
-<li>在某些容器里的对象通常一同被使用，所以你想在一个特别的堆里把它们放得很近使引用的区域性最大化</li>
-<li>你想建立一个相当共享内存的唯一的堆，然后把一个或多个容器放在那块内存里，因为这样它们可以被其他进程共享。</li>
-</ul>
-<h3 id="管理共享内存">管理共享内存</h3>
-<p>假定你有仿效<code>malloc</code>和<code>free</code>的特别程序，用于管理共享内存的堆</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span><span class="o">*</span> <span class="nf">mallocShared</span><span class="p">(</span><span class="n">size_t</span> <span class="n">bytesNeeded</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">freeShared</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>并且你希望能把STL容器的内容放在共享内存中:</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SharedMemoryAllocator</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="n">pointer</span> <span class="n">allocate</span><span class="p">(</span><span class="n">size_type</span> <span class="n">numObiects</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">localityHint</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">pointer</span><span class="o">&gt;</span><span class="p">(</span><span class="n">mallocShared</span><span class="p">(</span><span class="n">numObiects</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">T</span><span class="p">)));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">deallocate</span><span class="p">(</span><span class="n">pointer</span> <span class="n">ptrToMemory</span><span class="p">,</span> <span class="n">size_type</span> <span class="n">numObjects</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">freeShared</span><span class="p">(</span><span class="n">ptrToMiemory</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>使用<code>SharedMemoryAllocator</code>：</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 方便的typedef
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span> <span class="n">SharedMemoryAllocator</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="n">SharedDoubleVec</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span> <span class="c1">// 开始一个块
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">SharedDoubleVec</span> <span class="n">v</span><span class="p">;</span> <span class="c1">// 建立一个元素在
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 共享内存中的vector
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span> <span class="c1">// 结束这个块
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>「问题：」<strong>v</strong>使用<code>SharedMemoryAllocator</code>，所以<strong>v</strong>分配来容纳它元素的内存将来自共享内存，但<strong>v本身——包括它的全部数据成员——几乎将肯定不被放在共享内存里，v只是一个普通的基于堆的对象，所以它将被放在运行时系统为所有普通的基于堆的对象使用的任何内存</strong>。那几乎不会是共享内存。</br></p>
-<p>为了把v的内容和v本身放进共享内存，必须这么做:</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="o">*</span><span class="n">pVectorMemory</span> <span class="o">=</span> <span class="n">mallocShared</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">SharedDoubleVec</span><span class="p">));</span><span class="c1">// 分配足够的共享内存来容纳一个SharedDoubleVec对象
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">SharedDoubleVec</span> <span class="o">*</span><span class="n">pv</span> <span class="o">=</span> <span class="k">new</span> <span class="p">(</span><span class="n">pVectorMemory</span><span class="p">)</span> <span class="n">SharedDoubleVec</span><span class="p">;</span> <span class="c1">// 使用“placement new”来 在那块内存中建立 一个SharedDoubleVec对象；
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 参见下面这个对象的使用（通过pv）
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="n">pv</span><span class="o">-&gt;~</span><span class="n">SharedDoubleVec</span><span class="p">();</span> <span class="c1">// 销毁共享内存中的对象
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">freeShared</span><span class="p">(</span><span class="n">pVectorMemory</span><span class="p">);</span> <span class="c1">// 销毁原来的共享内存块
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这就是<code>「手工的四步分配/建造/销毁/回收的过程」</code>：获得一些共享内存 <code>——&gt;</code> 在里面建立一个用共享内存为自己内部分配的vector <code>——&gt;</code> 用完这个vector时，调用它的析构函数 <code>——&gt;</code> 释放vector占用的内存。</p>
-<p>这段代码有2点需要注意：</p>
-<ul>
-<li>
-<p>忽略了<code>mallocShared</code>可能返回一个null指针。</p>
-</li>
-<li>
-<p>共享内存中的vector的建立由“placement new”完成。</p>
-</li>
-</ul>
-<h3 id="管理分配和回收的堆">管理分配和回收的堆</h3>
-<p>假设有2个堆，类<code>Heap1</code>和<code>Heap2</code>。</p>
-<p>每个堆类有用于进行「分配」和「回收」的「静态成员函数」：</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Heap1</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="k">static</span> <span class="kt">void</span><span class="o">*</span> <span class="n">alloc</span><span class="p">(</span><span class="n">size_t</span> <span class="n">numBytes</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">memoryBlockToBeNear</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">static</span> <span class="kt">void</span> <span class="nf">dealloc</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Heap2</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span> <span class="c1">// 有相同的alloc/dealloc接口
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>你想在不同的堆里联合定位一些STL容器的内容。</p>
-<p>首先，设计一个分配器，使用像Heap1和Heap2那样用于真实内存管理的类：</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="n">typenameT</span><span class="p">,</span> <span class="k">typename</span> <span class="n">Heap</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecificHeapAllocator</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">pointer</span> <span class="n">allocate</span><span class="p">(</span><span class="n">size_type</span> <span class="n">numObjects</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">localityHint</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">pointer</span><span class="o">&gt;</span><span class="p">(</span><span class="n">Heap</span><span class="o">::</span><span class="n">alloc</span><span class="p">(</span><span class="n">numObjects</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">T</span><span class="p">),</span> <span class="n">localityHint</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">deallocate</span><span class="p">(</span><span class="n">pointer</span> <span class="n">ptrToMemory</span><span class="p">,</span> <span class="n">size_type</span> <span class="n">numObjects</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">Heap</span><span class="o">::</span><span class="n">dealloc</span><span class="p">(</span><span class="n">ptrToMemory</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>然后，使用<code>SpecificHeapAllocator</code>来把容器的元素集合在一起：</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">SpecificHeapAllocator</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Heap1</span> <span class="o">&gt;&gt;</span> <span class="n">v</span><span class="p">;</span> <span class="c1">// 把v和s的元素放进Heap1
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">SpecificHeapAllocator</span><span class="o">&lt;</span><span class="kt">int</span> <span class="n">Heap1</span> <span class="o">&gt;&gt;</span> <span class="n">s</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SpecificHeapAllocator</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">Heap2</span><span class="o">&gt;&gt;</span> <span class="n">L</span><span class="p">;</span> <span class="c1">// 把L和m的元素 放进Heap2
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">map</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">string</span><span class="p">,</span> <span class="n">less</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SpecificHeapAllocator</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="kt">int</span><span class="p">,</span> <span class="n">string</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">Heap2</span><span class="o">&gt;&gt;</span> <span class="n">m</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>在这个例子里，很重要的一点是「<strong>Heap1和Heap2是类型而不是对象</strong>」。</p>
-<p>STL为用不同的分配器对象初始化相同类型的不同STL容器提供了语法。那是「<strong>因为如果Heap1和Heap2是对象而不是类型，那么它们将是不等价的分配器，那就违反了分配器的等价约束</strong>」。</p>
-<p>只要遵循「<strong>相同类型的所有分配器都一定等价的限制条件</strong>」，你将毫不费力地使用自定义分配器来「<strong>控制一般内存管理策略，群集关系和使用共享内存以及其他特殊的堆</strong>」。</p>]]></description></item></channel></rss>
+[2]. <a href="https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item></channel></rss>

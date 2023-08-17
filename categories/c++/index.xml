@@ -1,4 +1,137 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 16 Aug 2023 19:06:25 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 17 Aug 2023 07:54:00 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [27] | 用distance和advance把const_iterator转化成iterator</title><link>https://jianye0428.github.io/posts/clause_27/</link><pubDate>Thu, 17 Aug 2023 07:54:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_27/</guid><description><![CDATA[<h2 id="把const_iterator转化为iterator">把const_iterator转化为iterator</h2>
+<p>有些容器成员函数只接受iterator作为参数，而不是const_iterator。如果你只有一个const_iterator，要在它所指向的容器位置上插入新元素呢？</p>
+<p>上一条款说并不存在从const_iterator到iterator之间的隐式转换，那该怎么办？</p>
+<p>看看当你把一个const_iterator映射为iterator时会发生什么:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// 方便的typedef
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span> <span class="c1">// ci是const_iterator
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">(</span><span class="n">ci</span><span class="p">);</span> <span class="c1">// 错误！没有从const_iterator 到iterator隐式转换的途径
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Iter</span> <span class="nf">i</span><span class="p">(</span><span class="k">const_cast</span><span class="o">&lt;</span><span class="n">Iter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ci</span><span class="p">));</span> <span class="c1">// 仍是个错误！不能从const_iterator 映射为iterator！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里只是以deque为例，但是用其它容器类——list、set、multiset、map、multimap甚至条款25描述的散列表容器——的结果一样。使用映射的行也许在vector或string的代码时能够编译，但这是我们马上要讨论的非常特殊的情形。</p>
+<p>上述代码不能通过编译的原因在于，对于这些容器而言，<font color=red>iterator和const_iterator是完全不同的类。</font></p>
+<p>在两个毫无关联的类之间进行<code>const_cast</code>映射是荒谬的，所以<code>reinterpret_cast</code>、<code>static_cast</code>甚至C风格的映射也会导致同样的结果。</p>
+<p><strong>不能编译的代码对于vector和string容器来说也许能够通过编译</strong></p>
+<p>那是因为通常情况下大多数实现都会采用真实的指针作为那些容器的迭代器。</p>
+<p>就这种实现而言，<code>vector&lt;T&gt;::iterator</code>是<code>T*</code>的<code>typedef</code>，而<code>vector&lt;T&gt;::const_iterator</code>是<code>const T*</code>的<code>typedef</code>，<code>string::iterator</code>是<code>char</code>的<code>typedef</code>，而<code>string::const_iterator</code>是<code>const char*</code>的<code>typedef</code>。</p>
+<p>在这种实现的情况下，用<code>const_cast</code>把<code>const_iterator</code>映射成<code>iterator</code>当然可以编译而且没有问题，因为<code>const_iterator</code>与<code>iterator</code>之间的<code>const_cast</code>映射被最终解释成<code>const T*</code>到<code>T*</code>的映射。但是，即使是在这种实现中，<code>reverse_iterator</code>和<code>const_reverse_iterator</code>也是真正的类，所以你仍然不能直接用<code>const_cast</code>把<code>const_reverse_iterator</code>映射成<code>reverse_iterator</code>。</p>
+<p>而且这些实现通常只会在Release模式时才使用指针表示vector和string的迭代器。</p>
+<p>所有这些事实表明，把const迭代器映射为迭代器是病态的，即使是对vector和string来说也时，因为移植性很值得怀疑。</p>
+<h2 id="const_iterator转换为iterator">const_iterator转换为iterator</h2>
+<p>有一种安全的、可移植的方法获取它所对应的iterator，而且，用不着陷入类型系统的转换。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;deque&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iterator&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// 和以前一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">IntDeque</span> <span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 让ci指向d
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Iter</span> <span class="n">i</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">begin</span><span class="p">());</span> <span class="c1">// 初始化i为d.begin()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span> <span class="c1">// 把i移到指向ci位置（但请留意下面关于为什么在它编译前要调整的原因）
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要得到与const_iterator指向同一位置的iterator:</p>
+<ol>
+<li>将iterator指向容器的起始位置，</li>
+<li>把它向前移到和const_iterator距离容器起始位置的偏移量一样的位置即可</li>
+</ol>
+<p>这个任务得到了两个函数模板advance和distance的帮助，它们都在<iterator>中声明:</p>
+<ul>
+<li>distance返回两个指向同一个容器的iterator之间的距离；</li>
+<li>advance则用于将一个iterator移动指定的距离。</li>
+</ul>
+<p>如果<code>i</code>和<code>ci</code>指向同一个容器，那么表达式<code>advance(i, distance(i, ci))</code>会将<code>i</code>移动到与<code>ci</code>相同的位置上。</p>
+<p>上述代码编译存在问题。</p>
+<p>先来看看distance的定义：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_InputIterator</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="n">_GLIBCXX17_CONSTEXPR</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_InputIterator</span><span class="o">&gt;::</span><span class="n">difference_type</span>
+</span></span><span class="line"><span class="cl">  <span class="n">distance</span><span class="p">(</span><span class="n">_InputIterator</span> <span class="n">__first</span><span class="p">,</span> <span class="n">_InputIterator</span> <span class="n">__last</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// concept requirements -- taken care of in __distance
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">__distance</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">__iterator_category</span><span class="p">(</span><span class="n">__first</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当遇到<code>distance</code>调用时，你的编译器需要根据使用的实参类型推断出<code>InputIterator</code>的类型。</p>
+<p>再来看看我所说的不太正确的<code>distance</code>调用:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span> <span class="c1">// 调整i，指向ci位置
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>有两个参数传递给distance，i和ci。i的类型是Iter，即<code>deque&lt;int&gt;::iterator</code>的typedef。</p>
+<p>对编译器来说，这表明调用<code>distance</code>的<code>InputIterator</code>是<code>deque::iterator</code>。但<code>ci</code>是<code>ConstIter</code>，即<code>deque::const_iterator</code>的<code>typedef</code>。</p>
+<p>表明那个<code>InputIterator</code>是<code>deque&lt;int&gt;::const_iterator</code>。</p>
+<p><code>InputIterator</code>不可能同时有两种不同的类型，所以调用<code>distance</code>失败。</p>
+<p>一般会造成一些冗长的出错信息，可能会也可能不会说明是编译器无法得出<code>InputIterator</code>是什么类型。</p>
+<p>要顺利地调用<code>distance</code>，你需要排除歧义。</p>
+<p>最简单的办法就是显式的指明<code>distance</code>调用的模板参数类型，从而避免编译器自己得出它们的类型:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们现在知道了怎么通过<code>advance</code>和<code>distance</code>获取<code>const_iterator</code>相应的<code>iterator</code>了。</p>
+<p><strong>效率如何？</strong></p>
+<p>答案很简单。<strong>取决于你所转换的究竟是什么样的迭代器。</strong></p>
+<p>对于<strong>随机访问的迭代器</strong>（比如<code>vector</code>、<code>string</code>和<code>deque</code>的）而言，这是<strong>常数时间</strong>的操作。</p>
+<p>对于<strong>双向迭代器</strong>（也就是，所有其它容器和包括散列容器的一些实现）而言，这是<strong>线性时间</strong>的操作。</p>
+<p>因为它可能花费线性时间的代价来产生一个和<code>const_iterator</code>等价的<code>iterator</code>，并且因为如果不能访问<code>const_iterator</code>所属的容器这个操作就无法完成。</p>
+<p>从这个角度出发，也许你需要重新审视你从<code>const_iterator</code>产生<code>iterator</code>的设计。</p>
+<p>当处理容器时尽量用<code>iterator</code>代替<code>const</code>和<code>reverse</code>迭代器。</p>
+]]></description></item><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
 <p>每个标准容器类都提供4种迭代器类型:<code>iterator</code>,<code>const_iterator</code>，<code>reverse_iterator</code>和<code>const_reverse_iterator</code></p>
 <p>对于<code>container&lt;T&gt;</code>而言，<code>iterator</code>的作用相当于<code>T*</code>，而<code>const_iterator</code>则相当于<code>const T*</code>。</p>
 <p>增加一个<code>iterator</code>或者<code>const_iterator</code>可以在一个从容器开头趋向尾部的遍历中让你移动到容器的下一个元素。</p>
@@ -6785,202 +6918,4 @@ const成员函数有2个好处：(1). 明确理解函数是否修改对象内容
 </ul>
 <h2 id="refbr">ref:</br></h2>
 <p>[1]. <a href="https://blog.csdn.net/cltcj/category_12098441.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/cltcj/category_12098441.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective STL [8] | 永不建立auto_ptr的容器</title><link>https://jianye0428.github.io/posts/clause_8/</link><pubDate>Thu, 27 Jul 2023 07:45:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_8/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="拷贝一个auto_ptr将改变它的值">拷贝一个auto_ptr将改变它的值</h2>
-<p>当你拷贝一个<code>auto_ptr</code>时，<code>auto_ptr</code>所指向对象的所有权被转移到拷贝的<code>auto_ptr</code>，而被拷贝的<code>auto_ptr</code>被设为<code>NULL</code>。</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">explicit</span> <span class="n">Widget</span><span class="p">(</span><span class="kt">int</span> <span class="n">in</span><span class="p">)</span> <span class="o">:</span> <span class="n">randy</span><span class="p">(</span><span class="n">in</span><span class="p">)</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="n">Widget</span><span class="o">&amp;</span> <span class="n">in</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">randy</span> <span class="o">&lt;</span> <span class="n">in</span><span class="p">.</span><span class="n">randy</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">randy</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw1</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span> <span class="c1">// pw1指向一个Widget
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">pw2</span><span class="p">(</span><span class="n">pw1</span><span class="p">);</span> <span class="c1">// pw2指向pw1的Widget; pw1被设为NULL。（Widget的所有权从pw1转移到pw2。）
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pw1</span> <span class="o">=</span> <span class="n">pw2</span><span class="p">;</span> <span class="c1">// pw1现在再次指向Widget； pw2被设为NULL
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>有意思的是，如果你建立一个<code>auto_ptr&lt;Widget&gt;</code>的<code>vector</code>，然后使用一个指向的<code>Widget</code>的值的函数对它进行排序：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">widgetAPCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">return</span> <span class="o">*</span><span class="n">lhs</span> <span class="o">&lt;</span> <span class="o">*</span><span class="n">rhs</span><span class="p">;</span> <span class="c1">// 假设Widget 存在operator&lt;
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">w1</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">(</span><span class="mi">3</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl"><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">w2</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl"><span class="n">widgets</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">w1</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">widgets</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">w2</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">auto_ptr</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">widgets</span><span class="p">;</span> <span class="c1">// 建立一个vector，然后用Widget的auto_ptr填充它；
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 记住这将不能编译！
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">sort</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">widgets</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">widgetAPCompare</span><span class="p">);</span><span class="c1">// 排序这个vector
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这段代码将不能编译</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">warning: ‘template&lt;class&gt; class std::auto_ptr’ is deprecated <span class="o">[</span>-Wdeprecated-declarations<span class="o">]</span>
-</span></span><span class="line"><span class="cl">   <span class="m">30</span> <span class="p">|</span>   std::vector&lt;auto_ptr&lt;Widget&gt; &gt;
-</span></span><span class="line"><span class="cl">      <span class="p">|</span>               ^~~~~~~~
-</span></span><span class="line"><span class="cl">In file included from /usr/include/c++/9/memory:80,
-</span></span><span class="line"><span class="cl">                 from temp.cpp:10:
-</span></span><span class="line"><span class="cl">/usr/include/c++/9/bits/unique_ptr.h:53:28: note: declared here
-</span></span><span class="line"><span class="cl">   <span class="m">53</span> <span class="p">|</span>   template&lt;typename&gt; class auto_ptr<span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">|</span>                            ^~~~~~~~
-</span></span><span class="line"><span class="cl">temp.cpp:33:3: warning: ‘template&lt;class&gt; class std::auto_ptr’ is deprecated <span class="o">[</span>-Wdeprecated-declarations<span class="o">]</span>
-</span></span><span class="line"><span class="cl">   <span class="m">33</span> <span class="p">|</span>   auto_ptr&lt;Widget&gt; w1<span class="o">(</span>new Widget<span class="o">(</span>3<span class="o">))</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">|</span>   ^~~~~~~~</span></span></code></pre></td></tr></table>
-</div>
-</div><p>从概念上看所有东西也都很合理，但结果却完全不合理。例如，在排序过程中widgets中的一个或多个auto_ptr可能已经被设为NULL。</p>
-<p>排序这个vector的行为可能已经改变了它的内容！</p>
-<h2 id="剖析">剖析</h2>
-<p>实现<code>sort</code>的方法是使用了<strong>快速排序算法</strong>的某种变体。</p>
-<p>排序一个容器的<strong>基本思想</strong>是，选择容器的某个元素作为“主元”，然后对大于和小于或等于主元的值进行递归排序。</p>
-<p>在sort内部，这样的方法看起来像这样：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">RandomAccessIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Compare</span><span class="o">&gt;</span><span class="c1">// 这个sort的声明直接来自于标准
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="n">sort</span><span class="p">(</span><span class="n">RandomAccessIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomAccessIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Compare</span> <span class="n">comp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 这个typedef在下面解释
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">typedef</span> <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span> <span class="n">ElementType</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">RandomAccessIterator</span> <span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// 让i指向主元
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">ElementType</span> <span class="n">pivotValue</span><span class="p">(</span><span class="o">*</span><span class="p">);</span> <span class="c1">// 把主元拷贝到一个局部临时变量中；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">...</span> <span class="c1">// wor
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>源码为：</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_RandomAccessIterator</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Compare</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kr">inline</span> <span class="kt">void</span>
-</span></span><span class="line"><span class="cl"><span class="n">sort</span><span class="p">(</span><span class="n">_RandomAccessIterator</span> <span class="n">__first</span><span class="p">,</span> <span class="n">_RandomAccessIterator</span> <span class="n">__last</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"> <span class="n">_Compare</span> <span class="n">__comp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// concept requirements
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">__glibcxx_function_requires</span><span class="p">(</span><span class="n">_Mutable_RandomAccessIteratorConcept</span><span class="o">&lt;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">_RandomAccessIterator</span><span class="o">&gt;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_function_requires</span><span class="p">(</span><span class="n">_BinaryPredicateConcept</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">    <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_RandomAccessIterator</span><span class="o">&gt;::</span><span class="n">value_type</span><span class="o">&gt;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_requires_valid_range</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">__glibcxx_requires_irreflexive_pred</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span> <span class="n">__comp</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">__sort</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__ops</span><span class="o">::</span><span class="n">__iter_comp_iter</span><span class="p">(</span><span class="n">__comp</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 上面 __gnu_cxx::__ops::__iter_comp_iter(__comp) 的实现如下
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_Compare</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Iterator</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">    <span class="kr">inline</span> <span class="n">_Iter_comp_to_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span> <span class="n">_Iterator</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">__iter_comp_iter</span><span class="p">(</span><span class="n">_Iter_comp_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="o">&gt;</span> <span class="n">__comp</span><span class="p">,</span> <span class="n">_Iterator</span> <span class="n">__it</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">_Iter_comp_to_iter</span><span class="o">&lt;</span><span class="n">_Compare</span><span class="p">,</span> <span class="n">_Iterator</span><span class="o">&gt;</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">   <span class="n">_GLIBCXX_MOVE</span><span class="p">(</span><span class="n">__comp</span><span class="p">.</span><span class="n">_M_comp</span><span class="p">),</span> <span class="n">__it</span><span class="p">);</span> <span class="c1">// 这里有move
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>当涉及<code>iterator_traits&lt;RandomAccessIterator&gt;::value_type</code>时，必须在它前面写上<code>typename</code>，因为它是一个<strong>依赖于模板参数类型的名字</strong>，在这里是<code>RandomAccessIterator</code>。</p>
-<p>上面代码中棘手的是这一行:</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ElementType</span> <span class="nf">pivotValue</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>因为它把一个元素从保存的区间拷贝到局部临时对象中。</p>
-<p>在例子里，这个元素是一个<code>auto_ptr&lt;Widget&gt;</code>，所以这个拷贝操作默默地把被拷贝的<code>auto_ptr——vector</code>中的那个——设为<code>NULL</code>。</p>
-<p>另外，当<code>pivotValue</code>出了生存期，它会自动删除指向的<code>Widget</code>。这时sort调用返回了，<code>vector</code>的内容已经改变了，而且至少一个<code>Widget</code>已经被删除了。</p>
-<p>也可能有几个<code>vector</code>元素已经被设为<code>NULL</code>，而且几个<code>widget</code>已经被删除，因为快速排序是一种递归算法，递归的每一层都会拷贝一个主元。</p>
-<h2 id="结论">结论</h2>
-<p>智能指针的容器是很好的， 但是<code>auto_ptr</code><font color=red>完全不是那样的智能指针</font>。</p>]]></description></item></channel></rss>
+[2]. <a href="https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2021/12/06_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%b8%80/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item></channel></rss>

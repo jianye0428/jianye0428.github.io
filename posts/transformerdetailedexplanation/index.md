@@ -180,8 +180,8 @@ Q $, $ K $, $ V $。计算过程如下图所示，这里的输入是一个矩阵
 但这时在进行 softmax 就会产生问题。回顾 softmax 函数 $\sigma(z_i) = \frac{e^{z_i}}{\sum_K^{j=i} e^{z_j}}$，$e^0$ 是 1，是有值的，这样的话 softmax 中被 padding 的部分就参与了运算，相当于让无效的部分参与了运算，这可能会产生很大的隐患。因此需要做一个 mask 操作，让这些无效的区域不参与运算，一般是给无效区域加一个很大的负数偏置，即
 
 $$
-\left\{\begin{aligned}Z_{illegal}&=Z_{illegal}+bias_{illegal}\cr
-&bias_{illegal} \rightarrow-\infty\end{aligned}\right.
+\begin{aligned}Z_{illegal}&=Z_{illegal}+bias_{illegal}\cr
+bias_{illegal}&\to-\infty\end{aligned}
 $$
 
 ### 3. 残差连接和 Layer Normalization
@@ -196,7 +196,7 @@ $$X_{\text{embedding}} + \text{Self-Attention(Q, K, V)}$$
 
 Layer Normalization 的作用是**把神经网络中隐藏层归一为标准正态分布**，也就是 $i.i.d$ 独立同分布，以起到**加快训练速度，加速收敛**的作用
 
-$$\mu_{j} = \frac{1}{m} \sum^{i}_{i=1} x_{ij}$$
+$$\mu_j=\frac1m\sum_{i=1}^mx_{ij}$$
 
 上式以矩阵的列(column)为单位求均值；
 

@@ -1,4 +1,137 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective-stl/</link><description>Effective STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 16 Aug 2023 19:06:25 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective-stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective-stl/</link><description>Effective STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 17 Aug 2023 07:54:00 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective-stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [27] | 用distance和advance把const_iterator转化成iterator</title><link>https://jianye0428.github.io/posts/clause_27/</link><pubDate>Thu, 17 Aug 2023 07:54:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_27/</guid><description><![CDATA[<h2 id="把const_iterator转化为iterator">把const_iterator转化为iterator</h2>
+<p>有些容器成员函数只接受iterator作为参数，而不是const_iterator。如果你只有一个const_iterator，要在它所指向的容器位置上插入新元素呢？</p>
+<p>上一条款说并不存在从const_iterator到iterator之间的隐式转换，那该怎么办？</p>
+<p>看看当你把一个const_iterator映射为iterator时会发生什么:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// 方便的typedef
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span> <span class="c1">// ci是const_iterator
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">(</span><span class="n">ci</span><span class="p">);</span> <span class="c1">// 错误！没有从const_iterator 到iterator隐式转换的途径
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Iter</span> <span class="nf">i</span><span class="p">(</span><span class="k">const_cast</span><span class="o">&lt;</span><span class="n">Iter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ci</span><span class="p">));</span> <span class="c1">// 仍是个错误！不能从const_iterator 映射为iterator！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里只是以deque为例，但是用其它容器类——list、set、multiset、map、multimap甚至条款25描述的散列表容器——的结果一样。使用映射的行也许在vector或string的代码时能够编译，但这是我们马上要讨论的非常特殊的情形。</p>
+<p>上述代码不能通过编译的原因在于，对于这些容器而言，<font color=red>iterator和const_iterator是完全不同的类。</font></p>
+<p>在两个毫无关联的类之间进行<code>const_cast</code>映射是荒谬的，所以<code>reinterpret_cast</code>、<code>static_cast</code>甚至C风格的映射也会导致同样的结果。</p>
+<p><strong>不能编译的代码对于vector和string容器来说也许能够通过编译</strong></p>
+<p>那是因为通常情况下大多数实现都会采用真实的指针作为那些容器的迭代器。</p>
+<p>就这种实现而言，<code>vector&lt;T&gt;::iterator</code>是<code>T*</code>的<code>typedef</code>，而<code>vector&lt;T&gt;::const_iterator</code>是<code>const T*</code>的<code>typedef</code>，<code>string::iterator</code>是<code>char</code>的<code>typedef</code>，而<code>string::const_iterator</code>是<code>const char*</code>的<code>typedef</code>。</p>
+<p>在这种实现的情况下，用<code>const_cast</code>把<code>const_iterator</code>映射成<code>iterator</code>当然可以编译而且没有问题，因为<code>const_iterator</code>与<code>iterator</code>之间的<code>const_cast</code>映射被最终解释成<code>const T*</code>到<code>T*</code>的映射。但是，即使是在这种实现中，<code>reverse_iterator</code>和<code>const_reverse_iterator</code>也是真正的类，所以你仍然不能直接用<code>const_cast</code>把<code>const_reverse_iterator</code>映射成<code>reverse_iterator</code>。</p>
+<p>而且这些实现通常只会在Release模式时才使用指针表示vector和string的迭代器。</p>
+<p>所有这些事实表明，把const迭代器映射为迭代器是病态的，即使是对vector和string来说也时，因为移植性很值得怀疑。</p>
+<h2 id="const_iterator转换为iterator">const_iterator转换为iterator</h2>
+<p>有一种安全的、可移植的方法获取它所对应的iterator，而且，用不着陷入类型系统的转换。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;deque&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iterator&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// 和以前一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">IntDeque</span> <span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 让ci指向d
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Iter</span> <span class="n">i</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">begin</span><span class="p">());</span> <span class="c1">// 初始化i为d.begin()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span> <span class="c1">// 把i移到指向ci位置（但请留意下面关于为什么在它编译前要调整的原因）
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要得到与const_iterator指向同一位置的iterator:</p>
+<ol>
+<li>将iterator指向容器的起始位置，</li>
+<li>把它向前移到和const_iterator距离容器起始位置的偏移量一样的位置即可</li>
+</ol>
+<p>这个任务得到了两个函数模板advance和distance的帮助，它们都在<iterator>中声明:</p>
+<ul>
+<li>distance返回两个指向同一个容器的iterator之间的距离；</li>
+<li>advance则用于将一个iterator移动指定的距离。</li>
+</ul>
+<p>如果<code>i</code>和<code>ci</code>指向同一个容器，那么表达式<code>advance(i, distance(i, ci))</code>会将<code>i</code>移动到与<code>ci</code>相同的位置上。</p>
+<p>上述代码编译存在问题。</p>
+<p>先来看看distance的定义：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_InputIterator</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="n">_GLIBCXX17_CONSTEXPR</span>
+</span></span><span class="line"><span class="cl">  <span class="k">typename</span> <span class="n">iterator_traits</span><span class="o">&lt;</span><span class="n">_InputIterator</span><span class="o">&gt;::</span><span class="n">difference_type</span>
+</span></span><span class="line"><span class="cl">  <span class="n">distance</span><span class="p">(</span><span class="n">_InputIterator</span> <span class="n">__first</span><span class="p">,</span> <span class="n">_InputIterator</span> <span class="n">__last</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// concept requirements -- taken care of in __distance
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">__distance</span><span class="p">(</span><span class="n">__first</span><span class="p">,</span> <span class="n">__last</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">__iterator_category</span><span class="p">(</span><span class="n">__first</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当遇到<code>distance</code>调用时，你的编译器需要根据使用的实参类型推断出<code>InputIterator</code>的类型。</p>
+<p>再来看看我所说的不太正确的<code>distance</code>调用:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span> <span class="c1">// 调整i，指向ci位置
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>有两个参数传递给distance，i和ci。i的类型是Iter，即<code>deque&lt;int&gt;::iterator</code>的typedef。</p>
+<p>对编译器来说，这表明调用<code>distance</code>的<code>InputIterator</code>是<code>deque::iterator</code>。但<code>ci</code>是<code>ConstIter</code>，即<code>deque::const_iterator</code>的<code>typedef</code>。</p>
+<p>表明那个<code>InputIterator</code>是<code>deque&lt;int&gt;::const_iterator</code>。</p>
+<p><code>InputIterator</code>不可能同时有两种不同的类型，所以调用<code>distance</code>失败。</p>
+<p>一般会造成一些冗长的出错信息，可能会也可能不会说明是编译器无法得出<code>InputIterator</code>是什么类型。</p>
+<p>要顺利地调用<code>distance</code>，你需要排除歧义。</p>
+<p>最简单的办法就是显式的指明<code>distance</code>调用的模板参数类型，从而避免编译器自己得出它们的类型:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们现在知道了怎么通过<code>advance</code>和<code>distance</code>获取<code>const_iterator</code>相应的<code>iterator</code>了。</p>
+<p><strong>效率如何？</strong></p>
+<p>答案很简单。<strong>取决于你所转换的究竟是什么样的迭代器。</strong></p>
+<p>对于<strong>随机访问的迭代器</strong>（比如<code>vector</code>、<code>string</code>和<code>deque</code>的）而言，这是<strong>常数时间</strong>的操作。</p>
+<p>对于<strong>双向迭代器</strong>（也就是，所有其它容器和包括散列容器的一些实现）而言，这是<strong>线性时间</strong>的操作。</p>
+<p>因为它可能花费线性时间的代价来产生一个和<code>const_iterator</code>等价的<code>iterator</code>，并且因为如果不能访问<code>const_iterator</code>所属的容器这个操作就无法完成。</p>
+<p>从这个角度出发，也许你需要重新审视你从<code>const_iterator</code>产生<code>iterator</code>的设计。</p>
+<p>当处理容器时尽量用<code>iterator</code>代替<code>const</code>和<code>reverse</code>迭代器。</p>
+]]></description></item><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
 <p>每个标准容器类都提供4种迭代器类型:<code>iterator</code>,<code>const_iterator</code>，<code>reverse_iterator</code>和<code>const_reverse_iterator</code></p>
 <p>对于<code>container&lt;T&gt;</code>而言，<code>iterator</code>的作用相当于<code>T*</code>，而<code>const_iterator</code>则相当于<code>const T*</code>。</p>
 <p>增加一个<code>iterator</code>或者<code>const_iterator</code>可以在一个从容器开头趋向尾部的遍历中让你移动到容器的下一个元素。</p>
