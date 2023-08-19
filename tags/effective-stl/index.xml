@@ -1,4 +1,220 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective-stl/</link><description>Effective STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 17 Aug 2023 20:04:40 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective-stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [28] | 了解如何通过reverse_iterator的base得到iterator</title><link>https://jianye0428.github.io/posts/clause_28/</link><pubDate>Thu, 17 Aug 2023 20:04:40 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_28/</guid><description><![CDATA[<h2 id="example">Example</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective-stl/</link><description>Effective STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 19 Aug 2023 15:32:43 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective-stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL [30] | 确保目标区间足够大</title><link>https://jianye0428.github.io/posts/clause_30/</link><pubDate>Sat, 19 Aug 2023 15:32:43 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_30/</guid><description><![CDATA[<p>STL容器在被添加时（通过insert、push_front、push_back等）自动扩展它们自己来容纳新对象。</p>
+<h2 id="插入数据">插入数据</h2>
+<p><strong>尾部插入 back_inserter</strong></p>
+<p>当你想向容器中插入对象但并没有告诉STL他们所想的时，问题出现了:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">transmogrify</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">);</span> <span class="c1">// 自定义的这个函数从x产生一些新值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把数据放入values
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把transmogrify应用于values中的每个对象
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 把这个返回的values附加到results
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">results</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">transmogrify</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 这段代码有bug！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>transform被告知它的目的区间是从<code>results.end()</code>开始的，所以那就是开始写在values的每个元素上调用<code>transmogrify</code>的结果的地方。</p>
+<p>就像所有使用目标区间的算法，<code>transform</code>通过对目标区间的元素赋值的方法写入结果，<code>transform</code>会把<code>transmogrify</code>应用于<code>values[0]</code>并把结果赋给<code>*results.end()</code>。</p>
+<p>然后它会把<code>transmogrify</code>应用于<code>value[1]</code>并把结果赋给<code>*(results.end()+1)</code>。</p>
+<p>那只能带来灾难，因为在<code>*results.end()</code>没有对象，<code>*(results.end()+1)</code>也没有！因为<code>transform</code>并没有在尾部创造新的对象。</p>
+<p>调用<code>transform</code>是错误的，因为它会给不存在的对象赋值。</p>
+<p><strong>正确做法</strong></p>
+<p>把<code>transform</code>的结果放入<code>results</code>容器的结尾的方式是调用<code>back_inserter</code>来产生指定目标区间起点的迭代器:</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把transmogrify应用于values中的每个对象，在results的结尾插入返回的values
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">back_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">),</span><span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在内部，<code>back_inserter</code>返回的迭代器会调用<code>push_back</code>，所以你可以在任何提供<code>push_back</code>的容器上使用<code>back_inserter</code>(也就是任何标准序列容器: <code>vector</code>、<code>string</code>、<code>deque</code>和<code>list</code>)。</p>
+<p><strong>前端插入 front_inserter</strong></p>
+<p>如果你想让一个算法在容器的前端插入东西，你可以使用<code>front_inserter</code>。</p>
+<p>在内部，<code>front_inserter</code>利用了<code>push_front</code>，所以<code>front_insert</code>只和提供那个成员函数的容器配合(也就是<code>deque</code>和<code>list</code>):</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// results现在是list
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">front_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">),</span><span class="n">transmogrify</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 在results前端   以反序   插入transform的结果
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为<code>front_inserter</code>用<code>push_front</code>把每个对象添加到<code>results</code>，<code>results</code>中的对象顺序会和<code>values</code>中对应的对象顺序相反。</p>
+<p><code>vector</code>不提供<code>push_front</code>，所以<code>front_inserter</code>不能用于<code>vector</code>。</p>
+<p><strong>同序插入</strong></p>
+<p>如果你要<code>transform</code>把输出结果放在<code>results</code>前端，但你也要输出和<code>values</code>中对应的对象顺序相同，只要以相反的顺序迭代<code>values</code>:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 在results前端 插入transform的结果
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">rbegin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">rend</span><span class="p">(),</span><span class="n">front_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">),</span><span class="n">transmogrify</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 保持相对的对象顺序
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>任意位置插入 inserter</strong></p>
+<p><code>front_inserter</code>让你强制算法在容器前端插入它们的结果，<code>back_inserter</code>让你告诉它们把结果放在容器后端，有点惊人的是<code>inserter</code>允许你强制算法把它们的结果插入容器中的任意位置:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 同上，除了现在在调用transform前 results已经有一些数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把transmogrify的结果插入results的中间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">inserter</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">results</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="插入效率">插入效率</h2>
+<p>不管你是否使用了<code>back_inserter</code>、<code>front_inserter</code>或<code>inserter</code>，<code>transform</code>会对目的区间每次写入一个值，你无法改变。</p>
+<p>当你要插入的容器是<code>vector</code>或<code>string</code>时，你可以最小化这个代价，<strong>预先调用<code>reserve</code></strong>。</p>
+<p>你仍然要承受每次发生插入时移动元素的开销，但至少你避免了重新分配容器的内在内存:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">results</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">+</span> <span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 确定results至少还能装得下values.size()个元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上，但results没有任何重新分配操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">inserter</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">results</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当使用<code>reserve</code>来提高一连串插入的效率时，总是应该记住<code>reserve</code><strong>只增加容器的容量：容器的大小仍然没有改变</strong>。</p>
+<p>即使调用完<code>reserve</code>，当你想要让容器把新元素加入到<code>vector</code>或<code>string</code>时，你也必须对算法使用插入迭代器(比如，从<code>back_inserter</code>、<code>front_inserter</code>或<code>inserter</code>返回的迭代器之一)，因为赋值只在两个对象之间操作时有意义，而不是在一个对象和一块原始的比特之间。</p>
+<p>第一个例子正确的写法:</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">results</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">+</span> <span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 把transmogrify的结果写入results的结尾，处理时避免了重新分配
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">back_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="p">,</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="覆盖原始数据">覆盖原始数据</h2>
+<p>有时候你要覆盖现有容器的元素而不是插入新的。</p>
+<p><strong>当这种情况时，你不需要插入迭代器，但你仍然需要按照本条款的建议来确保你的目的区间足够大。</strong></p>
+<p>假设你让<code>transform</code>覆盖<code>results</code>的元素。如果<code>results</code>至少有和<code>values</code>一样多的元素，那很简单。如果没有， 你也必须使用<code>resize</code>来确保它有。</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 确保results至少和values一样大
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">()){</span>
+</span></span><span class="line"><span class="cl"> <span class="n">results</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 覆盖values.size()个 results的元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">results</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>或者你可以清空results然后用通常的方式使用插入迭代器:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 销毁results中的所有元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">results</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 保留足够空间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">results</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把transform地返回值// 放入results
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">back_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">),</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="结论">结论</h2>
+<p>无论何时你使用一个要求指定目的区间的算法，确保目的区间已经足够大或者在算法执行时可以增加大小。</p>
+<p>如果你选择增加大小，就使用插入迭代器，比如<code>ostream_iterators</code>或从<code>back_inserter</code>、<code>front_inserter</code>或<code>inserter</code>返回的迭代器。</p>
+]]></description></item><item><title>Effective STL [28] | 了解如何通过reverse_iterator的base得到iterator</title><link>https://jianye0428.github.io/posts/clause_28/</link><pubDate>Thu, 17 Aug 2023 20:04:40 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_28/</guid><description><![CDATA[<h2 id="example">Example</h2>
 <p>通过reverse_iterator的base初始化一个iterator:</p>
 <div class="highlight" id="id-1"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">

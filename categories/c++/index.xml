@@ -1,4 +1,220 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 17 Aug 2023 20:04:40 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [28] | 了解如何通过reverse_iterator的base得到iterator</title><link>https://jianye0428.github.io/posts/clause_28/</link><pubDate>Thu, 17 Aug 2023 20:04:40 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_28/</guid><description><![CDATA[<h2 id="example">Example</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 19 Aug 2023 15:32:43 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>Effective STL [30] | 确保目标区间足够大</title><link>https://jianye0428.github.io/posts/clause_30/</link><pubDate>Sat, 19 Aug 2023 15:32:43 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_30/</guid><description><![CDATA[<p>STL容器在被添加时（通过insert、push_front、push_back等）自动扩展它们自己来容纳新对象。</p>
+<h2 id="插入数据">插入数据</h2>
+<p><strong>尾部插入 back_inserter</strong></p>
+<p>当你想向容器中插入对象但并没有告诉STL他们所想的时，问题出现了:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">transmogrify</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">);</span> <span class="c1">// 自定义的这个函数从x产生一些新值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把数据放入values
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把transmogrify应用于values中的每个对象
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 把这个返回的values附加到results
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">results</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">transmogrify</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 这段代码有bug！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>transform被告知它的目的区间是从<code>results.end()</code>开始的，所以那就是开始写在values的每个元素上调用<code>transmogrify</code>的结果的地方。</p>
+<p>就像所有使用目标区间的算法，<code>transform</code>通过对目标区间的元素赋值的方法写入结果，<code>transform</code>会把<code>transmogrify</code>应用于<code>values[0]</code>并把结果赋给<code>*results.end()</code>。</p>
+<p>然后它会把<code>transmogrify</code>应用于<code>value[1]</code>并把结果赋给<code>*(results.end()+1)</code>。</p>
+<p>那只能带来灾难，因为在<code>*results.end()</code>没有对象，<code>*(results.end()+1)</code>也没有！因为<code>transform</code>并没有在尾部创造新的对象。</p>
+<p>调用<code>transform</code>是错误的，因为它会给不存在的对象赋值。</p>
+<p><strong>正确做法</strong></p>
+<p>把<code>transform</code>的结果放入<code>results</code>容器的结尾的方式是调用<code>back_inserter</code>来产生指定目标区间起点的迭代器:</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把transmogrify应用于values中的每个对象，在results的结尾插入返回的values
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">back_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">),</span><span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在内部，<code>back_inserter</code>返回的迭代器会调用<code>push_back</code>，所以你可以在任何提供<code>push_back</code>的容器上使用<code>back_inserter</code>(也就是任何标准序列容器: <code>vector</code>、<code>string</code>、<code>deque</code>和<code>list</code>)。</p>
+<p><strong>前端插入 front_inserter</strong></p>
+<p>如果你想让一个算法在容器的前端插入东西，你可以使用<code>front_inserter</code>。</p>
+<p>在内部，<code>front_inserter</code>利用了<code>push_front</code>，所以<code>front_insert</code>只和提供那个成员函数的容器配合(也就是<code>deque</code>和<code>list</code>):</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// results现在是list
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="n">front_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">),</span><span class="n">transmogrify</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 在results前端   以反序   插入transform的结果
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为<code>front_inserter</code>用<code>push_front</code>把每个对象添加到<code>results</code>，<code>results</code>中的对象顺序会和<code>values</code>中对应的对象顺序相反。</p>
+<p><code>vector</code>不提供<code>push_front</code>，所以<code>front_inserter</code>不能用于<code>vector</code>。</p>
+<p><strong>同序插入</strong></p>
+<p>如果你要<code>transform</code>把输出结果放在<code>results</code>前端，但你也要输出和<code>values</code>中对应的对象顺序相同，只要以相反的顺序迭代<code>values</code>:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 在results前端 插入transform的结果
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">rbegin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">rend</span><span class="p">(),</span><span class="n">front_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">),</span><span class="n">transmogrify</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 保持相对的对象顺序
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>任意位置插入 inserter</strong></p>
+<p><code>front_inserter</code>让你强制算法在容器前端插入它们的结果，<code>back_inserter</code>让你告诉它们把结果放在容器后端，有点惊人的是<code>inserter</code>允许你强制算法把它们的结果插入容器中的任意位置:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 同上，除了现在在调用transform前 results已经有一些数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把transmogrify的结果插入results的中间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">inserter</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">results</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="插入效率">插入效率</h2>
+<p>不管你是否使用了<code>back_inserter</code>、<code>front_inserter</code>或<code>inserter</code>，<code>transform</code>会对目的区间每次写入一个值，你无法改变。</p>
+<p>当你要插入的容器是<code>vector</code>或<code>string</code>时，你可以最小化这个代价，<strong>预先调用<code>reserve</code></strong>。</p>
+<p>你仍然要承受每次发生插入时移动元素的开销，但至少你避免了重新分配容器的内在内存:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">results</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">+</span> <span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 确定results至少还能装得下values.size()个元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上，但results没有任何重新分配操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">inserter</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">results</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当使用<code>reserve</code>来提高一连串插入的效率时，总是应该记住<code>reserve</code><strong>只增加容器的容量：容器的大小仍然没有改变</strong>。</p>
+<p>即使调用完<code>reserve</code>，当你想要让容器把新元素加入到<code>vector</code>或<code>string</code>时，你也必须对算法使用插入迭代器(比如，从<code>back_inserter</code>、<code>front_inserter</code>或<code>inserter</code>返回的迭代器之一)，因为赋值只在两个对象之间操作时有意义，而不是在一个对象和一块原始的比特之间。</p>
+<p>第一个例子正确的写法:</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">results</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">+</span> <span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 同上
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 把transmogrify的结果写入results的结尾，处理时避免了重新分配
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">back_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="p">,</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="覆盖原始数据">覆盖原始数据</h2>
+<p>有时候你要覆盖现有容器的元素而不是插入新的。</p>
+<p><strong>当这种情况时，你不需要插入迭代器，但你仍然需要按照本条款的建议来确保你的目的区间足够大。</strong></p>
+<p>假设你让<code>transform</code>覆盖<code>results</code>的元素。如果<code>results</code>至少有和<code>values</code>一样多的元素，那很简单。如果没有， 你也必须使用<code>resize</code>来确保它有。</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">results</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 确保results至少和values一样大
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">()){</span>
+</span></span><span class="line"><span class="cl"> <span class="n">results</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 覆盖values.size()个 results的元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">results</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>或者你可以清空results然后用通常的方式使用插入迭代器:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 销毁results中的所有元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">results</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 保留足够空间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">results</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把transform地返回值// 放入results
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">transform</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">back_inserter</span><span class="p">(</span><span class="n">results</span><span class="p">),</span> <span class="n">transmogrify</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="结论">结论</h2>
+<p>无论何时你使用一个要求指定目的区间的算法，确保目的区间已经足够大或者在算法执行时可以增加大小。</p>
+<p>如果你选择增加大小，就使用插入迭代器，比如<code>ostream_iterators</code>或从<code>back_inserter</code>、<code>front_inserter</code>或<code>inserter</code>返回的迭代器。</p>
+]]></description></item><item><title>Effective STL [28] | 了解如何通过reverse_iterator的base得到iterator</title><link>https://jianye0428.github.io/posts/clause_28/</link><pubDate>Thu, 17 Aug 2023 20:04:40 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_28/</guid><description><![CDATA[<h2 id="example">Example</h2>
 <p>通过reverse_iterator的base初始化一个iterator:</p>
 <div class="highlight" id="id-1"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -5456,15 +5672,7 @@ private继承做法：让Widget类private继承于Timer，重写父类Timer的on
 <p>回到本节开头，明智和审慎的意思是👉即使多重继承可以用单继承方案替代解决，思考后，如果多重继承依然是最简洁、最易维护、最合理的做法，那就选择它。</p>
 <p>ref:</br>
 [1]. <a href="https://blog.csdn.net/cltcj/category_12098441.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/cltcj/category_12098441.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://kissingfire123.github.io/2022/02/14_effective-c-%E4%B9%8B%E9%98%85%E8%AF%BB%E6%80%BB%E7%BB%93%E4%B8%89/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2022/02/14_effective-c-%E4%B9%8B%E9%98%85%E8%AF%BB%E6%80%BB%E7%BB%93%E4%B8%89/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [2]</title><link>https://jianye0428.github.io/posts/parttwo/</link><pubDate>Sun, 30 Jul 2023 17:08:51 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/parttwo/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h1 id="前言">前言</h1>
+[2]. <a href="https://kissingfire123.github.io/2022/02/14_effective-c-%E4%B9%8B%E9%98%85%E8%AF%BB%E6%80%BB%E7%BB%93%E4%B8%89/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2022/02/14_effective-c-%E4%B9%8B%E9%98%85%E8%AF%BB%E6%80%BB%E7%BB%93%E4%B8%89/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective C++ (第3版) 精读总结 [2]</title><link>https://jianye0428.github.io/posts/parttwo/</link><pubDate>Sun, 30 Jul 2023 17:08:51 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/parttwo/</guid><description><![CDATA[<h1 id="前言">前言</h1>
 <blockquote>
 <p>Effective-C++总结系列分为四部分，本文为第二部分，涉及原书第3~4章，内容范围Rule13~25。为方便书写，Rule13简写为R13。</p>
 </blockquote>
@@ -6177,192 +6385,5 @@ copy构造函数用来定义一个type的值传递具体实现。</li>
 </ul>
 <p>ref:</br>
 [1]. <a href="https://blog.csdn.net/cltcj/category_12098441.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/cltcj/category_12098441.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>]]></description></item><item><title>Effective STL [11] | 理解自定义分配器的正确用法</title><link>https://jianye0428.github.io/posts/clause_11/</link><pubDate>Sun, 30 Jul 2023 09:21:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_11/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="自定义分配器">自定义分配器</h2>
-<p>很多时候，你会有建立自定义分配器的想法：</p>
-<ul>
-<li><code>allocator&lt;T&gt;</code>对线程安全采取了措拖，但是你只对单线程的程序感兴趣，你不想花费不需要的同步开销</li>
-<li>在某些容器里的对象通常一同被使用，所以你想在一个特别的堆里把它们放得很近使引用的区域性最大化</li>
-<li>你想建立一个相当共享内存的唯一的堆，然后把一个或多个容器放在那块内存里，因为这样它们可以被其他进程共享。</li>
-</ul>
-<h3 id="管理共享内存">管理共享内存</h3>
-<p>假定你有仿效<code>malloc</code>和<code>free</code>的特别程序，用于管理共享内存的堆</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span><span class="o">*</span> <span class="nf">mallocShared</span><span class="p">(</span><span class="n">size_t</span> <span class="n">bytesNeeded</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">freeShared</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>并且你希望能把STL容器的内容放在共享内存中:</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SharedMemoryAllocator</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="n">pointer</span> <span class="n">allocate</span><span class="p">(</span><span class="n">size_type</span> <span class="n">numObiects</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">localityHint</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">pointer</span><span class="o">&gt;</span><span class="p">(</span><span class="n">mallocShared</span><span class="p">(</span><span class="n">numObiects</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">T</span><span class="p">)));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">deallocate</span><span class="p">(</span><span class="n">pointer</span> <span class="n">ptrToMemory</span><span class="p">,</span> <span class="n">size_type</span> <span class="n">numObjects</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">freeShared</span><span class="p">(</span><span class="n">ptrToMiemory</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>使用<code>SharedMemoryAllocator</code>：</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 方便的typedef
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span> <span class="n">SharedMemoryAllocator</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="n">SharedDoubleVec</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span> <span class="c1">// 开始一个块
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">SharedDoubleVec</span> <span class="n">v</span><span class="p">;</span> <span class="c1">// 建立一个元素在
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 共享内存中的vector
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span> <span class="c1">// 结束这个块
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>「问题：」<strong>v</strong>使用<code>SharedMemoryAllocator</code>，所以<strong>v</strong>分配来容纳它元素的内存将来自共享内存，但<strong>v本身——包括它的全部数据成员——几乎将肯定不被放在共享内存里，v只是一个普通的基于堆的对象，所以它将被放在运行时系统为所有普通的基于堆的对象使用的任何内存</strong>。那几乎不会是共享内存。</br></p>
-<p>为了把v的内容和v本身放进共享内存，必须这么做:</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="o">*</span><span class="n">pVectorMemory</span> <span class="o">=</span> <span class="n">mallocShared</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">SharedDoubleVec</span><span class="p">));</span><span class="c1">// 分配足够的共享内存来容纳一个SharedDoubleVec对象
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">SharedDoubleVec</span> <span class="o">*</span><span class="n">pv</span> <span class="o">=</span> <span class="k">new</span> <span class="p">(</span><span class="n">pVectorMemory</span><span class="p">)</span> <span class="n">SharedDoubleVec</span><span class="p">;</span> <span class="c1">// 使用“placement new”来 在那块内存中建立 一个SharedDoubleVec对象；
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 参见下面这个对象的使用（通过pv）
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="n">pv</span><span class="o">-&gt;~</span><span class="n">SharedDoubleVec</span><span class="p">();</span> <span class="c1">// 销毁共享内存中的对象
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">freeShared</span><span class="p">(</span><span class="n">pVectorMemory</span><span class="p">);</span> <span class="c1">// 销毁原来的共享内存块
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这就是<code>「手工的四步分配/建造/销毁/回收的过程」</code>：获得一些共享内存 <code>——&gt;</code> 在里面建立一个用共享内存为自己内部分配的vector <code>——&gt;</code> 用完这个vector时，调用它的析构函数 <code>——&gt;</code> 释放vector占用的内存。</p>
-<p>这段代码有2点需要注意：</p>
-<ul>
-<li>
-<p>忽略了<code>mallocShared</code>可能返回一个null指针。</p>
-</li>
-<li>
-<p>共享内存中的vector的建立由“placement new”完成。</p>
-</li>
-</ul>
-<h3 id="管理分配和回收的堆">管理分配和回收的堆</h3>
-<p>假设有2个堆，类<code>Heap1</code>和<code>Heap2</code>。</p>
-<p>每个堆类有用于进行「分配」和「回收」的「静态成员函数」：</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Heap1</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="k">static</span> <span class="kt">void</span><span class="o">*</span> <span class="n">alloc</span><span class="p">(</span><span class="n">size_t</span> <span class="n">numBytes</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">memoryBlockToBeNear</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">static</span> <span class="kt">void</span> <span class="nf">dealloc</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Heap2</span> <span class="p">{</span> <span class="p">...</span> <span class="p">};</span> <span class="c1">// 有相同的alloc/dealloc接口
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>你想在不同的堆里联合定位一些STL容器的内容。</p>
-<p>首先，设计一个分配器，使用像Heap1和Heap2那样用于真实内存管理的类：</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="n">typenameT</span><span class="p">,</span> <span class="k">typename</span> <span class="n">Heap</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecificHeapAllocator</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">pointer</span> <span class="n">allocate</span><span class="p">(</span><span class="n">size_type</span> <span class="n">numObjects</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">localityHint</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">pointer</span><span class="o">&gt;</span><span class="p">(</span><span class="n">Heap</span><span class="o">::</span><span class="n">alloc</span><span class="p">(</span><span class="n">numObjects</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">T</span><span class="p">),</span> <span class="n">localityHint</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">deallocate</span><span class="p">(</span><span class="n">pointer</span> <span class="n">ptrToMemory</span><span class="p">,</span> <span class="n">size_type</span> <span class="n">numObjects</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">Heap</span><span class="o">::</span><span class="n">dealloc</span><span class="p">(</span><span class="n">ptrToMemory</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>然后，使用<code>SpecificHeapAllocator</code>来把容器的元素集合在一起：</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">SpecificHeapAllocator</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Heap1</span> <span class="o">&gt;&gt;</span> <span class="n">v</span><span class="p">;</span> <span class="c1">// 把v和s的元素放进Heap1
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">SpecificHeapAllocator</span><span class="o">&lt;</span><span class="kt">int</span> <span class="n">Heap1</span> <span class="o">&gt;&gt;</span> <span class="n">s</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SpecificHeapAllocator</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">Heap2</span><span class="o">&gt;&gt;</span> <span class="n">L</span><span class="p">;</span> <span class="c1">// 把L和m的元素 放进Heap2
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">map</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">string</span><span class="p">,</span> <span class="n">less</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SpecificHeapAllocator</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="kt">int</span><span class="p">,</span> <span class="n">string</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">Heap2</span><span class="o">&gt;&gt;</span> <span class="n">m</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>在这个例子里，很重要的一点是「<strong>Heap1和Heap2是类型而不是对象</strong>」。</p>
-<p>STL为用不同的分配器对象初始化相同类型的不同STL容器提供了语法。那是「<strong>因为如果Heap1和Heap2是对象而不是类型，那么它们将是不等价的分配器，那就违反了分配器的等价约束</strong>」。</p>
-<p>只要遵循「<strong>相同类型的所有分配器都一定等价的限制条件</strong>」，你将毫不费力地使用自定义分配器来「<strong>控制一般内存管理策略，群集关系和使用共享内存以及其他特殊的堆</strong>」。</p>]]></description></item></channel></rss>
+[2]. <a href="https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/"target="_blank" rel="external nofollow noopener noreferrer">https://kissingfire123.github.io/2022/01/11_effective-c-%e4%b9%8b%e5%ad%a6%e4%b9%a0%e6%80%bb%e7%bb%93%e4%ba%8c/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
+]]></description></item></channel></rss>
