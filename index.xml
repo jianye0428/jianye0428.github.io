@@ -1,4 +1,152 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 20 Aug 2023 17:44:07 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Transformer | 如何理解attention中的Q,K,V？</title><link>https://jianye0428.github.io/posts/attentionaqkv/</link><pubDate>Sun, 20 Aug 2023 17:44:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/attentionaqkv/</guid><description><![CDATA[<h2 id="解答一">解答一</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 21 Aug 2023 07:59:36 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Transformer Q &amp; A</title><link>https://jianye0428.github.io/posts/transformerqanda/</link><pubDate>Mon, 21 Aug 2023 07:59:36 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerqanda/</guid><description><![CDATA[<h2 id="1-2017年深度学习领域的重大突破是什么">1. 2017年深度学习领域的重大突破是什么？</h2>
+<p>Transformer。有两方面的原因：</p>
+<p>1.1 一方面，Transformer是深度学习领域既MLP、RNN、CNN之后的第4大特征提取器（也被称为基础模型）。什么是特征提取器？大脑是人与外部世界（图像、文字、语音等）交互的方式；特征提取器是计算机为了模仿大脑，与外部世界（图像、文字、语音等）交互的方式，如图1所示。举例而言：Imagenet数据集中包含1000类图像，人们已经根据自己的经验把这一百万张图像分好1000类，每一类图像（如美洲豹）都有独特的特征。这时，神经网络（如ResNet18）也是想通过这种分类的方式，把每一类图像的特有特征尽可能提取或识别出来。分类不是最终目的，而是一种提取图像特征的手段，掩码补全图像也是一种提取特征的方式，图像块顺序打乱也是一种提取特征的方式。</p>
+<p></p>
+<p>1.2 另一方面，Transformer在深度学习领域扮演的角色：第3次和第4次热潮的基石，如下图2所示。</p>
+<p></p>
+<h2 id="2-transformer的提出背景是什么">2. Transformer的提出背景是什么？</h2>
+<p><strong>2.1 在领域发展背景层面</strong>：当时时处2017年，深度学习在计算机视觉领域火了已经几年。从Alexnet、VGG、GoogleNet、ResNet、DenseNet；从图像分类、目标检测再到语义分割；但在自然语言处理领域并没有引起很大反响。</p>
+<p><strong>2.2 技术背景层面</strong>： </br>
+（1）当时主流的序列转录任务（如机器翻译）的解决方案如下图3所示，在Sequence to Sequence架构下（Encoder- Decoder的一种），RNN来提取特征，Attention机制将Encoder提取到的特征高效传递给Decoder。
+（2）这种做法有两个不足之处，一方面是在提取特征时的RNN天生从前向后时序传递的结构决定了其无法并行运算，其次是当序列长度过长时，最前面序列的信息有可能被遗忘掉。因此可以看到，在这个框架下，RNN是相对薄弱急需改进的地方。</p>
+<p></p>
+<h2 id="3-transformer到底是什么">3. Transformer到底是什么？</h2>
+<p>3.1 Transformer是一种由Encoder和Decoder组成的架构。那么什么是架构呢？最简单的架构就是A+B+C。</p>
+<p>3.2 Transformer也可以理解为一个函数，输入是“我爱学习”，输出是“I love study”。</p>
+<p>3.3 如果把Transformer的架构进行分拆，如图4所示。</p>
+<p></p>
+<h2 id="4-什么是transformer-encoder">4. 什么是Transformer Encoder？</h2>
+<p>4.1 从功能角度，Transformer Encoder的核心作用是<strong>提取特征</strong>，也有使用Transformer Decoder来提取特征。例如，一个人学习跳舞，Encoder是看别人是如何跳舞的，Decoder是将学习到的经验和记忆，展现出来</p>
+<p>4.2 从结构角度，如图5所示，Transformer Encoder = Embedding + Positional Embedding + N*（子Encoder block1 + 子Encoder block2）；</p>
+<p>子Encoder block1 = Multi head attention + ADD + Norm；</p>
+<p>子Encoder block2 = Feed Forward + ADD + Norm；</p>
+<p>4.3 从输入输出角度，N个Transformer Encoder block中的第一个Encoder block的输入为一组向量 X = （Embedding + Positional Embedding），向量维度通常为512<em>512，其他N个TransformerEncoder block的输入为上一个 Transformer Encoder block的输出，输出向量的维度也为512</em>512（输入输出大小相同）。</p>
+<p>4.4 为什么是512*512？前者是指token的个数，如“我爱学习”是4个token，这里设置为512是为了囊括不同的序列长度，不够时padding。后者是指每一个token生成的向量维度，也就是每一个token使用一个序列长度为512的向量表示。人们常说，Transformer不能超过512，否则硬件很难支撑；其实512是指前者，也就是token的个数，因为每一个token要做self attention操作；但是后者的512不宜过大，否则计算起来也很慢。</p>
+<p></p>
+<h2 id="5-什么是transformer-decoder">5. 什么是Transformer Decoder？</h2>
+<p>5.1 从功能角度，相比于Transformer Encoder，Transformer Decoder更擅长做生成式任务，尤其对于自然语言处理问题。</p>
+<p>5.2 从结构角度，如图6所示，Transformer Decoder = Embedding + Positional Embedding + N*（子Decoder block1 + 子Decoder block2 + 子Decoder block3）+ Linear + Softmax；</p>
+<p>子Decoder block1 = Mask Multi head attention + ADD + Norm；</p>
+<p>子Decoder block2 = Multi head attention + ADD + Norm；</p>
+<p>子Decoder block3 = Feed Forward + ADD + Norm；</p>
+<p></p>
+<p>5.3 从（Embedding+Positional Embedding）（N个Decoder block）（Linear + softmax) 这三个每一个单独作用角度：</p>
+<p>Embedding + Positional Embedding ：以机器翻译为例，输入“Machine Learning”，输出“机器学习”；这里的Embedding是把“机器学习”也转化成向量的形式。</p>
+<p>N个Decoder block：特征处理和传递过程。</p>
+<p>Linear + softmax：softmax是预测下一个词出现的概率，如图7所示，前面的Linear层类似于分类网络（ResNet18）最后分类层前接的MLP层。</p>
+<p></p>
+<p>5.4 Transformer Decoder的输入、输出是什么？在Train和Test时是不同的。</p>
+<p>在Train阶段，如图8所示。这时是知道label的，decoder的第一个输入是begin字符，输出第一个向量与label中第一个字符使用cross entropy loss。Decoder的第二个输入是第一个向量的label，Decoder的第N个输入对应的输出是End字符，到此结束。这里也可以看到，在Train阶段是可以进行并行训练的。</p>
+<p></p>
+<p>在Test阶段，下一个时刻的输入时是前一个时刻的输出，如图9所示。因此，Train和Test时候，Decoder的输入会出现Mismatch，在Test时候确实有可能会出现一步错，步步错的情况。有两种解决方案：一种是train时偶尔给一些错误，另一种是Scheduled sampling。</p>
+<p></p>
+<p>5.5 Transformer Decoder block内部的输出和输出是什么？</p>
+<p>前面提到的是在整体train和test阶段，Decoder的输出和输出，那么Transformer Decoder内部的Transformer Decoder block，如图10所示，的输入输出又是什么呢？</p>
+<p></p>
+<p>对于N=6中的第1次循环（N=1时）：子Decoder block1 的输入是 embedding +Positional Embedding，子Decoder block2 的输入的Q来自子Decoder block1的输出，KV来自Transformer Encoder最后一层的输出。</p>
+<p>对于N=6的第2次循环：子Decoder block1的输入是N=1时，子Decoder block3的输出，KV同样来自Transformer Encoder的最后一层的输出。</p>
+<p>总的来说，可以看到，无论在Train还是Test时，Transformer Decoder的输入不仅来自（ground truth或者上一个时刻Decoder的输出），还来自Transformer Encoder的最后一层。</p>
+<p>训练时：第i个decoder的输入 = encoder输出 + ground truth embedding。</p>
+<p>预测时：第i个decoder的输入 = encoder输出 + 第(i-1)个decoder输出.</p>
+<h2 id="6-transformer-encoder和transformer-decoder有哪些不同">6. Transformer Encoder和Transformer Decoder有哪些不同？</h2>
+<p>6.1 作用上，Transformer Encoder常用来提取特征，Transformer Decoder常用于生成式任务。Transformer Encoder和Transformer Decoder是两条不同的技术路线，Bert采用的前者，GPT系列模型采用的是后者。</p>
+<p>6.2 结构上，Transformer Decoder block包括了3个子Decoder block，而Transformer Encoder block 包括2个子Encoder block，且Transformer Decoder中使用了Mask multi-head Attention。</p>
+<p>6.3 从二者的输入输出角度，N个Transformer Encoder运算完成之后，它的输出才正式输入进Transformer Decoder，作为QKV中的K和V，给Transformer Decoder使用。那么TransformerEncoder最后层的输出是如何送给Decoder呢？如图11所示。</p>
+<p></p>
+<p>那么，为什么Encoder和Decoder必须要用这种交互的方式呢？其实也并不一定，后续有不同交互方式的提出，如图12。</p>
+<p></p>
+<h2 id="7-什么是embedding">7. 什么是Embedding？</h2>
+<p>7.1 Embedding在Transformer架构中的位置如图13所示。</p>
+<p>7.2 提出背景： 计算机无法直接处理一个单词或者一个汉字，需要把一个token转化成计算机可以识别的向量，这也就是embedding过程。</p>
+<p>7.3 实现方式： 最简单的embedding操作就是one hot vector，但one hot vector有一个弊端就是没有考虑词语前后之间的关系，后来也就产生了WordEmbedding，如图13。</p>
+<p></p>
+<h2 id="8-什么是positional-embedding">8. 什么是Positional Embedding？</h2>
+<p>8.1 Positional Embedding在Transformer架构中的位置如图14所示。</p>
+<p>8.2 提出背景： RNN作为特征提取器，是自带词的前后顺序信息的；而Attention机制并没有考虑先后顺序信息，但前后顺序信息对语义影响很大，因此需要通过Positional Embedding这种方式把前后位置信息加在输入的Embedding上。</p>
+<p>8.3 实现方式： 传统位置编码和神经网络自动训练得到。</p>
+<p></p>
+<h2 id="9-什么是attention">9. 什么是Attention？</h2>
+<p>9.1 介绍Transformer，为什么要介绍Attention呢？因为在Transformer中最多的multi head attention和Mask multi head attention来自Scaled dot product attention，而scaled dot product attention来自self attention，而self attention是attention的一种，因此首先需要了解Attention，如图15所示。</p>
+<p></p>
+<p>9.2 Attention到底是什么意思呢？</p>
+<p>对于图像而言，attention就是人们看到图像中的核心关注的区域，是图像中的重点，如图16所示。对于序列而言，Attention机制本质上是为了找到输入中不同token之间的相互关系，通过权重矩阵来自发地找到词与词之间的关系。</p>
+<p></p>
+<p>9.3 Attention是如何实现的呢？</p>
+<p>是通过QKV实现的。</p>
+<p>那么什么是QKV呢？Q是query，K是keys，V是values。如图17所示，举例而言，Q是大脑发出的信号，我口渴了；K是环境信息，眼睛看到的世界；V是对环境中不同的物品赋予不同的比重，水的比重加大。</p>
+<p>总之，Attention就是通过计算QK的相似度，与V相乘得到注意力数值。</p>
+<p>$$\text{Attention}(\mathrm{Query},\mathrm{Source})=\sum\text{Similarity}(\mathrm{Query},\mathrm{Key}<em>\mathrm{i})*\mathrm{Value}</em>\mathrm{i}$$</p>
+<p></p>
+<p>9.4 为什么必须要有QKV三者？</p>
+<p>为什么不是只有Q？因为Q1与Q2之间的关系权重，不止需要a12，也需要a21。你可能会问？我们让a12=a21不行吗？也可以尝试，但从原理上讲效果应该没有a12和a21效果好。</p>
+<p>为什么不是只有QK？求得的权重系数需要放到输入中，可以乘Q，也可以乘K，为什么要重新乘V呢？我觉得可能是多了一组可训练参数WV，使网络具有更强的学习能力。</p>
+<h2 id="10-什么是self-attention">10. 什么是Self attention？</h2>
+<p>10.1 介绍Transformer，为什么要介绍self Attention呢？因为在Transformer中最多的multi head attention和Mask multi head attention来自Scaled dot product attention，而scaled dot product attention来自self attention，如图15所示。</p>
+<p>10.2 什么是self attention呢？self attention和local attention、stride attention都是attention的一种；self attention是每一个Q与每一个K依次计算注意力系数，如图18所示，而像local attention是Q只与相邻的K计算注意力系数，stride attention是Q通过跳连的方式与K计算注意力系数。</p>
+<p></p>
+<p>10.3 Self attention为什么可以用于处理像机器翻译这种序列数据?</p>
+<p>输入序列中的每一个位置的数据，可以关注其他位置的信息，由此通过Attention score来提取特征或者捕获输入序列每一个token之间的关系。</p>
+<p>10.4 Self attention是如何具体实现的? 总共分为4步，如图19所示</p>
+<p></p>
+<h2 id="11-什么是scaled-dot-product-attention">11. 什么是Scaled dot product attention？</h2>
+<p>11.1 self attention最常见的有两种，一种是dot product attention、另一种是additive attention，如图20所示，前者的计算效率更高。</p>
+<p></p>
+<p>11.2 什么是Scaled ?</p>
+<p>scaled的具体实现方式如图21所示，这一操作的目的是为了防止内积过大，从梯度角度考虑，避免靠近1，易训练；与batch normalization有一些相似的功能。</p>
+<p>$$\text{Attention}(Q,K,V)=\text{softmax}(\frac{QK^T}{\sqrt{d_k}})V$$</p>
+<h2 id="12-什么是multi-head-attention">12. 什么是Multi head attention？</h2>
+<p>12.1 Multi head attention在Transformer架构中的位置如图15所示。</p>
+<p>12.2 提出背景：CNN具有多个channel，可以提取图像不同维度的特征信息，那么Self attention是否可以有类似操作，可以提取不同距离token的多个维度信息呢？</p>
+<p>12.3 什么是group 卷积？如图22所示，将输入的特征多个channel分成几个group单独做卷积，最后再进行con c操作。</p>
+<p></p>
+<p>12.4 Multi head attention的实现方式？与self attention根本不同是什么？</p>
+<p>如图23所示，以2个head的为例，将输入的Q、K、V分成两份，每一小份的Q与对应的K、V分别操作，最后计算得到的向量再进行conc操作，由此可以看出，Multi head attention与group卷积有着相似的实现方式。</p>
+<p></p>
+<p>12.5 如何从输入输出维度，角度来理解Multi head attention？如图24所示。</p>
+<p></p>
+<h2 id="13-什么是mask-multi-head-attention">13. 什么是Mask Multi head attention？</h2>
+<p>13.1 Mask Multi head attention在transformer架构中的位置如图15所示。</p>
+<p>13.2 为什么要有Mask这种操作？</p>
+<p>Transformer预测第T个时刻的输出，不能看到T时刻之后的那些输入，从而保证训练和预测一致。</p>
+<p>通过 Masked 操作可以防止第 i 个单词知道 i+1 个单词之后的信息，如图25所示。</p>
+<p></p>
+<p>13.3 Mask操作是如何具体实现的呢？</p>
+<p>Q1只跟K1计算，Q2只跟K1、K2计算，而对于K3、K4等，在softmax之前给一个非常大的负数，由此经过softmax之后变为0，其在矩阵上的计算原理实现如图26所示。</p>
+<p></p>
+<h2 id="14-什么是add">14. 什么是ADD？</h2>
+<p>14.1 Add就是残差连接，由2015年ResNet这篇文章发扬光大（目前引用量已超过16万），与Skip connection的区别在于需要大小维度全部相同。</p>
+<p>14.2 作为大道至简想法的极致，几乎每一个深度学习模型都会用到这个技术，可以防止网络退化，常用于解决多层网络难训练的问题。</p>
+<p></p>
+<h2 id="15-什么是norm">15. 什么是Norm？</h2>
+<p>15.1 Norm就是layer normalization。</p>
+<p>15.2 核心作用：为了训练更加稳定，和batch normalization有相同的作用，都是为了使输入的样本均值为零，方差为1。</p>
+<p>15.3 为什么不使用batch normalization，使用的是layer normalization呢？因为一个时序数据，句子输入长度有长有短，如果使用batch normalization，则很容易造成因样本长短不一造成“训练不稳定”。BN是对同一个batch内的所有数据的同一个特征数据进行操作；而LN是对同一个样本进行操作。</p>
+<p></p>
+<ol start="16">
+<li>什么是FFN？</li>
+</ol>
+<p>16.1 FFN就是feed forward networks。</p>
+<p>16.2 为什么有了Self attention层，还要有FFN？Attention已经有了想要的序列信息特征，MLP的作用是把信息投影到特定的空间里，再做一次非线性映射，和Self attention交替使用。</p>
+<p>16.3 结构上：包括两层MLP，第一层的维度为512<em>2048，第二层的维度为2048</em>512，且第二层MLP没有使用激活函数，如图29所示。</p>
+<p></p>
+<h2 id="17-transformer是如何训练出来的">17. Transformer是如何训练出来的？</h2>
+<p>17.1 数据上，在Transformer论文中有提到，用到了4.5M和36M的翻译句子对。</p>
+<p>17.2 硬件上，base模型是8个P100 GPU训练了12个小时，大模型是训练了3.5天。</p>
+<p>17.3 模型参数和调参层面：</p>
+<p>第一，可训练的参数包括WQ、WK、WV、WO，换包括FFN层的参数。</p>
+<p>第二，可调的参数包括：每一个token向量表示的维度（d_model）、head的头数、Encoder和Decoder中block重复的次数N、FFN中间层向量的维度、Label smoothing（置信度0.1）和dropout（0.1）。</p>
+<h2 id="18-transformer为什么效果好">18. Transformer为什么效果好？</h2>
+<p>18.1 虽然题目是Attention is all you need，但后续一些研究表明，Attention、残差连接、layer normalization、FFN，这些因素共同成就了Transformer。</p>
+<p>18.2 Transformer优点包括：</p>
+<p>第一，提出深度学习既MLP、CNN、RNN后的第4大特征提取器。</p>
+<p>第二，一开始用在机器翻译，随着GPT和Bert彻底出圈；是一个转折点，在这个点之后，NLP领域快速发展，之后多模态、大模型、视觉Transformer等开始兴起。</p>
+<p>第三，给人们信心，原来CNN和RNN之后，还可以有效果更好的特征提取器。</p>
+<p>18.3 Transformer的不足之处？</p>
+<p>第一，计算量大，对硬件要求高。</p>
+<p>第二，因为无归纳偏置，需要很多数据才可以取得很好的效果。</p>
+<p>ref:</br>
+[1]. <a href="https://mp.weixin.qq.com/s/sNyh3SzhIdsk8feYfQlTSA"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/sNyh3SzhIdsk8feYfQlTSA<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Transformer | 如何理解attention中的Q,K,V？</title><link>https://jianye0428.github.io/posts/attentionaqkv/</link><pubDate>Sun, 20 Aug 2023 17:44:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/attentionaqkv/</guid><description><![CDATA[<h2 id="解答一">解答一</h2>
 <p>我们直接用torch实现一个SelfAttention来说一说：</p>
 <ol>
 <li>首先定义三个线性变换矩阵，query, key, value：</li>
@@ -3148,315 +3296,4 @@ D的<strong>string对象是一个指针大小的7倍</strong>（仍然假设使�
 <li>
 <p>「你不能希望库消除对手工并行控制的需要，而且你完全不能依赖于任何线程支持」</p>
 </li>
-</ul>]]></description></item><item><title>Diffusion 扩散模型（DDPM）</title><link>https://jianye0428.github.io/posts/ddpm/</link><pubDate>Mon, 31 Jul 2023 15:57:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ddpm/</guid><description><![CDATA[<h2 id="一引入">一、引入</h2>
-<p></p>
-<p>近年AIGC的爆火离不开人工智能在图像生成、文本生成以及多模态等领域的不断累积，其中<strong>生成模型</strong>的发展占据了很大功劳，如：<mark>生成对抗网络 GAN</mark> 及其一系列变体、<mark>变分自编码器 VAE</mark> 及其一系列变体、<mark>自回归模型 AR</mark>、<mark>流模型 flow</mark> ，以及近年大火的<strong>扩散模型 Diffusion Model</strong> 等。</p>
-<p>扩散模型的大火并非横空出世，早在2015年就有人提出了类似的想法，直到2020年才提出了经典的 <strong>Denoising Diffusion Probabilistic Models（DDPM）</strong>，像OpenAI、NovelAI、NVIDIA和Google成功的训练了大规模模型之后，它们吸引了很多人注意，后续有了很多基于扩散模型的变体，比如有：GLIDE、DALLE-2、Imagen和年底爆火的完全开源的稳定扩散模型（Stable Diffusion）。</p>
-<p>扩散模型与之前所有的生成方法有着本质的区别：</p>
-<p></p>
-<p>直观的说它是<mark>将图像生成过程（采样）分解为许多小的去噪步骤</mark>，其实 Diffusion 的含义本质上就是一个迭代过程，实线箭头用于扩散步骤中添加随机噪声，虚线箭头代表的是通过学习逆向扩散过程<mark>从噪声中重构所需的数据样本</mark>。<strong>引入噪声导致了信息的衰减，再通过噪声尝试还原原始数据，多次迭代最小化损失后，能够使模型在给定噪声输入的情况下学习生成新图像。</strong></p>
-<p>所以Diffusion模型和其它生成模型的区别是，它不是直接的<strong>图像-&gt;潜变量、潜变量-&gt;图像</strong>的一步到位，它是一步一步的<mark><font color=red><strong>逐渐分解、逐渐去噪</strong></font></mark>的过程。</p>
-<p>当然有关Diffusion的理解和变体有很多，但是扩散模型从本质上讲就是DDPM，所以本文主要对DDPM的原理进行讲解，并给出DDPM的扩散过程、去噪过程、训练损失的详细推导，对于掌握Diffusion算法原理只需要抓住以下四点即可：</p>
-<ul>
-<li>前向过程（扩散）；</li>
-<li>反向过程（去噪、采样）；</li>
-<li>如何训练；</li>
-<li>如何推断。</li>
-</ul>
-<h2 id="二扩散原理阐述">二、扩散原理阐述</h2>
-<p>扩散模型包括 <strong>前向扩散过程</strong> 和 <strong>反向去噪过程(采样)</strong>，前向阶段对图像逐步施加噪声，直至图像被破坏变成完全的高斯噪声，然后在反向阶段学习从高斯噪声还原为原始图像的过程。</p>
-<h3 id="21直观理解">2.1、直观理解</h3>
-<ul>
-<li>扩散模型的目的是什么？
-<ul>
-<li>学习从纯噪声生成图片的方法。</li>
-</ul>
-</li>
-<li>扩散模型是怎么做的？
-<ul>
-<li>训练一个UNet，接受一系列加了噪声的图片，学习预测所加的噪声。</li>
-</ul>
-</li>
-<li>前向过程在干什么？
-<ul>
-<li>逐步向真实图片添加噪声最终得到一个纯噪声；</li>
-<li>对于训练集中的每张图片，都能生成一系列的噪声程度不同的加噪图片；</li>
-<li>在训练时，这些 【不同程度的噪声图片 + 生成它们所用的噪声】 是实际的训练样本。</li>
-</ul>
-</li>
-<li>反向过程在干什么？
-<ul>
-<li>训练好模型后，采样、生成图片。</li>
-</ul>
-</li>
-</ul>
-<h3 id="22前向过程扩散">2.2、前向过程（扩散）</h3>
-<p></p>
-<p>前向过程在原始输入图像$x_0$上逐步添加随机噪声，这个噪声服从高斯分布$N(0, 1)$，每一步得到的图像$x_t$只和上一步的加噪结果$x_{t-1}$相关，逐步添加噪声至$T$步，可以得到趋向于纯粹噪声的图像，如下图所示：
-</p>
-<blockquote>
-<p>后面有详细的推导，公式比较多，这里先提前把主要的列一下方便阐述。</p>
-</blockquote>
-<p>对于将一张图片，从$x_{t-1}\rightarrow x_{t}$的逐步加噪破坏的公式为：</p>
-<p>$$x_t=\sqrt{\alpha_t}\left.x_{t-1}+\sqrt{1-\alpha_t}\right.\varepsilon_t\quad\quad\quad\quad\quad\quad(1)$$</p>
-<p>其中:</p>
-<ul>
-<li>$x_t$表示第$t$步的图像；</li>
-<li>$\varepsilon$ 是一个满足正态分布的随机噪声，$\varepsilon \sim N(0, 1)$；</li>
-<li>$\sqrt{\alpha_{t}}$ 是图片的权重，$\sqrt{1 - \alpha_{t}}$ 是噪声的权重；</li>
-</ul>
-<p>定义：</p>
-<ul>
-<li>$\alpha_t=1-\beta_t$</li>
-<li>$\overline{\alpha}=\prod_{s=1}^t\alpha_s$</li>
-</ul>
-<p>随着$t$的增加，<strong>噪声的占比会越来越大</strong>，所以添加的<strong>噪声强度也会越来越大</strong>，也就是说图片的权重要越来越小，噪声的权重要越来越大。因为随着扩散过程的增加，图像中噪声的占比也会越来越大，我们想要进一步破坏它的结构，就需要添加更多的噪声。</p>
-<blockquote>
-<p>换句话说，一开始图像比较清晰，这个时候添加的噪声小一些，随着图像的噪声越来越多，这个时候再加一点噪声的话，对原来的图像就没什么影响了，因为它本身就有好多噪声了，所以随着图像的噪声越来越多，后面的步骤就要加更多的噪声。</p>
-</blockquote>
-<p>实际训练过程中会比较大（DDPM原文中为1000），所以会有从$x_0$递推到$x_t$的公式：</p>
-<p>$$x_t=\sqrt{\overline{\alpha}_t}\left.x_0+\sqrt{1-\overline{\alpha}_t}\right.\varepsilon\quad\quad\quad\quad(2)$$</p>
-<p>其中：</p>
-<ul>
-<li>$\alpha_t$、$\beta_t$ 有一个固定的已知函数，是可以直接进行计算的；</li>
-<li>$\varepsilon$ 为随机产生的噪声；</li>
-</ul>
-<p>所以整个式子是已知的，式 $(1)$、$(2)$ 就可以描述前向过程了，$(1)$ 用于将一张图片的逐步破坏，$(2)$ 用于一步到位的破坏。</p>
-<h3 id="23反向过程去噪">2.3、反向过程（去噪）</h3>
-<p>反向过程则是不断去除噪声的过程，给定一个噪声图片 $x_T$，对它一步步的去噪还原，直至最终将原始图像 $x_0$ 给恢复出来，如下图所示：</p>
-<p></p>
-<p>去噪的过程，$x_t$、$\alpha_t$、$\beta_t$ 都是已知的，只有公式 $(2)$ 中的真实噪声是未知的，因为它是随机采样的。所以需要一个神经网络把 $\varepsilon$ 给学出来，也就是说训练一个由 $x_t$ 和 $t$ 估测噪声的模型:</p>
-<p>$$x_{t-1}=\frac{1}{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\varepsilon</em>\theta(x_t,t))$$</p>
-<p>其中 $\theta$ 就是模型的参数，通常使用UNet作为预估噪声的模型。</p>
-<h3 id="24模型训练">2.4、模型训练</h3>
-<p>所以说反向过程其实就是<strong>训练网络去学习分解过程每一步的噪声</strong>，当网络训练好之后，输入一张噪声图片，通过网络就能把加的噪声给求出来，噪声有了代入公式，就能把 $x_{t-1}$ 步的比较清晰的图给求出来了，一步步往前迭代就行了。</p>
-<p>采用L2距离刻画相近程度就可以，DDPM的关键是训练 $\varepsilon_{\theta}(x_t, t)$，目的就是使预测的噪声与真实用于破坏的噪声相近：</p>
-<p>$$Loss=\mid\mid\varepsilon-\varepsilon_\theta(x_t,t)\mid\mid^2=\mid\mid\varepsilon-\varepsilon_\theta(\sqrt{\overline{\alpha}_t}~x_0+\sqrt{1-\overline{\alpha}_t}~\varepsilon_t,t)\mid\mid^2$$</p>
-<p></p>
-<p>模型训练完后，只要给定随机高斯噪声，就可以生成一张从未见过的图像。</p>
-<p>UNet本文不做介绍，结构图为：</p>
-<p></p>
-<blockquote>
-<p>额外强调的是：Unet里有一个位置编码，是关于时间步的，每个时间步是有一个线性调度器的，每个时间添加的噪声的方差是不一样的，所以将时间步作为编码嵌入的话，可以将模型预测的噪声更加的准确。</p>
-</blockquote>
-<h2 id="三算法流程概述">三、算法流程概述</h2>
-<p></p>
-<p>再次总结，扩散模型两个步骤如下：</p>
-<ul>
-<li>一个固定的（预先定义好的）前向扩散过程 $q(x_t | x_{t-1})$：逐步向图片增加噪声直到最终得到一张纯粹的噪声图；</li>
-<li>一个学习得到的去噪过程 $p_{\theta}(x_{t-1} | x_t)$：训练一个神经网络去逐渐的从一张纯噪声中消除噪声，直到得到一张真正的图片。</li>
-</ul>
-<p></p>
-<p>算法1 为训练流程：</p>
-<ul>
-<li>line2：从数据中采样 $x_0$，$q(x_0)$ 的意思是给 $x_0$ 加上噪声；</li>
-<li>line3：随机选取 time step $t$；
-<ul>
-<li>真实训练过程中我们不可能一步步的从 $t$ 到 $T$，因为会很大，这就意味着每输入一张图片 $x$，就会产生张噪声图像，也就是一张图像的网络要训练 $T$ 个噪声样本，非常耗时。</li>
-<li>所以对 $T$ 进行了采样，$t$ 就是从 $T$ 里采集若干个的意思。</li>
-<li>举个例子：假设采集 $t$ 的分别为100、20、3，对应的 $x$ 为 $x_{100}$、$x_{20}$、$x_{3}$，对应噪声为 $\varepsilon_{100}$、$\varepsilon_{20}$、$\varepsilon_{3}$，对于的预测噪声为 $\hat{\varepsilon}<em>{100}$、$\hat{\varepsilon}</em>{20}$、$\hat{\varepsilon}_{3}$, 只需要将 $\varepsilon$ 和 $\hat{\varepsilon}$ 代入MSE公式即可（相减、平方、最小化）。</li>
-</ul>
-</li>
-<li>line 4：生成随机高斯噪声；</li>
-<li>line 5：调用模型估计 $\varepsilon_{\theta}(\sqrt{\overline{\alpha}_t}~x_0+\sqrt{1-\overline{\alpha}_t}~\varepsilon_t,t)$ ，计算真实噪声与估计噪声之间的MSE Loss，反向传播更新模型。
-<ul>
-<li>网络的作用是预测噪声，随着的增加，噪声强度会越来越大，因此预测的噪声是和迭代是直接相关的，所以要把作为参数送入到网络当中。</li>
-</ul>
-</li>
-<li>直到收敛。</li>
-</ul>
-<p>算法2 为采样流程：</p>
-<ul>
-<li>line 1：从高斯分布采样 $x_T$；</li>
-<li>line 2：按照 $T, &hellip;, 1$ 的顺序进行迭代；</li>
-<li>line 3：如果 $t = 1$ 令 $z = 0$；如果 $t &gt; 1$ ，从高斯分布中采样；</li>
-<li>line 4：利用公式求出均值和方差，进而求得 $x_{t-1}$；</li>
-<li>经过上述迭代，恢复 $x_0$。</li>
-</ul>
-<h2 id="四数学描述">四、数学描述</h2>
-<p>我们来推导如何从原始图像直接到第t时刻的图像 $(X_0 - X_t)$。</p>
-<p>首先回顾 2.1小节 的两个定义：</p>
-<ul>
-<li>$\alpha_t = 1 - \beta_{t}$, $\beta_t$ 要越大越好，论文中从0.0001到0.02;</li>
-<li>$\overline{\alpha}=\prod_{s=1}^t\alpha_s$累乘，下面会用到；</li>
-<li>$x_t=\sqrt{\alpha_t}x_{t-1}+\sqrt{1-\alpha_t}\varepsilon_t\text{,}\varepsilon_t\sim N(0,1)$ 每一时刻添加的噪声均独立；</li>
-</ul>
-<p>我们要求$x_t$时刻的图像，它需要一步步的加噪迭代，这样太慢了。因为每一步添加的噪声独立且服从正太分布，我们可以做如下推导：</p>
-<blockquote>
-<p>为了不混淆，只需要记住：<strong>下标越小，噪声越小</strong>，即 $x_{t-1}$ 的噪声是小于 $x_t$ 的。</p>
-</blockquote>
-<p>$$
-\begin{aligned}
-q(x_{t}\mid x_{t-1})&amp; =N(x_t;\sqrt{\alpha_t}x_{t-1},(1-\alpha_t)I)  \cr
-&amp;=\underbrace{\sqrt{\alpha_t}x_{t-1}}<em>{x</em>{t-2}\text{来表示}x_{t-1}}+\sqrt{1-\alpha_t}\varepsilon_t \cr
-&amp;=\sqrt{\alpha_t}\left(\sqrt{\alpha_{t-1}}\right.x_{t-2}+\sqrt{1-\alpha_{t-1}}\left.\varepsilon_{t-1}\right)+\sqrt{1-\alpha_t}\left.\varepsilon_t\right. \cr
-&amp;=\sqrt{\alpha_t\alpha_{t-1}}x_{t-2}+\underbrace{\sqrt{\alpha_t-\alpha_t\alpha_{t-1}}\varepsilon_{t-1}+\sqrt{1-\alpha_t}\varepsilon_t}<em>{\text{两个独立正太分布相加}} \cr
-&amp;=\sqrt{\alpha_t\alpha</em>{t-1}}\left.x_{t-2}+\sqrt{1-\alpha_t\alpha_{t-1}}\right.\varepsilon  \cr
-&amp;\text{&hellip;} \
-&amp;=\sqrt{\overline{\alpha}_t}\left.x_0+\sqrt{1-\overline{\alpha}_t}\right.\varepsilon  \cr
-&amp;\therefore q(x_t\mid x_0)=N(x_t;\sqrt{\overline{\alpha}_t}x_0,\sqrt{1-\overline{\alpha}_t}I)
-\end{aligned}
-$$</p>
-<blockquote>
-<p>上述用的就是重参数化技巧。</p>
-</blockquote>
-<p>方差参数 $\beta_{t}$ 可以固定为一个常数，也可以选择作为 $T$ 时间段的一个时间表。事实上，人们可以定义一个方差表，它可以是线性的、二次的、余弦的等等。最初的DDPM作者利用了一个从 $\beta_1 = 10^{-4}$ 到$\beta_T = 0.02$增加的线性时间表。Nichol等人2021年的研究表明，采用余弦时间表效果更好。</p>
-<p></p>
-<h3 id="42反向过程去噪">4.2、反向过程（去噪）</h3>
-<p>接下来是反向过程的推导：
-$$p(x_{t-1}\mid x_t)=N(x_{t-1};\underbrace{\mu_\theta(x_t,t)}<em>\text{要反预测这个},\overbrace{\Sigma</em>\theta(x_t,t)}^{fixed})$$</p>
-<p>给定$x_t$要预测 $x_{t-1}$，它是一个高斯分布，$x_t$和$t$的方差是固定的，论文作者使用原始的噪声调度器作为方差，也就是说噪声调度器一旦确立，方差的大小也就固定了。所以我们只需要预测这个均值就好了，下面给出具体的推导过程：</p>
-<p>我们先看整个损失函数，是个<strong>负对数似然</strong>：</p>
-<p>$$-\log{p_{\theta}(x_0)}$$</p>
-<p>希望神经网络的参数 $\theta$，可以使得生成 $x_0$的概率越大越好。</p>
-<p>但问题在于 $x_0$ 的概率不好计算，因为它依赖于 $x_0$ 之前的所有步长，从 $x_T$ 开始。作为一种解决方案，我们可以计算这个目标的<strong>变分下界</strong>，并得到一个更易于计算的公式：</p>
-<p>$$-log(p_\theta(x_0))\leq-log(p_\theta(x_0))+D_{KL}(q(x_{1:T}\mid x_0)\parallel p_\theta(x_{1:T}\mid x_0))$$</p>
-<p>其中：</p>
-<ul>
-<li>$x_{1:T}$ 指的是 $x_1, &hellip;, x_T$ 整个序列。</li>
-</ul>
-<p>现在依然无法计算，我们继续推导：</p>
-<p>$$
-\begin{gathered}
--log(p_\theta(x_0)) \leq-log(p_\theta(x_0))+D_{KL}(q(x_{1:T}\mid x_0)\mid\mid p_\theta(x_{1:T}\mid x_0)) \cr
-\leq-log(p_\theta(x_0))+log(\frac{q(x_{1:T}\mid x_0)}{p_\theta(x_{1:T}\mid x_0)})
-\end{gathered}
-$$</p>
-<p>我们将 KL divergence 改写后，再利用贝叶斯公式进行变形，即分母可以改写为：</p>
-<p>$$
-\begin{aligned}
-p_\theta(x_{1:T}\mid x_0) &amp;=\frac{p_\theta(x_0\mid x_{1:T})\mathrm{~}p_\theta(x_{1:T})}{p_\theta(x_0)} \cr
-&amp;=\frac{p_\theta(x_0,x_{1:T})}{p_\theta(x_0)} \cr
-&amp;=\frac{p_\theta(x_{0:T})}{p_\theta(x_0)}
-\end{aligned}
-$$</p>
-<p>将其代回原式：</p>
-<p>$$
-\begin{aligned}
-log(\frac{q(x_{1:T}\mid x_0)}{p_\theta(x_{1:T}\mid x_0)})&amp; =log(\frac{q(x_{1:T}\mid x_0)}{\frac{p_\theta(x_{0:T})}{p_\theta(x_0)}})  \cr
-&amp;=log(\frac{q(x_{1:T}\mid x_0)}{p_\theta(x_{0:T})})+log(p_\theta(x_0))
-\end{aligned}
-$$</p>
-<p>所以原式可简化为：</p>
-<p>$$-log(p_\theta(x_0))\leq\underbrace{log(\frac{q(x_{1:T}\mid x_0)}{p_\theta(x_{0:T})})}_{\text{变分下界,可以优化它}}$$</p>
-<ul>
-<li>
-<p>分子，就是前向过程，它是固定的，从 $x_0$ 到 $x_{1:T}$ 的采样，换句话说就是从我们数据中的一些图像开始；</p>
-</li>
-<li>
-<p>分母，$p_\theta(x_{0:T})=p(x_T)\prod_{t=1}^Tp_\theta(x_{t-1}\mid x_t)$；</p>
-<ul>
-<li>将 $p(x_T)$ 提出来，是因为 $p(x_T)$ 是指当前图像，它是不依赖于网络参数 $\theta$ 的.</li>
-</ul>
-<p>$$
-\begin{aligned}
-log(\frac{q(x_{1:T}\mid x_0)}{p_{\theta}(x_{0:T})})&amp; =log(\frac{\prod_{t=1}^Tq(x_t\mid x_{t-1})}{p(x_T)\prod_{t=1}^Tp_\theta(x_{t-1}\mid x_t)})  \cr
-&amp;=-log(p(x_T))+log(\frac{\prod_{t=1}^Tq(x_t\mid x_{t-1})}{\prod_{t=1}^Tp_\theta(x_{t-1}\mid x_t)}) \cr
-&amp;=-log(p(x_T))+\sum_{t=1}^Tlog(\frac{q(x_t\mid x_{t-1})}{p_\theta(x_{t-1}\mid x_t)}) \cr
-&amp;=-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_t\mid x_{t-1})}{p_\theta(x_{t-1}\mid x_t)})+\underbrace{log(\frac{q(x_1\mid x_0)}{p_\theta(x_0\mid x_1)})}_{t=1}
-\end{aligned}
-$$</p>
-</li>
-</ul>
-<p></p>
-<p>$q(x_t|x_{t-1})$ 根据贝叶斯公式可以变换如下：</p>
-<p>$$q(x_t\mid x_{t-1})=\frac{q(x_{t-1}\mid x_t)q(x_t)}{q(x_{t-1})}$$</p>
-<p>$q(x_{t-1}|x_{t})$具有比较高的方差，因为根据这张照片，我们无法确定它来自哪里，但是引入 $x_0$，我们就可以容易的预测出 $x_{t-1}$，</p>
-<p></p>
-<p>因此我们使用：</p>
-<p>$$\frac{q(x_{t-1}\mid x_t,x_0)\mathrm{~}q(x_t\mid x_0)}{q(x_{t-1}\mid x_0)}$$</p>
-<p>替换贝叶斯重写后的式子，我们得到：</p>
-<p>$$
-\begin{aligned}
-log(\frac{q(x_{1:T}\mid x_0)}{p_{\theta}(x_{0:T})})&amp; =-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)q(x_t\mid x_0)}{p_\theta(x_{t-1}\mid x_t)q(x_{t-1}\mid x_0)})+log(\frac{q(x_1\mid x_0)}{p_\theta(x_0\mid x_1)})  \cr
-&amp;=-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)}{p_\theta(x_{t-1}\mid x_t)})+\underbrace{\sum_{t=2}^Tlog(\frac{q(x_t\mid x_0)}{q(x_{t-1}\mid x_0)})}+log(\frac{q(x_1\mid x_0)}{p_\theta(x_0\mid x_1)})
-\end{aligned}
-$$</p>
-<p>上述标记的式子，也可以简化，我们假设 $t=4$：</p>
-<p>$$
-\begin{gathered}
-\begin{aligned}\sum_{t=2}^{T=4}log(\frac{q(x_t\mid x_0)}{q(x_{t-1}\mid x_0)})\end{aligned} =log(\frac{q(x_2\mid x_0)}{q(x_1\mid x_0)}\cdot\frac{q(x_3\mid x_0)}{q(x_2\mid x_0)}\cdot\frac{q(x_4\mid x_0)}{q(x_3\mid x_0)}) \
-=log(\frac{q(x_4\mid x_0)}{q(x_1\mid x_0)})
-\end{gathered}
-$$</p>
-<p>因此我们可以简化为：</p>
-<p>$$
-\begin{aligned}
-&amp;=-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)}{p_\theta(x_{t-1}\mid x_t)})+log(\frac{q(x_t\mid x_0)}{q(x_1\mid x_0)})+log(\frac{q(x_1\mid x_0)}{p_\theta(x_0\mid x_1)}) \cr
-&amp;=-log(p(x_T))+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)}{p_\theta(x_{t-1}\mid x_t)})+log(q(x_t\mid x_0))-log(p_\theta(x_0\mid x_1)) \cr
-&amp;=log(\frac{q(x_t\mid x_0)}{p(x_T)})+\sum_{t=2}^Tlog(\frac{q(x_{t-1}\mid x_t,x_0)}{p_\theta(x_{t-1}\mid x_t)})-log(p_\theta(x_0\mid x_1))\cr
-&amp;=\overbrace{\underbrace{D_{KL}(q(x_t\mid x_0)\mid\mid p(x_T))}<em>{q\text{只是个正向过程没有可学习参数}}}^{\text{可以忽略}} + \sum</em>{t=2}^TD_{KL}(q(x_{t-1}\mid x_t,x_0)\mid\mid p_\theta(x_{t-1}\mid x_t))-log(p_\theta(x_0\mid x_1))
-\end{aligned}
-$$</p>
-<ul>
-<li>第一项KL散度可以忽略，因为$q$只是个正向过程，没有可学习参数，换句话说就是它是固定的。</li>
-<li>第二项KL散度，左边和右边都是正太分布，分别服从 $N(x_{t-1};\tilde{\mu_t}(x_t,x_0),\tilde{\mathsf{\beta}<em>t}I)$ 、$N(x</em>{t-1};\mu_\theta(x_t,t),\text{β}I)$：</li>
-</ul>
-<p>$$
-\sum_{t=2}^TD_{KL}(\underbrace{q(x_{t-1}\mid x_t,x_0)}<em>{N(x</em>{t-1};\tilde{\mu}<em>t(x_t,x_0),\tilde{\mathsf{\beta}}<em>tI)}\mid\mid\overbrace{p</em>\theta(x</em>{t-1}\mid x_t)}^{N(x_{t-1};\mu_\theta(x_t,t),\mathsf{\beta}I})
-$$</p>
-<p>第一项的 $\tilde{\mu_{t}}(x_{t},x_{0})$、$\tilde{\beta_{t}}$ 就是我们要求的值，这里省略了这部分的推导，不影响算法的理解，</p>
-<p>$$
-\begin{gathered}\tilde{\mu}<em>t(x_t,x_0)=\frac{\sqrt{\alpha_t}(1-\overline{\alpha}</em>{t-1})}{1-\overline{\alpha}<em>t}x_t+\frac{\sqrt{\alpha}</em>{t-1}\beta_t}{1-\overline{\alpha}_t}x_0\\tilde{\mathsf{\beta}}<em>t=\frac{1-\overline{\alpha}</em>{t-1}}{1-\overline{\alpha}_t}\beta_t\end{gathered}
-$$</p>
-<blockquote>
-<p>凡是涉及到 $\alpha_t$ 的，就是学习调度器的，我们不需要关注它</p>
-</blockquote>
-<p>我们可以化简 $\tilde{\mu}_{t}$，我们知道 $x_t=\sqrt{\overline{\alpha}_t}x_0+\sqrt{1-\overline{\alpha}_t}\varepsilon $, 即:</p>
-<p>$$
-x_0=\frac1{\sqrt{\overline{\alpha}_t}}(x_t-\sqrt{1-\overline{\alpha}_t}\left.\varepsilon\right)
-$$</p>
-<p>还知道: $\overline{\alpha}=\prod_{s=1}^t\alpha_s$、$\alpha_t=1-\beta_t$:</p>
-<p>代入 $\tilde{\mu}_{t}$ 得到：</p>
-<p>$$
-\begin{aligned}
-\underbrace{\tilde{\mu}<em>t(x_t,x_0)}</em>{\text{不再依赖}x_0}&amp; =\frac{\sqrt{\alpha_{t}}(1-\overline{\alpha}<em>{t-1})}{1-\overline{\alpha}</em>{t}}x_{t}+\frac{\sqrt{\overline{\alpha}<em>{t-1}}\beta</em>{t}}{1-\overline{\alpha}<em>{t}}\frac{1}{\sqrt{\overline{\alpha}</em>{t}}}(x_{t}-\sqrt{1-\overline{\alpha}<em>{t}}\varepsilon)  \cr
-&amp;=\frac{\alpha_t(1-\overline{\alpha}</em>{t-1})x_t}{\sqrt{\alpha_t}(1-\overline{\alpha}_t)}+\frac{\beta_t}{\sqrt{\alpha_t}(1-\overline{\alpha}_t)}(x_t-\sqrt{1-\overline{\alpha}_t}\left.\varepsilon\right) \cr
-&amp;=\frac{\alpha_tx_t-\overline{\alpha}_tx_t+(1-\alpha_t)x_t-(1-\alpha_t)\sqrt{1-\overline{\alpha}_t}\varepsilon}{\sqrt{\alpha_t}(1-\overline{\alpha}_t)} \cr
-&amp;=\frac{x_t(1-\overline{\alpha}_t)-(1-\alpha_t)\sqrt{1-\overline{\alpha}_t}\varepsilon}{\sqrt{\alpha_t}(1-\overline{\alpha}_t)} \cr
-&amp;=\frac{x_t}{\sqrt{\alpha_t}}-\frac{(1-\alpha_t)\varepsilon}{\sqrt{\alpha_t}\sqrt{(1-\overline{\alpha}_t)}} \cr
-&amp;=\frac1{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}_t}}\left.\varepsilon\right)
-\end{aligned}
-$$</p>
-<p>代入之后我们发现它就不再依赖于 $x_0$ 了，它就是和 $x_t$ 的一个关系式，式中的 $\alpha_t$、$\beta_t$、$\varepsilon$都是已知的，最后的本质就是我们只是从中减去缩放的随机噪声。</p>
-<p>$$\therefore x_{t-1}=N(x_{t-1};\frac1{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\left.\varepsilon</em>\theta(x_t,t)\right),\Sigma_\theta(x_t,t))$$</p>
-<p>这样一来，DDPM的每一步推断可以总结为：</p>
-<ul>
-<li>每个时间步通过 $x_t$ 和 $t$ 来预测高斯噪声，图中用 $z$ 表示，根据上述公式计算得到均值 $\mu$；</li>
-<li>得到方差 $\Sigma_\theta(x_t,t)$</li>
-<li>入公式得到 $q(x_{t-1}\mid x_t)$ ，利用重参数化得到 $x_{t-1}$ 。</li>
-</ul>
-<p></p>
-<h3 id="43训练损">4.3、训练损</h3>
-<p>下面我们来看损失的推导，我们来回顾第二项：</p>
-<p></p>
-<p>我们需要减小KL散度，由于<mark>方差是固定的，我们无法优化，所以需要将它们的均值之差减小</mark>，原论文中使用的是简单的均方误差：</p>
-<p>将$\mu$表达式代入：</p>
-<p>$$
-\begin{aligned}
-L_{t}&amp; =\frac1{2\sigma_t^2}\mid|\tilde{\mu}<em>t(x_t,x_0)-\mu</em>\theta(x_t,t)||^2  \cr
-&amp;=\frac1{2\sigma_t^2}\mid\mid\frac1{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\left.\varepsilon\right)-\frac1{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\overline{\alpha}<em>t}}\left.\varepsilon</em>\theta(x_t,t)\right)\mid\mid^2 \cr
-&amp;=\frac{\beta_t^2}{2\sigma_t^2\alpha_t(1-\overline{\alpha}<em>t)}\underbrace{\mid\mid\varepsilon-\varepsilon</em>\theta(x_t,t)\mid\mid^2}</em>{mse} \cr
-&amp;-&gt;\mid\mid\varepsilon-\varepsilon_\theta(x_t,t)\mid\mid^2=\mid\mid\varepsilon-\varepsilon_\theta(\sqrt{\overline{\alpha}_t}\left.x_0+\sqrt{1-\overline{\alpha}_t}\left.\varepsilon_t,t\right)\mid\mid^2\right.
-\end{aligned}
-$$</p>
-<p>研究人员发现，忽略前面的系数项会变得更简单，采样质量也会得到提高，所以前面这个系数项我们直接忽略，它是和噪声调度器有关的，我们加噪的话也会使计算复杂。</p>
-<p>我们最小化 $\mid\mid\varepsilon-\varepsilon_\theta(x_t, t)\mid\mid^2$ 也就是<strong>最小化了KL散度</strong>，KL散度变小了也就是变分上限优化到最小，所以那个负对数似然也会变小。</p>
-<p>上面还剩了最后一项 $-log(p_\theta(x_0\mid x_1))$ ，这个作者决定去掉它，即在 $t=1$ 时，我们不添加噪声。也就是下面横线的地方，只有 $t&gt;1$ 的时候才服从高斯分布，如果 $t\leq {1}$，直接让 $z=0$，即噪声设置为0。</p>
-<p></p>
-<p>回顾上面整个推导过程：我们从<strong>负对数似然 -&gt; 优化下界 -&gt; 简化下界 -&gt; 预测噪声</strong>。</p>
-<h2 id="五torch复现">五、torch复现</h2>
-<p><a href="https://wangguisen.blog.csdn.net/article/details/128821008"target="_blank" rel="external nofollow noopener noreferrer">https://wangguisen.blog.csdn.net/article/details/128821008<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>ref:
-[1]. <a href="https://arxiv.org/abs/2006.11239"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2006.11239<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://kexue.fm/archives/9119"target="_blank" rel="external nofollow noopener noreferrer">https://kexue.fm/archives/9119<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[3]. <a href="https://zhuanlan.zhihu.com/p/576475987"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/576475987<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[4]. <a href="https://zhuanlan.zhihu.com/p/525106459"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/525106459<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[5]. <a href="https://www.bilibili.com/video/BV1b541197HX"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1b541197HX<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[6]. <a href="https://www.bilibili.com/video/BV1WD4y1E7X5"target="_blank" rel="external nofollow noopener noreferrer">https://www.bilibili.com/video/BV1WD4y1E7X5<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[7]. <a href="https://huggingface.co/blog/annotated-diffusion"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/annotated-diffusion<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[8]. <a href="https://www.datalearner.com/blog/1051664857725795"target="_blank" rel="external nofollow noopener noreferrer">https://www.datalearner.com/blog/1051664857725795<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[9]. <a href="https://lilianweng.github.io/posts/2021-07-11-diffusion-models"target="_blank" rel="external nofollow noopener noreferrer">https://lilianweng.github.io/posts/2021-07-11-diffusion-models<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[10]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486128&amp;idx=1&amp;sn=7ffef5d8c1bbf24565d0597eb5eaeb16&amp;chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486128&idx=1&sn=7ffef5d8c1bbf24565d0597eb5eaeb16&chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[11]. <a href="https://arxiv.org/pdf/2006.11239.pdf"target="_blank" rel="external nofollow noopener noreferrer">paper link<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item></channel></rss>
+</ul>]]></description></item></channel></rss>
