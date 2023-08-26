@@ -1,15 +1,6 @@
 # Effective STL [5] | 尽量使用区间成员函数代替它们的单元素兄弟
 
 
-<!-- {{< admonition quote "quote" false >}}
-note abstract info tip success question warning failure danger bug example quote
-{{< /admonition >}} -->
-
-<!--more-->
-
-ref:</br>
-[1]. https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&mid=2247490705&idx=1&sn=830797e69b61fe9693bf4aaea72df4b3&chksm=f9e42202ce93ab1437ad36c37e141b0794328495c0c584d808d0f4ad36251680dbfba257b060&cur_album_id=3009999611861975043&scene=189#wechat_redirect
-
 ## Example
 
 Q：给定两个vector，v1和v2，使v1的内容和v2的后半部分一样的最简单方式是什么？
@@ -201,6 +192,10 @@ void container::assign(InputIterator begin, InputIterator end);
 几乎所有目标区间被插入迭代器指定的copy的使用都可以用调用的区间成员函数的来代替 。
 
 尽量使用区间成员函数来代替单元素兄弟的三个可靠的论点。区间成员函数更容易写，它们更清楚地表达你的意图，而且它们提供了更高的性能。那是很难打败的三驾马车。
+
+
+ref:</br>
+[1]. https://mp.weixin.qq.com/s?__biz=MzUyMDc2MDMxNg==&mid=2247490705&idx=1&sn=830797e69b61fe9693bf4aaea72df4b3&chksm=f9e42202ce93ab1437ad36c37e141b0794328495c0c584d808d0f4ad36251680dbfba257b060&cur_album_id=3009999611861975043&scene=189#wechat_redirect
 
 ---
 
