@@ -1,55 +1,896 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 21 Aug 2023 07:59:36 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Transformer Q &amp; A</title><link>https://jianye0428.github.io/posts/transformerqanda/</link><pubDate>Mon, 21 Aug 2023 07:59:36 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerqanda/</guid><description><![CDATA[<h2 id="1-2017年深度学习领域的重大突破是什么">1. 2017年深度学习领域的重大突破是什么？</h2>
-<p>Transformer。有两方面的原因：</p>
-<p>1.1 一方面，Transformer是深度学习领域既MLP、RNN、CNN之后的第4大特征提取器（也被称为基础模型）。什么是特征提取器？大脑是人与外部世界（图像、文字、语音等）交互的方式；特征提取器是计算机为了模仿大脑，与外部世界（图像、文字、语音等）交互的方式，如图1所示。举例而言：Imagenet数据集中包含1000类图像，人们已经根据自己的经验把这一百万张图像分好1000类，每一类图像（如美洲豹）都有独特的特征。这时，神经网络（如ResNet18）也是想通过这种分类的方式，把每一类图像的特有特征尽可能提取或识别出来。分类不是最终目的，而是一种提取图像特征的手段，掩码补全图像也是一种提取特征的方式，图像块顺序打乱也是一种提取特征的方式。</p>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 26 Aug 2023 10:55:58 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective STL [34] | 注意哪个算法需要有序区间</title><link>https://jianye0428.github.io/posts/clause_34/</link><pubDate>Sat, 26 Aug 2023 10:55:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_34/</guid><description><![CDATA[<p>不是所有算法可以用于任意区间。比如，<strong>remove需要前向迭代器和可以通过这些迭代器赋值的能力</strong>。所以，它不能应用于由输入迭代器划分的区间，也不能是map或multimap，也不能是set和multiset的一些实现。</p>
+<p>同样，<strong>很多排序算法需要随机访问迭代器</strong>，所以不可能在一个list的元素上调用这些算法。</p>
+<p>最常见的就是一些算法<strong>需要有序值的区间</strong>。无论何时都应该坚持这个需求，因为冒犯它不仅会导致编译器诊断，而且会造成未定义的运行期行为。</p>
+<p>既可以和有序又可以和无序区间合作的算法很少，但<strong>当操作有序区间的时候它们最有用</strong>。</p>
+<h2 id="只能操作有序数据的算法的表">只能操作有序数据的算法的表</h2>
+<ul>
+<li>binary_search</li>
+<li>lower_bound</li>
+<li>upper_bound</li>
+<li>equal_range</li>
+<li>set_union</li>
+<li>set_intersection</li>
+<li>set_difference</li>
+<li>set_symmetric_difference</li>
+<li>merge</li>
+<li>inplace_merge</li>
+<li>includes</li>
+</ul>
+<h2 id="一般用于有序区间但不强制要求">一般用于有序区间，但不强制要求</h2>
+<ul>
+<li>unique</li>
+<li>unique_copy</li>
+</ul>
+<h2 id="binary_searchlower_boundupper_bound和equal_range"><code>binary_search</code>、<code>lower_bound</code>、<code>upper_bound</code>和<code>equal_range</code></h2>
+<p>搜索算法binary_search、lower_bound、upper_bound和equal_range需要<strong>有序区间</strong>，因为它们<strong>使用二分法查找来搜索</strong>值。像C库中的bsearch，这些算法保证了<strong>对数时间的查找</strong>，但作为交换的是，你必须给它们已经排过序的值。</p>
+<p>实际上，仅当传给它们的是随机访问迭代器时它们才能保证有那样的性能。</p>
+<p>如果给它们威力比较小的迭代器（比如双向迭代器），它们仍然进行对数次比较，但运行是线性时间的。那是因为，缺乏进行“<strong>迭代器算术（arithmetic）</strong>”的能力。它们在搜索的区间中需要花费线性时间来从一个地方移动到另一个地方。</p>
+<h2 id="unionset_intersectionset_difference和set_symmetric_difference"><code>union</code>、<code>set_intersection</code>、<code>set_difference</code>和<code>set_symmetric_difference</code></h2>
+<p>算法<code>set_union</code>、<code>set_intersection</code>、<code>set_difference</code>和<code>set_symmetric_difference</code>的四人组提供了线性时间设置它们名字所提出的操作的性能。</p>
+<p>为什么它们需要有序区间？因为如果不是的话，它们不能以线性时间完成它们的工作。</p>
+<p>你会发现，<strong>需要有序区间的算法为了比它们用于可能无序区间提供更好的性能而这么做</strong>。</p>
+<h2 id="merge和inplace_merge">merge和inplace_merge</h2>
+<p>merge和inplace_merge执行了有效的单遍合并排序算法：它们读取两个有序区间，然后产生一个包含了两个源区间所有元素的新有序区间。</p>
+<p>它们以线性时间执行，如果它们不知道源区间已经有序就不能完成。</p>
+<h2 id="includes">includes</h2>
+<p>includes 用来检测是否一个区间的所有对象也在另一个区间中。</p>
+<p>因为includes可能假设它的两个区间都已经有序，所以它保证了线性时间性能。没有那个保证，一般来说它会变慢。</p>
+<h2 id="unique和unique_copy">unique和unique_copy</h2>
+<p>unique和unique_copy甚至在无序区间上也提供了定义良好的行为。</p>
+<p>看看标准是怎么描述unique的行为的：</p>
+<blockquote>
+<p>从每个相等元素的连续组中去除第一个以外所有的元素。</p>
+</blockquote>
+<p>如果你要unique从一个区间去除所有重复值（也就是，让区间中所有值“唯一”），你必须先确保所有重复值一个接着一个。那是排序完成的东西之一。</p>
+<p>实际上，unique一般用于从区间中去除所有重复值，所以你几乎总是要确保你传递给unique（或unique_copy）的区间是有序的。Unix开发者会发现STL的unique和Unix的uniq之间有惊人的相似。</p>
+<p>顺便说说，unique从一个区间除去元素的方式和remove一样，也就是说它只是区分出不除去的元素。</p>
+<h2 id="排序">排序</h2>
+<p>因为STL允许你指定用于排序的比较函数，<strong>不同的区间可能以不同的方式排序</strong>。</p>
+<p>比如，给定两个int的区间，一个可能以默认方式排序（也就是升序），而另一个使用<code>greater&lt;int&gt;</code>排序，因此是降序。</p>
+<p>给定Widget的两个区间，一个可能以价格排序而另一个可能以年龄排序。因为有很多不同的方式来排序，所以保证给STL所使用的排序相关信息一致是很重要的。</p>
+<p><strong>如果你传一个区间给一个也带有比较函数的算法，确保你传递的比较函数行为和你用于排序这个区间的一样。</strong></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 建立一个vector，把一些数据放进去
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">sort</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">greater</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">());</span> <span class="c1">// 降序排列
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 使用这个vector（没有改变它）
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 在这个vector中搜索5
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">bool</span> <span class="n">is3Exists</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl"><span class="n">binary_search</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">3</span><span class="p">);</span> <span class="c1">// 假设它是升序排列！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>默认情况下，binary_search假设它搜索的区间是以“&lt;”排序（也就是，值是升序），但在本例中，这个vector是降序。当你在值的排列顺序和算法所期望的不同的区间上调用binary_search (或lower_bound等）会导致未定义的结果。</p>
+<h3 id="正确排序方式">正确排序方式</h3>
+<p>要让代码行为正确，你必须告诉binary_search要使用和sort同样的比较函数：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="n">is3Exists</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 搜索3
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">binary_search</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">3</span><span class="p">,</span> <span class="n">greater</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 比较函数把greater作为
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><font color=blue>所有需要有序区间的算法（也就是除了unique和unique_copy外本条款的所有算法）通过等价来判断两个值是否“相同”，就像标准关联容器（它们本身是有序的）。相反，unique和unique_copy判断两个对象“相同”的默认方式是通过相等</font>，但是你可以通过传给这些算法一个定义了“相同”的意义的判断式来覆盖这个默认情况。</p>
+<h2 id="总结">总结</h2>
+<p>11个需要有序区间的算法为了比其他可能性提供更好的性能而<font color=blue>需要传给它们有序区间，需要保证用于算法的比较函数和用于排序的一致</font>。</p>
+]]></description></item><item><title>Effective STL [33] | 提防在指针的容器上使用类似remove的算法</title><link>https://jianye0428.github.io/posts/clause_33/</link><pubDate>Sat, 26 Aug 2023 10:55:54 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_33/</guid><description><![CDATA[<h2 id="删除含有指针的容器元素">删除含有指针的容器元素</h2>
+<p>如果你在管理一堆动态分配的Widgets，每一个都可能通过检验，你把结果指针保存在一个vector中：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 这个Widget是否通过检验
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">bool</span> <span class="n">isCertified</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 建立一个vector然后用动态分配的Widget的指针填充
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">*&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当和v工作一段时间后，你决定除去未通过检验的Widget，因为你不再需要它们了。</p>
+<p><strong>尽量用算法调用代替显式循环和关于remove和erase之间关系的描述</strong>，你自然会想到转向erase-remove惯用法，虽然这次你使用了remove_if：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove_if</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 删除未通过检验的Widget指针
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">not1</span><span class="p">(</span><span class="n">mem_fun</span><span class="p">(</span><span class="o">&amp;</span><span class="n">Widget</span><span class="o">::</span><span class="n">isCertified</span><span class="p">))),</span>
+</span></span><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 关于mem_fun的信息参见条款41
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>条款7介绍过摧毁容器中的一个指针也不会删除指针指向的东西的讨论，所以这里当调用erase时，极可能你已经泄漏了资源。</p>
+<h2 id="资源泄露分析">资源泄露分析</h2>
+<p>我们假设在调用remove_if前，v看起来像这样：</p>
 <p></p>
-<p>1.2 另一方面，Transformer在深度学习领域扮演的角色：第3次和第4次热潮的基石，如下图2所示。</p>
+<p>在调用remove_if后，一般来说v看起来像这样（包含从remove_if返回的迭代器）：</p>
+<p></p>
+<p>资源泄漏的理由现在很明朗了。指向Widget B和C的“删除的”指针被vector中后面的“不删除的”指针覆盖。没有什么指向两个未通过检验的Widget，它们也没有被删除，它们的内存和其他资源泄漏了。</p>
+<p>一旦remove_if和erase返回后，情况看起来像这样：</p>
+<p></p>
+<p>现在你也很清楚为什么应该努力避免在动态分配的指针的容器上使用remove和类似算法（remove_if和unique）。</p>
+<p>在很多情况下，你会发现<strong>partition算法是合理的替代品</strong>。</p>
+<h2 id="正确删除做法">正确删除做法</h2>
+<p>如果你无法避免在那样的容器上使用remove，排除这个问题一种方法是在<strong>应用erase-remove惯用法之前先删除指针并设置它们为空，然后除去容器中的所有空指针</strong>：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">delAndNullifyUncertified</span><span class="p">(</span><span class="n">Widget</span> <span class="o">*&amp;</span><span class="n">pWidget</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 如果*pWidget是一个未通过检验Widget，
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">pWidget</span><span class="o">-&gt;</span><span class="n">isCertified</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 删除指针
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">delete</span> <span class="n">pWidget</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 并且设置它为空
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">pWidget</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 把所有指向未通过检验Widget的指针删除并且设置为空
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">for_each</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">delAndNullifyUncertified</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 从v中除去空指针0必须映射到一个指针，
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">v</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">               <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">Widget</span> <span class="o">*&gt;</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span>
+</span></span><span class="line"><span class="cl">        <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 让C++可以正确地推出remove的第三个参数的类型
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当然，这假设vector并不容纳任何你想保留的空指针。如果有的话，你可能必须自己写循环来按你的方式删除指针。</p>
+<h3 id="智能指针">智能指针</h3>
+<p>如果你把指针的容器替换成<strong>执行引用计数的智能指针的容器</strong>，删除相关的困难就不存在了，你可以直接使用erase-remove惯用法：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// RCSP = “引用计数智能指针”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">RCSP</span> <span class="p">{</span> <span class="p">...};</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// RCSPW = “RCSP to Widget”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">RCSP</span><span class="o">&lt;</span> <span class="n">Widget</span><span class="o">&gt;</span> <span class="n">RCSPW</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 建立一个vector，用动态分配Widget的智能指针填充它
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">RCSPW</span> <span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">RCSPW</span><span class="p">(</span><span class="k">new</span> <span class="n">Widget</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// erase未通过检验的Widget的指针
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">v</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove_if</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">  <span class="n">not1</span> <span class="p">(</span><span class="n">mem_fun</span><span class="p">(</span><span class="o">&amp;</span><span class="n">Widget</span><span class="o">::</span><span class="n">isCertified</span><span class="p">))),</span>
+</span></span><span class="line"><span class="cl">  <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 没有资源泄漏
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>要让这些工作，你的<strong>智能指针类型就必须可以（比如<code>RCSP&lt;Widget&gt;</code>）隐式转换为相应的内建指针类型（比如<code>Widget*</code>）</strong>。那是因为容器持有智能指针，但被调用的成员函数（比如Widget::isCertified）要的是内建指针。如果不存在隐式转换，你的编译器会抗议的。</p>
+]]></description></item><item><title>Effective STL [32] | 如果你真的想删除东西的话就在类似remove的算法后接上erase</title><link>https://jianye0428.github.io/posts/clause_32/</link><pubDate>Sat, 26 Aug 2023 10:55:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_32/</guid><description><![CDATA[<h2 id="remove实际作用">remove实际作用</h2>
+<h3 id="remove的声明">remove的声明</h3>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">ForwardIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="n">ForwardIterator</span> <span class="n">remove</span><span class="p">(</span><span class="n">ForwardIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">ForwardIterator</span> <span class="n">last</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>remove接收指定它操作的元素区间的一对迭代器。它不接收一个容器，所以<strong>remove不知道它作用于哪个容器</strong>。</p>
+<p>此外，remove也不可能发现容器，因为没有办法从一个迭代器获取对应于它的容器。</p>
+<h3 id="remove不做什么">remove不做什么</h3>
+<p>从容器中除去一个元素，唯一的方法是调用那个容器的一个成员函数，几乎都是erase的某个形式，(list有几个除去元素的成员函数不叫erase，但它们仍然是成员函数。)因为唯一从容器中除去一个元素的方法是在那个容器上调用一个成员函数，而且因为remove无法知道它正在操作的容器，所以remove不可能从一个容器中除去元素。</p>
+<p>从一个容器中remove元素不会改变容器中元素的个数：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 建立一个vector&lt;int&gt; 用1-10填充它(调用reserve的解释在条款14)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 打印10
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">v</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span> <span class="o">=</span> <span class="mi">99</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 设置3个元素为99
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">remove</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">99</span><span class="p">);</span> <span class="c1">// 删除所有等于99的元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="c1">// 仍然是10！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><font color=blue>remove并不“真的”删除东西，因为它做不到。</font></p>
+<p><strong>remove不知道它要从哪个容器删除东西，而没有容器，它就没有办法调用成员函数。</strong></p>
+<h3 id="remove-做了什么">remove 做了什么</h3>
+<p>remove移动指定区间中的元素直到所有“不删除的”元素在区间的开头(相对位置和原来它们的一样)。它返回一个指向最后一个的下一个“不删除的”元素的迭代器。返回值是区间的“新逻辑终点”。</p>
+<p>举个例子，这是v在调用remove前看起来的样子：</p>
+<p></p>
+<p>如果我们把remove的返回值存放在一个叫做newEnd的新迭代器中:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">newEnd</span><span class="p">(</span><span class="n">remove</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">99</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这是调用后v看起来的样子:</p>
+<p></p>
+<p>如果“不删除的”元素在v中的v.begin()和newEnd之间，“删除的”元素就必须在newEnd和v.end()之间。</p>
+<p><strong>remove并没有改变区间中元素的顺序，所以不会把所有“删除的”元素放在结尾，并安排所有“不删除的”值在开头。</strong></p>
+<p>如果你不想失去任何值，你可能应该调用partition或stable_partition而不是remove。</p>
+<h3 id="remove-实际操作流程">remove 实际操作流程</h3>
+<p>在内部，remove遍历这个区间，把要“删除的”值覆盖为后面要保留的值。这个覆盖通过对持有被覆盖的值的元素赋值来完成。</p>
+<ol>
+<li>remove检测v[0]，发现它的值不是要被删除的，然后移动到v[1]。同样的情况发生在v[1]和v[2]。</li>
+<li>发现v[3]应该被删除，所以它记录下v[3]的值应该被覆盖，然后它移动到v[4]。这类似记录v[3]是一个需要填充的“洞”。</li>
+<li>发现v[4]的值应该被保持，所以它把v[4]赋给v[3]，记录下v[4]应该被覆盖，然后移动到v[5]。继续类似的压缩，它用v[4]“填充”v[3]而且记录v[4]现在是一个洞。</li>
+<li>发现v[5]应该被删除，所以忽略并它移动到v[6]。仍然记得v[4]是一个等待填充的洞。</li>
+<li>发现v[6]是一个应该保留的值，所以把v[6]赋给v[4]。记得v[5]现在是下一个要被填充的洞，然后移到v[7]。</li>
+<li>在某种意义上类似上面的，检查v[7]、v[8]和v[9]。把v[7]赋给v[5]，v[8]赋给v[6]，忽略v[9]，因为v[9]的值是要被删除的。</li>
+<li>返回指定下一个要被覆盖的元素的迭代器，在这个例子中这个元素是v[7]。</li>
+</ol>
+<p></p>
+<p>事实上当remove在删除时覆盖的值是指针时，会有重要的影响。但是对于本条款，知道remove不从容器中除去任何元素因为它做不到就够了。</p>
+<h2 id="应该在remove后面接上erase">应该在remove后面接上erase</h2>
+<p>只有容器成员函数可以除去容器元素，而那是本条款的整个要点：<strong>如果你真的要删除东西的话，你应该在remove后面接上erase</strong>。</p>
+<p>要除去那些元素，你要做的所有事情就是用那两个迭代器调用erase的区间形式。因为remove本身很方便地返回了区间新逻辑终点的迭代器:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 正如从前
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">v</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">remove</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">99</span><span class="p">),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 真的删除所有等于99的元素，现在返回7
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>事实上，remove和erase是亲密联盟，这两个整合到list成员函数remove中。这是STL中唯一名叫remove又能从容器中除去元素的函数：</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">li</span><span class="p">;</span>  <span class="c1">// 建立一个list放一些值进去
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">li</span><span class="p">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">99</span><span class="p">);</span> <span class="c1">// 除去所有等于99的元素：真的删除元素，所以它的大小可能改变了
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>调用这个remove函数是一个STL中的矛盾。在关联容器中类似的函数叫erase，list的remove也可以叫做erase。但它没有，所以我们都必须习惯它。</p>
+<p><strong>对于list，调用remove成员函数比应用erase-remove惯用法更高效。</strong></p>
+<h2 id="类似remove的算法">类似remove的算法</h2>
+<p><code>remove_if</code>和<code>unique</code>。 remove和remove_if之间的相似性很直截了当。</p>
+<p>unique行为也像remove。它用来从一个区间删除东西(邻近的重复值)而不用访问持有区间元素的容器。如果你真的要从容器中删除元素，你也必须成对调用unique和erase，unique在list中也类似于remove。正像list::remove真的删除东西(而且比erase-remove惯用法高效得多)。</p>
+<p><code>list::unique</code>也真的删除邻近的重复值(也比erase-unique高效)。</p>
+]]></description></item><item><title>Effective STL [31] | 了解你的排序选择</title><link>https://jianye0428.github.io/posts/clause_31/</link><pubDate>Sat, 26 Aug 2023 10:19:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_31/</guid><description><![CDATA[<h2 id="稳定排序-vs-不稳定排序">稳定排序 VS 不稳定排序</h2>
+<p>有些排序算法是稳定的。在稳定排序中，如果一个区间中的两个元素有等价的值，它们的相对位置在排序后不改变。不稳定的算法没做这个保证。</p>
+<p>例如，在（未排序的）widgets vector中Widget A在Widget B之前，而且两者都有相同的质量等级，那么稳定排序算法会保证在这个vector排序后，Widget A仍然在Widget B之前。</p>
+<h2 id="partial_sort"><code>partial_sort</code></h2>
+<p>sort是个令人称赞的算法，如果不需要完全排序时，比如有一个存有Widget 的vector，你想选择20个质量最高的Widget发送给客户，20个之外的Widget可以保持无序，也就是你需要的是部分排序，这时就可以用partial_sort。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">qualityCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 返回lhs的质量是不是比rhs的质量好
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把最好的20个元素（按顺序）放在widgets的前端
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">partial_sort</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="mi">20</span><span class="p">,</span> <span class="n">widgets</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">qualityCompare</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 使用widgets...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>调用完partial_sort后，widgets的前20个元素是容器中最好的而且它们按顺序排列，质量最高的Widget是widgets[0]，第二高的是widgets[1]等。</p>
+<p>partial_sort是不稳定的。</p>
+<h2 id="nth_element">nth_element</h2>
+<p>如果你不关心哪个Widget给哪个客户，你需要的只是任意顺序的20个最好的Widget。STL中nth_element可以精确地完成了你需要的。</p>
+<p>nth_element排序一个区间，在n位置（你指定的）的元素是如果区间被完全排序后会出现在那儿的元素。</p>
+<p><strong>Example</strong></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">randy</span><span class="p">[</span><span class="n">n</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//默认求第m大的元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">nth_element</span><span class="p">(</span><span class="n">randy</span><span class="p">,</span> <span class="n">randy</span><span class="o">+</span><span class="n">m</span><span class="p">,</span> <span class="n">randy</span><span class="o">+</span><span class="n">n</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">//定义cmp可求第m小的元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">bool</span> <span class="nf">cmp</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl"> <span class="k">return</span> <span class="n">a</span><span class="o">&gt;</span><span class="n">b</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">nth_element</span><span class="p">(</span><span class="n">randy</span><span class="p">,</span> <span class="n">randy</span><span class="o">+</span><span class="n">m</span><span class="p">,</span> <span class="n">randy</span><span class="o">+</span><span class="n">n</span><span class="p">,</span> <span class="n">cmp</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>函数是将第 m 大的元素放在 arr 数组数组中适当位置，其他元素按照第 m 元素的大小划分。 在[ 0, n ]这个范围内，在第 m 个元素之前的元素都小于或等于第 m 个元素，而且第 m 个元素后面的每个元素都会比它大。</p>
+<p><code>nth_element()</code>函数仅将第 m 大/小的数在 randy 数组中排好了位置，并不返回值。输出 randy[m] 即是第 m 大/小的数。</p>
+<p><strong>排序Widget数组</strong></p>
+<p>使用nth_element来保证最好的20个Widget在widgets vector的前端：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">nth_element</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="mi">19</span><span class="p">,</span> <span class="n">widgets</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">qualityCompare</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把最好的20个元素放在widgets前端，但不用担心它们的顺序
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>调用nth_element本质上等价于调用partial_sort，两个算法都把20个质量最高的Widget移动到vector前端。</p>
+<p>它们结果的唯一区别是partial_sort排序了在位置1-20的元素，而nth_element不排序。</p>
+<p><strong>其他用法</strong></p>
+<p>除了能帮你找到区间顶部的n个元素，它也可以用于找到区间的中值或者找到在指定百分点的元素：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 迭代器的变量方便地表示widgets的起点和终点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">begin</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">end</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 这个迭代器指示了下面代码要找的中等质量等级的Widget的位置
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">goalPosition</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 兴趣的Widget会是有序的vector的中间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">goalPosition</span> <span class="o">=</span> <span class="n">begin</span> <span class="o">+</span> <span class="n">widgets</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 找到widgets中中等质量等级的值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">nth_element</span><span class="p">(</span><span class="n">begin</span><span class="p">,</span> <span class="n">goalPosition</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">qualityCompare</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// goalPosition现在指向中等质量等级的Widget
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 下面的代码能找到质量等级为75%的Widget
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 指出兴趣的Widget离开始有多远
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">size_type</span> <span class="n">goalOffset</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">*</span> <span class="n">widgets</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 找到质量值为75%的Widget
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">nth_element</span><span class="p">(</span><span class="n">begin</span><span class="p">,</span> <span class="n">begin</span> <span class="o">+</span> <span class="n">goalOffset</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">qualityCompare</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// begin + goalOffset现在指向质量等级为75%的Widget
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="元素有同样质量">元素有同样质量</h2>
+<p>假设有12个元素质量是1级（可能是最好的），15个元素质量是2级（第二好的）。在这种情况下，选择20个最好的Widget就是选择12个1级的和15个中的8个2级的。partial_sort和nth_element怎么判断15个中的哪些要放到最好的20个中？对于这个问题，当多个元素有等价的值时sort怎么判断元素的顺序？</p>
+<p>partial_sort和nth_element以任何它们喜欢的方式排序值等价的元素，而且你不能控制它们在这方面行为。</p>
+<p>nth_element、sort也没有提供稳定性。</p>
+<h2 id="stable_sort">stable_sort</h2>
+<p>stable_sort 是稳定排序，STL并不包含partial_sort和nth_element的稳定版本。</p>
+<p>当指定范围内包含多个相等的元素时，sort() 排序函数无法保证不改变它们的相对位置。那么，如果既要完成排序又要保证相等元素的相对位置，可以使用stable_sort()函数</p>
+<p>stable_sort() 函数完全可以看作是 sort() 函数在功能方面的升级版。stable_sort() 和 sort() 具有相同的使用场景，就连语法格式也是相同的（后续会讲），只不过前者在功能上除了可以实现排序，还可以保证不改变相等元素的相对位置。</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="c1">//对 [first, last) 区域内的元素做默认的升序排序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="nf">stable_sort</span> <span class="p">(</span> <span class="n">RandomAccessIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomAccessIterator</span> <span class="n">last</span> <span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//按照指定的 comp 排序规则，对 [first, last) 区域内的元素进行排序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="nf">stable_sort</span> <span class="p">(</span> <span class="n">RandomAccessIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomAccessIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Compare</span> <span class="n">comp</span> <span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;     // std::cout</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;algorithm&gt;    // std::stable_sort</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;       // std::vector</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="c1">//以普通函数的方式实现自定义排序规则
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">bool</span> <span class="nf">randy_comp</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//以函数对象的方式实现自定义排序规则
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">kim_comp</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">bool</span> <span class="k">operator</span><span class="p">()</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">jeff_num</span><span class="p">{</span><span class="mi">88</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">22</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">33</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">stable_sort</span><span class="p">(</span><span class="n">jeff_num</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span>  <span class="n">jeff_num</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="mi">4</span><span class="p">);</span>  <span class="c1">// 2 13 22 88 1 30 3 33
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="c1">//利用STL标准库提供greater&lt;T&gt;进行排序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">stable_sort</span><span class="p">(</span><span class="n">jeff_num</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">jeff_num</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">greater</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">());</span>  <span class="c1">// 88 22 13 2 1 30 3 33
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="c1">//通过自定义比较规则进行排序,这里也可以换成 kim_comp()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">stable_sort</span><span class="p">(</span><span class="n">jeff_num</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">jeff_num</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">randy_comp</span><span class="p">);</span>  <span class="c1">// 1 2 3 13 22 30 33 88
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">it</span> <span class="o">=</span> <span class="n">jeff_num</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">it</span> <span class="o">!=</span> <span class="n">jeff_num</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">it</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="o">*</span><span class="n">it</span> <span class="o">&lt;&lt;</span> <span class="sc">&#39; &#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="partition">partition</h2>
+<p>但是完全排序需要很多工作，而且对于这个任务做了很多不必要的工作。一个更好的策略是使用partition算法，它重排区间中的元素以使所有满足某个标准的元素都在区间的开头。</p>
+<p>比如，移动所有质量等级为2或更好的Widget到widgets前端：</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">hasAcceptableQuality</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="c1">// 返回w质量等级是否是2或更高;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 把所有满足hasAcceptableQuality的widgets移动到widgets前端，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 并且返回一个指向第一个不满足的widget的迭代器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">goodEnd</span> <span class="o">=</span> <span class="n">partition</span><span class="p">(</span><span class="n">widgets</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">widgets</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">hasAcceptableQuality</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>此调用完成后，从widgets.begin()到goodEnd的区间容纳了所有质量是1或2的Widget，从goodEnd到widgets.end()的区间包含了所有质量等级更低的Widget。</p>
+<p>如果在分割时保持同样质量等级的Widget的相对位置很重要，我们自然会用stable_partition来代替partition。</p>
+<p><strong>list排序</strong></p>
+<p>唯一我们可能会但不能使用<code>sort</code>、<code>stable_sort</code>、<code>partial_sort</code>或<code>nth_element</code>的容器是<code>list</code>，<code>list</code>通过提供<code>sort</code>成员函数做了一些补偿。（有趣的是，list::sort提供了<u>稳定排序</u>。）</p>
+<p>如果你想要对list中的对象进行partial_sort或nth_element，你必须间接完成：</p>
+<ol>
+<li>把元素拷贝到一个支持随机访问迭代器的容器中，然后对它应用需要的算法;</li>
+<li>建立一个list::iterator的容器，对那个容器使用算法，然后通过迭代器访问list元素;</li>
+<li>使用有序的迭代器容器的信息来迭代地把list的元素接合到你想让它们所处的位置。</li>
+</ol>
+<h2 id="总结">总结</h2>
+<p><strong>算法sort、stable_sort、partial_sort和nth_element需要随机访问迭代器，所以它们可能只能用于vector、string、deque和数组。</strong></p>
+<p>对标准关联容器排序元素没有意义，因为这样的容器使用它们的比较函数来在任何时候保持有序。</p>
+<p>partition和stable_partition与sort、stable_sort、partial_sort和nth_element不同，它们只需要双向迭代器。因此你可以在任何标准序列迭代器上使用partition和stable_partition。</p>
+<ol>
+<li>如果需要在vector、string、deque或数组上进行<strong>完全排序</strong>，你可以使用<code>sort</code>或<code>stable_sort</code>。</li>
+<li>如果你有一个vector、string、deque或数组，<strong>只需要排序前n个元素</strong>，应该用<code>partial_sort</code>。</li>
+<li>如果你有一个vector、string、deque或数组，<strong>需要鉴别出第n个元素或你需要鉴别出最前的n个元素，而不用知道它们的顺序</strong>，nth_element是你应该注意和调用的。</li>
+<li>如果你需要<strong>把标准序列容器的元素或数组分隔为满足和不满足某个标准</strong>，你大概就要找partition或stable_partition。</li>
+<li>如果你的数据是在list中，你可以直接使用partition和stable_partition，你可以使用list的sort来代替sort和stable_sort。如果你需要partial_sort或nth_element提供的效果，你就必须间接完成这个任务。</li>
+</ol>
+<p>你可以通过把数据放在标准关联容器中的方法以<strong>保持在任何时候东西都有序</strong>。你也可能会考虑标准非STL容器priority_queue，它也可以总是保持它的元素有序。</p>
+<p>一般来说，<font color=blue>做更多工作的算法比做得少的要花更长时间，而必须稳定排序的算法比忽略稳定性的算法要花更长时间</font>。</p>
+<p>本节讨论的算法需要更少资源（时间和空间）的算法排序：</p>
+<ol>
+<li>partition</li>
+<li>partial_sort</li>
+<li>stable_partition</li>
+<li>sort</li>
+<li>nth_element</li>
+<li>stable_sort</li>
+</ol>
+]]></description></item><item><title>Effective STL [6] | 仿函数、仿函数类、函数等</title><link>https://jianye0428.github.io/posts/partsix/</link><pubDate>Tue, 22 Aug 2023 19:22:49 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partsix/</guid><description><![CDATA[<h1 id="前言">前言</h1>
+<blockquote>
+<p>Effective-STL总结系列分为七部分，本文为第六部分，涉及原书第六章，内容范围Rule38~42。为方便书写，Rule38简写为R38。</p>
+</blockquote>
+<div class="details admonition Note">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Effective-STL系列List<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">本博客站点系列内容如下：</br>
+💡 <a href="https://jianye0428.github.io/posts/partone/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版)精读总结(一)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/parttwo/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版)精读总结(二)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/partthree/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版)精读总结(三)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/partfour/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版)精读总结(四)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></div>
+    </div>
+  </div>
+<h2 id="r38-遵循按值传递的原则来设计函数子类">R38: 遵循按值传递的原则来设计函数子类</h2>
+<p>函数指针是按值传递的。</p>
+<p>函数对象往往按值传递和返回。所以，编写的函数对象必须尽可能地小巧，否则复制的开销大；函数对象必须是<strong>单态</strong>的（不是多态），不得使用虚函数。</p>
+<p>如果你希望创建一个包含大量数据并且使用了多态性的函数子类，该怎么办呢？</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFCImpl</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">...</span>
+</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="o">~</span><span class="n">BPFCImpl</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="kt">void</span> <span class="nf">operator</span><span class="p">()</span> <span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">friend</span> <span class="k">class</span> <span class="nc">BPFC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">;</span>					<span class="c1">// 允许BPFC访问内部数据。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span><span class="o">:</span>								<span class="c1">// 新的BPFC类：短小、单态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">BPFCImpl</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">*</span><span class="n">pImpl</span><span class="p">;</span>					<span class="c1">// BPFC唯一的数据成员
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">void</span> <span class="k">operator</span><span class="p">()</span> <span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span>	<span class="c1">// 现在这是一个非虚函数，将调用转到BPFCImpl中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">pImpl</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">()(</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>那么你应该创建一个小巧、单态的类，其中包含一个指针，指向另一个实现类，并且将所有的数据和虚函数都放在实现类中（“Pimpl Idiom”）。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFCImpl</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">...</span>
+</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="o">~</span><span class="n">BPFCImpl</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="kt">void</span> <span class="nf">operator</span><span class="p">()</span> <span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">friend</span> <span class="k">class</span> <span class="nc">BPFC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">;</span>					<span class="c1">// 允许BPFC访问内部数据。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span><span class="o">:</span>								<span class="c1">// 新的BPFC类：短小、单态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">BPFCImpl</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">*</span><span class="n">pImpl</span><span class="p">;</span>					<span class="c1">// BPFC唯一的数据成员
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">void</span> <span class="k">operator</span><span class="p">()</span> <span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span>	<span class="c1">// 现在这是一个非虚函数，将调用转到BPFCImpl中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">pImpl</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">()(</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="r39-确保判别式是-纯函数">R39 确保判别式是 “纯函数”</h2>
+<p><strong>判别式（predicate）：一个返回值为 bool 类型的函数。</strong></p>
+<p><strong>纯函数：指返回值仅仅依赖于其参数的函数。</strong></p>
+<p>判别式类（predicate class）：一个函数子类，它的 operator() 函数是一个判别式（返回 true 或 false）。</p>
+<p>STL 中凡是可以接受一个判别式类对象的地方，也就可以接受一个判别式函数。</p>
+<p>判别式应该是一个纯函数，而纯函数应该没有状态。</p>
+<h2 id="r40-使仿函数类可适配">R40 使仿函数类可适配</h2>
+<p>对函数指针，要先应用<code>ptr_fun</code>之后再应用<code>not1</code>之后才可以工作。</p>
+<p>4 个标准的函数配接器（<code>not1</code>、<code>not2</code>、<code>bind1st</code>、<code>bind2nd</code>）都要求一些特殊的类型定义，提供这些必要类型定义（<code>argument_type</code>、<code>first_argument_type</code>、<code>second_argument_type</code>、<code>result_type</code>）的函数对象被称为可配接(可适配)（<code>adaptable</code>）的函数对象。</p>
+<p>提供这些类型定义最简单的方法：让函数子从一个基结构继承。</p>
+<ul>
+<li>对于 unary_function，必须指定函数子类 operator() 所带的参数类型，以及 operator() 返回类型。</li>
+<li>对于 binary_function，必须指定 3 个类型：operator() 第一个和第二个参数类型，以及 operator() 返回类型。</li>
+</ul>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MeetsThreshold</span><span class="o">:</span> <span class="k">public</span> <span class="n">std</span><span class="o">::</span><span class="n">unary_function</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">const</span> <span class="n">T</span> <span class="n">threshold</span><span class="p">;</span>						<span class="c1">// 包含状态信息，使用类封装。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">MeetsThreshold</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">threshold</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">WidgetNameCompare</span><span class="o">:</span>					<span class="c1">// STL中所有无状态函数子类一般都被定义成结构。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">public</span> <span class="n">std</span><span class="o">::</span><span class="n">binary_function</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">Widget</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，一般情况下，传递给 binary_function 或 unary_function 的非指针类型需要去掉 const 和应用（&amp;）部分。</p>
+<h2 id="r41-理解-ptr_funmem_fun-和-mem_fun_ref-的来由">R41 理解 ptr_fun、mem_fun 和 mem_fun_ref 的来由</h2>
+<p>STL语法惯例：函数或者函数对象被调用时，总是使用非成员函数的语法形式。</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">for_each</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">test</span><span class="p">);</span>					<span class="c1">// 调用1：f(x)，f为非成员函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">for_each</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Widget</span><span class="o">::</span><span class="n">test</span><span class="p">);</span>			<span class="c1">// 调用2：x.f()，f为成员函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>														<span class="c1">// x是一个对象或对象的引用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="n">Widget</span> <span class="o">*&gt;</span> <span class="n">lpw</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">for_each</span><span class="p">(</span><span class="n">lpw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">lpw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Widgettest</span><span class="p">);</span>			<span class="c1">// 调用3：p-&gt;f()，f为成员函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>														<span class="c1">// p是一个指向对象x的指针。
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>mem_fun、mem_fun_t：mem_fun 将语法 3 调整为语法 1。</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">R</span><span class="p">,</span> <span class="k">typename</span> <span class="n">C</span><span class="o">&gt;</span>		<span class="c1">//该mem_fun声明针对不带参数的非const成员函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">mem_fun_t</span><span class="o">&lt;</span><span class="n">R</span><span class="p">,</span><span class="n">C</span><span class="o">&gt;</span>							<span class="c1">//C是类，R是所指向的成员函数返回的类型。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">mem_fun</span><span class="p">(</span><span class="n">R</span><span class="p">(</span><span class="n">C</span><span class="o">::*</span><span class="n">pmf</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>mem_fun 带一个指向某个成员函数的指针参数 pmf，并且返回一个 mem_fun_t 类型的对象。</p>
+<p>mem_fun_t 是一个函数子类，它拥有该成员函数的指针，并提供了 operator() 函数，在 operator() 中调用了通过参数传递进来的对象上的该成员函数。</p>
+<p>类似地，mem_fun_ref 将语法 2 调整为语法 1。</p>
+<p><strong>总结:</strong></p>
+<ul>
+<li>std::ptr_fun：将函数指针转换为函数对象。</li>
+<li>std::mem_fun：将成员函数转换为函数对象(指针版本)。</li>
+<li>std::mem_fun_ref：将成员函数转换为函数对象(引用版本)。</li>
+</ul>
+<h2 id="r42">R42</h2>
+<p>Ref:</p>
+<p>[1]. <a href="https://www.cnblogs.com/Sherry4869/p/15162253.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/Sherry4869/p/15162253.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[2]. <a href="https://blog.csdn.net/zhuikefeng/article/details/108164117#t35"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhuikefeng/article/details/108164117#t35<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[3]. <a href="https://zhuanlan.zhihu.com/p/458156007"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/458156007<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Transformer Q &amp; A</title><link>https://jianye0428.github.io/posts/transformerqanda/</link><pubDate>Mon, 21 Aug 2023 07:59:36 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerqanda/</guid><description><![CDATA[<h2 id="1-2017年深度学习领域的重大突破是什么">1. 2017年深度学习领域的重大突破是什么？</h2>
+<p>Transformer。有两方面的原因:</p>
+<p>1.1 一方面，Transformer是深度学习领域继MLP、RNN、CNN之后的第4大特征提取器(也被称为基础模型)。</br>
+<strong>什么是特征提取器？</strong></br>
+特征提取器是计算机模仿大脑，与外部世界(图像、文字、语音等)交互的方式，如图1所示。举例而言: Imagenet数据集中包含1000类图像，人们已经根据自己的经验把这一百万张图像分好1000类，每一类图像(如美洲豹)都有独特的特征。这时，神经网络(如ResNet18)也是想通过这种分类的方式，把每一类图像的特征尽可能提取或识别出来。分类不是最终目的，而是一种提取图像特征的手段，掩码补全图像也是一种提取特征的方式，图像块顺序打乱也是一种提取特征的方式。</p>
+<p></p>
+<p>1.2 另一方面，Transformer在深度学习领域扮演的角色: 第3次和第4次热潮的基石，如下图2所示。</p>
 <p></p>
 <h2 id="2-transformer的提出背景是什么">2. Transformer的提出背景是什么？</h2>
-<p><strong>2.1 在领域发展背景层面</strong>：当时时处2017年，深度学习在计算机视觉领域火了已经几年。从Alexnet、VGG、GoogleNet、ResNet、DenseNet；从图像分类、目标检测再到语义分割；但在自然语言处理领域并没有引起很大反响。</p>
-<p><strong>2.2 技术背景层面</strong>： </br>
-（1）当时主流的序列转录任务（如机器翻译）的解决方案如下图3所示，在Sequence to Sequence架构下（Encoder- Decoder的一种），RNN来提取特征，Attention机制将Encoder提取到的特征高效传递给Decoder。
-（2）这种做法有两个不足之处，一方面是在提取特征时的RNN天生从前向后时序传递的结构决定了其无法并行运算，其次是当序列长度过长时，最前面序列的信息有可能被遗忘掉。因此可以看到，在这个框架下，RNN是相对薄弱急需改进的地方。</p>
+<p><strong>2.1 在领域发展背景层面</strong>: 当时时处2017年，深度学习在计算机视觉领域已经火了几年。从Alexnet、VGG、GoogleNet、ResNet、DenseNet;从图像分类、目标检测再到语义分割;但在自然语言处理领域并没有引起很大反响。</p>
+<p><strong>2.2 技术背景层面</strong>:
+(1)当时主流的序列转录任务(如机器翻译)的解决方案如下图3所示，在Sequence to Sequence架构下(Encoder-Decoder的一种)，RNN来提取特征，Attention机制将Encoder提取到的特征高效传递给Decoder。
+(2)这种做法有两个不足之处，一方面是在提取特征时的RNN天生<strong>从前向后时序传递</strong>的结构决定了其无法并行运算，其次是当序列长度过长时，最前面序列的信息有可能被遗忘掉。因此可以看到，在这个框架下，RNN是相对薄弱急需改进的地方。</p>
 <p></p>
 <h2 id="3-transformer到底是什么">3. Transformer到底是什么？</h2>
-<p>3.1 Transformer是一种由Encoder和Decoder组成的架构。那么什么是架构呢？最简单的架构就是A+B+C。</p>
+<p>3.1 Transformer是一种由Encoder和Decoder组成的架构。那么什么是架构呢？最简单的架构就是A + B + C。</p>
 <p>3.2 Transformer也可以理解为一个函数，输入是“我爱学习”，输出是“I love study”。</p>
 <p>3.3 如果把Transformer的架构进行分拆，如图4所示。</p>
 <p></p>
 <h2 id="4-什么是transformer-encoder">4. 什么是Transformer Encoder？</h2>
-<p>4.1 从功能角度，Transformer Encoder的核心作用是<strong>提取特征</strong>，也有使用Transformer Decoder来提取特征。例如，一个人学习跳舞，Encoder是看别人是如何跳舞的，Decoder是将学习到的经验和记忆，展现出来</p>
-<p>4.2 从结构角度，如图5所示，Transformer Encoder = Embedding + Positional Embedding + N*（子Encoder block1 + 子Encoder block2）；</p>
-<p>子Encoder block1 = Multi head attention + ADD + Norm；</p>
-<p>子Encoder block2 = Feed Forward + ADD + Norm；</p>
-<p>4.3 从输入输出角度，N个Transformer Encoder block中的第一个Encoder block的输入为一组向量 X = （Embedding + Positional Embedding），向量维度通常为512<em>512，其他N个TransformerEncoder block的输入为上一个 Transformer Encoder block的输出，输出向量的维度也为512</em>512（输入输出大小相同）。</p>
-<p>4.4 为什么是512*512？前者是指token的个数，如“我爱学习”是4个token，这里设置为512是为了囊括不同的序列长度，不够时padding。后者是指每一个token生成的向量维度，也就是每一个token使用一个序列长度为512的向量表示。人们常说，Transformer不能超过512，否则硬件很难支撑；其实512是指前者，也就是token的个数，因为每一个token要做self attention操作；但是后者的512不宜过大，否则计算起来也很慢。</p>
+<p>4.1 从<font color=red>功能角度</font>，Transformer Encoder的核心作用是<strong>提取特征</strong>，也有使用Transformer Decoder来提取特征。例如，一个人学习跳舞，Encoder是看别人是如何跳舞的，Decoder是将学习到的经验和记忆(key和value的匹配程度)，展现出来</p>
+<p>4.2 从<font color=red>结构角度</font>，如图5所示，Transformer Encoder = Embedding + Positional Embedding + N * (子Encoder block1 + 子Encoder block2);</p>
+<p>子Encoder block1 = Multi head attention + ADD + Norm;</p>
+<p>子Encoder block2 = Feed Forward + ADD + Norm;</p>
+<p>4.3 从<font color=red>输入输出角度</font>，N个Transformer Encoder block中的第一个Encoder block的输入为一组向量 X = (Embedding + Positional Embedding)，向量维度通常为512*512，其他N个TransformerEncoder block的输入为上一个 Transformer Encoder block的输出，输出向量的维度也为<code>512*512</code>(输入输出大小相同)。</p>
+<p>4.4 为什么是<code>512*512</code>？<font color=red>前者是指token的个数</font>，如“我爱学习”是4个token，这里设置为512是为了囊括不同的序列长度，不够时padding。<font color=red>后者是指每一个token生成的向量维度</font>，也就是每一个token使用一个序列长度为512的向量表示。人们常说，Transformer不能超过512，否则硬件很难支撑;其实512是指前者，也就是token的个数，因为每一个token要做self attention操作;但是后者的512不宜过大，否则计算起来也很慢。</p>
 <p></p>
 <h2 id="5-什么是transformer-decoder">5. 什么是Transformer Decoder？</h2>
-<p>5.1 从功能角度，相比于Transformer Encoder，Transformer Decoder更擅长做生成式任务，尤其对于自然语言处理问题。</p>
-<p>5.2 从结构角度，如图6所示，Transformer Decoder = Embedding + Positional Embedding + N*（子Decoder block1 + 子Decoder block2 + 子Decoder block3）+ Linear + Softmax；</p>
-<p>子Decoder block1 = Mask Multi head attention + ADD + Norm；</p>
-<p>子Decoder block2 = Multi head attention + ADD + Norm；</p>
-<p>子Decoder block3 = Feed Forward + ADD + Norm；</p>
+<p>5.1 从功能角度，相比于Transformer Encoder，Transformer Decoder更擅长做<strong>生成式任务</strong>，尤其对于自然语言处理问题。</p>
+<p>5.2 从结构角度，如图6所示，Transformer Decoder = Embedding + Positional Embedding + N*(子Decoder block1 + 子Decoder block2 + 子Decoder block3)+ Linear + Softmax;</p>
+<p>子Decoder block1 = Mask Multi head attention + ADD + Norm;</p>
+<p>子Decoder block2 = Multi head attention + ADD + Norm;</p>
+<p>子Decoder block3 = Feed Forward + ADD + Norm;</p>
 <p></p>
-<p>5.3 从（Embedding+Positional Embedding）（N个Decoder block）（Linear + softmax) 这三个每一个单独作用角度：</p>
-<p>Embedding + Positional Embedding ：以机器翻译为例，输入“Machine Learning”，输出“机器学习”；这里的Embedding是把“机器学习”也转化成向量的形式。</p>
-<p>N个Decoder block：特征处理和传递过程。</p>
-<p>Linear + softmax：softmax是预测下一个词出现的概率，如图7所示，前面的Linear层类似于分类网络（ResNet18）最后分类层前接的MLP层。</p>
+<p>5.3 从(Embedding+Positional Embedding)(N个Decoder block)(Linear + softmax) 这三个每一个单独作用角度:</p>
+<p>Embedding + Positional Embedding: 以机器翻译为例，输入“Machine Learning”，输出“机器学习”; 这里的Embedding是把“机器学习”也转化成向量的形式。</p>
+<p>N个Decoder block: 特征处理和传递过程。</p>
+<p>Linear + softmax: softmax是预测下一个词出现的概率，如图7所示，前面的Linear层类似于分类网络(ResNet18)最后分类层前接的MLP层。</p>
 <p></p>
 <p>5.4 Transformer Decoder的输入、输出是什么？在Train和Test时是不同的。</p>
-<p>在Train阶段，如图8所示。这时是知道label的，decoder的第一个输入是begin字符，输出第一个向量与label中第一个字符使用cross entropy loss。Decoder的第二个输入是第一个向量的label，Decoder的第N个输入对应的输出是End字符，到此结束。这里也可以看到，在Train阶段是可以进行并行训练的。</p>
+<p>在Train阶段，如图8所示。这时是知道label的，decoder的第一个输入是begin字符，输出第一个向量与label中第一个字符使用cross entropy loss。Decoder的第二个输入是第一个向量的label，Decoder的第N个输入对应的输出是End字符，到此结束。这里也可以看到，在Train阶段是可以进行<strong>并行训练</strong>的。</p>
 <p></p>
-<p>在Test阶段，下一个时刻的输入时是前一个时刻的输出，如图9所示。因此，Train和Test时候，Decoder的输入会出现Mismatch，在Test时候确实有可能会出现一步错，步步错的情况。有两种解决方案：一种是train时偶尔给一些错误，另一种是Scheduled sampling。</p>
+<p>在Test阶段，下一个时刻的输入是前一个时刻的输出，如图9所示。因此，Train和Test时候，Decoder的输入会出现Mismatch，在Test时候确实有可能会出现一步错，步步错的情况。有两种解决方案: 一种是train时偶尔给一些错误，另一种是Scheduled sampling。</p>
 <p></p>
-<p>5.5 Transformer Decoder block内部的输出和输出是什么？</p>
-<p>前面提到的是在整体train和test阶段，Decoder的输出和输出，那么Transformer Decoder内部的Transformer Decoder block，如图10所示，的输入输出又是什么呢？</p>
+<p>5.5 Transformer Decoder block内部的输入和输出是什么？</p>
+<p>前面提到的是在整体train和test阶段，Decoder的输入和输出，那么Transformer Decoder内部的Transformer Decoder block，如图10所示，的输入输出又是什么呢？</p>
 <p></p>
-<p>对于N=6中的第1次循环（N=1时）：子Decoder block1 的输入是 embedding +Positional Embedding，子Decoder block2 的输入的Q来自子Decoder block1的输出，KV来自Transformer Encoder最后一层的输出。</p>
-<p>对于N=6的第2次循环：子Decoder block1的输入是N=1时，子Decoder block3的输出，KV同样来自Transformer Encoder的最后一层的输出。</p>
-<p>总的来说，可以看到，无论在Train还是Test时，Transformer Decoder的输入不仅来自（ground truth或者上一个时刻Decoder的输出），还来自Transformer Encoder的最后一层。</p>
-<p>训练时：第i个decoder的输入 = encoder输出 + ground truth embedding。</p>
-<p>预测时：第i个decoder的输入 = encoder输出 + 第(i-1)个decoder输出.</p>
+<p>对于N=6中的第1次循环(N=1时): 子Decoder block1 的输入是 embedding +Positional Embedding，子Decoder block2 的输入的Q来自子Decoder block1的输出，KV来自Transformer Encoder最后一层的输出。</p>
+<p>对于N=6的第2次循环: 子Decoder block1的输入是N=1时，子Decoder block3的输出，KV同样来自Transformer Encoder的最后一层的输出。</p>
+<p>总的来说，可以看到，无论在Train还是Test时，Transformer Decoder的输入不仅来自(ground truth或者上一个时刻Decoder的输出)，还来自Transformer Encoder的最后一层。</p>
+<p>训练时: 第i个decoder的输入 = encoder输出 + ground truth embedding。</p>
+<p>预测时: 第i个decoder的输入 = encoder输出 + 第(i-1)个decoder输出.</p>
 <h2 id="6-transformer-encoder和transformer-decoder有哪些不同">6. Transformer Encoder和Transformer Decoder有哪些不同？</h2>
-<p>6.1 作用上，Transformer Encoder常用来提取特征，Transformer Decoder常用于生成式任务。Transformer Encoder和Transformer Decoder是两条不同的技术路线，Bert采用的前者，GPT系列模型采用的是后者。</p>
+<p>6.1 作用上，Transformer Encoder常用来<strong>提取特征</strong>，Transformer Decoder常用于<strong>生成式任务</strong>。Transformer Encoder和Transformer Decoder是两条不同的技术路线，<strong>Bert采用的前者，GPT系列模型采用的是后者</strong>。</p>
 <p>6.2 结构上，Transformer Decoder block包括了3个子Decoder block，而Transformer Encoder block 包括2个子Encoder block，且Transformer Decoder中使用了Mask multi-head Attention。</p>
 <p>6.3 从二者的输入输出角度，N个Transformer Encoder运算完成之后，它的输出才正式输入进Transformer Decoder，作为QKV中的K和V，给Transformer Decoder使用。那么TransformerEncoder最后层的输出是如何送给Decoder呢？如图11所示。</p>
 <p></p>
@@ -57,32 +898,40 @@
 <p></p>
 <h2 id="7-什么是embedding">7. 什么是Embedding？</h2>
 <p>7.1 Embedding在Transformer架构中的位置如图13所示。</p>
-<p>7.2 提出背景： 计算机无法直接处理一个单词或者一个汉字，需要把一个token转化成计算机可以识别的向量，这也就是embedding过程。</p>
-<p>7.3 实现方式： 最简单的embedding操作就是one hot vector，但one hot vector有一个弊端就是没有考虑词语前后之间的关系，后来也就产生了WordEmbedding，如图13。</p>
+<p>7.2 提出背景:  计算机无法直接处理一个单词或者一个汉字，需要把一个token转化成计算机可以识别的向量，这也就是embedding过程。</p>
+<p>7.3 实现方式:  最简单的embedding操作就是one hot vector，但one hot vector有一个弊端就是没有考虑词语前后之间的关系，后来也就产生了WordEmbedding，如图13。</p>
+<div class="details admonition Note open">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">wordembedding将单词token向量化，并且考虑的单词与单词之间的相关性。</div>
+    </div>
+  </div>
 <p></p>
 <h2 id="8-什么是positional-embedding">8. 什么是Positional Embedding？</h2>
 <p>8.1 Positional Embedding在Transformer架构中的位置如图14所示。</p>
-<p>8.2 提出背景： RNN作为特征提取器，是自带词的前后顺序信息的；而Attention机制并没有考虑先后顺序信息，但前后顺序信息对语义影响很大，因此需要通过Positional Embedding这种方式把前后位置信息加在输入的Embedding上。</p>
-<p>8.3 实现方式： 传统位置编码和神经网络自动训练得到。</p>
+<p>8.2 提出背景:  RNN作为特征提取器，是自带词的前后顺序信息的;而Attention机制并没有考虑先后顺序信息，但前后顺序信息对语义影响很大，因此需要通过Positional Embedding这种方式把前后位置信息加在输入的Embedding上。</p>
+<p>8.3 实现方式:  传统位置编码和神经网络自动训练得到。</p>
 <p></p>
 <h2 id="9-什么是attention">9. 什么是Attention？</h2>
 <p>9.1 介绍Transformer，为什么要介绍Attention呢？因为在Transformer中最多的multi head attention和Mask multi head attention来自Scaled dot product attention，而scaled dot product attention来自self attention，而self attention是attention的一种，因此首先需要了解Attention，如图15所示。</p>
 <p></p>
 <p>9.2 Attention到底是什么意思呢？</p>
-<p>对于图像而言，attention就是人们看到图像中的核心关注的区域，是图像中的重点，如图16所示。对于序列而言，Attention机制本质上是为了找到输入中不同token之间的相互关系，通过权重矩阵来自发地找到词与词之间的关系。</p>
+<p>对于图像而言，attention就是人们看到图像中的核心关注的区域，是图像中的重点，如图16所示。对于序列而言，Attention机制本质上是为了找到<strong>输入中不同token之间的相互关系</strong>，通过权重矩阵来自发地找到词与词之间的关系。</p>
 <p></p>
 <p>9.3 Attention是如何实现的呢？</p>
 <p>是通过QKV实现的。</p>
-<p>那么什么是QKV呢？Q是query，K是keys，V是values。如图17所示，举例而言，Q是大脑发出的信号，我口渴了；K是环境信息，眼睛看到的世界；V是对环境中不同的物品赋予不同的比重，水的比重加大。</p>
+<p>那么什么是QKV呢？Q是query，K是keys，V是values。如图17所示，举例而言，Q是大脑发出的信号，我口渴了;K是环境信息，眼睛看到的世界;V是对环境中不同的物品赋予不同的比重，水的比重加大。</p>
 <p>总之，Attention就是通过计算QK的相似度，与V相乘得到注意力数值。</p>
 <p>$$\text{Attention}(\mathrm{Query},\mathrm{Source})=\sum\text{Similarity}(\mathrm{Query},\mathrm{Key}<em>\mathrm{i})*\mathrm{Value}</em>\mathrm{i}$$</p>
 <p></p>
 <p>9.4 为什么必须要有QKV三者？</p>
 <p>为什么不是只有Q？因为Q1与Q2之间的关系权重，不止需要a12，也需要a21。你可能会问？我们让a12=a21不行吗？也可以尝试，但从原理上讲效果应该没有a12和a21效果好。</p>
-<p>为什么不是只有QK？求得的权重系数需要放到输入中，可以乘Q，也可以乘K，为什么要重新乘V呢？我觉得可能是多了一组可训练参数WV，使网络具有更强的学习能力。</p>
-<h2 id="10-什么是self-attention">10. 什么是Self attention？</h2>
+<p>为什么不是只有QK？求得的权重系数需要放到输入中，可以乘Q，也可以乘K，为什么要重新乘V呢？我觉得可能是多了一组可训练参数$W_V$，使网络具有更强的学习能力。</p>
+<h2 id="10-什么是self-attention">10. 什么是Self Attention？</h2>
 <p>10.1 介绍Transformer，为什么要介绍self Attention呢？因为在Transformer中最多的multi head attention和Mask multi head attention来自Scaled dot product attention，而scaled dot product attention来自self attention，如图15所示。</p>
-<p>10.2 什么是self attention呢？self attention和local attention、stride attention都是attention的一种；self attention是每一个Q与每一个K依次计算注意力系数，如图18所示，而像local attention是Q只与相邻的K计算注意力系数，stride attention是Q通过跳连的方式与K计算注意力系数。</p>
+<p>10.2 什么是Self Attention呢？self attention和local attention、stride attention都是attention的一种;self attention是每一个Q与每一个K依次计算注意力系数，如图18所示，而像local attention是Q只与相邻的K计算注意力系数，stride attention是Q通过跳连的方式与K计算注意力系数。</p>
 <p></p>
 <p>10.3 Self attention为什么可以用于处理像机器翻译这种序列数据?</p>
 <p>输入序列中的每一个位置的数据，可以关注其他位置的信息，由此通过Attention score来提取特征或者捕获输入序列每一个token之间的关系。</p>
@@ -92,17 +941,17 @@
 <p>11.1 self attention最常见的有两种，一种是dot product attention、另一种是additive attention，如图20所示，前者的计算效率更高。</p>
 <p></p>
 <p>11.2 什么是Scaled ?</p>
-<p>scaled的具体实现方式如图21所示，这一操作的目的是为了防止内积过大，从梯度角度考虑，避免靠近1，易训练；与batch normalization有一些相似的功能。</p>
+<p>scaled的具体实现方式如图21所示，这一操作的目的是为了防止内积过大，从梯度角度考虑，避免靠近1，易训练;与batch normalization有一些相似的功能。</p>
 <p>$$\text{Attention}(Q,K,V)=\text{softmax}(\frac{QK^T}{\sqrt{d_k}})V$$</p>
 <h2 id="12-什么是multi-head-attention">12. 什么是Multi head attention？</h2>
 <p>12.1 Multi head attention在Transformer架构中的位置如图15所示。</p>
-<p>12.2 提出背景：CNN具有多个channel，可以提取图像不同维度的特征信息，那么Self attention是否可以有类似操作，可以提取不同距离token的多个维度信息呢？</p>
+<p>12.2 提出背景: CNN具有多个channel，可以提取图像不同维度的特征信息，那么Self attention是否可以有类似操作，可以提取不同距离token的多个维度信息呢？</p>
 <p>12.3 什么是group 卷积？如图22所示，将输入的特征多个channel分成几个group单独做卷积，最后再进行con c操作。</p>
 <p></p>
 <p>12.4 Multi head attention的实现方式？与self attention根本不同是什么？</p>
 <p>如图23所示，以2个head的为例，将输入的Q、K、V分成两份，每一小份的Q与对应的K、V分别操作，最后计算得到的向量再进行conc操作，由此可以看出，Multi head attention与group卷积有着相似的实现方式。</p>
 <p></p>
-<p>12.5 如何从输入输出维度，角度来理解Multi head attention？如图24所示。</p>
+<p>12.5 如何从输入输出的维度来理解Multi head attention？如图24所示。</p>
 <p></p>
 <h2 id="13-什么是mask-multi-head-attention">13. 什么是Mask Multi head attention？</h2>
 <p>13.1 Mask Multi head attention在transformer架构中的位置如图15所示。</p>
@@ -114,37 +963,37 @@
 <p>Q1只跟K1计算，Q2只跟K1、K2计算，而对于K3、K4等，在softmax之前给一个非常大的负数，由此经过softmax之后变为0，其在矩阵上的计算原理实现如图26所示。</p>
 <p></p>
 <h2 id="14-什么是add">14. 什么是ADD？</h2>
-<p>14.1 Add就是残差连接，由2015年ResNet这篇文章发扬光大（目前引用量已超过16万），与Skip connection的区别在于需要大小维度全部相同。</p>
-<p>14.2 作为大道至简想法的极致，几乎每一个深度学习模型都会用到这个技术，可以防止网络退化，常用于解决多层网络难训练的问题。</p>
+<p>14.1 Add就是残差连接，由2015年ResNet这篇文章发扬光大(目前引用量已超过16万)，与Skip connection的区别在于需要大小维度全部相同。</p>
+<p>14.2 作为大道至简想法的极致，几乎每一个深度学习模型都会用到这个技术，可以<strong>防止网络退化</strong>，常用于解决多层网络难训练的问题。</p>
 <p></p>
 <h2 id="15-什么是norm">15. 什么是Norm？</h2>
 <p>15.1 Norm就是layer normalization。</p>
-<p>15.2 核心作用：为了训练更加稳定，和batch normalization有相同的作用，都是为了使输入的样本均值为零，方差为1。</p>
-<p>15.3 为什么不使用batch normalization，使用的是layer normalization呢？因为一个时序数据，句子输入长度有长有短，如果使用batch normalization，则很容易造成因样本长短不一造成“训练不稳定”。BN是对同一个batch内的所有数据的同一个特征数据进行操作；而LN是对同一个样本进行操作。</p>
+<p>15.2 核心作用: 为了训练更加稳定，和batch normalization有相同的作用，都是为了使输入的样本均值为零，方差为1。</p>
+<p>15.3 为什么不使用batch normalization，使用的是layer normalization呢？因为一个时序数据，句子输入长度有长有短，如果使用batch normalization，则很容易造成因样本长短不一造成“训练不稳定”。BN是对同一个batch内的所有数据的同一个特征数据进行操作;而LN是对同一个样本进行操作。</p>
 <p></p>
 <ol start="16">
 <li>什么是FFN？</li>
 </ol>
 <p>16.1 FFN就是feed forward networks。</p>
 <p>16.2 为什么有了Self attention层，还要有FFN？Attention已经有了想要的序列信息特征，MLP的作用是把信息投影到特定的空间里，再做一次非线性映射，和Self attention交替使用。</p>
-<p>16.3 结构上：包括两层MLP，第一层的维度为512<em>2048，第二层的维度为2048</em>512，且第二层MLP没有使用激活函数，如图29所示。</p>
+<p>16.3 结构上: 包括两层MLP，第一层的维度为$512<em>2048$，第二层的维度为$2048</em>512$，且第二层MLP没有使用激活函数，如图29所示。</p>
 <p></p>
 <h2 id="17-transformer是如何训练出来的">17. Transformer是如何训练出来的？</h2>
 <p>17.1 数据上，在Transformer论文中有提到，用到了4.5M和36M的翻译句子对。</p>
 <p>17.2 硬件上，base模型是8个P100 GPU训练了12个小时，大模型是训练了3.5天。</p>
-<p>17.3 模型参数和调参层面：</p>
-<p>第一，可训练的参数包括WQ、WK、WV、WO，换包括FFN层的参数。</p>
-<p>第二，可调的参数包括：每一个token向量表示的维度（d_model）、head的头数、Encoder和Decoder中block重复的次数N、FFN中间层向量的维度、Label smoothing（置信度0.1）和dropout（0.1）。</p>
+<p>17.3 模型参数和调参层面:</p>
+<p>第一，可训练的参数包括$W_Q$、$W_K$、$W_V$、$W_O$，换包括$FFN$层的参数。</p>
+<p>第二，可调的参数包括: 每一个token向量表示的维度(d_model)、head的头数、Encoder和Decoder中block重复的次数N、FFN中间层向量的维度、Label smoothing(置信度0.1)和dropout(0.1)。</p>
 <h2 id="18-transformer为什么效果好">18. Transformer为什么效果好？</h2>
 <p>18.1 虽然题目是Attention is all you need，但后续一些研究表明，Attention、残差连接、layer normalization、FFN，这些因素共同成就了Transformer。</p>
-<p>18.2 Transformer优点包括：</p>
-<p>第一，提出深度学习既MLP、CNN、RNN后的第4大特征提取器。</p>
-<p>第二，一开始用在机器翻译，随着GPT和Bert彻底出圈；是一个转折点，在这个点之后，NLP领域快速发展，之后多模态、大模型、视觉Transformer等开始兴起。</p>
+<p>18.2 Transformer优点包括:</p>
+<p>第一，提出深度学习继MLP、CNN、RNN后的第4大特征提取器。</p>
+<p>第二，一开始用在机器翻译，随着GPT和Bert彻底出圈;是一个转折点，在这个点之后，NLP领域快速发展，之后多模态、大模型、视觉Transformer等开始兴起。</p>
 <p>第三，给人们信心，原来CNN和RNN之后，还可以有效果更好的特征提取器。</p>
 <p>18.3 Transformer的不足之处？</p>
 <p>第一，计算量大，对硬件要求高。</p>
 <p>第二，因为无归纳偏置，需要很多数据才可以取得很好的效果。</p>
-<p>ref:</br>
+<p>Ref:</br>
 [1]. <a href="https://mp.weixin.qq.com/s/sNyh3SzhIdsk8feYfQlTSA"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/sNyh3SzhIdsk8feYfQlTSA<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>Transformer | 如何理解attention中的Q,K,V？</title><link>https://jianye0428.github.io/posts/attentionaqkv/</link><pubDate>Sun, 20 Aug 2023 17:44:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/attentionaqkv/</guid><description><![CDATA[<h2 id="解答一">解答一</h2>
 <p>我们直接用torch实现一个SelfAttention来说一说：</p>
@@ -484,6 +1333,76 @@ $$Attention(Q,K_i,V_i)\color{red}{\boxed{=softmax(\frac{Q^TK_i}{\sqrt{d_k}})V_i}
 </div><h2 id="结论">结论</h2>
 <p>无论何时你使用一个要求指定目的区间的算法，确保目的区间已经足够大或者在算法执行时可以增加大小。</p>
 <p>如果你选择增加大小，就使用插入迭代器，比如<code>ostream_iterators</code>或从<code>back_inserter</code>、<code>front_inserter</code>或<code>inserter</code>返回的迭代器。</p>
+]]></description></item><item><title>Effective STL [29] | 需要一个一个字符输入时考虑使用istreambuf_iterator</title><link>https://jianye0428.github.io/posts/clause_29/</link><pubDate>Fri, 18 Aug 2023 07:55:51 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_29/</guid><description><![CDATA[<h2 id="istream_iterator-拷贝文件">istream_iterator 拷贝文件</h2>
+<p>假设要把一个文本文件拷贝到一个字符串对象中。似乎可以用一种很有道理的方法完成：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;interestingData.txt&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span> <span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 把inputFile读入fileData；
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 关于为什么它不是很正确请看下文关于这个语法的警告参见条款6
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>很快你就会发现这种方法无法把文件中的空格拷贝到字符串中。</p>
+<p>那是因为<code>istream_iterators</code>使用<code>operator&gt;&gt;</code>函数来进行真的读取，而且<code>operator&gt;&gt;</code>函数在默认情况下忽略空格。</p>
+<p>假如你想保留空格，你要的做就是覆盖默认情况。只要清除输入流的skipws标志就行了：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;interestingData.txt&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">inputFile</span><span class="p">.</span><span class="n">unset</span><span class="p">(</span><span class="n">ios</span><span class="o">::</span><span class="n">skipws</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 关闭inputFile的忽略空格标志
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span> <span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在inputFile中的所有字符都拷贝到fileData中了。</p>
+<p><strong>拷贝速度</strong></p>
+<p>你会发现它们的拷贝速度不像你想象的那么快。</p>
+<p><code>istream_iterators</code>所依靠的<code>operator&gt;&gt;</code>函数进行的是格式化输入，这意味着每次你调用的时候它们都必须做大量工作：</p>
+<ol>
+<li>
+<p>必须建立和销毁岗哨（sentry）对象（为每个<code>operator&gt;&gt;</code>调用进行建立和清除活动的特殊的<code>iostream</code>对象）；</p>
+</li>
+<li>
+<p>必须检查可能影响它们行为的流标志（比如skipws）；</p>
+</li>
+<li>
+<p>必须进行全面的读取错误检查；</p>
+</li>
+<li>
+<p>如果它们遇到问题，它们必须检查流的异常掩码来决定是否该抛出一个异常。</p>
+</li>
+</ol>
+<p>如果进行格式化输入，那些都是重要的活动，但如果你需要的只是从输入流中抓取下一个字符，那就过度了。</p>
+<h2 id="istreambuf_iterators-拷贝文件">istreambuf_iterators 拷贝文件</h2>
+<p>你可以像<code>istream_iterator</code>一样使用<code>istreambuf_iterator</code>，但<code>istream_iterator&lt;char&gt;</code>对象使用<code>operator&gt;&gt;</code>来从输入流中读取单个字符。 <code>istreambuf_iterator</code>对象进入流的缓冲区并直接读取下一个字符。（更明确地说，<code>istreambuf_iterator&lt;char&gt;</code> 对象从一个<code>istream s</code>中读取会调用<code>s.rdbuf()-&gt;sgetc()</code>来读<code>s</code>的下一个字符。）把我们的文件读取代码改为使用<code>istreambuf_iterator</code>相当简单，大多数Visual Basic程序员都可以在两次尝试内做对：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;interestingData.txt&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istreambuf_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span>
+</span></span><span class="line"><span class="cl"><span class="n">istreambuf_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意这里不需要“<code>unset</code>” <code>skipws</code>标志，<code>istreambuf_iterator</code>不忽略任何字符。它们只抓取流缓冲区的下一个字符。</p>
+<p>相对于<code>istream_iterator</code>，它们抓取得更快。</p>
+<p>如果你需要一个一个地读取流中的字符，你不需要格式化输入的威力，你关心的是它们花多少时间来读取流，和明显的性能提高相比，为每个迭代器多键入三个字符的代价是微弱的。对于无格式的一个一个字符输入，你总是应该考虑使用<code>istreambuf_iterator</code>。</p>
+<h2 id="结论">结论</h2>
+<p>当你了解它之后，你也应该考虑把<code>ostreambuf_iterator</code>用于相应的无格式一个一个字符输出的作。</p>
+<p>它们没有了<code>ostream_iterator</code>的开销（和灵活性），所以它们通常也做得更好。</p>
 ]]></description></item><item><title>Effective STL [28] | 了解如何通过reverse_iterator的base得到iterator</title><link>https://jianye0428.github.io/posts/clause_28/</link><pubDate>Thu, 17 Aug 2023 20:04:40 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_28/</guid><description><![CDATA[<h2 id="example">Example</h2>
 <p>通过reverse_iterator的base初始化一个iterator:</p>
 <div class="highlight" id="id-1"><div class="chroma">
@@ -2593,707 +3512,4 @@ $$Attention(Q,K_i,V_i)\color{red}{\boxed{=softmax(\frac{Q^TK_i}{\sqrt{d_k}})V_i}
 <h2 id="总结">总结</h2>
 <p><code>vector&lt;bool&gt;</code>不满足STL容器的必要条件，你最好不要使用它；</p>
 <p>而<code>deque&lt;bool&gt;</code>和<code>bitset</code>是基本能满足你对<code>vector&lt;bool&gt;</code>提供的性能的需要的替代数据结构。</p>
-]]></description></item><item><title>Effective STL [17] | 使用“交换技巧”来修整过剩容量(仅适用于vector和string)</title><link>https://jianye0428.github.io/posts/clause_17/</link><pubDate>Tue, 08 Aug 2023 08:48:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_17/</guid><description><![CDATA[<blockquote>
-<p>注意: 这里的容量指的是capacity</p>
-</blockquote>
-<p>假如有一个海选，需要从申请者中挑选一些人进入到下一轮比赛当中，我们可能会建立一个vector用来存储申请者：</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Contestant</span> <span class="p">{...};</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">contestants</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><code>vector</code>会很快获得很多元素，你可能会将能够进入到下一轮的申请者放到 vector 的前端（可能通过 <code>partial_sort</code>或<code>partition</code>），如果没有参与到下一轮的申请者就会从vector 中删除（典型的方法就是调用 erase 的区间形式，具体见条款5）。</p>
-<p>这样很好地减少了 vector 的大小，<strong>但是没有减少它的容量</strong>。</p>
-<p>当然可以通过resize方法去改变，但是如果我不知道大概要多少，我只知道有一些符合我的要求，如果直接用resize可能大了很多，或者抛弃了原本符合要求的元素。所以最好有一种shrink_to_fit的方式。</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">contestants</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span><span class="p">(</span><span class="n">contestants</span><span class="p">).</span><span class="n">swap</span><span class="p">(</span><span class="n">contestants</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><font color=Aqua><strong>具体工作原理：</strong></font></p>
-<ol>
-<li>表达式<code>vector&lt;Contestant&gt;(contestants)</code>建立一个临时<code>vector</code>，它是<code>contestants</code>的一份拷贝：<code>vector</code>的拷贝构造函数做了这个工作。<strong>vector的拷贝构造函数只分配拷贝的元素需要的内存</strong>，就是说<code>contestants</code>真实包含多少元素，就分配多少内存空间，按照<code>size()</code>的个数，而不是capicatiy个数，所以这个临时vector没有多余的容量。</li>
-<li>让临时<code>vector</code>和<code>contestants</code>交换数据，这时contestants只有临时变量的修整过的容量(size)，而这个临时变量则持有了曾经在contestants中的发胀的容量(capacity)。在这里（这个语句结尾），临时vector被销毁，因此释放了以前contestants使用的内存。  收缩到合适。</li>
-<li>完成收缩内存的同时，也拷贝了实际<code>size()</code>个内存，也有性能消耗。</li>
-</ol>
-<p><strong>TEST</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">r1</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// r1 包含100个1，即100个申请者
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">            <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">r1</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">50</span><span class="p">);</span> <span class="c1">// 只保留前50名申请者进入下一轮
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">            <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">r1</span><span class="p">).</span><span class="n">swap</span><span class="p">(</span><span class="n">r1</span><span class="p">);</span> <span class="c1">// shrink to fit
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">            <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>结果:</strong></p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">r1 size: <span class="m">100</span> capacity: <span class="m">100</span>
-</span></span><span class="line"><span class="cl">r1 size: <span class="m">50</span> capacity: <span class="m">100</span>
-</span></span><span class="line"><span class="cl">r1 size: <span class="m">50</span> capacity: <span class="m">50</span>
-</span></span><span class="line"><span class="cl">r1 size: <span class="m">0</span> capacity: <span class="m">0</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>string也同样适用：</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="n">s</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contest</span><span class="o">&gt;</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>	<span class="c1">//清楚v并把它的容量变为最小
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>			<span class="c1">//清楚s并把它的容量变为最小
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>另外，在swap的时候，不仅仅容器内容被交换，其迭代器、指针和引用也被交换(string除外)。因此，在发生交换后，原来的迭代器、指针和引用依然有效，并指向同样的元素——但这些元素已经在另外一个容器中。</p>
-<h2 id="清空容器并减少容量到最小">清空容器并减少容量到最小</h2>
-<p><strong>交换技巧的变体可以用于清除容器和减少它的容量到你的实现提供的最小值。</strong></p>
-<p>可以简单地和一个默认构造的临时vector或string做个交换：</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="n">s</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 使用v和s
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Contestant</span><span class="o">&gt;</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">v</span><span class="p">);</span> <span class="c1">// 清除v而且最小化它的容量
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">s</span><span class="p">);</span> <span class="c1">// 清除s而且最小化它的容量
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>测试代码：</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">r1</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// r1 包含100个1，即100个申请者
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">          <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">().</span><span class="n">swap</span><span class="p">(</span><span class="n">r1</span><span class="p">);</span> <span class="c1">// 清空 r1
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;r1 size: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; capacity: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">r1</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">          <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>结果:</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">r1</span> <span class="nl">size</span><span class="p">:</span> <span class="mi">100</span> <span class="nl">capacity</span><span class="p">:</span> <span class="mi">100</span>
-</span></span><span class="line"><span class="cl"><span class="n">r1</span> <span class="nl">size</span><span class="p">:</span> <span class="mi">0</span> <span class="nl">capacity</span><span class="p">:</span> <span class="mi">0</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>ref:</br>
-[1]. <a href="https://blog.csdn.net/u011058765/article/details/51205757?spm=1001.2101.3001.6650.2&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&amp;utm_relevant_index=3"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/u011058765/article/details/51205757?spm=1001.2101.3001.6650.2&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-51205757-blog-18826.235%5Ev38%5Epc_relevant_anti_t3&utm_relevant_index=3<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>Effective STL [16] | 如何将vector和string的数据传给遗留的API</title><link>https://jianye0428.github.io/posts/clause_16/</link><pubDate>Mon, 07 Aug 2023 08:35:57 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_16/</guid><description><![CDATA[<h2 id="string-和-vector-传递给c-api">string 和 vector 传递给C API</h2>
-<h3 id="vector传递指针">vector传递指针</h3>
-<p>C风格API接受的是<strong>数组</strong>和<code>char*</code>指针，这样的API还会存在很长时间，如果有1个vector对象randy， 则使用<code>&amp;v[0]</code>就可以得到一个指向randy中数据的指针。对于string对象sesame，则传递<code>sesame.c_str()</code>即可。</p>
-<p>表达式<code>randy[0]</code>生产一个指向vector中第一个元素的引用，所以，<code>&amp;randy[0]</code>是指向那个首元素的指针。</p>
-<p>vector中的元素被C++标准限定为存储在连续内存中，就像是一个数组。</p>
-<p>所以我们可能会这么传递</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">pInts</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">numInts</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 调用
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">randy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">randy</span><span class="p">.</span><span class="n">size</span><span class="p">());</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>唯一的问题就是，如果randy是空的，<code>randysize()</code>是0，而<code>&amp;randy[0]</code>试图产生一个指向根本就不存在的东西的指针。</p>
-<p>可以提前判断一下randy的大小：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">randy</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">randy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">randy</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p><strong>randy.begin()代替&amp;randy[0]?</strong></p>
-</blockquote>
-<p>对于vector，其迭代器实际上是指针。</p>
-<p><code>begin</code>的返回类型是<code>iterator</code>，而不是一个指针，当你需要一个指向vector内部数据的指针时绝不该使用begin。如果你基于某些原因决定键入<code>randy.begin()</code>，就应该键入<code>&amp;*randy.begin()</code>，因为这将会产生和<code>&amp;v[0]</code>相同的指针。</p>
-<h3 id="string-传递指针">string 传递指针</h3>
-<p>类似从vector上获取指向内部数据的指针的方法，<strong>对string不是可靠的</strong>:</p>
-<ol>
-<li>string中的数据并没有保证被存储在独立的一块连续内存中</li>
-<li>string的内部表示形式并没承诺以一个null字符结束。这解释了string的成员函数c_str存在的原因</li>
-</ol>
-<p>即使是字符串的长度为0，<code>c_str</code>将返回一个指向<code>null</code>字符的指针。</p>
-<p><strong>在两种形式下，指针都被传递为指向const的指针。vector和string的数据只能传给只读取而不修改它的API。</strong></p>
-<p>如果你将<code>randy</code>传给一个修改其元素的C风格API的话，典型情况都是没问题，但<strong>被调用的函数绝不能试图改变vector中元素的个数</strong>。否则，randy的内部状态将会变得不一致，<code>v.size()</code>将会得到一个不正确的结果。</p>
-<p><strong>把一个vector传递给需要修改vector数据的API，一定要确保这些额外限制继续被满足</strong>，比如是否需要保持原来vector中元素的顺序。</p>
-<h2 id="c风格api返回的元素初始化stl容器">C风格API返回的元素初始化STL容器</h2>
-<h3 id="初始化vector">初始化vector</h3>
-<p><strong>利用vector和数组潜在的内存分布兼容性将存储vecotr的元素的空间传给API函数：</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API：此函数需要一个指向数组的指针，数组最多有arraySize个double
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 而且会对数组写入数据。它返回写入的double数，不会大于arraySize
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="nf">fillArray</span><span class="p">(</span><span class="kt">double</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">vd</span><span class="p">(</span><span class="n">maxNumDoubles</span><span class="p">);</span> <span class="c1">// 建立一个vector，它的大小是maxNumDoubles
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vd</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">fillArray</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vd</span><span class="p">.</span><span class="n">size</span><span class="p">()));</span> <span class="c1">// 让fillArray把数据写入vd，然后调整vd的大小为fillArray写入的元素个数
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>这个技巧只能工作于vector，因为只有vector承诺了与数组具有相同的潜在内存分布。</strong></p>
-<h3 id="初始化string">初始化string</h3>
-<p>只要让API将数据放入一个<code>vector&lt;char&gt;</code>，然后从vector中将数据拷到string：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// C API：此函数需要一个指向数组的指针，数组最多有arraySize个char
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 而且会对数组写入数据。它返回写入的char数，不会大于arraySize
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="nf">fillString</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span> <span class="n">vc</span><span class="p">(</span><span class="n">maxNumChars</span><span class="p">);</span> <span class="c1">// 建立一个vector，它的大小是maxNumChars
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">size_t</span> <span class="n">charsWritten</span> <span class="o">=</span> <span class="n">fillString</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vc</span><span class="p">.</span><span class="n">size</span><span class="p">());</span> <span class="c1">// 让fillString把数据写入vc
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">string</span> <span class="nf">s</span><span class="p">(</span><span class="n">vc</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vc</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span> <span class="o">+</span> <span class="n">charsWritten</span><span class="p">);</span> <span class="c1">// 从vc通过范围构造函数拷贝数据到s
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="初始化其他stl容器">初始化其他STL容器</h3>
-<p><strong>通用方法：C风格API把数据放入一个vector，然后拷到实际想要的STL容器</strong></p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">size_t</span> <span class="nf">fillArray</span><span class="p">(</span><span class="kt">double</span> <span class="o">*</span><span class="n">pArray</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">arraySize</span><span class="p">);</span> <span class="c1">// 同上
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">vd</span><span class="p">(</span><span class="n">maxNumDoubles</span><span class="p">);</span> <span class="c1">// 一样同上
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vd</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">fillArray</span><span class="p">(</span><span class="o">&amp;</span><span class="n">vd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vd</span><span class="p">.</span><span class="n">size</span><span class="p">()));</span>
-</span></span><span class="line"><span class="cl"><span class="n">deque</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">d</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到deque
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到list
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">set</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">s</span><span class="p">(</span><span class="n">vd</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vd</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝数据到set
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="stl容器传递给c-api">STL容器传递给C API</h3>
-<p>STL容器将它们的数据传给C风格API，只要将容器的每个数据拷到vector，然后将vector传给API:</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span><span class="n">pints</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">numInts</span><span class="p">);</span> <span class="c1">// C API (同上)
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">intSet</span><span class="p">;</span> <span class="c1">// 保存要传递给API数据的set
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">(</span><span class="n">intSet</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">intSet</span><span class="p">.</span><span class="n">end</span><span class="p">());</span> <span class="c1">// 拷贝set数据到vector
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">v</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="n">doSomething</span><span class="p">(</span><span class="o">&amp;</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">());</span> <span class="c1">// 传递数据到API
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>如果在编译期就知道容器的大小</strong>，可以将数据拷进一个<strong>数组</strong>，然后将数组传给C风格的API，否则不得不分配动态数组。</p>
-]]></description></item><item><title>Effective STL [15] | 小心string实现的多样性</title><link>https://jianye0428.github.io/posts/clause_15/</link><pubDate>Fri, 04 Aug 2023 08:25:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_15/</guid><description><![CDATA[<h2 id="sizeofstring的值">sizeof(string)的值</h2>
-<p>如果想知道<code>sizeof(string)</code>的值是多少，答案不一定。</p>
-<p><code>string</code>和<code>char*</code>指针一样大的实现很常见，也很容易找到<code>string</code>是<code>char</code>*7 倍大小的<code>string</code>实现。</p>
-<p>所以得了解一下<code>string</code>的实现</p>
-<h2 id="string的实现">string的实现</h2>
-<p><strong>基本实现</strong></p>
-<ul>
-<li>字符串的大小，也就是包含的字符的数目。</li>
-<li>容纳字符串字符的内存容量。</li>
-<li>字符串的值，也就是，构成这个字符串的字符。
-<strong>可能实现</strong></li>
-<li>配置器的拷贝
-<strong>依赖引用计数的string实现</strong>s</li>
-<li>包含这个值的引用计数</li>
-</ul>
-<h2 id="4种不同的string实现数据结构">4种不同的string实现数据结构</h2>
-<p>以下是原作者看到的4个源码的string的实现</p>
-<p><strong>A</strong>
-每个string对象包含一个<strong>配置器的拷贝</strong>，<strong>字符串的大小(size)</strong>，<strong>容量(capacity)</strong>，<strong>一个指向包含引用计数（“RefCnt”）<strong>和</strong>字符串值的动态分配的缓冲区的指针</strong>。</p>
-<p>在这个实现中，一个使用默认配置器的字符串对象是指针大小的4倍。对于一个自定义的配置器，string对象会随配置器对象的增大而变大：</p>
-<p></p>
-<p><strong>B</strong>
-B的<strong>string对象和指针一样大</strong>，因为在结构体中只包含一个指针。再次，这里假设使用默认配置器。正如实现A，如果使用自定义配置器，这个string对象的大小会增加大约配置器对象的大小。</p>
-<p>在这个实现中，<strong>使用默认配置器不占用空间，这归功于这里用了一个在实现A中没有的使用优化</strong>。</p>
-<p>B的string指向的对象包含<strong>字符串的大小</strong>、<strong>容量</strong>和<strong>引用计数</strong>，以及<strong>容纳字符串值的动态分配缓冲区的指</strong>针及&quot;<strong>其他</strong>&quot;。“其他”指对象包含在多线程系统中与并发控制有关的一些附加数据。</p>
-<p>
-在实现B中，<strong>用于并发控制的数据是一个指针大小的6倍</strong>。</p>
-<p><strong>C</strong>
-<strong>C的string对象总是等于指针的大小</strong>，但是<strong>这个指针指向一个包含所有与string相关的东西的动态分配缓冲器</strong>：大小、容量、引用计数和值。没有每物体配置器（per-object allocator）的支持。缓冲区也容纳一些关于值可共享性的数据，标记为“<strong>X</strong>”。
-</p>
-<p><strong>D</strong>
-D的<strong>string对象是一个指针大小的7倍</strong>（仍然假设使用了默认配置器）。这个实现<strong>没有使用引用计数</strong>，但每个string包含了一个足以<strong>表现最多15个字符的字符串值的内部缓冲区</strong>。</p>
-<p>因此小的字符串可以被整个保存在string对象中，一个有时被称为“<strong>小字符串优化</strong>”的特性。</p>
-<p>当一个string的容量超过15时，<strong>缓冲器的第一部分被用作指向动态分配内存的一个指针，而字符串的值存放在那块内存</strong>中：</p>
-<p></p>
-<p><strong>g++ 9.4.0中的实现</strong></p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl">  <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">_CharT</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Traits</span><span class="p">,</span> <span class="k">typename</span> <span class="n">_Alloc</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">class</span> <span class="nc">basic_string</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__alloc_traits</span><span class="o">&lt;</span><span class="n">_Alloc</span><span class="o">&gt;::</span><span class="k">template</span>
-</span></span><span class="line"><span class="cl"> <span class="n">rebind</span><span class="o">&lt;</span><span class="n">_CharT</span><span class="o">&gt;::</span><span class="n">other</span> <span class="n">_Char_alloc_type</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__alloc_traits</span><span class="o">&lt;</span><span class="n">_Char_alloc_type</span><span class="o">&gt;</span> <span class="n">_Alloc_traits</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="c1">// Types:
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Traits</span>     <span class="n">traits_type</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Traits</span><span class="o">::</span><span class="n">char_type</span>  <span class="n">value_type</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">_Char_alloc_type</span>    <span class="n">allocator_type</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">size_type</span>  <span class="n">size_type</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">difference_type</span> <span class="n">difference_type</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">reference</span>  <span class="n">reference</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">const_reference</span> <span class="n">const_reference</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">pointer</span>  <span class="n">pointer</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">_Alloc_traits</span><span class="o">::</span><span class="n">const_pointer</span> <span class="n">const_pointer</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__normal_iterator</span><span class="o">&lt;</span><span class="n">pointer</span><span class="p">,</span> <span class="n">basic_string</span><span class="o">&gt;</span>  <span class="n">iterator</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">__gnu_cxx</span><span class="o">::</span><span class="n">__normal_iterator</span><span class="o">&lt;</span><span class="n">const_pointer</span><span class="p">,</span> <span class="n">basic_string</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">       <span class="n">const_iterator</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">reverse_iterator</span><span class="o">&lt;</span><span class="n">const_iterator</span><span class="o">&gt;</span> <span class="n">const_reverse_iterator</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="n">std</span><span class="o">::</span><span class="n">reverse_iterator</span><span class="o">&lt;</span><span class="n">iterator</span><span class="o">&gt;</span>  <span class="n">reverse_iterator</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="c1">///  Value returned by various member functions when they fail.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">static</span> <span class="k">const</span> <span class="n">size_type</span> <span class="n">npos</span> <span class="o">=</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="n">size_type</span><span class="o">&gt;</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>sizeof(string)</strong></p>
-<p>举例：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">s</span><span class="p">(</span><span class="s">&#34;Randy&#34;</span><span class="p">);</span> <span class="c1">// 5个字符
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ol>
-<li>
-<p>实现A有32个字符的最小分配大小，所以虽然s的大小是5，在实现A下容量是31。（第32个字符大概被保留作<strong>尾部的null</strong>，因此可以容易地实现c_str成员函数。）</p>
-</li>
-<li>
-<p>实现C最小量16，而且没有为尾部null保留空间。所以在实现C下，s的容量是16。</p>
-</li>
-<li>
-<p>实现D的最小缓冲区大小也是16，包括尾部null的空间。当然，在这里区别出实现D是因为容量小于16的字符串使用的内存包含在本身字符串对象中。</p>
-</li>
-<li>
-<p>实现B没有最小分配，在实现B下，s的容量是7。</p>
-</li>
-</ol>
-<p><strong>动态分配</strong></p>
-<p>在实现D下<strong>将会没有动态分配</strong>，在<strong>实现A和C 1次</strong>，而在<strong>实现B 2次</strong>（一次是string对象指向的对象，一次是那个对象指向的字符缓冲区）。</p>
-<p>如果关心动态分配和回收内存的次数，或如果关心经常伴随这样分配的内存开销，你可能想要避开实现B。</p>
-<p>另一方面， 实<strong>现B的数据结构包括了对多线程系统并发控制的特殊支持的事实意味着它比实现A或C更能满足你的需要，尽管动态分配次数较多</strong>。</p>
-<p>实现D不需要对多线程的特殊支持，因为它不使用引用计数。</p>
-<p>在基于<strong>引用计数的设计</strong>中，<strong>字符串对象之外的每个东西都可以被多个字符串共享</strong>（如果它们有相同的值），所以我们可以从图中观察到的其他东西是<strong>实现A比B或C提供更少的共享性</strong>。</p>
-<p>特别是，<strong>实现B和C能共享一个字符串的大小和容量，因此潜在地减少了每物体分摊的的储存数据的开销</strong>。</p>
-<p>有趣的是，<strong>实现C不能支持每对象配置器的事实意味着它是唯一可以共享配置器的实现：所有字符串必须使用同一个</strong>！</p>
-<p><strong>实现D在字符串对象间没有共享数据。</strong></p>
-<h2 id="总结">总结</h2>
-<p>不同的实现以不同的方式从它们的设计灵活性中得到好处：</p>
-<ol>
-<li>
-<p><strong>字符串值可能是或可能不是引用计数的</strong>。默认情况下，很多实现的确是用了引用计数，但它们通常提供了关闭的方法，一般是通过预处理器宏。比如，<strong>引用计数只对频繁拷贝的字符串有帮助，而有些程序不经常拷贝字符串，所以没有那个开销</strong></p>
-</li>
-<li>
-<p>string对象的大小可能从1到至少7倍char*指针的大小</p>
-</li>
-<li>
-<p><strong>新字符串值的建立可能需要0、1或2次动态分配</strong></p>
-</li>
-<li>
-<p><strong>string对象可能是或可能不共享字符串的大小和容量信息</strong></p>
-</li>
-<li>
-<p><strong>string可能是或可能不支持每对象配置器</strong></p>
-</li>
-<li>
-<p><strong>不同实现对于最小化字符缓冲区的配置器有不同策略</strong></p>
-</li>
-</ol>
-<p>string是标准库中的最重要的组件之一，鼓励应该要多用。</p>
-<p>如果要<strong>有效使用STL</strong>，<strong>需要小心string实现的多样性</strong>，特别是如果你正在写必须在不同STL平台上运行的代码并且你面临严格的性能需求。</p>
-]]></description></item><item><title>Effective STL [14] | 使用reserve来避免不必要的重新分配</title><link>https://jianye0428.github.io/posts/clause_14/</link><pubDate>Thu, 03 Aug 2023 13:06:29 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_14/</guid><description><![CDATA[<h2 id="自动扩容">自动扩容</h2>
-<p>STL 容器只要存储的对象不超过「<strong>最大大小</strong>」，就可以自动增长到足以容纳放进去的数据。这个最大值，只要调用名叫max_size的成员函数就可以查询到。</p>
-<p>对于vector和string，只要需要更多空间，就以<code>realloc</code>等价的思想来增长。</p>
-<p>realloc的操作有4个部分：</p>
-<ol>
-<li>「<strong>分配新的内存块</strong>」。在大部分实现中，vector和string的容量每次以「<strong>2</strong>」为因数增长，即容量每次翻倍。</li>
-<li>「<strong>把所有元素从容器的旧内存拷贝到新内存</strong>」。</li>
-<li>「<strong>销毁旧内存中的对象</strong>」。</li>
-<li>「<strong>回收旧内存</strong>」。
-这就是分配，回收，拷贝和析构4个步骤，这些步骤代价都很昂贵。</li>
-</ol>
-<p>即便是简单地把一个元素插入vector或string的动作也可能因为需要更新其他使用了指向vector或string中的迭代器、指针或引用的数据结构而膨胀。</p>
-<h2 id="4个成员函数">4个成员函数</h2>
-<p>这4个STL容器成员函数，只有vector和string提供了所有这些函数。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align:left">成员函数</th>
-<th style="text-align:left">说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left">size()</td>
-<td style="text-align:left">「容器中有多少元素」。</br>没有说明容器为容纳的元素分配了多少内存。</td>
-</tr>
-<tr>
-<td style="text-align:left">capacity()</td>
-<td style="text-align:left">「容器已经分配的内存中可以容纳多少元素」。</br>那是容器在那块内存中总共可以容纳多少元素，而不是还可以容纳多少元素。如果想知道一个vector或string中有多少没有被占用的内存，必须从capacity()中减去size()。如果size和capacity返回同样的值，容器中就没有剩余空间了，而下一次插入（通过insert或push_back等）会引发上面的重新分配步骤。</td>
-</tr>
-<tr>
-<td style="text-align:left">resize(Container::size_type n)</td>
-<td style="text-align:left"></br>「强制把容器改为容纳n个元素」。调用resize之后，size将会返回n。如果n小于当前大小，容器尾部的元素会被销毁。如果n大于当前大小，新默认构造的元素会添加到容器尾部。如果n大于当前容量，在元素加入之前会发生重新分配。</td>
-</tr>
-<tr>
-<td style="text-align:left">reserve(Container::size_type n)</td>
-<td style="text-align:left">「强制容器把它的容量改为至少n，提供的n不小于当前大小」。</br>这一般强迫进行一次重新分配，因为容量需要增加。</td>
-</tr>
-</tbody>
-</table>
-<p><strong>reserve</strong>成员函数允许你最小化必须进行的重新分配的次数，因而可以避免真分配的开销和迭代器/指针/引用失效。</p>
-<p>「<strong>调用reserve不改变容器中对象的个数。</strong>」</p>
-<h2 id="提前-reserve">提前 reserve</h2>
-<p>「<strong>只要有元素需要插入而且容器的容量不足时就会发生重新分配</strong>」（包括它们维护的「原始内存分配和回收」，「对象的拷贝和析构」和「迭代器、指针和引用的失效」）。</p>
-<p>「避免重新分配的关键」是使用reserve尽快把容器的容量设置为足够大，最好在容器被构造之后立刻进行。</p>
-<p><strong>Example</strong></p>
-<p>假定你想建立一个容纳1-1000值的<code>vector&lt;int&gt;</code>。没有使用<code>reserve</code>：</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">1000</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>在大多数STL实现中，这段代码在循环过程中「<strong>将会导致2到10次重新分配</strong>」。（「vector在重新分配时一般把容量翻倍」，$1000 \approx 2^{10}$。） 把代码改为使用<code>reserve</code>：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">1000</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>「<strong>这在循环中不会发生重新分配。</strong>」</p>
-<h2 id="结论">结论</h2>
-<p>通常有2种情况使用<code>reserve</code>来避免不必要的重新分配:</p>
-<ol>
-<li>可用的情况是「<strong>当你确切或者大约知道有多少元素将最后出现在容器中</strong>」。可以提前reserve适当数量的空间。</li>
-</ol>
-<p>2.「<strong>保留可能需要的最大的空间</strong>」，然后，一旦添加完全部数据「<strong>修整掉任何多余的容量</strong>」。</p>
-]]></description></item><item><title>Effective STL [13] | 尽量使用vector和string来代替动态分配的数组</title><link>https://jianye0428.github.io/posts/clause_13/</link><pubDate>Thu, 03 Aug 2023 09:11:16 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_13/</guid><description><![CDATA[<h2 id="使用new动态分配内存时的注意事项">使用new动态分配内存时的注意事项</h2>
-<ol>
-<li>
-<p>必须确保以后会delete这个分配。如果后面没有delete，「<strong>new就会产生一个资源泄漏</strong>」。</p>
-</li>
-<li>
-<p>你须确保使用了<strong>delete</strong>的正确形式:
-如果使用了delete的错误形式，结果会未定义。在一些平台上，程序在运行期会当掉。另一方面，有时候会造成资源泄漏，一些内存也随之而去。</p>
-<ul>
-<li>对于分配一个单独的对象，必须使用“delete”。</li>
-<li>对于分配一个数组，必须使用“delete []”。</li>
-</ul>
-</li>
-<li>
-<p>必须确保只<strong>delete</strong>一次。如果一个分配被删除了不止一次，结果也会未定义。</p>
-</li>
-</ol>
-<h2 id="vector和string">vector和string</h2>
-<ol>
-<li>
-<p>vector和string消除了上面的负担，因为它们管理自己的内存。
-当元素添加到那些容器中时它们的内存会增长，而且当一个vector或string销毁时，它的析构函数会自动销毁容器中的元素，回收存放那些元素的内存。</p>
-</li>
-<li>
-<p>vector和string是羽翼丰满的序列容器。
-虽然数组也可以用于STL算法，但没有提供像<code>begin</code>、<code>end</code>和<code>size</code>这样的成员函数，也没有内嵌像<code>iterator</code>、<code>reverse_iterator</code>或<code>value_type</code>那样的<code>typedef</code>。而且<code>char*</code>指针当然不能和提供了专用成员函数的<code>string</code>竞争。STL用的越多，越会歧视内建的数组。</p>
-</li>
-</ol>
-<h2 id="string-计数问题">string 计数问题</h2>
-<p>很多<code>string</code>实现在后台使用了引用计数，「一个消除了不必要的内存分配和字符拷贝的策略，而且在很多应用中可以提高性能」。</p>
-<p>事实上，一般认为<strong>通过引用计数优化字符串很重要</strong>，所以C++标准委员会特别设法保证了那是一个合法的实现。</p>
-<p><strong>多线程使用</strong></p>
-<p>如果你在多线程环境中使用了引用计数的字符串，你可能发现<font color=red>「避免分配和拷贝所节省下的时间都花费在后台并发控制上」</font>了，会因为线程安全性导致的性能下降。</p>
-<p>如果用到的string实现是引用计数的，而且已经确定string的引用计数在多线程环境中运行，那么至少有3个合理的选择，而且没有一个放弃了STL：</p>
-<ol>
-<li>「<strong>看看库实现是否可以关闭引用计数，通常是通过改变预处理变量的值</strong>」；</li>
-<li>寻找或开发一个不使用引用计数的string实现（或部分实现）替代品；</li>
-<li>「<strong>考虑使用vector<char>来代替string，vector实现不允许使用引用计数，所以隐藏的多线程性能问题不会出现了</strong>」。</li>
-</ol>
-<p>当然，使用了vector<char>，就相当于放弃了string的专用成员函数，但大部分功能仍然可以通过STL算法得到，所以从一种语法切换到另一种不会失去很多功能。</p>
-<h2 id="结论">结论</h2>
-<p>如果你在使用动态分配数组，你可能比需要的做更多的工作。
-要减轻你的负担，就使用vector或string来代替。</p>
-]]></description></item><item><title>Effective STL [12] | 理解自定义分配器的正确用法</title><link>https://jianye0428.github.io/posts/clause_12/</link><pubDate>Wed, 02 Aug 2023 08:03:42 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_12/</guid><description><![CDATA[<!-- <div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">note abstract info tip success question warning failure danger bug example quote</div>
-    </div>
-  </div> -->
-<h2 id="多线程维护的规则">多线程维护的规则</h2>
-<p>多线程程序是很普遍的，所以大部分STL厂商努力使他们的实现在线程环境中可以正常工作。</p>
-<p>但是，即使他们做得很好，「<strong>大部分负担仍在你肩上，而理解为什么会这样是很重要的</strong>」。</p>
-<p>在STL容器（和大多数厂商的愿望）里对多线程支持的黄金规则已经由SGI定义，并且在它们的STL网站上发布：</p>
-<ul>
-<li>「<strong>多个读取者是安全的</strong>」。多线程可能同时读取一个容器的内容，在读取时「不能有任何写入者操作这个容器」。</li>
-<li>「<strong>对不同容器的多个写入者是安全的</strong>」。多线程可以同时写不同的容器。对同一个容器同时多线程写入是不安全的。</li>
-</ul>
-<h2 id="完全线程安全">完全线程安全？</h2>
-<p>很多程序员希望STL实现是完全线程安全，这非常难以实现。</p>
-<p>一个库可能试图以下列方式实现这样完全线程安全的容器：</p>
-<ul>
-<li>每次调用容器的成员函数期间都要锁定该容器」</li>
-<li>在「<strong>每个容器返回的迭代器(例如通过调用begin或end)的生存期之内都要锁定该容器</strong>」</li>
-<li>在「<strong>每个在容器上调用的算法执行期间锁定该容器</strong>」。（这事实上没有意义，因为算法没有办法识别出它们正在操作的容器）</li>
-</ul>
-<h2 id="example-多线程修改">Example 多线程修改</h2>
-<p>搜寻一个vector<int>中第一次出现3这个值的地方，如果它找到了，就把这个值改为2。</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">first3</span><span class="p">(</span><span class="n">find</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">3</span><span class="p">));</span> <span class="c1">// line 1
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">first3</span> <span class="o">!=</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">()){</span> <span class="c1">// line 2
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="o">*</span><span class="n">first3</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> <span class="c1">// line 3
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>多线程访问时，会有很多「问题」:</p>
-<ol>
-<li>在多线程环境里，另一个线程可能在行1完成之后立刻修改v中的数据。如果是那样，行2对first3和v.end的检测将是无意义的，因为v的值可能和它们在行1结束时的值不同。</li>
-<li>这样的检测会产生未定义的结果，因为另一线程可能插在行1和行2之间，使first3失效，或许通过进行一次插入操作造成vector重新分配它的内在内存。（那将使vector全部的迭代器失效）</li>
-<li>行3中对<code>*first3</code>的赋值是不安全的，因为另一个线程可能在行2和行3之间执行，并以某种方式使<code>first3</code>失效，可能通过删除它指向（或至少曾经指向）的元素。</li>
-</ol>
-<p><strong>解决办法：加锁</strong></p>
-<p>要让上面的代码成为线程安全的，「<strong>v必须从行1到行3保持锁定</strong>」，让最多一个线程在1-3行的过程中能访问v。很难想象STL实现怎么能自动推断出这个。</p>
-<p>而「<strong>同步原语（例如，信号灯，互斥量，等等）通常开销很大</strong>」，更难想象怎么实现在程序没有明显性能损失的情况下做到前面所说的。</p>
-<p>因此你必须「<strong>手工对付</strong>」这些情况中的同步控制</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="n">getMutexFor</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">first3</span><span class="p">(</span><span class="n">find</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">3</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">first3</span> <span class="o">!=</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span> <span class="c1">// 这里现在安全了
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="o">*</span><span class="n">first3</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> <span class="c1">// 这里也是
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="n">releaseMutexFor</span><span class="p">(</span><span class="n">v</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>「<strong>改进</strong>：」一个更面向对象的解决方案是「<strong>创建一个Lock类</strong>」，在它的「<strong>构造函数里获得互斥量并在它的析构函数里释放它</strong>」，这样使<strong>getMutexFor</strong>和<strong>releaseMutexFor</strong>的「<strong>调用不匹配的机会减到最小</strong>」:</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">Container</span><span class="o">&gt;</span> <span class="c1">// 获取和释放容器的互斥量的类的模板核心；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Lock</span> <span class="p">{</span> <span class="o">/</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span> <span class="c1">// 忽略了很多细节
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Lock</span><span class="p">(</span><span class="k">const</span> <span class="n">Containers</span> <span class="n">container</span><span class="p">)</span><span class="o">:</span> <span class="n">c</span><span class="p">(</span><span class="n">container</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">getMutexFor</span><span class="p">(</span><span class="n">c</span><span class="p">);</span> <span class="c1">// 在构造函数获取互斥量
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="o">~</span><span class="n">Lock</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">releaseMutexFor</span><span class="p">(</span><span class="n">c</span><span class="p">);</span> <span class="c1">// 在析构函数里释放它
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"> <span class="k">const</span> <span class="n">Container</span><span class="o">&amp;</span> <span class="n">c</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>使用一个类（像Lock）来管理资源的生存期（例如互斥量）的办法通常称为<strong>资源获得即初始化</strong>。</p>
-<p>应用到上述例子：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span> <span class="c1">// 建立新块；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Lock</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">lock</span><span class="p">(</span><span class="n">v</span><span class="p">);</span> <span class="c1">// 获取互斥量
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">first3</span><span class="p">(</span><span class="n">find</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">3</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">first3</span> <span class="o">!=</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="o">*</span><span class="n">first3</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"> <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="c1">// 关闭块，自动
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 释放互斥量
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>基于Lock的方法在有异常的情况下是稳健的</strong></p>
-<p>因为Lock对象在Lock的析构函数里释放容器的的互斥量，所以在互斥量需要释放是就销毁Lock是很重要的。为了让这件事发生，我们建立一个里面定义了Lock的新块，而且当我们不再需要互斥量时就关闭那个块。</p>
-<p>C++保证如果抛出了异常，局部对象就会被销毁，所以即使当我们正在使用Lock对象时有异常抛出，Lock也将释放它的互斥量。如果我们依赖手工调用<code>getMutexFor</code>和<code>releaseMutexFor</code>，那么在调用<code>getMutexFor</code>之后<code>releaseMutexFor</code>之前如果有异常抛出，我们将不会释放互斥量。</p>
-<h2 id="结论">结论</h2>
-<ul>
-<li>
-<p>当涉及到线程安全和STL容器时，你可以确定库实现允许在一个容器上的多读取者和不同容器上的多写入者。</p>
-</li>
-<li>
-<p>「你不能希望库消除对手工并行控制的需要，而且你完全不能依赖于任何线程支持」</p>
-</li>
-</ul>]]></description></item></channel></rss>
+]]></description></item></channel></rss>
