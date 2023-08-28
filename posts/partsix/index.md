@@ -18,7 +18,7 @@
 
 函数指针是按值传递的。
 
-函数对象往往按值传递和返回。所以，编写的函数对象必须尽可能地小巧，否则复制的开销大；函数对象必须是**单态**的（不是多态），不得使用虚函数。
+函数对象往往按值传递和返回。所以，编写的函数对象必须尽可能地小巧，否则复制的开销大；函数对象必须是**单态**的(不是多态)，不得使用虚函数。
 
 如果你希望创建一个包含大量数据并且使用了多态性的函数子类，该怎么办呢？
 
@@ -48,7 +48,7 @@ public:
 }
 ```
 
-那么你应该创建一个小巧、单态的类，其中包含一个指针，指向另一个实现类，并且将所有的数据和虚函数都放在实现类中（“Pimpl Idiom”）。
+那么你应该创建一个小巧、单态的类，其中包含一个指针，指向另一个实现类，并且将所有的数据和虚函数都放在实现类中(“Pimpl Idiom”)。
 
 ```c++
 template<typename T>
@@ -78,11 +78,11 @@ public:
 
 ## R39 确保判别式是 “纯函数”
 
-**判别式（predicate）：一个返回值为 bool 类型的函数。**
+**判别式(predicate)：一个返回值为 bool 类型的函数。**
 
 **纯函数：指返回值仅仅依赖于其参数的函数。**
 
-判别式类（predicate class）：一个函数子类，它的 operator() 函数是一个判别式（返回 true 或 false）。
+判别式类(predicate class)：一个函数子类，它的 operator() 函数是一个判别式(返回 true 或 false)。
 
 STL 中凡是可以接受一个判别式类对象的地方，也就可以接受一个判别式函数。
 
@@ -92,7 +92,7 @@ STL 中凡是可以接受一个判别式类对象的地方，也就可以接受�
 
 对函数指针，要先应用`ptr_fun`之后再应用`not1`之后才可以工作。
 
-4 个标准的函数配接器（`not1`、`not2`、`bind1st`、`bind2nd`）都要求一些特殊的类型定义，提供这些必要类型定义（`argument_type`、`first_argument_type`、`second_argument_type`、`result_type`）的函数对象被称为可配接(可适配)（`adaptable`）的函数对象。
+4 个标准的函数配接器(`not1`、`not2`、`bind1st`、`bind2nd`)都要求一些特殊的类型定义，提供这些必要类型定义(`argument_type`、`first_argument_type`、`second_argument_type`、`result_type`)的函数对象被称为可配接(可适配)(`adaptable`)的函数对象。
 
 提供这些类型定义最简单的方法：让函数子从一个基结构继承。
   - 对于 unary_function，必须指定函数子类 operator() 所带的参数类型，以及 operator() 返回类型。
@@ -115,7 +115,7 @@ struct WidgetNameCompare:					// STL中所有无状态函数子类一般都被�
 }
 ```
 
-注意，一般情况下，传递给 binary_function 或 unary_function 的非指针类型需要去掉 const 和应用（&）部分。
+注意，一般情况下，传递给 binary_function 或 unary_function 的非指针类型需要去掉 const 和应用(&)部分。
 
 
 ## R41 理解 ptr_fun、mem_fun 和 mem_fun_ref 的来由
@@ -149,7 +149,25 @@ mem_fun_t 是一个函数子类，它拥有该成员函数的指针，并提供�
 - std::mem_fun：将成员函数转换为函数对象(指针版本)。
 - std::mem_fun_ref：将成员函数转换为函数对象(引用版本)。
 
-## R42
+## R42 确保less<T>与operator<具有相同的语义
+尽量避免修改 less 的行为，可能会误导其他程序员。
+
+如果你使用了 less，无论是显式地还是隐式地，都需要确保它与 operator< 具有相同的意义。
+
+如果你希望以一种特殊的方式来排列对象，那么最好创建一个特殊的函数子类。
+
+假设有一个multiset<Widget>容器，它默认的比较函数是less<Widget>，而less<Widget>在默认情况下会调用operator<来完成multiset的排序，而operator<是按照Widget中成员变量weight来排序的，现在特殊情况下需要一个按Widget中成员变量speed来排序的multiset，一种方法是全特化less<Widget>，但是这种做法并不好，因为用户可能是觉得自己按照weight来排序，但是其实做的却是按照speed来排序，更好的办法是创建一个函数子类，然后用该子类做比较函数，而不是改变less的默认行为。
+
+```c++
+struct speedCompare : public binary_function<Widget, Widget, bool> {
+bool operator()(const Widget& lhs, const Widget& rhs) const{
+        return lhs.maxSpeed() < rhs.maxSpeed();
+    }
+};
+
+multiset<Widget, speedCompare> widgets;
+```
+
 
 Ref:
 
