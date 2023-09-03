@@ -235,6 +235,117 @@
 </span></span><span class="line"><span class="cl"><span class="n">Point</span> <span class="n">avg</span> <span class="o">=</span> <span class="n">for_each</span><span class="p">(</span><span class="n">lp</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">lp</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">PointAverage</span><span class="p">()).</span><span class="n">result</span><span class="p">;</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>就个人来说，我更喜欢用<code>accumulate</code>来统计，因为我认为它最清楚地表达了正在做什么，但是<code>for_each</code>也可以，而且不像<code>accumulate</code>，副作用的问题并不跟随<code>for_each</code>。</p>
+]]></description></item><item><title>Effective STL 精读总结 [1] | 容器</title><link>https://jianye0428.github.io/posts/partone/</link><pubDate>Fri, 01 Sep 2023 08:38:45 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partone/</guid><description><![CDATA[<h1 id="前言">前言</h1>
+<blockquote>
+<p>Effective-STL总结系列分为七部分，本文为第一部分，涉及原书第一章，内容范围Rule01~12。为方便书写，Rule12简写为R12。</p>
+</blockquote>
+<div class="details admonition Note">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Effective-STL系列List<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">本博客站点系列内容如下：</br>
+💡 <a href="https://jianye0428.github.io/posts/partone/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版)精读总结(一)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/parttwo/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版)精读总结(二)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/partthree/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版)精读总结(三)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/partfour/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版)精读总结(四)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></div>
+    </div>
+  </div>
+<h2 id="r01-慎重选择容器类型">R01 慎重选择容器类型</h2>
+<p>STL 容器不是简单的好，而是确实很好。</p>
+<p>容器类型如下：</p>
+<ul>
+<li>标准 STL 序列容器：<code>vector</code>、<code>string</code>、<code>deque</code>、<code>list</code>。</li>
+<li>标准 STL 关联容器：<code>set</code>、<code>multiset</code>、<code>map</code>、<code>multimap</code>。</li>
+<li>非标准序列容器 <code>slist</code> 和 <code>rope</code>。<code>slist</code> 是一个单向链表，<code>rope</code> 本质上是一个 &ldquo;重型&rdquo; <code>string</code>。</li>
+<li>非标准的关联容器：<code>hash_set</code>、<code>hash_multiset</code>、<code>hash_map</code>、<code>hash_multimap</code>。</li>
+<li><code>vector</code> 作为 <code>string</code> 的替代。</li>
+<li><code>vector</code> 作为标准关联容器的替代：有时 <code>vector</code> 在运行时间和空间上都要优于标准关联容器。</li>
+<li>几种标准的非 STL 容器：<code>array</code>、<code>bitset</code>、<code>valarray</code>、<code>stack</code>、<code>queue</code>、<code>priority_queue</code>。</li>
+</ul>
+<p>容器选择标准:</p>
+<ol>
+<li>vector、list和deque有着不同的复杂度，vector是默认使用的序列类型。当需要频繁在序列中间做插入和删除操作时，应使用list。当大多数插入和删除操作发生在序列的头部和尾部时，应使用deque。</li>
+<li>可以将容器分为连续内存容器和基于节点的容器两类。连续内存容器把元素存放在一块或多块(动态分配的)内存中，当有新元素插入或已有的元素被删除时，同一块内存中的其他元素要向前或向后移动，以便为新元素让出空间，或者是填充被删除元素所留下的空隙。这种移动会影响到效率和异常安全性。标准的连续内存容器有vector、string和deque，非标准的有rope。</li>
+<li>基于节点的容器在每一个(动态分配的)内存块中只存放一个元素。容器中元素的插入或删除只影响指向节点的指针，而不影响节点本身，所以插入或删除操作时元素是不需要移动的。链表实现的容器list和slist是基于节点的，标准关联容器也是(通常的实现方式是平衡树)，非标准的哈希容器使用不同的基于节点的实现。</li>
+<li>是否需要在容器的任意位置插入新元素？需要则选择序列容器，关联容器是不行的。</li>
+<li>是否关心容器中的元素是如何排序的？如果不关心，可以选择哈希容器，否则不能选哈希容器(unordered)。</li>
+<li>需要哪种类型的迭代器？如果是随机访问迭代器，那就只能选择vector、deque和string。如果使用双向迭代器，那么就不能选slist和哈希容器。</li>
+<li>是否希望在插入或删除元素时避免移动元素？如果是，则不能选择连续内存的容器。</li>
+<li>容器的数据布局是否需要和C兼容？如果需要只能选<code>vector</code>。</li>
+<li>元素的查找速度是否是关键的考虑因素？如果是就考虑哈希容器、排序的<code>vector</code>和标准关联容器。</li>
+<li>是否介意容器内部使用引用计数技术，如果是则避免使用<code>string</code>，因为<code>string</code>的实现大多使用了引用计数，可以考虑用<code>vector&lt;char&gt;</code>替代。</li>
+<li>对插入和删除操作需要提供事务语义吗？就是说在插入和删除操作失败时，需要回滚的能力吗？如果需要则使用基于节点的容器。如果是对多个元素的插入操作(针对区间)需要事务语义，则需要选择<code>list</code>，因为在标准容器中，只有<code>list</code>对多个元素的插入操作提供了事务语义。对希望编写异常安全代码的程序员，事务语义尤为重要。使用连续内存的容器也可以获得事务语义，但是要付出性能上的代价，而且代码也不那么直截了当。</li>
+<li>需要使迭代器、指针和引用变为无效的次数最少吗？如果是则选择基于节点的容器，因为对这类容器的插入和删除操作从来不会使迭代器、指针和引用变成无效(除非它们指向一个正在删除的元素)。而对连续内存容器的插入和删除一般会使得指向该容器的迭代器、指针和引用变为无效。</li>
+</ol>
+<h2 id="r02-不要试图编写独立于容器类型的代码">R02 不要试图编写独立于容器类型的代码</h2>
+<ol>
+<li>
+<p>容器是以类型作为参数的，而试图把容器本身作为参数，写出独立于容器类型的代码是不可能实现的。因为不同的容器支持的操作是不同的，即使操作是相同的，但是实现又是不同的，比如带有一个迭代器参数的erase作用于序列容器时，会返回一个新的迭代器，但作用于关联容器则没有返回值。这些限制的根源在于，对于不同类型的序列容器，使迭代器、指针和引用无效的规则是不同的。</p>
+</li>
+<li>
+<p>有时候不可避免要从一个容器类型转到另一种，可以使用封装技术来实现。最简单的方式是对容器类型和其迭代器类型使用typedef，如<code>typedef vector&lt;Widget&gt; widgetContainer</code>; <code>typedef widgetContainer::iterator WCIterator</code>; 如果想减少在替换容器类型时所需要修改的代码，可以把容器隐藏到一个类中，并尽量减少那些通过类接口可见的、与容器有关的信息。</p>
+</li>
+</ol>
+<p><strong>一种容器类型转换为另一种容器类型：typedef</strong></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span><span class="p">{...};</span>
+</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">WidgetContainer</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">WidgetContainer</span> <span class="n">cw</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">Widget</span> <span class="n">bestWidget</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">WidgetContainer</span><span class="o">::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="n">cw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">cw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">bestWidget</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样就使得改变容器类型要容易得多，尤其当这种改变仅仅是增加一个自定义得分配子时，就显得更为方便（这一改变不影响使迭代器/指针/引用无效的规则）。</p>
+<h2 id="r03-确保容器中的对象拷贝正确而高效">R03 确保容器中的对象拷贝正确而高效</h2>
+<ul>
+<li>存在继承关系的情况下，拷贝动作会导致<strong>剥离</strong>（slicing）: 如果创建了一个存放基类对象的容器，却向其中插入派生类对象，那么在派生类对象（通过基类的拷贝构造函数）被拷贝进容器时，它所特有的部分（即派生类中的信息）将会丢失。
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">vw</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SpecialWidget</span><span class="o">:</span>			<span class="c1">// SpecialWidget 继承于上面的 Widget
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">public</span> <span class="n">Widget</span><span class="p">{...};</span>
+</span></span><span class="line"><span class="cl"><span class="n">SpecialWidget</span> <span class="n">sw</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">vw</span><span class="p">.</span><span class="n">push_back</span><span class="p">();</span>					<span class="c1">// sw 作为基类对象被拷贝进 vw 中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                <span class="c1">// 它的派生类特有部分在拷贝时被丢掉了
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li><strong>剥离意味着向基类对象中的容器中插入派生类对象几乎总是错误的</strong>。</li>
+<li>解决剥离问题的简单方法：<u>使容器包含指针而不是对象</u>。</li>
+</ul>
+<ol>
+<li>容器中保存的对象，并不是你提供给容器的那些对象。从容器中取出对象时，也不是容器中保存的那份对象。当通过如insert或push_back之类的操作向容器中加入对象时，存入容器的是该对象的拷贝。当通过如front或back之类的操作从容器中 取出对象时，所得到的是容器中对象的拷贝。进去会拷贝，出来也是拷贝，这就是STL的工作方式。</li>
+<li>当对象被保存到容器中，它经常会进一步被拷贝。当对vector、string或deque进行元素的插入或删除时，现有元素的位置通常会被移动（拷贝）。如果使用下列任何算法，next_permutation或previous_permutation，remove、unique，rotate或reverse等等，那么对象将会被移动（拷贝），这就是STL的工作方式。</li>
+<li>如果向容器中填充的对象拷贝操作很费时，那么向容器中填充对象这一简单操作将会成为程序的性能瓶颈。而且如果这些对象的拷贝有特殊含义，那么把它们放入容器还将不可避免地会产生错误。</li>
+<li>当存在继承关系时，拷贝动作会导致剥离。也就是说，如果创建了一个存放基类对象的容器，却向其中插入派生类的对象，那么派生类对象（通过基类的拷贝构造函数）被拷贝进容器时，它派生类的部分将会丢失。</li>
+<li>使拷贝动作高效、正确，并防止剥离问题发生的一个简单办法就是使容器包含对象指针，而不是对象本身。拷贝指针的速度非常快，而且总是会按你期望的方式进行。如果考虑资源的释放，智能指针是一个很好的选择。</li>
+</ol>
+<h2 id="r04-调用-empty-而不是检查-size是否为0">R04 调用 empty 而不是检查 size()是否为0</h2>
+<ul>
+<li><code>empty</code> 通常被实现为内联函数（inline function），并且它做的仅仅是返回 size() 是否为 0.</li>
+<li><code>empty</code> 对所有标准容器都是常数时间操作，而对于一些 list 实现，size 耗费线性时间</li>
+</ul>
+<p>ref:
+[1]. <a href="https://www.cnblogs.com/Sherry4869/p/15128250.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/Sherry4869/p/15128250.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://blog.csdn.net/zhuikefeng/article/details/108164117#t42"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhuikefeng/article/details/108164117#t42<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>Effective STL [36] | 了解copy_if的正确实现</title><link>https://jianye0428.github.io/posts/clause_36/</link><pubDate>Wed, 30 Aug 2023 20:20:55 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_36/</guid><description><![CDATA[<h2 id="stl中copy算法">STL中copy算法</h2>
 <p>STL有很多有趣的地方，其中一个是虽然有11个名字带“copy”的算法，但没有一个是copy_if。</p>
 <ul>
@@ -326,7 +437,7 @@
 </span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">destBegin</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item><item><title>Effective STL 精度总结 [7] | 在程序中使用STL</title><link>https://jianye0428.github.io/posts/partseven/</link><pubDate>Mon, 28 Aug 2023 07:58:09 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partseven/</guid><description><![CDATA[<h1 id="前言">前言</h1>
+</div>]]></description></item><item><title>Effective STL 精读总结 [7] | 在程序中使用STL</title><link>https://jianye0428.github.io/posts/partseven/</link><pubDate>Mon, 28 Aug 2023 07:58:09 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partseven/</guid><description><![CDATA[<h1 id="前言">前言</h1>
 <blockquote>
 <p>Effective-STL总结系列分为七部分，本文为第七部分，涉及原书第七章，内容范围Rule43~50。为方便书写，Rule43简写为R43。</p>
 </blockquote>
@@ -352,10 +463,96 @@
 <p>例子：P155，</p>
 <p>算法的名称表明了它的功能，而 for、while、do 循环不能。</p>
 <p>手写循环需要维护迭代器的有效性。</p>
-<p>Ref:</p>
-<p>[1]. <a href="https://www.cnblogs.com/Sherry4869/p/15162253.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/Sherry4869/p/15162253.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2]. <a href="https://blog.csdn.net/zhuikefeng/article/details/108164117#t35"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhuikefeng/article/details/108164117#t35<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[3]. <a href="https://zhuanlan.zhihu.com/p/458156007"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/458156007<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="r44-容器的成员函数优先于同名的算法">R44 容器的成员函数优先于同名的算法</h2>
+<p>原因:</p>
+<ol>
+<li>成员函数往往速度快。</li>
+<li>成员函数通常与容器结合得更加紧密。（同样的名称做不同的事情）</li>
+</ol>
+<p>对于 map 和 multimap 而言:</p>
+<ol>
+<li>成员函数可以获得对数时间的性能。</li>
+<li>成员函数的相同是等价，而算法是相等。</li>
+<li>它们的成员函数只统计检查每个 pair 对象的键部分。而算法同时检查键和值/(key,value)对。</li>
+</ol>
+<p>对于 list 而言，list 成员函数只是简单地维护指针，可以提供更好的性能。list 的 remove、remove_if、unqiue 则实实在在的删除了元素。sort 算法不能直接应用于 list，因为 sort 需要随机访问迭代器，而 list 的迭代器是双向迭代器。</p>
+<h2 id="r45-正确区分countfindbinary_searchlower_boundupper_bound和equal_range">R45 正确区分count、find、binary_search、lower_bound、upper_bound和equal_range</h2>
+<ol>
+<li>假设你要在容器中查找一些信息，标题列出的几个函数应该怎么选择呢？首先应该考虑区间是否是排序的，如果是排序的，则binary_search、lower_bound、upper_bound和equal_range具有更快的查找速度，如果不是排序的，那么你只能选择count、count_if、find、find_if，这些算法仅提供线性时间的查找效率。但是这些函数还是有区别的，count、count_if、find、find_if使用相等性进行查找，binary_search、lower_bound、upper_bound和equal_range使用等价性进行查找。</li>
+<li>考虑count和find的区别，count表示区间是否存在待查找的值，如果存在有多少个？find表示区间是否存在待查找的值，如果存在它在哪里？假设你只想知道区间中是否存在待查找的值，如果是使用count会更方便一些，因为使用find还需要比较find返回的指针是否是容器的end()，但是因为find找到第一个符合查找的值就会返回，count一定会遍历到容器的末尾，所以find的效率更高。</li>
+<li>当你的区间是排序的，那么你就可以使用对数时间查找的四种方法。与标准C/C++函数库中的bsearch不同的是，binary_search仅判断区间是否存在待查找的值（返回值是bool），如果你还想知道待查找值得位置，可以使用其他三种方法，先考虑lower_bound，lower_bound查找特定值会返回一个迭代器，同样你需要判断这个迭代器的结果，除了要判断这个迭代器是否是end()，还要判断其指向的值是否是待查找的值，所以很多人会这么写：</li>
+</ol>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">i</span> <span class="o">=</span> <span class="n">lower_bound</span><span class="p">(</span><span class="n">vw</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">w</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">vw</span><span class="p">.</span><span class="n">end</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">*</span><span class="n">i</span> <span class="o">==</span> <span class="n">w</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span><span class="c1">//这里有一个错误
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里<code>*i == w</code>是一个相等性测试，但是lower_bound使用等价性进行搜索的，虽然大多数情况下等价性测试和相等性测试的结果相同，但是条款19也说明了违背这个情况也很常见，所以正确也更方便的方式是使用equal_range，equal_range会返回一对迭代器，第一个迭代器等于lower_bound返回的迭代器，第二个迭代器等于upper_bound返回的迭代器，equal_range返回了一个子区间，其中的值与待查找的值等价，如果返回的两个迭代器相同，等说明查找的区间没有待查找的值，而子区间的长度就是等价值的个数，可以使用distance得到。</p>
+<ol start="4">
+<li>再考虑lower_bound和upper_bound的使用场景，这次我不是希望查找某个元素，而是想找到第一个比特定值大的元素的位置，这个特定值可能不在容器中，那么可以使用lower_bound，如果希望找到第一个大于或等于特定值的元素的位置，那么可以使用upper_bound。</li>
+</ol>
+<h2 id="r46-考虑使用函数对象而不是函数作为-stl-算法的参数">R46 考虑使用函数对象而不是函数作为 STL 算法的参数</h2>
+<ol>
+<li>第一个原因是因为效率。随着抽象程度的提高，所生成代码的效率是在降低的，比如几乎在所有情况下，操作包含一个double的对象比直接操作double都是要慢的，但是可能令你感到惊讶的是，将函数对象传递给STL算法往往比传递函数更加高效。比如说你想生成一个降序排列的vector<double>，你可以使用函数对象，即greater<double>，也可以使用一个自定义的比较函数，而第一种情况往往是更快的，这是因为如果一个函数对象的operator()函数被声明是内联的（可以通过inline显式声明，也可以定义在类中隐式声明），那么它的函数体可被编译器直接优化，但是传递函数指针则不行，编译器不能优化。
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">sort</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">doubleGreater</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">sort</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">greater</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">());</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+<p>使用<code>greater&lt;double&gt;()</code>的sort调用比使用<code>doubleGreater</code>的 sort 调用快得多。原因：<strong>函数内联，sort 不包含函数调用</strong>。
+抽象性利益：C++ 的 sort 算法性能总是优于 C 的 qsort。在运行时，sort 算法以内联方式调用它的比较函数，而 qsort 则通过函数指针调用它的比较函数。
+使用函数对象，可以让你的程序正确地通过编译，避免语言本身的缺陷。
+2. 第二个原因是正确性，有的时候STL平台会拒绝一些完全合法的代码，如下：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//完全合法的代码但是不能通过编译
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">transform</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">s</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">ostream_iterator</span><span class="o">&lt;</span><span class="n">string</span><span class="o">::</span><span class="n">size_type</span><span class="o">&gt;</span><span class="p">(</span><span class="n">cout</span><span class="p">,</span> <span class="s">&#34;</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">),</span> <span class="n">mem_fun_ref</span><span class="p">(</span><span class="o">&amp;</span><span class="n">string</span><span class="o">::</span><span class="n">size</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">//可以改用函数对象的形式
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">struct</span> <span class="nc">stringSize</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">string</span><span class="o">::</span><span class="n">size_type</span><span class="o">&gt;</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span><span class="o">::</span><span class="n">size_type</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">s</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">s</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="r47-避免产生-直写型-write-only的代码">R47 避免产生 “直写型” （write only）的代码</h2>
+<p>所谓”直写型“的代码是指一行代码中有过于复杂的嵌套函数调用，可能对于编写代码的人，这行代码看似非常直接和简单，但是对于阅读代码的人则显得难以理解。所以在遇到这种写出“直写型”代码时，应该将其拆分成多行代码，或者使用typedef起别名的形式，让代码更易于阅读。</p>
+<h2 id="r48-总是包含include正确的头文件">R48 总是包含（#include）正确的头文件</h2>
+<p>有的时候即使漏掉了必要的头文件，程序同样可以编译，这是因为C++标准并没有规定标准库中头文件之间的相互包含关系，这就导致了某个头文件包含了其他头文件，如<vector>包含了<string>。但是这种程序往往是不可移植的，即使在你的平台上可以编译，但是在其他平台上就可能会编译不过，所以解决此类问题的一条原则就是总是include必要的头文件</p>
+<h2 id="r49-学会分析与-stl-相关的编译器诊断信息">R49 学会分析与 STL 相关的编译器诊断信息</h2>
+<p>在程序编译或者运行出错时，有时编译器给出的诊断信息非常混乱和难以阅读。对于这些信息可以使用同义词替换的方法进行简化，比如说将std::basic_string&lt;&gt;替换成string，将std::map&lt;&gt;替换成map，将看不懂的STL内部模板std::_Tree替换成something</p>
+<h2 id="r50-熟悉与-stl-相关的-web-站点">R50 熟悉与 STL 相关的 web 站点</h2>
+<p><a href="http://www.sgi.com/tech/stl"target="_blank" rel="external nofollow noopener noreferrer">SGI STL 站点<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<a href="http://www.stlport.org/"target="_blank" rel="external nofollow noopener noreferrer">STLport 站点<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<a href="http://www.boost.org/"target="_blank" rel="external nofollow noopener noreferrer">Boost 站点<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>Ref:</br>
+[1]. htTps://www.cnblogs.com/Sherry4869/p/15162253.html</br>
+[2]. <a href="https://blog.csdn.net/zhuikefeng/article/details/108164117#t35"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhuikefeng/article/details/108164117#t35<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3]. <a href="https://zhuanlan.zhihu.com/p/458156007"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/458156007<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
 ]]></description></item><item><title>Effective STL [34] | 注意哪个算法需要有序区间</title><link>https://jianye0428.github.io/posts/clause_34/</link><pubDate>Sat, 26 Aug 2023 10:55:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_34/</guid><description><![CDATA[<p>不是所有算法可以用于任意区间。比如，<strong>remove需要前向迭代器和可以通过这些迭代器赋值的能力</strong>。所以，它不能应用于由输入迭代器划分的区间，也不能是map或multimap，也不能是set和multiset的一些实现。</p>
 <p>同样，<strong>很多排序算法需要随机访问迭代器</strong>，所以不可能在一个list的元素上调用这些算法。</p>
 <p>最常见的就是一些算法<strong>需要有序值的区间</strong>。无论何时都应该坚持这个需求，因为冒犯它不仅会导致编译器诊断，而且会造成未定义的运行期行为。</p>
@@ -3245,201 +3442,4 @@
 <p>本条款是关于指针的关联容器，但它也可以应用于表现为指针的对象的容器，例如，智能指针和迭代器。</p>
 <p>如果你有一个智能指针或迭代器的关联容器，那也得为它指定比较类型。幸运的是，指针的这个解决方案也可以用于类似指针的对象。正如DereferenceLess适合作为T*的关联容器的比较类型一样，它也 可以作为T对象的迭代器和智能指针容器的比较类型。</p>
 <p>实际上，这24种排列很可能不是平等的，所以“24份之1”的陈述有点使人误解。确实，有24个不同的顺序，而且你可能得到它们中的任何一个。</p>
-]]></description></item><item><title>Effective STL [19] | 了解相等和等价的区别</title><link>https://jianye0428.github.io/posts/clause_19/</link><pubDate>Thu, 10 Aug 2023 08:30:55 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_19/</guid><description><![CDATA[<h2 id="比较对象">比较对象</h2>
-<p>STL充满了比较对象是否有同样的值。比如，当你用<code>find</code>来定位区间中第一个有特定值的对象的位置，<code>find</code>必须可以比较两个对象，看看一个的值是否与另一个相等。同样，当你尝试向<code>set</code>中插入一个新元素时，<code>set::insert</code>必须可以判断那个元素的值是否已经在<code>set</code>中了。</p>
-<p><code>find</code>算法和<code>set</code>的<code>insert</code>成员函数是很多必须判断两个值是否相同的函数的代表。但它们实现方式不同，find对“相同”的定义是相等，基于<code>operator==</code>。<code>set::insert</code>对“相同”的定义是等价，通常基于<code>operator&lt;</code>。因为有定义不同，所以有可能一个定义规定了两个对象有相同的值而另一个定义判定它们没有。结果，如果你想有效使用STL，那么你必须明白相等和等价的区别。</p>
-<p><strong>相等</strong></p>
-<p>操作上来说，相等的概念是基于<code>operator</code>的。如果表达式“<code>x == y</code>”返回true，<code>x</code>和<code>y</code>有相等的值，否则它们没有。</p>
-<p><strong><font color=red>x和y有相等的值并不意味着所有它们的成员有相等的值</font></strong>。比如，我们可能有一个内部记录了最后一次访问的Widget类。</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"> <span class="n">TimeStamp</span> <span class="n">lastAccessed</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>我们可以有一个用于Widget的忽略这个域的operator:</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">operator</span><span class="p">(</span><span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span> <span class="k">const</span> <span class="n">Widget</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 忽略lastAccessed域的代码
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>在这里，两个<code>Widget</code>即使它们的<code>lastAccessed</code>域不同也可以有相等的值。</p>
-<p>一般而言，相等意味着两个变量的值相同，但是如果比较2个对象，因为比较函数可以自定义，因此有时候对象的某些成员变量值不同也会设定2个对象相等。</p>
-<p><strong>等价</strong></p>
-<p>==等价是基于在一个有序区间中对象值的相对位置==。</p>
-<p>等价一般在每种标准关联容器（比如，set、multiset、map和multimap）的一部分——排序顺序方面有意义。注意这里的应用场景是==排序==。</p>
-<p>两个对象x和y如果在关联容器c的排序顺序中没有哪个排在另一个之前，那么它们关于c使用的排序顺序有等价的值。</p>
-<p>举一个例子，一个set<Widget> s。两个Widget w1和w2，如果在s的排序顺序中没有哪个在另一个之前，那么关于s它们有等价的值。set<Widget>的默认比较函数是less<Widget>，而默认的less<Widget>简单地对Widget调用operator&lt;，所以w1和w2关于operator&lt;有等价的值如果下面表达式为真：</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">!</span><span class="p">(</span><span class="n">w1</span> <span class="o">&lt;</span> <span class="n">w2</span><span class="p">)</span> <span class="c1">// w1 &lt; w2时它非真
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">&amp;&amp;</span> <span class="c1">// 而且
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">!</span><span class="p">(</span><span class="n">w2</span><span class="o">&lt;</span><span class="n">w1</span><span class="p">)</span> <span class="c1">// w2 &lt; w1时它非真
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这个有意义：<font color=red>两个值如果没有哪个在另一个之前（关于某个排序标准），那么它们等价（按照那个标准）。</font>在一般情况下，用于关联容器的比较函数不是<code>operator&lt;</code>或甚至<code>less</code>，它是用户定义的判断式。每个标准关联容器通过它的<code>key_comp</code>成员函数来访问排序判断式，所以如果下式求值为真，两个对象x和y关于一个关联容器c的排序标准有等价的值：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">!</span><span class="n">c</span><span class="p">.</span><span class="n">key_comp</span><span class="p">()(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">c</span><span class="p">.</span><span class="n">key_comp</span><span class="p">()(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="c1">// 在c的排序顺序中
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 如果x在y之前它非真，同时在c的排序顺序中,如果y在x之前它非真
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>要完全领会==相等==和==等价==的含义，考虑一个忽略大小写的<code>set&lt;string&gt;</code>，也就是set的比较函数忽略字符串中字符大小写的<code>set&lt;string&gt;</code>。这样的比较函数会认为“STL”和“stL”是等价的。条款35演示了怎么实现一个函数，<code>ciStringCompare</code>，它进行了忽略大小写比较，但set要一个比较函数的类型，不是真的函数。要填平这个鸿沟，我们写一个operator()调用了ciStringCompare的仿函数类:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">CIStringCompare</span><span class="o">:</span> <span class="c1">// 用于忽略大小写
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span> <span class="c1">// 字符串比较的类；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">binary_function</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">string</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lhs</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span>
-</span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">return</span> <span class="n">ciStringCompare</span><span class="p">(</span><span class="n">lhs</span><span class="p">,</span> <span class="n">rhs</span><span class="p">);</span> <span class="c1">// 关于ciStringCompare
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>具体实现为:</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">ciCharCompare</span><span class="p">(</span><span class="kt">char</span> <span class="n">c1</span><span class="p">,</span> <span class="kt">char</span> <span class="n">c2</span><span class="p">)</span> <span class="c1">// 忽略大小写比较字符
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">{</span>   <span class="c1">// c1和c2，如果c1 &lt; c2返回-1，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 如果c1==c2返回0，如果c1 &gt; c2返回1
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">int</span> <span class="n">Ic1</span> <span class="o">=</span> <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c1</span><span class="p">));</span><span class="c1">// 转成小写
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">int</span> <span class="n">Ic2</span> <span class="o">=</span> <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c2</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">Ic1</span> <span class="o">&lt;</span> <span class="n">Ic2</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">lc1</span> <span class="o">&gt;</span> <span class="n">Ic2</span><span class="p">)</span> <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>给定<code>CIStringCompare</code>，要建立一个忽略大小写的set<string>就很简单了:</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">CIStringCompare</span><span class="o">&gt;</span> <span class="n">ciss</span><span class="p">;</span> <span class="c1">// ciss = “case-insensitive
-</span></span></span><span class="line"><span class="cl"><span class="c1">// string set”
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果我们向这个set中插入“<code>Persephone</code>”和“<code>persephone</code>”，只有第一个字符串加入了，因为第二个等价于第一个：</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ciss</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="s">&#34;Persephone&#34;</span><span class="p">);</span> <span class="c1">// 一个新元素添加到set中
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">ciss</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="s">&#34;persephone&#34;</span><span class="p">);</span> <span class="c1">// 没有新元素添加到set中
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果我们现在使用set的find成员函数搜索字符串“persephone”，搜索会成功，</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">ciss</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#34;persephone&#34;</span><span class="p">)</span> <span class="o">!=</span> <span class="n">ciss</span><span class="p">.</span><span class="n">end</span><span class="p">())...</span> <span class="c1">// 这个测试会成功
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>但如果我们用非成员的find算法，搜索会失败：</p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">find</span><span class="p">(</span><span class="n">ciss</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">ciss</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
-</span></span><span class="line"><span class="cl"><span class="s">&#34;persephone&#34;</span><span class="p">)</span> <span class="o">!=</span> <span class="n">ciss</span><span class="p">.</span><span class="n">end</span><span class="p">())...</span> <span class="c1">// 这个测试会失败
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>那是因为“<code>persephone</code>”等价于“<code>Persephone</code>”（关于比较仿函数CIStringCompare），但不等于它（因为string(&ldquo;persephone&rdquo;) != string(&ldquo;Persephone&rdquo;)）。你可能会奇怪为什么标准关联容器是基于等价而不是相等。毕竟，大多数程序员对相等有感觉而缺乏等价的感觉。</p>
-<p><font color=red>标准关联容器保持有序，所以每个容器必须有一个定义了怎么保持东西有序的比较函数（默认是less）。等价是根据这个比较函数定义的，所以标准关联容器的用户只需要为他们要使用的任意容器指定一个比较函数（决定排序顺序的那个）。</p>
-<p>如果关联容器使用相等来决定两个对象是否有相同的值，那么每个关联容器就需要，除了用于排序的比较函数，还需要一个用于判断两个值是否相等的比较函数。（默认的，这个比较函数大概应该是equal_to，但有趣的是equal_to从没有在STL中用做默认比较函数。当在STL中需要相等时，习惯是简单地直接调用operator==。比如，这是非成员find算法所作的。）</font></p>
-<p><strong><font color=blue>说白了，就是等价是为容器排序服务的，如果容器想要插入多个转化为小写后相等的单词，容器会判定这些单词等价，虽然它们本身不相等，这样就能够很好地保持容器内单词的唯一性和单词的有序性。否则通过查找或插入该单词的时候，容器内部就会发生歧义，造成不符合使用者逻辑。</font></strong></p>
-<p>让我们假设我们有一个类似set的STL容器叫做<code>set2CF</code>，“set with two comparison functions”。<strong><font color=red>第一个比较函数用来决定set的排序顺序，第二个用来决定是否两个对象有相同的值。</font></strong> 现在考虑这set2CF：</p>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set2CF</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">CIStringCompare</span><span class="p">,</span> <span class="n">equal_to</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">s</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>在这里，s内部排序它的字符串时不考虑大小写，等价标准直觉上是这样：如果两个字符串中一个等于另一个，那么它们有相同的值。让我们向s中插入哈迪斯强娶的新娘（Persephone）的两个拼写:</p>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">s</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="s">&#34;Persephone&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">s</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="s">&#34;persephone&#34;</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p>如果我们说<code>&quot;Persephone&quot; != &quot;persephone&quot;</code>然后两个都插入s，它们应该是什么顺序？</p>
-</blockquote>
-<p>记住排序函数不能分别告诉它们。我们可以以任意顺序插入，因此放弃以确定的顺序遍历set内容的能力吗？（不能以确定的顺序遍历关联容器元素已经折磨着<code>multiset</code>和<code>multimap</code>了，因为标准没有规定等价的值（对于multiset）或键（对于multimap）的相对顺序。）或者我们坚持s的内容的一个确定顺序并忽略第二次插入的尝试（“persephone”的那个）? 如果我们那么做，这里会发生什么？</p>
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#34;persephone&#34;</span><span class="p">)</span> <span class="o">!=</span> <span class="n">s</span><span class="p">.</span><span class="n">end</span><span class="p">())...</span> <span class="c1">// 这个测试成功或失败？
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>大概**<font color=red>find使用了等价检查</font>**，但如果我们为了维护s中元素的一个确定顺序而忽略了第二个insert的调用，这个find会失败，即使“persephone”的插入由于它是一个重复的值的原则而被忽略！</p>
-<h2 id="总结">总结</h2>
-<p>通过只使用一个比较函数并使用等价作为两个值“相等”的意义的仲裁者，标准关联容器避开了很多会由允许两个比较函数而引发的困难。</p>
-<p>一开始行为可能看起来有些奇怪（特别是当你发现成员和非成员find可能返回不同结果），但最后，它避免了会由在标准关联容器中混用相等和等价造成的混乱。</p>
 ]]></description></item></channel></rss>

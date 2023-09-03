@@ -23,9 +23,9 @@ note abstract info tip success question warning failure danger bug example quote
 ## 一、AE
 ![](images/VAE_1.png)
 
-先来介绍一下自编码器（Auto-Encoder），它是一种无监督学习方法，如上图所示，原理可概述为：
+先来介绍一下自编码器(Auto-Encoder)，它是一种无监督学习方法，如上图所示，原理可概述为：
 
-- 将高维原始数据（如图片）送入 Encoder，利用 Encoder 将高维数据映射到一个低维空间，将n维压缩到m维($m<<n$)，我们用隐变量来表示；
+- 将高维原始数据(如图片)送入 Encoder，利用 Encoder 将高维数据映射到一个低维空间，将n维压缩到m维($m<<n$)，我们用隐变量来表示；
 - 然后将低维空间的特征送入 Decoder 进行解码，以此来重建原始输入数据。
 
 {{<admonition Note "Note">}}
@@ -47,7 +47,7 @@ $$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - x'^{(i)})^2
 
 上面我们通过AE可以<font color=lightseablue>**构建一个重构图像的模型**</font>，但是这个模型并不能满足要求，或者说它并不是真正意义上的生成模型。对于一个生成模型而言，它满足：
 
-- **Encoder 和 Decoder 可以独立拆分（类比 GAN 的 Generator 和 Discriminator）；**
+- **Encoder 和 Decoder 可以独立拆分(类比 GAN 的 Generator 和 Discriminator)；**
 - **固定维度下<font color=red>任意采样</font>出来的编码，都应该能通过 Decoder 产生一张清晰且逼真的图片。**
 
 当然对于第一点它是满足的，我们主要分析第二点，也就是AE存在的问题，从而引出VAE。
@@ -56,7 +56,7 @@ $$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - x'^{(i)})^2
 
 如上图所示，用一张全月图和一张半月图去训练一个AE，经过训练模型是能够很好的还原出这两张图片。
 
-接下来，我们在 latent code 中任取一点，将其交给 Decoder 进行解码，直觉上我们会得到一张介于全月和半月之前的图片（比如阴影面积覆盖的样子）。然而<font color=red>实际上的输出图片不仅模糊而且还是乱码的</font>。
+接下来，我们在 latent code 中任取一点，将其交给 Decoder 进行解码，直觉上我们会得到一张介于全月和半月之前的图片(比如阴影面积覆盖的样子)。然而<font color=red>实际上的输出图片不仅模糊而且还是乱码的</font>。
 
 对于这个现象，一个直观的解释就是AE的 Encoder 和 Decoder 都用了DNN，那么NN只会干一件事情：学习、记住、用记住的东西预测，我们<u>从 latent space 中采样的点，编码器都没有学习过</u>，怎么能够指望它生成希望的值呢?
 
@@ -78,13 +78,13 @@ $$L_{\text{AE}}(\theta, \phi) = \frac{1}{n}\sum_{i=1}^{n} (x^{(i)} - x'^{(i)})^2
 
 ![](images/VAE_4.png)
 
-这个其实就是VAE的思想，熟悉GMM的同学应该知道，它是K个高斯分布（Gaussian Distribution）的混合，其实**<font color=green>VAE可以说是无限个高斯分布的混合</font>**。
+这个其实就是VAE的思想，熟悉GMM的同学应该知道，它是K个高斯分布(Gaussian Distribution)的混合，其实<font color=green>**VAE可以说是无限个高斯分布的混合**</font>。
 
 ## 三、VAE 结构预览
 
 ![](images/VAE_5.png)
 
-如上图所示VAE的结构，我们可以看到VAE里的编码器不是输出隐向量$z$，而是一个概率分布，分布的均值为$m$、方差为$\sigma$，$e$ 即为给编码添加的噪声，来自于正态分布。
+如上图所示VAE的结构，我们可以看到**VAE里的编码器不是输出隐向量$z$，而是一个概率分布**，分布的均值为$m$、方差为$\sigma$，$e$ 即为给编码添加的噪声，来自于正态分布。
 
 {{<admonition Note "tips">}}
 VAE的Encoder的输出不是隐向量，而是均值为$m$, 方差为$\sigma$的正态分布。
@@ -94,10 +94,11 @@ VAE的Encoder的输出不是隐向量，而是均值为$m$, 方差为$\sigma$的
 
 $$z_{i} = c_{i} = \exp(\sigma_i) * e_i + m_i$$
 
- - Encoder会计算出两组编码，一组为均值m、一组为控制噪声干扰程度的方差$\sigma$；
- - 方差$\sigma$主要用来为噪声编码 $e$ 分配权重；
- - 取指数主要是为了保证分配到的权重是正值；
- - 也就是说数据分布会在 $\exp(\sigma_i) * e$ 方差范围内采样一个值，得到一个偏移量，就是相当于把原始的样本加上了一个噪声。从结构图中我们可以看到，损失除了AE的 重构损失（reconstruction error）外，还多出了下面这一项：
+ - $e$ 为噪声，$m$ 为均值， $\sigma$ 为控制噪声$e$的方差;
+ - Encoder会计算出两组编码，一组为均值m、一组为控制噪声干扰程度的方差$\sigma$;
+ - 方差$\sigma$主要用来为噪声编码 $e$ 分配权重;
+ - 取指数主要是为了保证分配到的权重是正值;
+ - 也就是说数据分布会在 $\exp(\sigma_i) * e$ 方差范围内采样一个值，得到一个偏移量，就是相当于把原始的样本加上了一个噪声。从结构图中我们可以看到，损失除了AE的 重构损失(reconstruction error)外，还多出了下面这一项:
    $$c = (c_1, c_2, c_3) = \sum_{i=1}^{3} (e^{\sigma_i} - (1 + \sigma_i) + (m_i)^2)$$
 
 这个辅助loss可以认为是一个约束，也就是说生成的 $\sigma$ 要满足这个约束。
@@ -227,7 +228,7 @@ $$
 我们将 $\sum_{z}q_{\phi}(z|x)\log(\frac{p_{\theta}(x, z)}{q_{\phi}(z|x)})$ 写成 $L(\theta, \phi; x)$ ，等式左边是一个const，也就是说不管 $x$ 的分布是什么样，它对 $\theta$ 来说没什么影响。等式右边，KL divergence是一个非负的，所以我们只要把 $L(\theta, \phi; x)$ 的值尽可能的拉大，那么KL divergence的值就会随之缩小。
 
 
-**想要最大化的$L(\theta, \phi; x)$，就被称为变分下界（Variational lower bound）。**
+**想要最大化的$L(\theta, \phi; x)$，就被称为变分下界(Variational lower bound)。**
 
 ### 4.3、Loss Function
 现在我们只要想办法将这个 lower bound 提升就可以了，那么这个 lower bound 就可以作为我们的 loss function：
@@ -309,7 +310,7 @@ $$
 \end{aligned}
 $$
 
-分别求导之后，后面一项可以写成期望的形式，但是前面这一项就无法处理了，为了解决这个问题，作者使用了**重参数化技巧（Reparameterization Trick）**。
+分别求导之后，后面一项可以写成期望的形式，但是前面这一项就无法处理了，为了解决这个问题，作者使用了**重参数化技巧(Reparameterization Trick)**。
 
 核心思想就是引入一个辅助的随机变量 $\epsilon$，$\epsilon \in p(\epsilon)$，这个随机变量和其它变量没有关系，它是一个独立的随机变量，用来表示产生 $z$ 的过程中所有的随机性。也就是说抽样产生 $z$ 的过程中，所有的随机性都是由这个 $\epsilon \in p(\epsilon)$ 产生的。
 
@@ -400,7 +401,7 @@ $$
 - $line 3:$ 因为 $\frac{1}{2}\log(2\pi)$ 是个常数、$N(z; \mu, \sigma^2)$ 这个分布积分之后是1，所以可以直接把常数项拿到积分外面；但是因为 $z$ 是一个向量，我们假设 $z$ 有 $J$ 个元素element，那么每个元素都会积出一个值来，所以要乘上 $J$，即 $\frac{J}{2}\log(2\pi)$;
 - $line 4:$ 对于积分 $\int N(z;\mu,\sigma^2) z^2\mathrm{d}z$ 我们可以换个角度理解它：这里我们把它就当成一个概率分布，所以整个这个积分其实也是一个期望的形式，不过它是对 $z^2$ 的期望，经过变形可以写成 $-\frac{1}{2} E_{z \sim N(z; \mu, \sigma^2)}[z]^2$
 。在这个基础上我们使用期望的性质 $E[z^2] = E[z]^2 + variance(z)$，即 $z^2$ 的期望等于期望的平方加上 $z$ 的方差；
-- 那么对于一个 normal distribution 来说它的期望和方差是显而易见的：$\mu$ 和 $\sigma$，对于 $z$ 里的每个元素（脚标是 $j$）都加起来就好了，这样最开始的积分就可以简化成最后的形式。
+- 那么对于一个 normal distribution 来说它的期望和方差是显而易见的：$\mu$ 和 $\sigma$，对于 $z$ 里的每个元素(脚标是 $j$)都加起来就好了，这样最开始的积分就可以简化成最后的形式。
 
 我们再来看 $\int q_{\phi}(z|x)\log q_{\phi}(z|x)\mathrm{d}z$:
 
