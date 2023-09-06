@@ -309,6 +309,138 @@ $$</p>
 [9]. <a href="https://lilianweng.github.io/posts/2021-07-11-diffusion-models"target="_blank" rel="external nofollow noopener noreferrer">https://lilianweng.github.io/posts/2021-07-11-diffusion-models<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [10]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486128&amp;idx=1&amp;sn=7ffef5d8c1bbf24565d0597eb5eaeb16&amp;chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486128&idx=1&sn=7ffef5d8c1bbf24565d0597eb5eaeb16&chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
 [11]. <a href="https://arxiv.org/pdf/2006.11239.pdf"target="_blank" rel="external nofollow noopener noreferrer">paper link<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Effective STL [10] | 注意分配器的协定和约束</title><link>https://jianye0428.github.io/posts/clause_10/</link><pubDate>Sat, 29 Jul 2023 15:38:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_10/</guid><description><![CDATA[<h2 id="分配器">分配器</h2>
+<p>分配器最初是为抽象内存模型而开发的，允许库开发者忽略在某些16位操作系统上near和far指针的区别，也被设计成促进全功能内存管理器的发展，但事实表明那种方法在STL的一些部分会<font color=red>导致效率损失</font>。</p>
+<p>分配器最初被设想为抽象内存模型，在那种情况下，分配器在它们定义的内存模型中提供指针和引用的<code>typedef</code>才有意义。在C++标准里，类型T的对象的默认分配器（巧妙地称为<code>allocator&lt;T&gt;</code>）提供<code>typedef allocator&lt;T&gt;::pointer</code>和<code>allocator&lt;T&gt;::reference</code>，而且也希望用户定义的分配器也提供这些typedef。</p>
+<p>建立行为像引用的对象是使用代理对象的例子，而代理对象会导致很多问题。</p>
+<p>实际上标准明确地允许库实现假设每个分配器的pointer typedef是T*的同义词，每个分配器的reference typedef与T&amp;相同。对，库实现可以忽视typedef并直接使用原始指针和引用！</p>
+<p>分配器是对象，那表明它们可能有成员功能，内嵌的类型和typedef（例如pointer和reference）等等，但标准允许STL实现认为所有相同类型的分配器对象都是等价的而且比较起来总是相等。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="c1">// 一个用户定义的分配器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">SpecialAllocator</span> <span class="p">{...};</span> <span class="c1">// 模板
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">SpecialAllocator</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">SAW</span><span class="p">;</span> <span class="c1">// SAW = “SpecialAllocator for Widgets”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SAW</span><span class="o">&gt;</span> <span class="n">L1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SAW</span><span class="o">&gt;</span> <span class="n">L2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">L1</span><span class="p">.</span><span class="n">splice</span><span class="p">(</span><span class="n">L1</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">L2</span><span class="p">);</span> <span class="c1">// 把L2的节点移到 L1前端
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>记住当list元素从一个list被接合到另一个时，没有拷贝什么。取而代之的是，调整了一些指针，曾经在一个list中的节点发现他们自己现在在另一个list中。这使接合操作既迅速又异常安全。</p>
+<p>当L1被销毁时，当然，它必须销毁它的所有节点（以及回收它们的内存），而因为它现在包含最初是L2一部分的节点，L1的分配器必须回收最初由L2的分配器分配的节点。</p>
+<p>现在清楚为什么<font color=blue><strong>标准允许STL实现认为相同类型的分配器等价</strong></font>。所以由一个分配器对象（比如L2）分配的内存可以安全地被另一个分配器对象（比如L1）回收。</p>
+<p>STL实现可以认为相同类型的分配器等价是多严厉的约束。那意味着可移植的分配器对象——<font color=blue><strong>不能有状态</strong></font>。让我们明确这一点：它意味着可移植的分配器不能有任何非静态数据成员，至少没有会影响它们行为的。</p>
+<h2 id="分配原始内存">分配原始内存</h2>
+<p>分配器在分配原始内存方面类似operator new，但它们的接口不同。如果你看看operator new和allocator::allocate最普通形式的声明，就会很清楚。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span><span class="o">*</span> <span class="k">operator</span> <span class="nf">new</span><span class="p">(</span><span class="n">size_t</span> <span class="n">bytes</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">pointer</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">allocate</span><span class="p">(</span><span class="n">size_type</span> <span class="n">numObjects</span><span class="p">);</span> <span class="c1">// 记住事实上“pointer”总是 T*的typedef
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>两者都带有一个指定要分配多少内存的参数，但对于<code>operator new</code>，这个参数指定的是字节数，而对于<code>allocator::allocate</code>，它指定的是内存里要能容纳多少个T对象。</p>
+<p>通常<code>allocator::size_type</code>是一个<code>size_t</code>的<code>typedef</code>。</p>
+<p><code>operator new</code>和<code>allocator::allocate</code>的返回类型也不同。<code>operator new</code>返回<code>void</code>，那是C++传统的表示一个到未初始化内存的指针的方式。<code>allocator::allocate</code>返回一个T（通过<code>pointer typedef</code>），不仅不传统，而且是有预谋的欺诈。从<code>allocator::allocate</code>返回的指针并不指向一个T对象，因为T还没有被构造！</p>
+<h2 id="大多数标准容器从未调用它们例示的分配器">大多数标准容器从未调用它们例示的分配器</h2>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">L</span><span class="p">;</span> <span class="c1">// 和list&lt;int, allocator&lt;int&gt; &gt;一样； allocator&lt;int&gt;从未用来分配内存！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">set</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SAW</span><span class="o">&gt;</span> <span class="n">s</span><span class="p">;</span> <span class="c1">// 记住SAW是一个 SpecialAllocator&lt;Widget&gt;的typedef； SAW从未分配内存！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为<code>set</code>、<code>multiset</code>、<code>map</code>和<code>multimap</code>是基于节点的容器，即，这些容器所基于的数据结构是每当值被储存就动态分配一个新节点。对于list，节点是列表节点。</p>
+<p><strong><font color=lightseagreen>对于标准关联容器，节点通常是树节点，因为标准关联容器通常用平衡二叉搜索树实现。</font></strong></p>
+<p><code>list</code>本身由节点组成，每个节点容纳一个T对象和到list中后一个和前一个节点的指针：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="c1">// list的可能
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="c1">// 实现
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">list</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl"><span class="n">Allocator</span> <span class="n">alloc</span><span class="p">;</span> <span class="c1">// 用于T类型对象的分配器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">struct</span> <span class="nc">ListNode</span><span class="p">{</span> <span class="c1">// 链表里的节点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">T</span> <span class="nl">data</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">ListNode</span> <span class="o">*</span><span class="n">prev</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">ListNode</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当添加一个新节点到<code>list</code>时，我们需要从分配器为它获取内存，我们要的不是<code>T</code>的内存，我们要的是包含了一个<code>T</code>的<code>ListNode</code>的内存。那使我们的<code>Allocator</code>对象没用了，因为它不为<code>ListNode</code>分配内存，它为T分配内存。现在你理解list为什么从未让它的<code>Allocator</code>做任何分配了：分配器不能提供list需要的。</p>
+<p>list需要的是从它的分配器类型那里获得用于ListNode的对应分配器的方法。</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="c1">// 标准分配器像这样声明，
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">allocator</span> <span class="p">{</span> <span class="c1">// 但也可以是用户写的分配器模板
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">U</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="nc">rebind</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typedef</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">U</span><span class="o">&gt;</span> <span class="n">other</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在list的实现代码里，需要确定我们持有的T的分配器所对应的<code>ListNode</code>的分配器类型。我们持有的T的分配器类型是模板参数<code>Allocator</code>。</p>
+<p>在本例中，<code>ListNodes</code>的对应分配器类型是：</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Allocator</span><span class="o">::</span><span class="n">rebind</span><span class="o">&lt;</span><span class="n">ListNode</span><span class="o">&gt;::</span><span class="n">other</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>每个分配器模板A（例如，<code>std::allocator</code>，<code>SpecialAllocator</code>等）都被认为有一个叫做<code>rebind</code>的内嵌结构体模板。<code>rebind</code>带有一个类型参数<code>U</code>, 并且只定义一个<code>typedef A&lt;U&gt; other</code>. other是<code>A&lt;U&gt;</code>的一个简单名字。</p>
+<p>结果，List<T>可以通过<code>Allocator::rebind&lt;ListNode&gt;::other</code>从它用于T对象的分配器（叫做Allocator）获取对应的<code>ListNode</code>对象分配器。</p>
+<h2 id="结论">结论</h2>
+<p>如果你想要写自定义分配器，让我们总结你需要记得的事情。</p>
+<ul>
+<li>把你的分配器做成一个模板，带有模板参数T，代表你要分配内存的对象类型。</li>
+<li>提供pointer和reference的typedef，但是总是让pointer是T*，reference是T&amp;。</li>
+<li>决不要给你的分配器每对象状态。通常，分配器不能有非静态的数据成员。- 记得应该传给分配器的allocate成员函数需要分配的对象个数而不是字节数。也应该记得这些函数返回T*指针（通过pointer typedef），即使还没有T对象被构造。</li>
+<li>一定要提供标准容器依赖的内嵌rebind模板。</li>
+</ul>
 ]]></description></item><item><title>Effective STL [9] | 在删除选项中仔细选择</title><link>https://jianye0428.github.io/posts/clause_9/</link><pubDate>Fri, 28 Jul 2023 07:59:27 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_9/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -5620,351 +5752,4 @@ $$\text{Micro-Recall} = \frac{TP_{cat} + TP_{dog} + TP_{pig}}{TP_{cat} + TP_{dog
 <p>回归算法的评价指标就是MSE，RMSE，MAE、R-Squared。</p>
 <p>　　MSE和MAE适用于误差相对明显的时候，大的误差也有比较高的权重，RMSE则是针对误差不是很明显的时候；MAE是一个线性的指标，所有个体差异在平均值上均等加权，所以它更加凸显出异常值，相比MSE；</p>
 <p>　　RMSLE: 主要针对数据集中有一个特别大的异常值，这种情况下，data会被skew，RMSE会被明显拉大，这时候就需要先对数据log下，再求RMSE，这个过程就是RMSLE。对低估值（under-predicted）的判罚明显多于估值过高(over-predicted)的情况（RMSE则相反）</p>
-]]></description></item><item><title>Maching Learning Notes 1</title><link>https://jianye0428.github.io/posts/notes_1/</link><pubDate>Sat, 15 Jul 2023 16:27:34 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/notes_1/</guid><description><![CDATA[<h2 id="用pickle保存和加载模型">用pickle保存和加载模型</h2>
-<ul>
-<li>保存模型
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pickle</span>
-</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">sklearn.svm</span> <span class="kn">import</span> <span class="n">SVC</span>
-</span></span><span class="line"><span class="cl"><span class="n">model_dir</span> <span class="o">=</span> <span class="s1">&#39;./model.pkl&#39;</span>
-</span></span><span class="line"><span class="cl"><span class="n">model</span> <span class="o">=</span> <span class="n">SVC</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> <span class="c1"># 注意:保存完模型之后要关闭文件</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>加载模型
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pickle</span>
-</span></span><span class="line"><span class="cl"><span class="n">model_dir</span> <span class="o">=</span> <span class="s1">&#39;./model.pkl&#39;</span>
-</span></span><span class="line"><span class="cl"><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">    <span class="n">model</span> <span class="o">=</span> <span class="n">pickel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">mode</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x</span><span class="p">))</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h2 id="逻辑回归-logistic-regression">逻辑回归 Logistic Regression</h2>
-<ul>
-<li>LR Implementation code snippets
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span><span class="lnt">62
-</span><span class="lnt">63
-</span><span class="lnt">64
-</span><span class="lnt">65
-</span><span class="lnt">66
-</span><span class="lnt">67
-</span><span class="lnt">68
-</span><span class="lnt">69
-</span><span class="lnt">70
-</span><span class="lnt">71
-</span><span class="lnt">72
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">accuracy_score</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">pickle</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">data_path</span> <span class="o">=</span> <span class="s1">&#39;./data/merged_data/data.npy&#39;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">model_l1_path</span><span class="o">=</span><span class="s1">&#39;./model/logistic_reg_l1.pickle&#39;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">model_l2_path</span><span class="o">=</span><span class="s1">&#39;./model/logictic_reg_l2.pickle&#39;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">X</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">35</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">X_train</span><span class="p">,</span> <span class="n">x_test</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1"># lr_l1 = LogisticRegression(penalty=&#34;l1&#34;, C=0.5, solver=&#39;sag&#39;, multi_class=&#34;auto&#34;)</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># lr_l2 = LogisticRegression(penalty=&#34;l2&#34;, C=0.5, solver=&#39;sag&#39;, multi_class=&#34;auto&#34;)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1"># # train model</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># lr_l1.fit(X_train, Y_train)</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># lr_l2.fit(X_train, Y_train)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1"># model performence on train set</span>
-</span></span><span class="line"><span class="cl">  <span class="n">l1_train_predict</span> <span class="o">=</span> <span class="p">[]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">l2_train_predict</span> <span class="o">=</span> <span class="p">[]</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1"># model performence on test set</span>
-</span></span><span class="line"><span class="cl">  <span class="n">l1_test_predict</span> <span class="o">=</span> <span class="p">[]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">l2_test_predict</span> <span class="o">=</span> <span class="p">[]</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">50</span><span class="p">)):</span>
-</span></span><span class="line"><span class="cl">      <span class="c1"># lr_l1 = LogisticRegression(penalty=&#34;l1&#34;, C=c, solver=&#39;liblinear&#39;, max_iter=1000)</span>
-</span></span><span class="line"><span class="cl">      <span class="c1"># lr_l2 = LogisticRegression(penalty=&#39;l2&#39;, C=c, solver=&#39;liblinear&#39;, max_iter=1000)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="n">lr_l1</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">penalty</span><span class="o">=</span><span class="s2">&#34;l1&#34;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;liblinear&#39;</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">multi_class</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">lr_l2</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l2&#39;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;liblinear&#39;</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">multi_class</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="c1"># 训练模型，记录L1正则化模型在训练集测试集上的表现</span>
-</span></span><span class="line"><span class="cl">      <span class="n">lr_l1</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">l1_train_predict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">lr_l1</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span> <span class="n">Y_train</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">      <span class="n">l1_test_predict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">lr_l1</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">),</span> <span class="n">y_test</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="c1"># 记录L2正则化模型的表现</span>
-</span></span><span class="line"><span class="cl">      <span class="n">lr_l2</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">l2_train_predict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">lr_l2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span> <span class="n">Y_train</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">      <span class="n">l2_test_predict</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">lr_l2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">),</span> <span class="n">y_test</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">          <span class="n">pred_y_test</span> <span class="o">=</span> <span class="n">lr_l2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">          <span class="n">mask</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pred_y_test</span><span class="o">-</span><span class="n">y_test</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">5</span>
-</span></span><span class="line"><span class="cl">          <span class="n">neg_test</span> <span class="o">=</span> <span class="n">pred_y_test</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">          <span class="n">res</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">neg_test</span><span class="p">)</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">pred_y_test</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">          <span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_l1_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f1</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">              <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">lr_l1</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_l2_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f2</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">              <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">lr_l2</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">l1_train_predict</span><span class="p">,</span> <span class="n">l2_train_predict</span><span class="p">,</span> <span class="n">l1_test_predict</span><span class="p">,</span> <span class="n">l2_test_predict</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">label</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;l1_train&#39;</span><span class="p">,</span> <span class="s1">&#39;l2_train&#39;</span><span class="p">,</span> <span class="s1">&#39;l1_test&#39;</span><span class="p">,</span> <span class="s2">&#34;l2_test&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">color</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="s1">&#39;orange&#39;</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="p">:</span>
-</span></span><span class="line"><span class="cl">      <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&#34;best&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h2 id="支持向量机-support-vector-machine">支持向量机 Support Vector Machine</h2>
-<ul>
-<li>Using GridSearch to find the best parameters [code snippets]
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span><span class="lnt">62
-</span><span class="lnt">63
-</span><span class="lnt">64
-</span><span class="lnt">65
-</span><span class="lnt">66
-</span><span class="lnt">67
-</span><span class="lnt">68
-</span><span class="lnt">69
-</span><span class="lnt">70
-</span><span class="lnt">71
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">Perceptron</span><span class="p">,</span> <span class="n">LogisticRegression</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.svm</span> <span class="kn">import</span> <span class="n">SVC</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">StandardScaler</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">datasets</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">metrics</span>
-</span></span><span class="line"><span class="cl">  <span class="kn">import</span> <span class="nn">pickle</span>
-</span></span><span class="line"><span class="cl">  <span class="n">merged_data_dir</span> <span class="o">=</span> <span class="s1">&#39;../data/merged_data/merged_data.npy&#39;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">model_dir</span><span class="o">=</span><span class="s1">&#39;./svm.pkl&#39;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">merged_data_dir</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">#labeling</span>
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">ele</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">20</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">          <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-</span></span><span class="line"><span class="cl">      <span class="k">elif</span> <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span><span class="mi">20</span> <span class="ow">and</span> <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">40</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">          <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-</span></span><span class="line"><span class="cl">      <span class="k">else</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">          <span class="n">ele</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">X</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">34</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">  <span class="nb">print</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># Create training and test split</span>
-</span></span><span class="line"><span class="cl">  <span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">stratify</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># feature scaling</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># sc = StandardScaler()</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># sc.fit(X_train)</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># X_train_std = sc.transform(X_train)</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># X_test_std = sc.transform(X_test)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">##################################</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># # Instantiate the Support Vector Classifier (SVC)</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># svc = SVC(C=10, random_state=1, kernel=&#39;rbf&#39;, gamma=0.3)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1"># # Fit the model</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># svc.fit(X_train, y_train)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1"># # Make the predictions</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># y_predict = svc.predict(X_test)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1"># # Measure the performance</span>
-</span></span><span class="line"><span class="cl">  <span class="c1"># print(&#34;Accuracy score %.3f&#34; %metrics.accuracy_score(y_test, y_predict))</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">#############################################</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">def</span> <span class="nf">svm_cross_validation</span><span class="p">(</span><span class="n">train_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">      <span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">GridSearchCV</span>
-</span></span><span class="line"><span class="cl">      <span class="kn">from</span> <span class="nn">sklearn.svm</span> <span class="kn">import</span> <span class="n">SVC</span>
-</span></span><span class="line"><span class="cl">      <span class="n">model</span> <span class="o">=</span> <span class="n">SVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">probability</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">param_grid</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">,</span> <span class="mf">1e-1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">],</span> <span class="s1">&#39;gamma&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.0001</span><span class="p">]}</span>
-</span></span><span class="line"><span class="cl">      <span class="n">grid_search</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">param_grid</span><span class="p">,</span> <span class="n">n_jobs</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="s1">&#39;accuracy&#39;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">grid_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">best_parameters</span> <span class="o">=</span> <span class="n">grid_search</span><span class="o">.</span><span class="n">best_estimator_</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="n">para</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">best_parameters</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
-</span></span><span class="line"><span class="cl">          <span class="nb">print</span><span class="p">(</span><span class="n">para</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">model</span> <span class="o">=</span> <span class="n">SVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">best_parameters</span><span class="p">[</span><span class="s1">&#39;C&#39;</span><span class="p">],</span> <span class="n">gamma</span><span class="o">=</span><span class="n">best_parameters</span><span class="p">[</span><span class="s1">&#39;gamma&#39;</span><span class="p">],</span> <span class="n">probability</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_x</span><span class="p">,</span> <span class="n">train_y</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">model</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">svm_model</span> <span class="o">=</span> <span class="n">svm_cross_validation</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f1</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">      <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">svm_model</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">f1</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">  <span class="nb">print</span><span class="p">(</span><span class="n">svm_model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">  <span class="n">y_predict</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="nb">print</span><span class="p">(</span><span class="n">y_predict</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
 ]]></description></item></channel></rss>

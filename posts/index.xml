@@ -1,91 +1,375 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 03 Sep 2023 19:31:13 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>BEVFormer 论文解读</title><link>https://jianye0428.github.io/posts/bevformer/</link><pubDate>Sun, 03 Sep 2023 19:31:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/bevformer/</guid><description><![CDATA[<h2 id="1-背景motivation">1. 背景/Motivation</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 06 Sep 2023 17:28:31 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>Effective STL [10] | 注意分配器的协定和约束</title><link>https://jianye0428.github.io/posts/clause_10/</link><pubDate>Sat, 29 Jul 2023 15:38:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_10/</guid><description><![CDATA[<h2 id="分配器">分配器</h2>
+<p>分配器最初是为抽象内存模型而开发的，允许库开发者忽略在某些16位操作系统上near和far指针的区别，也被设计成促进全功能内存管理器的发展，但事实表明那种方法在STL的一些部分会<font color=red>导致效率损失</font>。</p>
+<p>分配器最初被设想为抽象内存模型，在那种情况下，分配器在它们定义的内存模型中提供指针和引用的<code>typedef</code>才有意义。在C++标准里，类型T的对象的默认分配器（巧妙地称为<code>allocator&lt;T&gt;</code>）提供<code>typedef allocator&lt;T&gt;::pointer</code>和<code>allocator&lt;T&gt;::reference</code>，而且也希望用户定义的分配器也提供这些typedef。</p>
+<p>建立行为像引用的对象是使用代理对象的例子，而代理对象会导致很多问题。</p>
+<p>实际上标准明确地允许库实现假设每个分配器的pointer typedef是T*的同义词，每个分配器的reference typedef与T&amp;相同。对，库实现可以忽视typedef并直接使用原始指针和引用！</p>
+<p>分配器是对象，那表明它们可能有成员功能，内嵌的类型和typedef（例如pointer和reference）等等，但标准允许STL实现认为所有相同类型的分配器对象都是等价的而且比较起来总是相等。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="c1">// 一个用户定义的分配器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">SpecialAllocator</span> <span class="p">{...};</span> <span class="c1">// 模板
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">SpecialAllocator</span><span class="o">&lt;</span><span class="n">Widget</span><span class="o">&gt;</span> <span class="n">SAW</span><span class="p">;</span> <span class="c1">// SAW = “SpecialAllocator for Widgets”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">list</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SAW</span><span class="o">&gt;</span> <span class="n">L1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SAW</span><span class="o">&gt;</span> <span class="n">L2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="n">L1</span><span class="p">.</span><span class="n">splice</span><span class="p">(</span><span class="n">L1</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">L2</span><span class="p">);</span> <span class="c1">// 把L2的节点移到 L1前端
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>记住当list元素从一个list被接合到另一个时，没有拷贝什么。取而代之的是，调整了一些指针，曾经在一个list中的节点发现他们自己现在在另一个list中。这使接合操作既迅速又异常安全。</p>
+<p>当L1被销毁时，当然，它必须销毁它的所有节点（以及回收它们的内存），而因为它现在包含最初是L2一部分的节点，L1的分配器必须回收最初由L2的分配器分配的节点。</p>
+<p>现在清楚为什么<font color=blue><strong>标准允许STL实现认为相同类型的分配器等价</strong></font>。所以由一个分配器对象（比如L2）分配的内存可以安全地被另一个分配器对象（比如L1）回收。</p>
+<p>STL实现可以认为相同类型的分配器等价是多严厉的约束。那意味着可移植的分配器对象——<font color=blue><strong>不能有状态</strong></font>。让我们明确这一点：它意味着可移植的分配器不能有任何非静态数据成员，至少没有会影响它们行为的。</p>
+<h2 id="分配原始内存">分配原始内存</h2>
+<p>分配器在分配原始内存方面类似operator new，但它们的接口不同。如果你看看operator new和allocator::allocate最普通形式的声明，就会很清楚。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span><span class="o">*</span> <span class="k">operator</span> <span class="nf">new</span><span class="p">(</span><span class="n">size_t</span> <span class="n">bytes</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">pointer</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">allocate</span><span class="p">(</span><span class="n">size_type</span> <span class="n">numObjects</span><span class="p">);</span> <span class="c1">// 记住事实上“pointer”总是 T*的typedef
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>两者都带有一个指定要分配多少内存的参数，但对于<code>operator new</code>，这个参数指定的是字节数，而对于<code>allocator::allocate</code>，它指定的是内存里要能容纳多少个T对象。</p>
+<p>通常<code>allocator::size_type</code>是一个<code>size_t</code>的<code>typedef</code>。</p>
+<p><code>operator new</code>和<code>allocator::allocate</code>的返回类型也不同。<code>operator new</code>返回<code>void</code>，那是C++传统的表示一个到未初始化内存的指针的方式。<code>allocator::allocate</code>返回一个T（通过<code>pointer typedef</code>），不仅不传统，而且是有预谋的欺诈。从<code>allocator::allocate</code>返回的指针并不指向一个T对象，因为T还没有被构造！</p>
+<h2 id="大多数标准容器从未调用它们例示的分配器">大多数标准容器从未调用它们例示的分配器</h2>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">L</span><span class="p">;</span> <span class="c1">// 和list&lt;int, allocator&lt;int&gt; &gt;一样； allocator&lt;int&gt;从未用来分配内存！
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">set</span><span class="o">&lt;</span><span class="n">Widget</span><span class="p">,</span> <span class="n">SAW</span><span class="o">&gt;</span> <span class="n">s</span><span class="p">;</span> <span class="c1">// 记住SAW是一个 SpecialAllocator&lt;Widget&gt;的typedef； SAW从未分配内存！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为<code>set</code>、<code>multiset</code>、<code>map</code>和<code>multimap</code>是基于节点的容器，即，这些容器所基于的数据结构是每当值被储存就动态分配一个新节点。对于list，节点是列表节点。</p>
+<p><strong><font color=lightseagreen>对于标准关联容器，节点通常是树节点，因为标准关联容器通常用平衡二叉搜索树实现。</font></strong></p>
+<p><code>list</code>本身由节点组成，每个节点容纳一个T对象和到list中后一个和前一个节点的指针：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="c1">// list的可能
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="c1">// 实现
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">list</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl"><span class="n">Allocator</span> <span class="n">alloc</span><span class="p">;</span> <span class="c1">// 用于T类型对象的分配器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">struct</span> <span class="nc">ListNode</span><span class="p">{</span> <span class="c1">// 链表里的节点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">T</span> <span class="nl">data</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">ListNode</span> <span class="o">*</span><span class="n">prev</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">ListNode</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当添加一个新节点到<code>list</code>时，我们需要从分配器为它获取内存，我们要的不是<code>T</code>的内存，我们要的是包含了一个<code>T</code>的<code>ListNode</code>的内存。那使我们的<code>Allocator</code>对象没用了，因为它不为<code>ListNode</code>分配内存，它为T分配内存。现在你理解list为什么从未让它的<code>Allocator</code>做任何分配了：分配器不能提供list需要的。</p>
+<p>list需要的是从它的分配器类型那里获得用于ListNode的对应分配器的方法。</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="c1">// 标准分配器像这样声明，
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">allocator</span> <span class="p">{</span> <span class="c1">// 但也可以是用户写的分配器模板
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">U</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="nc">rebind</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">typedef</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">U</span><span class="o">&gt;</span> <span class="n">other</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在list的实现代码里，需要确定我们持有的T的分配器所对应的<code>ListNode</code>的分配器类型。我们持有的T的分配器类型是模板参数<code>Allocator</code>。</p>
+<p>在本例中，<code>ListNodes</code>的对应分配器类型是：</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">Allocator</span><span class="o">::</span><span class="n">rebind</span><span class="o">&lt;</span><span class="n">ListNode</span><span class="o">&gt;::</span><span class="n">other</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>每个分配器模板A（例如，<code>std::allocator</code>，<code>SpecialAllocator</code>等）都被认为有一个叫做<code>rebind</code>的内嵌结构体模板。<code>rebind</code>带有一个类型参数<code>U</code>, 并且只定义一个<code>typedef A&lt;U&gt; other</code>. other是<code>A&lt;U&gt;</code>的一个简单名字。</p>
+<p>结果，List<T>可以通过<code>Allocator::rebind&lt;ListNode&gt;::other</code>从它用于T对象的分配器（叫做Allocator）获取对应的<code>ListNode</code>对象分配器。</p>
+<h2 id="结论">结论</h2>
+<p>如果你想要写自定义分配器，让我们总结你需要记得的事情。</p>
+<ul>
+<li>把你的分配器做成一个模板，带有模板参数T，代表你要分配内存的对象类型。</li>
+<li>提供pointer和reference的typedef，但是总是让pointer是T*，reference是T&amp;。</li>
+<li>决不要给你的分配器每对象状态。通常，分配器不能有非静态的数据成员。- 记得应该传给分配器的allocate成员函数需要分配的对象个数而不是字节数。也应该记得这些函数返回T*指针（通过pointer typedef），即使还没有T对象被构造。</li>
+<li>一定要提供标准容器依赖的内嵌rebind模板。</li>
+</ul>
+]]></description></item><item><title>Effective STL [35] | 通过mismatch或lexicographical比较实现简单的忽略大小写字符串比较</title><link>https://jianye0428.github.io/posts/clause_35/</link><pubDate>Mon, 28 Aug 2023 07:58:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_35/</guid><description><![CDATA[<h2 id="怎么使用stl来进行忽略大小写的字符串比较">怎么使用STL来进行忽略大小写的字符串比较?</h2>
+<p>如果你<strong>忽略国际化问题而且只关注于设计成字符串strcmp那样的类型</strong>，这个任务很简单。</p>
+<p>如果你要有strcmp不具有的按语言处理字符串中的字符的能力（即，容纳文本的字符串是除了英语以外的语言）或程序使用了区域设置而不是默认的，这个任务很困难。</p>
+<p>想要使用<strong>忽略大小写</strong>比较的程序员通常需要两种不同的调用接口：</p>
+<ul>
+<li>一种类似strcmp（返回一个负数、零或正数）</li>
+<li>另一种类似operator（返回true或false）</li>
+</ul>
+<h2 id="确定两个字符除了大小写之外是否相等">确定两个字符除了大小写之外是否相等</h2>
+<p>类似<code>strcmp</code>进行的字符串比较，只考虑类似<code>strcmp</code>的字符串比较：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="c1">// 忽略大小写比较字符
+</span></span></span><span class="line"><span class="cl"><span class="c1">// c1和c2，如果c1 &lt; c2返回-1，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 如果c1==c2返回0，如果c1 &gt; c2返回1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">int</span> <span class="nf">ciCharCompare</span><span class="p">(</span><span class="kt">char</span> <span class="n">c1</span><span class="p">,</span> <span class="kt">char</span> <span class="n">c2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 这些语句的解释看下文
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">int</span> <span class="n">Ic1</span> <span class="o">=</span> <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c1</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">Ic2</span> <span class="o">=</span> <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">Ic1</span> <span class="o">&lt;</span> <span class="n">Ic2</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">Ic1</span> <span class="o">&gt;</span> <span class="n">Ic2</span><span class="p">)</span> <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个函数遵循了strcmp，可以返回一个负数、零或正数，依赖于c1和c2之间的关系。</p>
+<p><strong>tolower</strong></p>
+<p>与strcmp不同的是，<code>ciCharCompare</code>在进行比较前把两个参数转化为小写，从而忽略大小写的字符比较。</p>
+<p>正如<code>&lt;cctype&gt;</code>（也是<code>&lt;ctype.h&gt;</code>）里的很多函数，tolower的参数和返回值类型是int，但除非这个int是EOF，它的值必须能表现为一个unsigned char。</p>
+<p>在C和C++中，char可能或可能不是有符号的（依赖于实现），当char有符号时，唯一确认它的值可以表现为unsigned char的方式是在调用tolower之前转换一下。</p>
+<p><strong>基于mismatch实现</strong></p>
+<p>给定了<code>ciCharCompare</code>，就很容易写出我们的第一个忽略大小写的两个字符串比较函数，提供了一个类似<code>strcmp</code>的接口。</p>
+<p><code>ciStringCompare</code>这个函数，返回一个负数、零或正数，依赖于要比较的字符串的关系。</p>
+<p>它基于<code>mismatch</code>算法，因为<code>mismatch</code>确定了两个区间中第一个对应的不相同的值的位置。</p>
+<p>我们必须确定一个字符串是否比另一个短，短的字符串作为第一个区间传递。</p>
+<p>因此我们可以把真正的工作放在一个叫做<code>ciStringCompareImpl</code>的函数，然后让<code>ciStringCompare</code>简单地确保传进去的实参顺序正确，如果实参交换了就调整返回值：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">ciStringCompareImpl</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 实现请看下文
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">int</span> <span class="nf">ciStringCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">s1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">s2</span><span class="p">.</span><span class="n">size</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">ciStringCompareImpl</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">else</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">-</span><span class="n">ciStringCompareImpl</span><span class="p">(</span><span class="n">s2</span><span class="p">,</span> <span class="n">s1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在ciStringCompareImpl中，大部分工作由mismatch来完成。它返回一对迭代器，表示了区间中第一个对应的字符不相同的位置：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">ciStringCompareImpl</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">si</span><span class="p">,</span> <span class="k">const</span> <span class="n">strings</span> <span class="n">s2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// PSCI = “pair of string::const_iterator”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">typedef</span> <span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="o">::</span><span class="n">const_iterator</span><span class="p">,</span> <span class="n">string</span><span class="o">::</span><span class="n">const_iterator</span><span class="o">&gt;</span> <span class="n">PSCI</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 下文解释了为什么我们需要not2；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">PSCI</span> <span class="n">p</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">      <span class="n">mismatch</span><span class="p">(</span><span class="n">s1</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">s1</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s2</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">not2</span><span class="p">(</span><span class="n">ptr_fun</span><span class="p">(</span><span class="n">ciCharCompare</span><span class="p">)));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">first</span> <span class="o">==</span> <span class="n">s1</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 如果为真，s1等于s2或s1比s2短
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">second</span> <span class="o">==</span> <span class="n">s2</span><span class="p">.</span><span class="n">end</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">ciCharCompare</span><span class="p">(</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">first</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                       <span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">second</span><span class="p">);</span>  <span class="c1">// 两个字符串的关系 和不匹配的字符一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>比较过程</strong></p>
+<p>当字符匹配时这个判断式返回true，因为当判断式返回false时mismatch会停止。我们不能为此使用ciCharCompare，因为它返回-1、1或0，而当字符匹配时它返回0，就像strcmp。</p>
+<p>如果我们把ciCharCompare作为判断式传给mismatch，C++会把ciCharCompare的返回类型转换为bool，而当然bool中零的等价物是false，正好和我们想要的相反！同样的，当ciCharCompare返回1或-1，那会被解释成true，因为，就像C，所有非零整数值都看作true。这再次和我们想要的相反。</p>
+<p>要修正这个语义倒置，我们在ciCharCompare前面放上not2和ptr_fun。</p>
+<p><strong>std::not1 和 std::not2</strong>
+std::not1 和 std::not2是用来把“符合某种条件的函数对象”转换为反义函数对象的函数。</p>
+<p><code>std::ptr_fun</code>用来把函数指针封装为符合某种条件的函数对象的函数，C++11 里可以用<code>std::bind</code>或<code>std::function</code>代替</p>
+<h2 id="lexicographical_compare">lexicographical_compare</h2>
+<p>可以在关联容器中用作比较函数的函数，可以把ciCharCompare修改为一个有判断式接口的字符比较函数，然后把进行字符串比较的工作交给STL中名字第二长的算法——lexicographical_compare：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 返回在忽略大小写的情况下c1是否在c2前面；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">bool</span> <span class="nf">ciCharLess</span><span class="p">(</span><span class="kt">char</span> <span class="n">c1</span><span class="p">,</span> <span class="kt">char</span> <span class="n">c2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 条款46解释了为什么一个函数对象可能 比函数好
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c1</span><span class="p">))</span> <span class="o">&lt;</span>
+</span></span><span class="line"><span class="cl">      <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">ciStringCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 算法调用的讨论在下文
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">return</span> <span class="n">lexicographical_compare</span><span class="p">(</span><span class="n">s1</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">s1</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s2</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">s2</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">                                 <span class="n">ciCharLess</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>lexicographical_compare是strcmp的泛型版本。</p>
+<p><strong>strcmp只对字符数组起作用，但lexicographical_compare对所有任何类型的值的区间都起作用。</strong></p>
+<p>同时，strcmp总是比较两个字符来看看它们的关系是相等、小于或大于另一个。lexicographical_compare可以传入一个决定两个值是否满足一个用户定义标准的二元判断式。</p>
+<p><strong>比较过程</strong></p>
+<p>在上面的调用中，lexicographical_compare用来寻找s1和s2第一个不同的位置，基于调用ciCharLess的结果。如果，使用那个位置的字符，ciCharLess返回true，lexicographical_compare也是；如果，在第一个字符不同的位置，从第一个字符串来的字符先于对应的来自第二个字符串的字符，第一个字符串就先于第二个。</p>
+<p>就像strcmp，lexicographical_compare认为两个相等值的区间是相等的，因此它对于这样的两个区间返回false：第一个区间不在第二个之前。</p>
+<p>也像strcmp，如果第一个区间在发现不同的对应值之前就结束了，lexicographical_compare返回true：一个先于任何区间的前缀是一个前缀。</p>
+]]></description></item><item><title>BEVFormer 论文解读</title><link>https://jianye0428.github.io/posts/bevformer/</link><pubDate>Sun, 03 Sep 2023 19:31:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/bevformer/</guid><description><![CDATA[<h2 id="1-背景motivation">1. 背景/Motivation</h2>
 <h3 id="11-为什么视觉感知要用bev">1.1 为什么视觉感知要用BEV？</h3>
 <p>相机图像描述的是一个2D像素世界，然而自动驾驶中利用相机感知结果的后续决策、路径规划都是在车辆所处的3D世界下进行。由此引入的2D和3D维度不匹配，就导致基于相机感知结果直接进行自动驾驶变得异常困难。</p>
 <p>这种感知和决策规划的空间维度不匹配的矛盾，也体现在学开车的新手上。倒车泊车时，新手通过后视镜观察车辆周围，很难直观地构建车子与周围障碍物的空间联系，容易导致误操作剐蹭或需要尝试多次才能泊车成功，本质上还是新手从2D图像到3D空间的转换能力较弱。基于相机图像平面感知结果进行决策规划的自动驾驶AI，就好比缺乏空间理解力的驾驶新手，很难把车开好。</p>
-<p>实际上，利用感知结果进行决策和路径规划，问题还出现在多视角融合过程中：在每个相机上进行目标检测，然后对目标进行跨相机融合。如2021 TESLA AI Day给出的图1，带拖挂的卡车分布在多个相机感知野内，在这种场景下试图通过目标检测和融合来真实地描述卡车在真实世界中的姿态，存在非常大的挑战。</p>
+<p>实际上，利用感知结果进行决策和路径规划，问题还出现在多视角融合过程中: 在每个相机上进行目标检测，然后对目标进行跨相机融合。如2021 TESLA AI Day给出的图1，带拖挂的卡车分布在多个相机感知野内，在这种场景下试图通过目标检测和融合来真实地描述卡车在真实世界中的姿态，存在非常大的挑战。</p>
 <p></p>
 <p>为了解决这些问题，很多公司采用硬件补充深度感知能力，如引入毫米波雷达或激光雷达与相机结合，辅助相机把图像平面感知结果转换到自车所在的3D世界，描述这个3D世界的专业术语叫做BEV map或BEV features(鸟瞰图或鸟瞰图特征)，如果忽略高度信息，就把拍扁后的自车坐标系叫做BEV坐标系(即鸟瞰俯视图坐标系)。</p>
-<p>但另外一些公司则坚持不引入深度感知传感器，他们尝试从本质入手，基于视觉学习得到从图像理解空间的能力，让自动驾驶AI系统更像老司机，例如TESLA。Elon Musk认为：人类不是超人，也不是蝙蝠侠，不能够眼放激光，也没安装雷达，但是通过眼睛捕捉到的图像，人类反复练习就可以构建出对周围世界的3D空间理解能力从而很好地掌握驾驶这项能力，那么要像人一样单纯利用眼睛(相机)进行自动驾驶就必须<font color=red>具备从2D图像平面到3D自车空间(BEV)的转换能力</font>。</p>
+<p>但另外一些公司则坚持不引入深度感知传感器，他们尝试从本质入手，基于视觉学习得到从图像理解空间的能力，让自动驾驶AI系统更像老司机，例如TESLA。Elon Musk认为: 人类不是超人，也不是蝙蝠侠，不能够眼放激光，也没安装雷达，但是通过眼睛捕捉到的图像，人类反复练习就可以构建出对周围世界的3D空间理解能力从而很好地掌握驾驶这项能力，那么要像人一样单纯利用眼睛(相机)进行自动驾驶就必须<font color=red>具备从2D图像平面到3D自车空间(BEV)的转换能力</font>。</p>
 <p>传统获取BEV map/features的方法有局限性，它一般是利用相机外参以及地面平面假设，即IPM(Inverse Perspective Mapping)方法，将图像平面的感知结果反投影到自车BEV坐标系。Tesla以前的方案也是这样，然而当车辆周围地面不满足平面假设，且多相机视野关联受到各种复杂环境影响的时候，这类方法就难以应付。</p>
 <p>针对IPM方法获取BEV遇到的困难，TESLA自动驾驶感知负责人Andrej Karparthy的团队<font color=red><strong>直接在神经网络中完成图像平面到BEV的空间变换</strong></font>，这一改变成为了2020年10月发布的FSD Beta与之前Autopilot产品最显著的差别。TESLA利用Transformer生成BEV Featrues，得到的Features通道数是256(IPM方法最多保留RGB3个channel)，这样能极大程度地保留图像信息，用于后续基于BEV Features的各种任务，如动、静态目标检测和线检测等。</p>
 <h3 id="12-生成bev视角的方法有哪些为何选用transformer呢">1.2 生成BEV视角的方法有哪些？为何选用Transformer呢？</h3>
-<p><strong>把相机2D平面图像转换成BEV视角的方法有两种：<u>视觉几何方法</u>和<u>神经网络方法</u>。</strong></p>
-<p><strong>视觉几何方法</strong>：基于IPM进行逐像素几何投影转换为BEV视角，再对多个视角的部分BEV图拼接形成完整BEV图。此方法有两个假设：1.路面与世界坐标系平行，2.车辆自身的坐标系与世界坐标系平行。前者在路面非平坦的情况下并不满足，后者依赖车辆姿态参数(Pitch和Roll)实时校正，且精度要求较高，不易实现。</p>
-<p><strong>神经网络方法</strong>：用神经网络生成BEV，其中的关键要找到合适的方法实现神经网络内部Feature Map空间尺寸上的变换。</p>
-<p>实现空间尺寸变换的神经网络主流操作有两种方法，如图2所示：MLP中的Fully Connected Layer和Transformer Cross Attention(图片引用自<a href="https://zhuanlan.zhihu.com/p/458076977"target="_blank" rel="external nofollow noopener noreferrer">《超长延迟的特斯拉AI Day解析：讲明白FSD车端感知》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</p>
+<p><strong>把相机2D平面图像转换成BEV视角的方法有两种: <u>视觉几何方法</u>和<u>神经网络方法</u>。</strong></p>
+<p><strong>视觉几何方法</strong>: 基于IPM进行逐像素几何投影转换为BEV视角，再对多个视角的部分BEV图拼接形成完整BEV图。此方法有两个假设: 1.路面与世界坐标系平行，2.车辆自身的坐标系与世界坐标系平行。前者在路面非平坦的情况下并不满足，后者依赖车辆姿态参数(Pitch和Roll)实时校正，且精度要求较高，不易实现。</p>
+<p><strong>神经网络方法</strong>: 用神经网络生成BEV，其中的关键要找到合适的方法实现神经网络内部Feature Map空间尺寸上的变换。</p>
+<p>实现空间尺寸变换的神经网络主流操作有两种方法，如图2所示: MLP中的Fully Connected Layer和Transformer Cross Attention(图片引用自<a href="https://zhuanlan.zhihu.com/p/458076977"target="_blank" rel="external nofollow noopener noreferrer">《超长延迟的特斯拉AI Day解析: 讲明白FSD车端感知》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</p>
 <p></p>
-<p><strong>MLP Fully Connected Layer方法：</strong></p>
+<p>**MLP Fully Connected Layer方法: **</p>
 <p>$$O=Act(W_{mlp}*X+b)$$</p>
-<p>忽略非线性激活函数和bias后，可以写成：</p>
+<p>忽略非线性激活函数和bias后，可以写成:</p>
 <p>$$O=W_{mlp}*X$$</p>
 <p><strong>Transformer Cross Attention方法:</strong></p>
 <p>$$O=Softmax(Q*K^T)*V$$</p>
 <p>其中，K和V是输入图像特征X经线性变换后得到的；在最终输出的BEV视角下，把自车周围空间中的索引量称作 $\boldsymbol{\Phi}$</p>
 <p>$$O=Softmax(\Phi W_q*(XW_K)^T)*XW_V=W_{transformer}(X,\Phi)*XW_V$$</p>
-<p>BEV变换的本质是利用两个操作中的任意一个，将输入的2D图像空间特征图转换成BEV特征图。在进行BEV转换之前，先通过多层CNN在图像上提取特征，得到图像空间特征图层尺寸($h * w$)，即X的尺寸。 BEV变换输出O所在的BEV空间尺寸，是以自车位置为原点的前后左右各若干米范围内建立的栅格空间(x * y)。</p>
-<p>MLP Fully Connect Layer和Cross Attention的显著差别在于作用于输入量X的系数W：**全联接层的W，一旦训练结束后在Inference阶段是固定不变的；而Cross Attention的Transformer的系数W，是输入量X和索引量
-的函数，在Inference阶段会根据输入量X和索引量的不同发生改变。从这个角度来讲，使用Cross Attention来进行空间变换可能使模型获得更强的表达能力。</p>
-<p>TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思想，并未披露更多实现细节。论文BEVFormer充分研究了TESLA的技术思想后，利用Transformer融合图像的时、空特征，得到BEV Features，与TESLA的关键方法、实现效果都非常接近。BEVFormer既通过论文披露了详尽方法，又在2022年6月开源了工程，接下来就围绕BEVFormer介绍如何通过Transformer获取BEV Features。</p>
+<p>BEV变换的本质是将输入的2D图像空间特征图转换成BEV特征图。在进行BEV转换之前，先通过多层CNN(或者任一图像处理backbone网络)在图像上提取特征，得到图像空间特征图层尺寸($h * w$)，即$X$的尺寸。 BEV变换输出O所在的BEV空间尺寸，是以自车位置为原点的前后左右各若干米范围内建立的栅格空间(x * y)。</p>
+<p>MLP Fully Connect Layer和Cross Attention的<font color=red><strong>显著差别</strong></font>在于作用于输入量X的系数W: 全联接层的W，一旦训练结束后在Inference阶段是固定不变的；而<font color=green>Cross Attention的Transformer的系数W，是输入量X和索引量的函数，在Inference阶段会根据输入量X和索引量的不同发生改变</font>。从这个角度来讲，使用Cross Attention来进行空间变换可能使模型获得更强的表达能力。</p>
+<p>TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思想，并未披露更多实现细节。<strong>论文BEVFormer充分研究了TESLA的技术思想后，利用Transformer融合图像的时、空特征，得到BEV Features，与TESLA的关键方法、实现效果都非常接近</strong>。BEVFormer既通过论文披露了详尽方法，又在2022年6月开源了工程，接下来就围绕BEVFormer介绍如何通过Transformer获取BEV Features。</p>
 <h2 id="2-methodstrategybevformer">2. Method/Strategy——BEVFormer</h2>
 <h3 id="21-overall-architecture">2.1 Overall Architecture</h3>
-<p>如下图3所示：BEVFormer主体部分有6层结构相同的BEVFormer encoder layers，每一层都是由以transformer为核心的modules(TSA+SCA)，再加上FF、Add和Norm组成。BEVFormer encoder layer结构中有3个特别的设计：BEV Queries， Spatial Cross-attention(SCA)和Temporal Self-attention(TSA)。其中BEV Queries是栅格形可学习参数，承载着通过attention机制在multi-camera views中查询、聚合的features。SCA和TSA是以BEV Queries作为输入的注意力层，负责实施查询、聚合空间features(来自multi-camera images)和时间features(来自历史BEV)的过程。</p>
-<p>下面分步骤观察BEV完整模型的前向推理过程：</p>
+<p>如下图3所示: BEVFormer主体部分有6层结构相同的<code>BEVFormer encoder layers</code>，每一层都是由以transformer为核心的modules(TSA+SCA)，再加上FF、Add和Norm组成。BEVFormer encoder layer结构中有3个特别的设计: <font color=red><strong>BEV Queries</strong></font>， <font color=red><strong>Spatial Cross-attention(SCA)</strong></font>和<font color=red><strong>Temporal Self-attention(TSA)</strong></font>。其中BEV Queries是栅格形可学习参数，承载着通过attention机制在multi-camera views中查询、聚合的features。SCA和TSA是以BEV Queries作为输入的注意力层，负责实施查询、聚合空间features(来自multi-camera images)和时间features(来自历史BEV)的过程。</p>
+<p>下面分步骤观察BEV完整模型的前向推理过程:</p>
 <ul>
-<li>在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features)： $F_t={\left.F_t^i\right.}<em>{i=1}^{N</em>{view}}$
-，其中 $F_{t}^{i}$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。</li>
+<li>在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features):  $F_t={\left.F_t^i\right.}<em>{i=1}^{N</em>{view}}$，其中 $F_{t}^{i}$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。</li>
 <li>在每个BEVFormer Encoder layer中，首先用BEV Queries Q通过TSA模块从 ${\boldsymbol{B}}_{t-1}$ 中查询并融合时域信息(the temporal information)，得到修正后的BEV Queries $Q^{\prime}$；</li>
 <li>然后在同一个BEVFormer Encoder layer中，对TSA“修证”过的BEV Queries $Q^{\prime}$ ，通过SCA模块从multi-camera features $F_{t}$ 查询并融合空域信息(spatial information)，得到进一步修正的BEV Queries $Q^{^{\prime\prime}}$ 。</li>
 <li>这一层encoder layer把经过两次修正的BEV features $Q^{^{\prime\prime}}$ (也可以叫做BEV Queries)进行FF计算，然后输出，作为下一个encoder layer的输入。</li>
-<li>如此堆叠6层，即经过6轮微调，t时刻的统一BEV features $B_{t}$ 就生成了。
-最后，以BEV Features $B_{t}$ 作为输入，3D detection head和map segmentation head预测感知结果，例如3D bounding boxes和semantic map。</li>
+<li>如此堆叠6层，即经过6轮微调，t时刻的统一BEV features $B_{t}$ 就生成了。</li>
+<li>最后，以BEV Features $B_{t}$ 作为输入，3D detection head和map segmentation head预测感知结果，例如3D bounding boxes和semantic map。</li>
 </ul>
 <p></p>
 <h3 id="22-bev-queries">2.2 BEV Queries</h3>
 <p>BEVFormer采用显性定义BEV的方式，BEV Queries就是其中的显性BEV features。</p>
-<p>可从3个概念循序渐进地认识/理解BEV Queries：<strong>BEV平面 → BEV 感知空间 → BEV Queries</strong>。</p>
+<p>可从3个概念循序渐进地认识/理解BEV Queries: <strong>BEV平面 → BEV 感知空间 → BEV Queries</strong>。</p>
 <ul>
 <li>
 <p>BEV 平面
-BEV平面($(R^{H\times W\times1})$)是以自车为中心的栅格化二维平面，H、W是BEV平面在x、y方向的栅格尺寸，此平面显性地与车辆周围横、纵向物理空间关联，一个栅格表示s米，论文中把BEV平面中的栅格叫做2D参考点(2D reference points)。例如论文中定义nuScenes数据集栅格尺寸200x200，对应[-51.2米, 51.2米]，那么s就是0.512米。</p>
+BEV平面($R^{H\times W\times1}$)是以自车为中心的栅格化二维平面，H、W是BEV平面在x、y方向的栅格尺寸，此平面显性地与车辆周围横、纵向物理空间关联，一个栅格表示s米，论文中把BEV平面中的栅格叫做2D参考点(2D reference points)。例如论文中定义nuScenes数据集栅格尺寸200x200，对应[-51.2米, 51.2米]，那么s就是0.512米。</p>
 </li>
 <li>
 <p>BEV 感知空间
-BEV感知空间( $(R^{H\times W\times N_{ref}})$ )把BEV平面在z轴方向选取 $N_{ref}$个<strong>3D参考点</strong>进行扩展，表示车辆周围有限空间。查看BEV开源工程可知，BEV感知空间的精确表示范围：在nuScenes数据集中，是以Lidar作为中心点，前后各51.2m、左右各51.2m、向上3m、向下5m的矩形空间。
-仔细深究作者这样设置的用意，会发现蛮有意思/意义：nuScenes采集车上安装的Lidar距地面高约1.84m，[-5m, 3m]的设置让BEV Queries感知空间在自车轮胎接地点平面以上部分约4.84m，接地点平面以下部分约3.16m。前者确保不仅能感知高大目标物，如货车等，还能感知覆盖坡度9.5%(4.84m/51.2m100%)上坡场景，后者保证感知覆盖坡度6.2%(3.16m/51.2m100%)下坡场景。备注：坡度=(高程差/水平距离)x100%，车辆前进100m的垂直上升/下降高度，我国规定城市道路最大纵坡8％，公路9％。</p>
+BEV感知空间( $R^{H\times W\times N_{ref}}$ )把BEV平面在z轴方向选取 $N_{ref}$个<strong>3D参考点</strong>进行扩展，表示车辆周围有限空间。查看BEV开源工程可知，BEV感知空间的精确表示范围: 在nuScenes数据集中，是以Lidar作为中心点，前后各51.2m、左右各51.2m、向上3m、向下5m的矩形空间。
+仔细深究作者这样设置的用意，会发现蛮有意思/意义: nuScenes采集车上安装的Lidar距地面高约1.84m，[-5m, 3m]的设置让BEV Queries感知空间在自车轮胎接地点平面以上部分约4.84m，接地点平面以下部分约3.16m。前者确保不仅能感知高大目标物，如货车等，还能感知覆盖坡度9.5%(4.84m/51.2m100%)上坡场景，后者保证感知覆盖坡度6.2%(3.16m/51.2m100%)下坡场景。备注: 坡度=(高程差/水平距离)x100%，车辆前进100m的垂直上升/下降高度，我国规定城市道路最大纵坡8％，公路9％。</p>
 </li>
 <li>
 <p>BEV Queries
 BEV Queries是预定义的一组栅格形(grid-shaped)可学习参数，简称 $Q\in R^{H\times W\times C}$，它是对上述BEV 感知空间的特征描述，可直白地理解为学习完成了，它就变成了BEV features。
 BEV Queries的H、W与BEV平面在x、y方向的栅格尺寸定义一致，因此也继承了BEV平面显性地与车辆周围横、纵向物理空间关联的特性。但C是BEV Queries作为features时在channel维度的尺寸，并不显性地对应于BEV平面z轴的物理空间尺寸。特别指出，位于 $p=(x,y)$ 处的某个query $Q_{p}\in R^{1\times C}$，表示BEV queries中的一个栅格。在输入到BEVFormer之前，BEV Queries加上了可学习的位置编码(learnable positional embedding)。
 论文中多处提及BEV Queries和BEV features，它俩什么关系？本质上描述的是同一个东西么？
-先说答案：两者本质上是同一个东西。模型中预定义参数BEV Queries 输入到BEV Encoder layer，输出的就是经过1次微调过的BEV features，它作为下一层的输入时，又被看作下一层的BEV Queries。经过所有layers的多次微调，最后一个layer输出的就是BEV features ${\mathit{B}}_{t}$ ，作为各类感知task heads的输入。</p>
+先说答案: 两者本质上是同一个东西。模型中预定义参数BEV Queries 输入到BEV Encoder layer，输出的就是经过1次微调过的BEV features，它作为下一层的输入时，又被看作下一层的BEV Queries。经过所有layers的多次微调，最后一个layer输出的就是BEV features ${\mathit{B}}_{t}$ ，作为各类感知task heads的输入。</p>
 </li>
 </ul>
 <h3 id="23-sca-spatial-cross-attention">2.3 SCA: Spatial cross-attention</h3>
 <p>如上图(b)所示，作者设计了一种空间交叉注意力机制，使 BEV queries 从多个相机的image Features中提取所需信息并转换为BEV Features。</p>
-<p>每个BEV栅格的query在image features的哪些范围提取信息呢？这里有3个方案：</p>
+<p>每个BEV栅格的query在image features的哪些范围提取信息呢？这里有3个方案:</p>
 <p>一、从image features的所有点上提取信息，即global attention。</p>
 <p>二、从BEV栅格在image features的投影点上提取信息。</p>
-<p>三、从BEV栅格在image features的投影点及其周围取信息，即deformable attention。</p>
-<p>由于使用了多尺度图像特征和高分辨率 BEV 特征(200x200)，如果采用方案一 global attention ，会带来无法负担的计算代价(显存和计算复杂度)。但是，方案一完全用不到相机内外参，这算是它独有的优势。</p>
+<p>三、从BEV栅格在image features的投影点及其周围提取信息，即deformable attention。</p>
+<p>由于使用了多尺度图像特征和高分辨率 BEV 特征(200x200)，如果采用方案一 global attention ，会带来无法负担的计算代价(显存和计算复杂度)。但是，方案一完全<u>用不到相机内外参</u>，这算是它<strong>独有的优势</strong>。</p>
 <p>方案二依赖非常精确的相机内、外参，且不能充分利用image features上的局部区域信息。</p>
-<p>因此作者选用了方案三，基于deformable attention 的稀疏注意力机制，使BEV Queries中的每个Query 只与其所代表世界坐标系物理空间投影到图像上的部分区域进行交互，且解除了对相机内、外参的高精度依赖。注意，这里复数BEV Queries表示整个BEV图，而单数Query表示BEV 图中位于 $(x, y)$的一个栅格。</p>
+<p>因此作者选用了方案三，基于deformable attention 的<strong>稀疏注意力机制</strong>，使BEV Queries中的每个Query 只与其所代表世界坐标系物理空间投影到图像上的部分区域进行交互，且解除了对相机内、外参的高精度依赖。注意，这里复数BEV Queries表示整个BEV图，而单数Query表示BEV 图中位于 $(x, y)$的一个栅格。</p>
 <p>$$\mathrm{SCA}(Q_p,F_t)=\frac1{|\mathcal{V}<em>\mathrm{hit}|}\sum</em>{i\in\mathcal{V}<em>\mathrm{hit}}\sum</em>{j=1}^{N_\mathrm{ref}}\mathrm{Deform}\mathrm{Attn}(Q_p,\mathcal{P}(p,i,j),F_t^i)\quad\quad\quad\quad(2)$$</p>
 <p>在DeformAttn()中，$Q_{p}$、$P(p,i,j)$ 和 $F_{t}^{i}$ 分别表示query, reference points和输入特征。</p>
-<p>通俗理解公式：在BEV Query对应的图像2D features 有效区域附近计算注意力，把图像2D features加权融合到BEV Query作为SCA的输出。</p>
-<p>参考图(b)和上述公式2，总结Spatial cross-attention的实现方式：</p>
+<p>通俗理解公式: <font color=red><strong>在BEV Query对应的图像2D features 有效区域附近计算注意力，把图像2D features加权融合到BEV Query作为SCA的输出</strong></font>。</p>
+<p>参考图(b)和上述公式2，总结Spatial cross-attention的实现方式:</p>
 <ol>
 <li>对于每一个位于 $(x, y)$ 位置的 BEV query $Q_{p}$ ，计算其对应真实世界的坐标 $(x^{&rsquo;},y^{&rsquo;})$。然后将 BEV query 在z方向进行 lift 操作，设置 $N_{ref}$ 个 3D参考点，即对应 $N_{ref}$ 个世界坐标系下的3D空间参考点。</li>
 <li>通过相机内外参，把第j个3D参考点投影到 $v_{hit}$ 个相机图像上。受相机感知范围限制，每个3D参考点一般只在 1-2 个相机上找到有效的投影点(反过来描述，每个相机的features只与部分BEV queries构成有效投影关系)。</li>
 <li>基于 Deformable Attention，把像平面上的这些投影点作为2D图像参考点，在其周围对 $F_{t}^{i}$ 进行特征采样，得到sampled features。</li>
 <li>最后，对 $V_{hit}$ 、$N_{ref}$ 个sampled features进行加权求和，作为spatial cross-attention的输出来更新BEV query，从而完成 spatial 空间的特征聚合。</li>
 </ol>
-<p>详细介绍一下第2步中如何把3D参考点投影到相机图像上获得2D参考点：</p>
+<p>详细介绍一下第2步中如何把3D参考点投影到相机图像上获得2D参考点:</p>
 <ul>
 <li>首先计算位于 $p = (x, y)$ 的query $Q_{p}$ 在以车辆为中心世界坐标 $(x^{&rsquo;},y^{&rsquo;})$
 $$x^{^{\prime}}=(x-W/2)*s; \quad y^{^{\prime}}=(y-{H}/2)*s$$
 其中H和W是BEV queries的尺寸，s是BEV中一个栅格所代表的物理空间尺寸;</li>
-<li>计算第j个3D参考点投影到第i个相机图像上的2D参考点坐标：
+<li>计算第j个3D参考点投影到第i个相机图像上的2D参考点坐标:
 $$P(p,i,j)=(x_{i,j},y_{i,j})$$
 其中，
 $$z_{i,j}[x_{i,j},y_{i,j},1]^T=T_i*[x^{&rsquo;},y^{&rsquo;},z^{&rsquo;},1]^T$$
@@ -95,21 +379,21 @@ $T_i$ 是第 $i$ 个相机的投影矩阵。</li>
 <p>从经典 RNN 网络获得启发，将 BEV 特征 $B_t$ 视为能够传递序列信息的 memory。每一时刻生成的 BEV 特征 $B_t$ 都从上一时刻的 BEV 特征  $B_{t-1}$ 获取所需的时序信息，这样能保证动态地获取所需的时序特征，而非像堆叠不同时刻 BEV 特征那样只能获取定长的时序信息。</p>
 <p></p>
 <p>$$\text{TSA}(Q_p,{Q,B&rsquo;<em>{t-1}})=\sum</em>{V\in{Q,B&rsquo;_{t-1}}}\text{DeformAttn}(Q_p,p,V),\quad(5)$$</p>
-<p>参考图4和上述公式5，总结temporal self-attention的实现方法：</p>
+<p>参考图4和上述公式5，总结temporal self-attention的实现方法:</p>
 <ol>
 <li>给定t-1时刻的 BEV 特征 $B_{t-1}$ ，先根据 ego motion 将 $B_{t-1}$ 对齐到 $t$ 时刻，来确保 $B_{t-1}$ 和 $B_{t}$ 在相同index位置的栅格对应于现实世界的同一位置，把时间对齐后的BEV特征记作 $B_{t-1}^{&rsquo;}$ 。</li>
 <li>$t$ 时刻位于 $(x, y)$ 处的 BEV query所表征的物体可能静态或者动态，它在t-1时刻会出现在 $B_{t-1}^{&rsquo;}$ 的 $(x, y)$ 周围，因此利用 deformable attention 以 $(x, y)$ 作为参考点在其周围进行特征采样。</li>
 </ol>
 <p>上述方法<strong>没有显式地设计遗忘门</strong>，而是通过 attention 机制中的 attention weights 来平衡历史时序特征和当前 BEV 特征的融合过程。</p>
-<p><strong>关于TSA的后记</strong>：BEVFormer V2对 BEVFormer的时域融合方法TSA做了修改。</p>
-<p>BEVFormer中TSA采用了继承式的时域信息融合方式：利用attention机制在t时刻融合了t-1时刻的BEV features信息，由于t-1时刻的BEV features 也融合了更早时刻(t-2)的信息，因此t时刻BEV features间接地融合了比t-1时刻更早的信息。</p>
+<p><strong>关于TSA的后记</strong>: BEVFormer V2对 BEVFormer的时域融合方法TSA做了修改。</p>
+<p>BEVFormer中TSA采用了继承式的时域信息融合方式: 利用attention机制在t时刻融合了t-1时刻的BEV features信息，由于t-1时刻的BEV features 也融合了更早时刻(t-2)的信息，因此t时刻BEV features间接地融合了比t-1时刻更早的信息。</p>
 <p>但是这种继承式时域融合方式有遗忘的特点，即不能有效利用较长时间的历史信息。</p>
-<p>BEVFormer V2把时域融合改成了：根据ego motion，把过去多个时刻的BEV features 对齐到当前时刻，然后在channel 维度把这些对齐后的BEV features 与当前时刻BEV features串联，然后用Residual 模块降低channel数，就完成了时域融合。</p>
+<p>BEVFormer V2把时域融合改成了: 根据ego motion，把过去多个时刻的BEV features 对齐到当前时刻，然后在channel 维度把这些对齐后的BEV features 与当前时刻BEV features串联，然后用Residual 模块降低channel数，就完成了时域融合。</p>
 <p>综合2.3和2.4节，观察6个 BEVFormer Encoder Layers的完整结构会发现， BEV query 既能通过 spatial cross-attention 聚合空间特征，又能通过 temporal self-attention 聚合时序特征，这个过程会重复多次，让时空特征融合能够相互促进，最终得到更好的融合BEV features。</p>
 <h3 id="25-application-of-bev-features">2.5 Application of BEV Features</h3>
 <p>BEV Features $B_{t}\in R^{H\times W\times C}$ 是可用于多种自动驾驶感知任务的2D feature map， 基于2D 感知方法稍加改动就可在 $B_t$ 上开发3D目标检测和map segmentation任务。</p>
 <p><strong>3D object detection</strong></p>
-<p>参考2D 目标检测器Deformable DETR，论文设计了end-to-end的3D目标检测head，修改部分包括：用single-scale 的BEV features $B_t$ 作为检测头的输入，预测输出3D b-boxes和速度而不是2D b-boxes，仅用 $L_1$ loss监督3D b-boxes的回归。继承DETR方法的优势，预测有限数目的候选目标集合(开源工程中设为300个)，这种end-to-end的检测头不需要NMS后处理。</p>
+<p>参考2D 目标检测器Deformable DETR，论文设计了end-to-end的3D目标检测head，修改部分包括: 用single-scale 的BEV features $B_t$ 作为检测头的输入，预测输出3D b-boxes和速度而不是2D b-boxes，仅用 $L_1$ loss监督3D b-boxes的回归。继承DETR方法的优势，预测有限数目的候选目标集合(开源工程中设为300个)，这种end-to-end的检测头不需要NMS后处理。</p>
 <p><strong>map segmentation</strong></p>
 <p>参考2D segmentation 方法Panoptic SegFormer，论文设计了map segmentation head。因为基于BEV的map segmentation基本上与常见语义分割相同，作者利用了参考文章[22]中的mask decoder和class-fixed queries设计head来查找每个语义类别，包括car、vehicle、road(可通行区域)和车道线。</p>
 <h3 id="26-implementation-details">2.6 Implementation details</h3>
@@ -119,19 +403,19 @@ $T_i$ 是第 $i$ 个相机的投影矩阵。</li>
 <li>在初始3个时刻，循环生成BEV features ${B_{t-3},B_{t-2},B_{t-1}}$，且在此阶段不计算梯度；</li>
 <li>计算第一个时刻t-3的temporal self-attention输出时，它并没有前序BEV features，就用它自身作为前序时刻输入，那么temporal self-attention暂时退化成了self-attention。</li>
 </ul>
-<p>inference时的实施细节：</p>
+<p>inference时的实施细节:</p>
 <p>按照时间顺序计算图像序列中的每一帧，前序时刻的BEV features被保持下来并用于后一时刻，这种online的inference策略在应用中比较高效。</p>
 <h2 id="3-experiments">3. Experiments</h2>
 <h3 id="31-experimental-settings">3.1 experimental settings</h3>
 <ol>
-<li>采用两种Backbone：ResNet101-DCN，采用来自FCOS3D训练得到的参数；VoVnet-99，采用来自DD3D训练得到的参数。</li>
+<li>采用两种Backbone: ResNet101-DCN，采用来自FCOS3D训练得到的参数；VoVnet-99，采用来自DD3D训练得到的参数。</li>
 <li>默认情况下，使用FPN输出的多尺度 features的尺寸包含1/16，1/32，1/64(注意，代码中实际用好的1/8尺寸的features，即nuScenes中的116*200的FPN输出)，同时把dimension C设为256。</li>
 <li>在nuScenes数据集试验中，BEV queries尺寸设为200x200，对应感x和y方向的知范围都是[-51.2m, 51.2m]，对应BEV Grid尺寸精度是0.512m。</li>
 <li>在Waymo数据集试验中，BEV queries尺寸设为300x220，对应感x方向的感知范围是[-35.0m, 75.0m]，y方向的知范围是[-75.0m, 75.0m]，对应BEV Grid尺寸精度是0.5m。自车中心位于 BEV的(70，150)处。</li>
 <li>对每个BEV query，在 spatial cross-attention模块中，设置 $N_{ref}=4$ 个3D参考点，预定义它们对应的高度范围是-5m到3m。</li>
 <li>对每个2D图像参考点(3D参考点投影到2D view上的点)，在其周围选取4个采样点送入SCA。</li>
 <li>默认情况下，训练24epoches，学习率设为 $12\times10^{-4}$。</li>
-<li><strong>Baselines</strong>：为了合理评估task heads的影响，公平地与其它生成BEV方法对比。选择VPN和Lift-Splat作为baselines，对它们head之前的部分替换BEVFormer，保留task heads和其它设置。
+<li><strong>Baselines</strong>: 为了合理评估task heads的影响，公平地与其它生成BEV方法对比。选择VPN和Lift-Splat作为baselines，对它们head之前的部分替换BEVFormer，保留task heads和其它设置。
 论文中，通过把temporal self-attention修改为普通的self-attention，这样就使BEVFormer变成了一个静态模型，命名为<strong>BEVFormer-S</strong>，它不使用历史BEV Features。</li>
 </ol>
 <h3 id="32-3d目标检测结果">3.2 3D目标检测结果</h3>
@@ -140,43 +424,234 @@ $T_i$ 是第 $i$ 个相机的投影矩阵。</li>
 <p>
 </p>
 <h3 id="33-multi-tasks-perception-results">3.3 multi-tasks perception results</h3>
-<p>联合训练3D detection和map segmentation任务，与单独训练比较训练效果，如Table4所示：对3D目标检测和分割中的车辆类语义感知，联合训练效果有提升；对分割中的road、lane类的语义感知，联合训练效果反而会下降。</p>
+<p>联合训练3D detection和map segmentation任务，与单独训练比较训练效果，如Table4所示: 对3D目标检测和分割中的车辆类语义感知，联合训练效果有提升；对分割中的road、lane类的语义感知，联合训练效果反而会下降。</p>
 <p></p>
 <h3 id="34-消融试验">3.4 消融试验</h3>
 <p>Spatial Cross-attention有效性</p>
 <p>为了验证SCA的有效性，利用不包含TSA的BEVFormer-S来设计消融试验，结果如Table5所示。</p>
-<p>默认的SCA基于deformable attention，在对比试验中构建了基于2种不同attention机制的baselines：1. 用global attention取代deformable attention；2. 让每个query仅与它的图像参考点交互，而不是像SCA那样query与图像参考点周围区域交互。为了扩大对比范围，把BEVFormer中的BEV生成方法替换为了VPN和Lift-Spalt中的方法。从Table5结果可见Deformable Attention方法显著优于其它方法，且在GPU Memory使用量和query兴趣区域大小之间实现了balance。</p>
+<p>默认的SCA基于deformable attention，在对比试验中构建了基于2种不同attention机制的baselines: 1. 用global attention取代deformable attention；2. 让每个query仅与它的图像参考点交互，而不是像SCA那样query与图像参考点周围区域交互。为了扩大对比范围，把BEVFormer中的BEV生成方法替换为了VPN和Lift-Spalt中的方法。从Table5结果可见Deformable Attention方法显著优于其它方法，且在GPU Memory使用量和query兴趣区域大小之间实现了balance。</p>
 <p></p>
 <p><strong>Temporal Self-attention有效性</strong></p>
-<p>从Table1和Table4可见，在相同的设置下，BEVFormer相比于BEVFormer-S的性能大幅提升，针对有挑战性的检测任务提升更明显。TSA主要是在以下方面影响性能提升的：1.temporal information的引入对提高目标速度估计精度非常有益；2.利用temporal information，目标预测的location和orientations更精确；3.受益于temporal information包含过去时刻object的信息，如图4所示，严重遮挡目标的recall 更高。根据nuScenes标注的遮挡程度把验证数据集进行划分成4部分，来评估BEVFormer对各种程度遮挡的性能，针对每个数据子集都会计算average recall(匹配时把中心距离的阈值设为2m)。</p>
+<p>从Table1和Table4可见，在相同的设置下，BEVFormer相比于BEVFormer-S的性能大幅提升，针对有挑战性的检测任务提升更明显。TSA主要是在以下方面影响性能提升的: 1.temporal information的引入对提高目标速度估计精度非常有益；2.利用temporal information，目标预测的location和orientations更精确；3.受益于temporal information包含过去时刻object的信息，如图4所示，严重遮挡目标的recall 更高。根据nuScenes标注的遮挡程度把验证数据集进行划分成4部分，来评估BEVFormer对各种程度遮挡的性能，针对每个数据子集都会计算average recall(匹配时把中心距离的阈值设为2m)。</p>
 <p></p>
 <p><strong>Model Scale and Latency</strong></p>
-<p>针对不同Scale Settings的BEVFormer，对比检测性能和latency，结果如Table6所示。在3方面进行BEVFormer的Scale配置：1. 输入到BEVFormer Encoder的features是multi-scale还是single-scale；2.BEV Queries/features的尺寸；3. encoder layer数目。</p>
+<p>针对不同Scale Settings的BEVFormer，对比检测性能和latency，结果如Table6所示。在3方面进行BEVFormer的Scale配置: 1. 输入到BEVFormer Encoder的features是multi-scale还是single-scale；2.BEV Queries/features的尺寸；3. encoder layer数目。</p>
 <p></p>
-<p>从实验结果看来：Backbone的Latency远大于BEVFormer，因此Latency优化的主要瓶颈在于Backbone而不是BEVFormer(这里指BEVFormer Encoder部分)，BEVFormer可以采用不同的Scale，具备支持灵活平衡性能和efficiency的特性。</p>
+<p>从实验结果看来: Backbone的Latency远大于BEVFormer，因此Latency优化的主要瓶颈在于Backbone而不是BEVFormer(这里指BEVFormer Encoder部分)，BEVFormer可以采用不同的Scale，具备支持灵活平衡性能和efficiency的特性。</p>
 <h2 id="4-discussion">4. Discussion</h2>
 <p>理论上视觉图像的数据比激光数据稠密，但基于视觉的BEV效果还是比基于激光的方法性能差，那么也说明了理论上视觉还有可提升空间。
 BEV Features能用于泊车位检测么？ 可能可以用BEVFormer在环视鱼眼相机上生成BEV features，用于泊车位检测或近距离目标的精确检测。
 显性地引入BEV 特征，限制了最大检测距离，在高速公路场景，检测远处目标非常重要，如何权衡BEV的大小与检测距离是一个需要考虑的问题。
 如何在检测精度和grid大小之间做平衡是一个问题。
-针对2、3问题的一个优化方向：设计自适应尺寸的BEV特征。这里的自适应是指根据场景来调整BEV尺寸或精度。</p>
+针对2、3问题的一个优化方向: 设计自适应尺寸的BEV特征。这里的自适应是指根据场景来调整BEV尺寸或精度。</p>
 <h2 id="5-references">5. References</h2>
-<p>论文：<a href="https://link.zhihu.com/?target=https%3A//arxiv.org/pdf/2203.17270.pdf"target="_blank" rel="external nofollow noopener noreferrer">《BEVFormer: Learning Bird’s-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>开源工程：https://github.com/zhiqi-li/BEVFormer</p>
+<p>论文: <a href="https://link.zhihu.com/?target=https%3A//arxiv.org/pdf/2203.17270.pdf"target="_blank" rel="external nofollow noopener noreferrer">《BEVFormer: Learning Bird’s-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>开源工程: <a href="https://github.com/zhiqi-li/BEVFormer"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/zhiqi-li/BEVFormer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <p>参考中文解读</p>
 <ol>
 <li><a href="https://zhuanlan.zhihu.com/p/495819042"target="_blank" rel="external nofollow noopener noreferrer">使用Transformer融合时空信息的自动驾驶感知框架<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 <li><a href="https://zhuanlan.zhihu.com/p/491890969"target="_blank" rel="external nofollow noopener noreferrer">3d camera-only detection: BEVFormer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 <li><a href="https://zhuanlan.zhihu.com/p/496284695"target="_blank" rel="external nofollow noopener noreferrer">BEVFormer，通过一个时空Transformer学习 BEV表征<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 </ol>
-<p>类似工作：
+<p>类似工作:
 Cross-view Transformers for real-time Map-view Semantic Segmentation
-论文：https://arxiv.org/pdf/2205.02833v1.pdf</p>
-<p>代码：https://github.com/bradyz/cross</p>
+论文: <a href="https://arxiv.org/pdf/2205.02833v1.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/pdf/2205.02833v1.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>代码: <a href="https://github.com/bradyz/cross"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/bradyz/cross<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <p>REF:
 [1]. <a href="https://zhuanlan.zhihu.com/p/538490215"target="_blank" rel="external nofollow noopener noreferrer">一文读懂BEVFormer论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
 <a href="https://zhuanlan.zhihu.com/p/543335939"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/543335939<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
 <a href="https://zhuanlan.zhihu.com/p/629792598"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/629792598<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Effective STL [37] | 把仿函数类设计为用于值传递</title><link>https://jianye0428.github.io/posts/effective_stl_38/</link><pubDate>Wed, 06 Sep 2023 17:28:31 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/effective_stl_38/</guid><description><![CDATA[<h2 id="函数指针按值传递">函数指针按值传递</h2>
+<p>C和C++都不允许你真的把函数作为参数传递给其他函数。取而代之的是，你必须传指针给函数。</p>
+<p>比如，这里有一个标准库函数qsort的声明:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">qsort</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">base</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">nmemb</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">cmpfcn</span><span class="p">)(</span><span class="k">const</span> <span class="kt">void</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>一旦你忽略了所有的星号，就可以清楚地看出作为cmpfcn传递的实参，一个指向函数的指针，是从调用端拷贝（也就是，值传递）给qsort。这是C和C++标准库都遵循的一般准则:<strong>函数指针是值传递</strong>。</p>
+<p>STL中的习惯是当传给函数和从函数返回时函数对象也是值传递的（也就是拷贝）。</p>
+<p>最好的证据是标准的for_each声明，这个算法通过值传递获取和返回函数对象:</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">InputIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Function</span><span class="o">&gt;</span> <span class="n">Function</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 注意值返回， 注意值传递
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">for_each</span><span class="p">(</span><span class="n">InputIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">InputIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Function</span> <span class="n">f</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>实际上，值传递的情况并不是完全打不破的，因为for_each的调用者在调用点可以显式指定参数类型。比如，下面的代码可以使for_each通过引用传递和返回它的仿函数:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DoSomething</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="kt">int</span> <span class="n">x</span><span class="p">){...}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 方便的typedef
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">DequeIntIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">di</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 建立一个函数对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">DoSomething</span> <span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 调用for_each，参数类型是DequeIntIter和DoSomething&amp;；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 这迫使d按引用传递和返回
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">for_each</span><span class="o">&lt;</span><span class="n">DequeIntIter</span><span class="p">,</span> <span class="n">DoSomething</span> <span class="o">&amp;&gt;</span><span class="p">(</span><span class="n">di</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">di</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">d</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="保证拷贝传递行为正常">保证拷贝传递行为正常</h2>
+<p>因为函数对象以值传递和返回，你的任务就是确保当拷贝传递时你的函数对象行为良好。</p>
+<p>这暗示了2个东西:</p>
+<ol>
+<li><strong>你的函数对象应该很小。否则它们的拷贝会很昂贵。</strong></li>
+<li><strong>你的函数对象必须单态（也就是，非多态）——它们不能用虚函数。那是因为派生类对象以值传递代入基类类型的参数会造成切割问题: 在拷贝时，它们的派生部分被删除。</strong></li>
+</ol>
+<p>当然效率很重要，避免切割问题也是，但不是所有的仿函数都是小的、单态的。函数对象比真的函数优越的的原因之一是仿函数可以包含你需要的所有状态。</p>
+<p>有些函数对象自然会很重，保持传这样的仿函数给STL算法和传它们的函数版本一样容易是很重要的。</p>
+<h2 id="多态仿函数实现">多态仿函数实现</h2>
+<p>禁止多态仿函数是不切实际的。C++支持继承层次和动态绑定，这些特性在设计仿函数类和其他东西的时候一样有用。仿函数类如果缺少继承就像C++缺少“++”。</p>
+<p>带着你要放进你的仿函数类的数据和/或多态，把它们移到另一个类中。然后给你的仿函数一个指向这个新类的指针。</p>
+<p>比如，如果你想要建立一个包含很多数据的多态仿函数类。</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// BPFC = “Big Polymorphic Functor Class”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 条款40解释了这个基类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Int</span> <span class="n">x</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 这个类有很多数据，所以用值传递
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 会影响效率
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">public</span> <span class="o">:</span> <span class="k">virtual</span> <span class="kt">void</span>
+</span></span><span class="line"><span class="cl">        <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>  <span class="c1">// 这是一个虚函数，所以切割时会出问题
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>建立一个包含一个指向实现类的指针的小而单态的类，然后把所有数据和虚函数放到实现类:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 用于修改的BPFC的新实现类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFCImpl</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 以前在BPFC里的所有数据现在在这里
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"> <span class="c1">// 多态类需要虚析构函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">virtual</span> <span class="o">~</span><span class="n">BPFCImpl</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">virtual</span> <span class="kt">void</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">friend</span> <span class="k">class</span> <span class="nc">BPFC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">;</span>  <span class="c1">// 让BPFC可以访问这些数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 小的，单态版的BPFC
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span> <span class="o">:</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">BPFCImpl</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;*</span> <span class="n">pImpl</span><span class="p">;</span>  <span class="c1">// 这是BPFC唯一的数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 现在非虚；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span>  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 调用BPFCImpl的真的虚函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">pImpl</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">()(</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>BPFC::operator()</code>的实现例证了BPFC所有的虚函数是怎么实现的: 它们调用了在BPFCImpl中它们真的虚函数。</p>
+<p>结果是仿函数类（BPFC）是小而单态的，但可以访问大量状态而且行为多态。</p>
+<p>顺便说一句，这种实现方法在《Effective C++》的条款34中有。在Gamma等的《设计模式》中，这叫做“Bridge模式”。Sutter在他的《Exceptional C++》中叫它“Pimpl惯用法”。</p>
+<h2 id="总结">总结</h2>
+<p>从STL的视角看来，要记住的最重要的东西是<strong>使用这种技术的仿函数类必须支持合理方式的拷贝</strong>。</p>
+<p>唯一你必须担心的是BPFC的拷贝构造函数的行为，因为当在STL中被传递或从一个函数返回时，函数对象总是被拷贝——值传递。</p>
+<p>记得吗？那意味着两2件事: <strong>让它们小，而且让它们单态</strong>。</p>
 ]]></description></item><item><title>变分自编码器 VAE 详解</title><link>https://jianye0428.github.io/posts/vae_1/</link><pubDate>Thu, 27 Jul 2023 10:53:41 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/vae_1/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -9327,94 +9802,283 @@ $$</p>
 [9]. <a href="https://lilianweng.github.io/posts/2021-07-11-diffusion-models"target="_blank" rel="external nofollow noopener noreferrer">https://lilianweng.github.io/posts/2021-07-11-diffusion-models<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [10]. <a href="https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&amp;mid=2247486128&amp;idx=1&amp;sn=7ffef5d8c1bbf24565d0597eb5eaeb16&amp;chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s?__biz=Mzk0MzIzODM5MA==&mid=2247486128&idx=1&sn=7ffef5d8c1bbf24565d0597eb5eaeb16&chksm=c337b729f4403e3f4ca4fcc1bc04704f72c1dc02876a2bf83c330e7857eba567864da6a64e18&scene=21#wechat_redirect<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
 [11]. <a href="https://arxiv.org/pdf/2006.11239.pdf"target="_blank" rel="external nofollow noopener noreferrer">paper link<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Effective STL [37] | 把仿函数类设计为用于值传递</title><link>https://jianye0428.github.io/posts/effective_stl_38/</link><pubDate>Wed, 06 Sep 2023 17:28:31 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/effective_stl_38/</guid><description><![CDATA[<h2 id="函数指针按值传递">函数指针按值传递</h2>
+<p>C和C++都不允许你真的把函数作为参数传递给其他函数。取而代之的是，你必须传指针给函数。</p>
+<p>比如，这里有一个标准库函数qsort的声明:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">qsort</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">base</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">nmemb</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">cmpfcn</span><span class="p">)(</span><span class="k">const</span> <span class="kt">void</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>一旦你忽略了所有的星号，就可以清楚地看出作为cmpfcn传递的实参，一个指向函数的指针，是从调用端拷贝（也就是，值传递）给qsort。这是C和C++标准库都遵循的一般准则:<strong>函数指针是值传递</strong>。</p>
+<p>STL中的习惯是当传给函数和从函数返回时函数对象也是值传递的（也就是拷贝）。</p>
+<p>最好的证据是标准的for_each声明，这个算法通过值传递获取和返回函数对象:</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">InputIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Function</span><span class="o">&gt;</span> <span class="n">Function</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 注意值返回， 注意值传递
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">for_each</span><span class="p">(</span><span class="n">InputIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">InputIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Function</span> <span class="n">f</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>实际上，值传递的情况并不是完全打不破的，因为for_each的调用者在调用点可以显式指定参数类型。比如，下面的代码可以使for_each通过引用传递和返回它的仿函数:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DoSomething</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="kt">int</span> <span class="n">x</span><span class="p">){...}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 方便的typedef
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">DequeIntIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">di</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 建立一个函数对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">DoSomething</span> <span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 调用for_each，参数类型是DequeIntIter和DoSomething&amp;；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 这迫使d按引用传递和返回
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">for_each</span><span class="o">&lt;</span><span class="n">DequeIntIter</span><span class="p">,</span> <span class="n">DoSomething</span> <span class="o">&amp;&gt;</span><span class="p">(</span><span class="n">di</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">di</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">d</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="保证拷贝传递行为正常">保证拷贝传递行为正常</h2>
+<p>因为函数对象以值传递和返回，你的任务就是确保当拷贝传递时你的函数对象行为良好。</p>
+<p>这暗示了2个东西:</p>
+<ol>
+<li><strong>你的函数对象应该很小。否则它们的拷贝会很昂贵。</strong></li>
+<li><strong>你的函数对象必须单态（也就是，非多态）——它们不能用虚函数。那是因为派生类对象以值传递代入基类类型的参数会造成切割问题: 在拷贝时，它们的派生部分被删除。</strong></li>
+</ol>
+<p>当然效率很重要，避免切割问题也是，但不是所有的仿函数都是小的、单态的。函数对象比真的函数优越的的原因之一是仿函数可以包含你需要的所有状态。</p>
+<p>有些函数对象自然会很重，保持传这样的仿函数给STL算法和传它们的函数版本一样容易是很重要的。</p>
+<h2 id="多态仿函数实现">多态仿函数实现</h2>
+<p>禁止多态仿函数是不切实际的。C++支持继承层次和动态绑定，这些特性在设计仿函数类和其他东西的时候一样有用。仿函数类如果缺少继承就像C++缺少“++”。</p>
+<p>带着你要放进你的仿函数类的数据和/或多态，把它们移到另一个类中。然后给你的仿函数一个指向这个新类的指针。</p>
+<p>比如，如果你想要建立一个包含很多数据的多态仿函数类。</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// BPFC = “Big Polymorphic Functor Class”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 条款40解释了这个基类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Int</span> <span class="n">x</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 这个类有很多数据，所以用值传递
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 会影响效率
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">public</span> <span class="o">:</span> <span class="k">virtual</span> <span class="kt">void</span>
+</span></span><span class="line"><span class="cl">        <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>  <span class="c1">// 这是一个虚函数，所以切割时会出问题
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>建立一个包含一个指向实现类的指针的小而单态的类，然后把所有数据和虚函数放到实现类:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 用于修改的BPFC的新实现类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFCImpl</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 以前在BPFC里的所有数据现在在这里
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"> <span class="c1">// 多态类需要虚析构函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">virtual</span> <span class="o">~</span><span class="n">BPFCImpl</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">virtual</span> <span class="kt">void</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">friend</span> <span class="k">class</span> <span class="nc">BPFC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">;</span>  <span class="c1">// 让BPFC可以访问这些数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 小的，单态版的BPFC
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span> <span class="o">:</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">BPFCImpl</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;*</span> <span class="n">pImpl</span><span class="p">;</span>  <span class="c1">// 这是BPFC唯一的数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 现在非虚；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span>  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 调用BPFCImpl的真的虚函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">pImpl</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">()(</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>BPFC::operator()</code>的实现例证了BPFC所有的虚函数是怎么实现的: 它们调用了在BPFCImpl中它们真的虚函数。</p>
+<p>结果是仿函数类（BPFC）是小而单态的，但可以访问大量状态而且行为多态。</p>
+<p>顺便说一句，这种实现方法在《Effective C++》的条款34中有。在Gamma等的《设计模式》中，这叫做“Bridge模式”。Sutter在他的《Exceptional C++》中叫它“Pimpl惯用法”。</p>
+<h2 id="总结">总结</h2>
+<p>从STL的视角看来，要记住的最重要的东西是<strong>使用这种技术的仿函数类必须支持合理方式的拷贝</strong>。</p>
+<p>唯一你必须担心的是BPFC的拷贝构造函数的行为，因为当在STL中被传递或从一个函数返回时，函数对象总是被拷贝——值传递。</p>
+<p>记得吗？那意味着两2件事: <strong>让它们小，而且让它们单态</strong>。</p>
 ]]></description></item><item><title>BEVFormer 论文解读</title><link>https://jianye0428.github.io/posts/bevformer/</link><pubDate>Sun, 03 Sep 2023 19:31:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/bevformer/</guid><description><![CDATA[<h2 id="1-背景motivation">1. 背景/Motivation</h2>
 <h3 id="11-为什么视觉感知要用bev">1.1 为什么视觉感知要用BEV？</h3>
 <p>相机图像描述的是一个2D像素世界，然而自动驾驶中利用相机感知结果的后续决策、路径规划都是在车辆所处的3D世界下进行。由此引入的2D和3D维度不匹配，就导致基于相机感知结果直接进行自动驾驶变得异常困难。</p>
 <p>这种感知和决策规划的空间维度不匹配的矛盾，也体现在学开车的新手上。倒车泊车时，新手通过后视镜观察车辆周围，很难直观地构建车子与周围障碍物的空间联系，容易导致误操作剐蹭或需要尝试多次才能泊车成功，本质上还是新手从2D图像到3D空间的转换能力较弱。基于相机图像平面感知结果进行决策规划的自动驾驶AI，就好比缺乏空间理解力的驾驶新手，很难把车开好。</p>
-<p>实际上，利用感知结果进行决策和路径规划，问题还出现在多视角融合过程中：在每个相机上进行目标检测，然后对目标进行跨相机融合。如2021 TESLA AI Day给出的图1，带拖挂的卡车分布在多个相机感知野内，在这种场景下试图通过目标检测和融合来真实地描述卡车在真实世界中的姿态，存在非常大的挑战。</p>
+<p>实际上，利用感知结果进行决策和路径规划，问题还出现在多视角融合过程中: 在每个相机上进行目标检测，然后对目标进行跨相机融合。如2021 TESLA AI Day给出的图1，带拖挂的卡车分布在多个相机感知野内，在这种场景下试图通过目标检测和融合来真实地描述卡车在真实世界中的姿态，存在非常大的挑战。</p>
 <p></p>
 <p>为了解决这些问题，很多公司采用硬件补充深度感知能力，如引入毫米波雷达或激光雷达与相机结合，辅助相机把图像平面感知结果转换到自车所在的3D世界，描述这个3D世界的专业术语叫做BEV map或BEV features(鸟瞰图或鸟瞰图特征)，如果忽略高度信息，就把拍扁后的自车坐标系叫做BEV坐标系(即鸟瞰俯视图坐标系)。</p>
-<p>但另外一些公司则坚持不引入深度感知传感器，他们尝试从本质入手，基于视觉学习得到从图像理解空间的能力，让自动驾驶AI系统更像老司机，例如TESLA。Elon Musk认为：人类不是超人，也不是蝙蝠侠，不能够眼放激光，也没安装雷达，但是通过眼睛捕捉到的图像，人类反复练习就可以构建出对周围世界的3D空间理解能力从而很好地掌握驾驶这项能力，那么要像人一样单纯利用眼睛(相机)进行自动驾驶就必须<font color=red>具备从2D图像平面到3D自车空间(BEV)的转换能力</font>。</p>
+<p>但另外一些公司则坚持不引入深度感知传感器，他们尝试从本质入手，基于视觉学习得到从图像理解空间的能力，让自动驾驶AI系统更像老司机，例如TESLA。Elon Musk认为: 人类不是超人，也不是蝙蝠侠，不能够眼放激光，也没安装雷达，但是通过眼睛捕捉到的图像，人类反复练习就可以构建出对周围世界的3D空间理解能力从而很好地掌握驾驶这项能力，那么要像人一样单纯利用眼睛(相机)进行自动驾驶就必须<font color=red>具备从2D图像平面到3D自车空间(BEV)的转换能力</font>。</p>
 <p>传统获取BEV map/features的方法有局限性，它一般是利用相机外参以及地面平面假设，即IPM(Inverse Perspective Mapping)方法，将图像平面的感知结果反投影到自车BEV坐标系。Tesla以前的方案也是这样，然而当车辆周围地面不满足平面假设，且多相机视野关联受到各种复杂环境影响的时候，这类方法就难以应付。</p>
 <p>针对IPM方法获取BEV遇到的困难，TESLA自动驾驶感知负责人Andrej Karparthy的团队<font color=red><strong>直接在神经网络中完成图像平面到BEV的空间变换</strong></font>，这一改变成为了2020年10月发布的FSD Beta与之前Autopilot产品最显著的差别。TESLA利用Transformer生成BEV Featrues，得到的Features通道数是256(IPM方法最多保留RGB3个channel)，这样能极大程度地保留图像信息，用于后续基于BEV Features的各种任务，如动、静态目标检测和线检测等。</p>
 <h3 id="12-生成bev视角的方法有哪些为何选用transformer呢">1.2 生成BEV视角的方法有哪些？为何选用Transformer呢？</h3>
-<p><strong>把相机2D平面图像转换成BEV视角的方法有两种：<u>视觉几何方法</u>和<u>神经网络方法</u>。</strong></p>
-<p><strong>视觉几何方法</strong>：基于IPM进行逐像素几何投影转换为BEV视角，再对多个视角的部分BEV图拼接形成完整BEV图。此方法有两个假设：1.路面与世界坐标系平行，2.车辆自身的坐标系与世界坐标系平行。前者在路面非平坦的情况下并不满足，后者依赖车辆姿态参数(Pitch和Roll)实时校正，且精度要求较高，不易实现。</p>
-<p><strong>神经网络方法</strong>：用神经网络生成BEV，其中的关键要找到合适的方法实现神经网络内部Feature Map空间尺寸上的变换。</p>
-<p>实现空间尺寸变换的神经网络主流操作有两种方法，如图2所示：MLP中的Fully Connected Layer和Transformer Cross Attention(图片引用自<a href="https://zhuanlan.zhihu.com/p/458076977"target="_blank" rel="external nofollow noopener noreferrer">《超长延迟的特斯拉AI Day解析：讲明白FSD车端感知》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</p>
+<p><strong>把相机2D平面图像转换成BEV视角的方法有两种: <u>视觉几何方法</u>和<u>神经网络方法</u>。</strong></p>
+<p><strong>视觉几何方法</strong>: 基于IPM进行逐像素几何投影转换为BEV视角，再对多个视角的部分BEV图拼接形成完整BEV图。此方法有两个假设: 1.路面与世界坐标系平行，2.车辆自身的坐标系与世界坐标系平行。前者在路面非平坦的情况下并不满足，后者依赖车辆姿态参数(Pitch和Roll)实时校正，且精度要求较高，不易实现。</p>
+<p><strong>神经网络方法</strong>: 用神经网络生成BEV，其中的关键要找到合适的方法实现神经网络内部Feature Map空间尺寸上的变换。</p>
+<p>实现空间尺寸变换的神经网络主流操作有两种方法，如图2所示: MLP中的Fully Connected Layer和Transformer Cross Attention(图片引用自<a href="https://zhuanlan.zhihu.com/p/458076977"target="_blank" rel="external nofollow noopener noreferrer">《超长延迟的特斯拉AI Day解析: 讲明白FSD车端感知》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</p>
 <p></p>
-<p><strong>MLP Fully Connected Layer方法：</strong></p>
+<p>**MLP Fully Connected Layer方法: **</p>
 <p>$$O=Act(W_{mlp}*X+b)$$</p>
-<p>忽略非线性激活函数和bias后，可以写成：</p>
+<p>忽略非线性激活函数和bias后，可以写成:</p>
 <p>$$O=W_{mlp}*X$$</p>
 <p><strong>Transformer Cross Attention方法:</strong></p>
 <p>$$O=Softmax(Q*K^T)*V$$</p>
 <p>其中，K和V是输入图像特征X经线性变换后得到的；在最终输出的BEV视角下，把自车周围空间中的索引量称作 $\boldsymbol{\Phi}$</p>
 <p>$$O=Softmax(\Phi W_q*(XW_K)^T)*XW_V=W_{transformer}(X,\Phi)*XW_V$$</p>
-<p>BEV变换的本质是利用两个操作中的任意一个，将输入的2D图像空间特征图转换成BEV特征图。在进行BEV转换之前，先通过多层CNN在图像上提取特征，得到图像空间特征图层尺寸($h * w$)，即X的尺寸。 BEV变换输出O所在的BEV空间尺寸，是以自车位置为原点的前后左右各若干米范围内建立的栅格空间(x * y)。</p>
-<p>MLP Fully Connect Layer和Cross Attention的显著差别在于作用于输入量X的系数W：**全联接层的W，一旦训练结束后在Inference阶段是固定不变的；而Cross Attention的Transformer的系数W，是输入量X和索引量
-的函数，在Inference阶段会根据输入量X和索引量的不同发生改变。从这个角度来讲，使用Cross Attention来进行空间变换可能使模型获得更强的表达能力。</p>
-<p>TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思想，并未披露更多实现细节。论文BEVFormer充分研究了TESLA的技术思想后，利用Transformer融合图像的时、空特征，得到BEV Features，与TESLA的关键方法、实现效果都非常接近。BEVFormer既通过论文披露了详尽方法，又在2022年6月开源了工程，接下来就围绕BEVFormer介绍如何通过Transformer获取BEV Features。</p>
+<p>BEV变换的本质是将输入的2D图像空间特征图转换成BEV特征图。在进行BEV转换之前，先通过多层CNN(或者任一图像处理backbone网络)在图像上提取特征，得到图像空间特征图层尺寸($h * w$)，即$X$的尺寸。 BEV变换输出O所在的BEV空间尺寸，是以自车位置为原点的前后左右各若干米范围内建立的栅格空间(x * y)。</p>
+<p>MLP Fully Connect Layer和Cross Attention的<font color=red><strong>显著差别</strong></font>在于作用于输入量X的系数W: 全联接层的W，一旦训练结束后在Inference阶段是固定不变的；而<font color=green>Cross Attention的Transformer的系数W，是输入量X和索引量的函数，在Inference阶段会根据输入量X和索引量的不同发生改变</font>。从这个角度来讲，使用Cross Attention来进行空间变换可能使模型获得更强的表达能力。</p>
+<p>TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思想，并未披露更多实现细节。<strong>论文BEVFormer充分研究了TESLA的技术思想后，利用Transformer融合图像的时、空特征，得到BEV Features，与TESLA的关键方法、实现效果都非常接近</strong>。BEVFormer既通过论文披露了详尽方法，又在2022年6月开源了工程，接下来就围绕BEVFormer介绍如何通过Transformer获取BEV Features。</p>
 <h2 id="2-methodstrategybevformer">2. Method/Strategy——BEVFormer</h2>
 <h3 id="21-overall-architecture">2.1 Overall Architecture</h3>
-<p>如下图3所示：BEVFormer主体部分有6层结构相同的BEVFormer encoder layers，每一层都是由以transformer为核心的modules(TSA+SCA)，再加上FF、Add和Norm组成。BEVFormer encoder layer结构中有3个特别的设计：BEV Queries， Spatial Cross-attention(SCA)和Temporal Self-attention(TSA)。其中BEV Queries是栅格形可学习参数，承载着通过attention机制在multi-camera views中查询、聚合的features。SCA和TSA是以BEV Queries作为输入的注意力层，负责实施查询、聚合空间features(来自multi-camera images)和时间features(来自历史BEV)的过程。</p>
-<p>下面分步骤观察BEV完整模型的前向推理过程：</p>
+<p>如下图3所示: BEVFormer主体部分有6层结构相同的<code>BEVFormer encoder layers</code>，每一层都是由以transformer为核心的modules(TSA+SCA)，再加上FF、Add和Norm组成。BEVFormer encoder layer结构中有3个特别的设计: <font color=red><strong>BEV Queries</strong></font>， <font color=red><strong>Spatial Cross-attention(SCA)</strong></font>和<font color=red><strong>Temporal Self-attention(TSA)</strong></font>。其中BEV Queries是栅格形可学习参数，承载着通过attention机制在multi-camera views中查询、聚合的features。SCA和TSA是以BEV Queries作为输入的注意力层，负责实施查询、聚合空间features(来自multi-camera images)和时间features(来自历史BEV)的过程。</p>
+<p>下面分步骤观察BEV完整模型的前向推理过程:</p>
 <ul>
-<li>在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features)： $F_t={\left.F_t^i\right.}<em>{i=1}^{N</em>{view}}$
-，其中 $F_{t}^{i}$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。</li>
+<li>在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features):  $F_t={\left.F_t^i\right.}<em>{i=1}^{N</em>{view}}$，其中 $F_{t}^{i}$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。</li>
 <li>在每个BEVFormer Encoder layer中，首先用BEV Queries Q通过TSA模块从 ${\boldsymbol{B}}_{t-1}$ 中查询并融合时域信息(the temporal information)，得到修正后的BEV Queries $Q^{\prime}$；</li>
 <li>然后在同一个BEVFormer Encoder layer中，对TSA“修证”过的BEV Queries $Q^{\prime}$ ，通过SCA模块从multi-camera features $F_{t}$ 查询并融合空域信息(spatial information)，得到进一步修正的BEV Queries $Q^{^{\prime\prime}}$ 。</li>
 <li>这一层encoder layer把经过两次修正的BEV features $Q^{^{\prime\prime}}$ (也可以叫做BEV Queries)进行FF计算，然后输出，作为下一个encoder layer的输入。</li>
-<li>如此堆叠6层，即经过6轮微调，t时刻的统一BEV features $B_{t}$ 就生成了。
-最后，以BEV Features $B_{t}$ 作为输入，3D detection head和map segmentation head预测感知结果，例如3D bounding boxes和semantic map。</li>
+<li>如此堆叠6层，即经过6轮微调，t时刻的统一BEV features $B_{t}$ 就生成了。</li>
+<li>最后，以BEV Features $B_{t}$ 作为输入，3D detection head和map segmentation head预测感知结果，例如3D bounding boxes和semantic map。</li>
 </ul>
 <p></p>
 <h3 id="22-bev-queries">2.2 BEV Queries</h3>
 <p>BEVFormer采用显性定义BEV的方式，BEV Queries就是其中的显性BEV features。</p>
-<p>可从3个概念循序渐进地认识/理解BEV Queries：<strong>BEV平面 → BEV 感知空间 → BEV Queries</strong>。</p>
+<p>可从3个概念循序渐进地认识/理解BEV Queries: <strong>BEV平面 → BEV 感知空间 → BEV Queries</strong>。</p>
 <ul>
 <li>
 <p>BEV 平面
-BEV平面($(R^{H\times W\times1})$)是以自车为中心的栅格化二维平面，H、W是BEV平面在x、y方向的栅格尺寸，此平面显性地与车辆周围横、纵向物理空间关联，一个栅格表示s米，论文中把BEV平面中的栅格叫做2D参考点(2D reference points)。例如论文中定义nuScenes数据集栅格尺寸200x200，对应[-51.2米, 51.2米]，那么s就是0.512米。</p>
+BEV平面($R^{H\times W\times1}$)是以自车为中心的栅格化二维平面，H、W是BEV平面在x、y方向的栅格尺寸，此平面显性地与车辆周围横、纵向物理空间关联，一个栅格表示s米，论文中把BEV平面中的栅格叫做2D参考点(2D reference points)。例如论文中定义nuScenes数据集栅格尺寸200x200，对应[-51.2米, 51.2米]，那么s就是0.512米。</p>
 </li>
 <li>
 <p>BEV 感知空间
-BEV感知空间( $(R^{H\times W\times N_{ref}})$ )把BEV平面在z轴方向选取 $N_{ref}$个<strong>3D参考点</strong>进行扩展，表示车辆周围有限空间。查看BEV开源工程可知，BEV感知空间的精确表示范围：在nuScenes数据集中，是以Lidar作为中心点，前后各51.2m、左右各51.2m、向上3m、向下5m的矩形空间。
-仔细深究作者这样设置的用意，会发现蛮有意思/意义：nuScenes采集车上安装的Lidar距地面高约1.84m，[-5m, 3m]的设置让BEV Queries感知空间在自车轮胎接地点平面以上部分约4.84m，接地点平面以下部分约3.16m。前者确保不仅能感知高大目标物，如货车等，还能感知覆盖坡度9.5%(4.84m/51.2m100%)上坡场景，后者保证感知覆盖坡度6.2%(3.16m/51.2m100%)下坡场景。备注：坡度=(高程差/水平距离)x100%，车辆前进100m的垂直上升/下降高度，我国规定城市道路最大纵坡8％，公路9％。</p>
+BEV感知空间( $R^{H\times W\times N_{ref}}$ )把BEV平面在z轴方向选取 $N_{ref}$个<strong>3D参考点</strong>进行扩展，表示车辆周围有限空间。查看BEV开源工程可知，BEV感知空间的精确表示范围: 在nuScenes数据集中，是以Lidar作为中心点，前后各51.2m、左右各51.2m、向上3m、向下5m的矩形空间。
+仔细深究作者这样设置的用意，会发现蛮有意思/意义: nuScenes采集车上安装的Lidar距地面高约1.84m，[-5m, 3m]的设置让BEV Queries感知空间在自车轮胎接地点平面以上部分约4.84m，接地点平面以下部分约3.16m。前者确保不仅能感知高大目标物，如货车等，还能感知覆盖坡度9.5%(4.84m/51.2m100%)上坡场景，后者保证感知覆盖坡度6.2%(3.16m/51.2m100%)下坡场景。备注: 坡度=(高程差/水平距离)x100%，车辆前进100m的垂直上升/下降高度，我国规定城市道路最大纵坡8％，公路9％。</p>
 </li>
 <li>
 <p>BEV Queries
 BEV Queries是预定义的一组栅格形(grid-shaped)可学习参数，简称 $Q\in R^{H\times W\times C}$，它是对上述BEV 感知空间的特征描述，可直白地理解为学习完成了，它就变成了BEV features。
 BEV Queries的H、W与BEV平面在x、y方向的栅格尺寸定义一致，因此也继承了BEV平面显性地与车辆周围横、纵向物理空间关联的特性。但C是BEV Queries作为features时在channel维度的尺寸，并不显性地对应于BEV平面z轴的物理空间尺寸。特别指出，位于 $p=(x,y)$ 处的某个query $Q_{p}\in R^{1\times C}$，表示BEV queries中的一个栅格。在输入到BEVFormer之前，BEV Queries加上了可学习的位置编码(learnable positional embedding)。
 论文中多处提及BEV Queries和BEV features，它俩什么关系？本质上描述的是同一个东西么？
-先说答案：两者本质上是同一个东西。模型中预定义参数BEV Queries 输入到BEV Encoder layer，输出的就是经过1次微调过的BEV features，它作为下一层的输入时，又被看作下一层的BEV Queries。经过所有layers的多次微调，最后一个layer输出的就是BEV features ${\mathit{B}}_{t}$ ，作为各类感知task heads的输入。</p>
+先说答案: 两者本质上是同一个东西。模型中预定义参数BEV Queries 输入到BEV Encoder layer，输出的就是经过1次微调过的BEV features，它作为下一层的输入时，又被看作下一层的BEV Queries。经过所有layers的多次微调，最后一个layer输出的就是BEV features ${\mathit{B}}_{t}$ ，作为各类感知task heads的输入。</p>
 </li>
 </ul>
 <h3 id="23-sca-spatial-cross-attention">2.3 SCA: Spatial cross-attention</h3>
 <p>如上图(b)所示，作者设计了一种空间交叉注意力机制，使 BEV queries 从多个相机的image Features中提取所需信息并转换为BEV Features。</p>
-<p>每个BEV栅格的query在image features的哪些范围提取信息呢？这里有3个方案：</p>
+<p>每个BEV栅格的query在image features的哪些范围提取信息呢？这里有3个方案:</p>
 <p>一、从image features的所有点上提取信息，即global attention。</p>
 <p>二、从BEV栅格在image features的投影点上提取信息。</p>
-<p>三、从BEV栅格在image features的投影点及其周围取信息，即deformable attention。</p>
-<p>由于使用了多尺度图像特征和高分辨率 BEV 特征(200x200)，如果采用方案一 global attention ，会带来无法负担的计算代价(显存和计算复杂度)。但是，方案一完全用不到相机内外参，这算是它独有的优势。</p>
+<p>三、从BEV栅格在image features的投影点及其周围提取信息，即deformable attention。</p>
+<p>由于使用了多尺度图像特征和高分辨率 BEV 特征(200x200)，如果采用方案一 global attention ，会带来无法负担的计算代价(显存和计算复杂度)。但是，方案一完全<u>用不到相机内外参</u>，这算是它<strong>独有的优势</strong>。</p>
 <p>方案二依赖非常精确的相机内、外参，且不能充分利用image features上的局部区域信息。</p>
-<p>因此作者选用了方案三，基于deformable attention 的稀疏注意力机制，使BEV Queries中的每个Query 只与其所代表世界坐标系物理空间投影到图像上的部分区域进行交互，且解除了对相机内、外参的高精度依赖。注意，这里复数BEV Queries表示整个BEV图，而单数Query表示BEV 图中位于 $(x, y)$的一个栅格。</p>
+<p>因此作者选用了方案三，基于deformable attention 的<strong>稀疏注意力机制</strong>，使BEV Queries中的每个Query 只与其所代表世界坐标系物理空间投影到图像上的部分区域进行交互，且解除了对相机内、外参的高精度依赖。注意，这里复数BEV Queries表示整个BEV图，而单数Query表示BEV 图中位于 $(x, y)$的一个栅格。</p>
 <p>$$\mathrm{SCA}(Q_p,F_t)=\frac1{|\mathcal{V}<em>\mathrm{hit}|}\sum</em>{i\in\mathcal{V}<em>\mathrm{hit}}\sum</em>{j=1}^{N_\mathrm{ref}}\mathrm{Deform}\mathrm{Attn}(Q_p,\mathcal{P}(p,i,j),F_t^i)\quad\quad\quad\quad(2)$$</p>
 <p>在DeformAttn()中，$Q_{p}$、$P(p,i,j)$ 和 $F_{t}^{i}$ 分别表示query, reference points和输入特征。</p>
-<p>通俗理解公式：在BEV Query对应的图像2D features 有效区域附近计算注意力，把图像2D features加权融合到BEV Query作为SCA的输出。</p>
-<p>参考图(b)和上述公式2，总结Spatial cross-attention的实现方式：</p>
+<p>通俗理解公式: <font color=red><strong>在BEV Query对应的图像2D features 有效区域附近计算注意力，把图像2D features加权融合到BEV Query作为SCA的输出</strong></font>。</p>
+<p>参考图(b)和上述公式2，总结Spatial cross-attention的实现方式:</p>
 <ol>
 <li>对于每一个位于 $(x, y)$ 位置的 BEV query $Q_{p}$ ，计算其对应真实世界的坐标 $(x^{&rsquo;},y^{&rsquo;})$。然后将 BEV query 在z方向进行 lift 操作，设置 $N_{ref}$ 个 3D参考点，即对应 $N_{ref}$ 个世界坐标系下的3D空间参考点。</li>
 <li>通过相机内外参，把第j个3D参考点投影到 $v_{hit}$ 个相机图像上。受相机感知范围限制，每个3D参考点一般只在 1-2 个相机上找到有效的投影点(反过来描述，每个相机的features只与部分BEV queries构成有效投影关系)。</li>
 <li>基于 Deformable Attention，把像平面上的这些投影点作为2D图像参考点，在其周围对 $F_{t}^{i}$ 进行特征采样，得到sampled features。</li>
 <li>最后，对 $V_{hit}$ 、$N_{ref}$ 个sampled features进行加权求和，作为spatial cross-attention的输出来更新BEV query，从而完成 spatial 空间的特征聚合。</li>
 </ol>
-<p>详细介绍一下第2步中如何把3D参考点投影到相机图像上获得2D参考点：</p>
+<p>详细介绍一下第2步中如何把3D参考点投影到相机图像上获得2D参考点:</p>
 <ul>
 <li>首先计算位于 $p = (x, y)$ 的query $Q_{p}$ 在以车辆为中心世界坐标 $(x^{&rsquo;},y^{&rsquo;})$
 $$x^{^{\prime}}=(x-W/2)*s; \quad y^{^{\prime}}=(y-{H}/2)*s$$
 其中H和W是BEV queries的尺寸，s是BEV中一个栅格所代表的物理空间尺寸;</li>
-<li>计算第j个3D参考点投影到第i个相机图像上的2D参考点坐标：
+<li>计算第j个3D参考点投影到第i个相机图像上的2D参考点坐标:
 $$P(p,i,j)=(x_{i,j},y_{i,j})$$
 其中，
 $$z_{i,j}[x_{i,j},y_{i,j},1]^T=T_i*[x^{&rsquo;},y^{&rsquo;},z^{&rsquo;},1]^T$$
@@ -9424,21 +10088,21 @@ $T_i$ 是第 $i$ 个相机的投影矩阵。</li>
 <p>从经典 RNN 网络获得启发，将 BEV 特征 $B_t$ 视为能够传递序列信息的 memory。每一时刻生成的 BEV 特征 $B_t$ 都从上一时刻的 BEV 特征  $B_{t-1}$ 获取所需的时序信息，这样能保证动态地获取所需的时序特征，而非像堆叠不同时刻 BEV 特征那样只能获取定长的时序信息。</p>
 <p></p>
 <p>$$\text{TSA}(Q_p,{Q,B&rsquo;<em>{t-1}})=\sum</em>{V\in{Q,B&rsquo;_{t-1}}}\text{DeformAttn}(Q_p,p,V),\quad(5)$$</p>
-<p>参考图4和上述公式5，总结temporal self-attention的实现方法：</p>
+<p>参考图4和上述公式5，总结temporal self-attention的实现方法:</p>
 <ol>
 <li>给定t-1时刻的 BEV 特征 $B_{t-1}$ ，先根据 ego motion 将 $B_{t-1}$ 对齐到 $t$ 时刻，来确保 $B_{t-1}$ 和 $B_{t}$ 在相同index位置的栅格对应于现实世界的同一位置，把时间对齐后的BEV特征记作 $B_{t-1}^{&rsquo;}$ 。</li>
 <li>$t$ 时刻位于 $(x, y)$ 处的 BEV query所表征的物体可能静态或者动态，它在t-1时刻会出现在 $B_{t-1}^{&rsquo;}$ 的 $(x, y)$ 周围，因此利用 deformable attention 以 $(x, y)$ 作为参考点在其周围进行特征采样。</li>
 </ol>
 <p>上述方法<strong>没有显式地设计遗忘门</strong>，而是通过 attention 机制中的 attention weights 来平衡历史时序特征和当前 BEV 特征的融合过程。</p>
-<p><strong>关于TSA的后记</strong>：BEVFormer V2对 BEVFormer的时域融合方法TSA做了修改。</p>
-<p>BEVFormer中TSA采用了继承式的时域信息融合方式：利用attention机制在t时刻融合了t-1时刻的BEV features信息，由于t-1时刻的BEV features 也融合了更早时刻(t-2)的信息，因此t时刻BEV features间接地融合了比t-1时刻更早的信息。</p>
+<p><strong>关于TSA的后记</strong>: BEVFormer V2对 BEVFormer的时域融合方法TSA做了修改。</p>
+<p>BEVFormer中TSA采用了继承式的时域信息融合方式: 利用attention机制在t时刻融合了t-1时刻的BEV features信息，由于t-1时刻的BEV features 也融合了更早时刻(t-2)的信息，因此t时刻BEV features间接地融合了比t-1时刻更早的信息。</p>
 <p>但是这种继承式时域融合方式有遗忘的特点，即不能有效利用较长时间的历史信息。</p>
-<p>BEVFormer V2把时域融合改成了：根据ego motion，把过去多个时刻的BEV features 对齐到当前时刻，然后在channel 维度把这些对齐后的BEV features 与当前时刻BEV features串联，然后用Residual 模块降低channel数，就完成了时域融合。</p>
+<p>BEVFormer V2把时域融合改成了: 根据ego motion，把过去多个时刻的BEV features 对齐到当前时刻，然后在channel 维度把这些对齐后的BEV features 与当前时刻BEV features串联，然后用Residual 模块降低channel数，就完成了时域融合。</p>
 <p>综合2.3和2.4节，观察6个 BEVFormer Encoder Layers的完整结构会发现， BEV query 既能通过 spatial cross-attention 聚合空间特征，又能通过 temporal self-attention 聚合时序特征，这个过程会重复多次，让时空特征融合能够相互促进，最终得到更好的融合BEV features。</p>
 <h3 id="25-application-of-bev-features">2.5 Application of BEV Features</h3>
 <p>BEV Features $B_{t}\in R^{H\times W\times C}$ 是可用于多种自动驾驶感知任务的2D feature map， 基于2D 感知方法稍加改动就可在 $B_t$ 上开发3D目标检测和map segmentation任务。</p>
 <p><strong>3D object detection</strong></p>
-<p>参考2D 目标检测器Deformable DETR，论文设计了end-to-end的3D目标检测head，修改部分包括：用single-scale 的BEV features $B_t$ 作为检测头的输入，预测输出3D b-boxes和速度而不是2D b-boxes，仅用 $L_1$ loss监督3D b-boxes的回归。继承DETR方法的优势，预测有限数目的候选目标集合(开源工程中设为300个)，这种end-to-end的检测头不需要NMS后处理。</p>
+<p>参考2D 目标检测器Deformable DETR，论文设计了end-to-end的3D目标检测head，修改部分包括: 用single-scale 的BEV features $B_t$ 作为检测头的输入，预测输出3D b-boxes和速度而不是2D b-boxes，仅用 $L_1$ loss监督3D b-boxes的回归。继承DETR方法的优势，预测有限数目的候选目标集合(开源工程中设为300个)，这种end-to-end的检测头不需要NMS后处理。</p>
 <p><strong>map segmentation</strong></p>
 <p>参考2D segmentation 方法Panoptic SegFormer，论文设计了map segmentation head。因为基于BEV的map segmentation基本上与常见语义分割相同，作者利用了参考文章[22]中的mask decoder和class-fixed queries设计head来查找每个语义类别，包括car、vehicle、road(可通行区域)和车道线。</p>
 <h3 id="26-implementation-details">2.6 Implementation details</h3>
@@ -9448,19 +10112,19 @@ $T_i$ 是第 $i$ 个相机的投影矩阵。</li>
 <li>在初始3个时刻，循环生成BEV features ${B_{t-3},B_{t-2},B_{t-1}}$，且在此阶段不计算梯度；</li>
 <li>计算第一个时刻t-3的temporal self-attention输出时，它并没有前序BEV features，就用它自身作为前序时刻输入，那么temporal self-attention暂时退化成了self-attention。</li>
 </ul>
-<p>inference时的实施细节：</p>
+<p>inference时的实施细节:</p>
 <p>按照时间顺序计算图像序列中的每一帧，前序时刻的BEV features被保持下来并用于后一时刻，这种online的inference策略在应用中比较高效。</p>
 <h2 id="3-experiments">3. Experiments</h2>
 <h3 id="31-experimental-settings">3.1 experimental settings</h3>
 <ol>
-<li>采用两种Backbone：ResNet101-DCN，采用来自FCOS3D训练得到的参数；VoVnet-99，采用来自DD3D训练得到的参数。</li>
+<li>采用两种Backbone: ResNet101-DCN，采用来自FCOS3D训练得到的参数；VoVnet-99，采用来自DD3D训练得到的参数。</li>
 <li>默认情况下，使用FPN输出的多尺度 features的尺寸包含1/16，1/32，1/64(注意，代码中实际用好的1/8尺寸的features，即nuScenes中的116*200的FPN输出)，同时把dimension C设为256。</li>
 <li>在nuScenes数据集试验中，BEV queries尺寸设为200x200，对应感x和y方向的知范围都是[-51.2m, 51.2m]，对应BEV Grid尺寸精度是0.512m。</li>
 <li>在Waymo数据集试验中，BEV queries尺寸设为300x220，对应感x方向的感知范围是[-35.0m, 75.0m]，y方向的知范围是[-75.0m, 75.0m]，对应BEV Grid尺寸精度是0.5m。自车中心位于 BEV的(70，150)处。</li>
 <li>对每个BEV query，在 spatial cross-attention模块中，设置 $N_{ref}=4$ 个3D参考点，预定义它们对应的高度范围是-5m到3m。</li>
 <li>对每个2D图像参考点(3D参考点投影到2D view上的点)，在其周围选取4个采样点送入SCA。</li>
 <li>默认情况下，训练24epoches，学习率设为 $12\times10^{-4}$。</li>
-<li><strong>Baselines</strong>：为了合理评估task heads的影响，公平地与其它生成BEV方法对比。选择VPN和Lift-Splat作为baselines，对它们head之前的部分替换BEVFormer，保留task heads和其它设置。
+<li><strong>Baselines</strong>: 为了合理评估task heads的影响，公平地与其它生成BEV方法对比。选择VPN和Lift-Splat作为baselines，对它们head之前的部分替换BEVFormer，保留task heads和其它设置。
 论文中，通过把temporal self-attention修改为普通的self-attention，这样就使BEVFormer变成了一个静态模型，命名为<strong>BEVFormer-S</strong>，它不使用历史BEV Features。</li>
 </ol>
 <h3 id="32-3d目标检测结果">3.2 3D目标检测结果</h3>
@@ -9469,39 +10133,39 @@ $T_i$ 是第 $i$ 个相机的投影矩阵。</li>
 <p>
 </p>
 <h3 id="33-multi-tasks-perception-results">3.3 multi-tasks perception results</h3>
-<p>联合训练3D detection和map segmentation任务，与单独训练比较训练效果，如Table4所示：对3D目标检测和分割中的车辆类语义感知，联合训练效果有提升；对分割中的road、lane类的语义感知，联合训练效果反而会下降。</p>
+<p>联合训练3D detection和map segmentation任务，与单独训练比较训练效果，如Table4所示: 对3D目标检测和分割中的车辆类语义感知，联合训练效果有提升；对分割中的road、lane类的语义感知，联合训练效果反而会下降。</p>
 <p></p>
 <h3 id="34-消融试验">3.4 消融试验</h3>
 <p>Spatial Cross-attention有效性</p>
 <p>为了验证SCA的有效性，利用不包含TSA的BEVFormer-S来设计消融试验，结果如Table5所示。</p>
-<p>默认的SCA基于deformable attention，在对比试验中构建了基于2种不同attention机制的baselines：1. 用global attention取代deformable attention；2. 让每个query仅与它的图像参考点交互，而不是像SCA那样query与图像参考点周围区域交互。为了扩大对比范围，把BEVFormer中的BEV生成方法替换为了VPN和Lift-Spalt中的方法。从Table5结果可见Deformable Attention方法显著优于其它方法，且在GPU Memory使用量和query兴趣区域大小之间实现了balance。</p>
+<p>默认的SCA基于deformable attention，在对比试验中构建了基于2种不同attention机制的baselines: 1. 用global attention取代deformable attention；2. 让每个query仅与它的图像参考点交互，而不是像SCA那样query与图像参考点周围区域交互。为了扩大对比范围，把BEVFormer中的BEV生成方法替换为了VPN和Lift-Spalt中的方法。从Table5结果可见Deformable Attention方法显著优于其它方法，且在GPU Memory使用量和query兴趣区域大小之间实现了balance。</p>
 <p></p>
 <p><strong>Temporal Self-attention有效性</strong></p>
-<p>从Table1和Table4可见，在相同的设置下，BEVFormer相比于BEVFormer-S的性能大幅提升，针对有挑战性的检测任务提升更明显。TSA主要是在以下方面影响性能提升的：1.temporal information的引入对提高目标速度估计精度非常有益；2.利用temporal information，目标预测的location和orientations更精确；3.受益于temporal information包含过去时刻object的信息，如图4所示，严重遮挡目标的recall 更高。根据nuScenes标注的遮挡程度把验证数据集进行划分成4部分，来评估BEVFormer对各种程度遮挡的性能，针对每个数据子集都会计算average recall(匹配时把中心距离的阈值设为2m)。</p>
+<p>从Table1和Table4可见，在相同的设置下，BEVFormer相比于BEVFormer-S的性能大幅提升，针对有挑战性的检测任务提升更明显。TSA主要是在以下方面影响性能提升的: 1.temporal information的引入对提高目标速度估计精度非常有益；2.利用temporal information，目标预测的location和orientations更精确；3.受益于temporal information包含过去时刻object的信息，如图4所示，严重遮挡目标的recall 更高。根据nuScenes标注的遮挡程度把验证数据集进行划分成4部分，来评估BEVFormer对各种程度遮挡的性能，针对每个数据子集都会计算average recall(匹配时把中心距离的阈值设为2m)。</p>
 <p></p>
 <p><strong>Model Scale and Latency</strong></p>
-<p>针对不同Scale Settings的BEVFormer，对比检测性能和latency，结果如Table6所示。在3方面进行BEVFormer的Scale配置：1. 输入到BEVFormer Encoder的features是multi-scale还是single-scale；2.BEV Queries/features的尺寸；3. encoder layer数目。</p>
+<p>针对不同Scale Settings的BEVFormer，对比检测性能和latency，结果如Table6所示。在3方面进行BEVFormer的Scale配置: 1. 输入到BEVFormer Encoder的features是multi-scale还是single-scale；2.BEV Queries/features的尺寸；3. encoder layer数目。</p>
 <p></p>
-<p>从实验结果看来：Backbone的Latency远大于BEVFormer，因此Latency优化的主要瓶颈在于Backbone而不是BEVFormer(这里指BEVFormer Encoder部分)，BEVFormer可以采用不同的Scale，具备支持灵活平衡性能和efficiency的特性。</p>
+<p>从实验结果看来: Backbone的Latency远大于BEVFormer，因此Latency优化的主要瓶颈在于Backbone而不是BEVFormer(这里指BEVFormer Encoder部分)，BEVFormer可以采用不同的Scale，具备支持灵活平衡性能和efficiency的特性。</p>
 <h2 id="4-discussion">4. Discussion</h2>
 <p>理论上视觉图像的数据比激光数据稠密，但基于视觉的BEV效果还是比基于激光的方法性能差，那么也说明了理论上视觉还有可提升空间。
 BEV Features能用于泊车位检测么？ 可能可以用BEVFormer在环视鱼眼相机上生成BEV features，用于泊车位检测或近距离目标的精确检测。
 显性地引入BEV 特征，限制了最大检测距离，在高速公路场景，检测远处目标非常重要，如何权衡BEV的大小与检测距离是一个需要考虑的问题。
 如何在检测精度和grid大小之间做平衡是一个问题。
-针对2、3问题的一个优化方向：设计自适应尺寸的BEV特征。这里的自适应是指根据场景来调整BEV尺寸或精度。</p>
+针对2、3问题的一个优化方向: 设计自适应尺寸的BEV特征。这里的自适应是指根据场景来调整BEV尺寸或精度。</p>
 <h2 id="5-references">5. References</h2>
-<p>论文：<a href="https://link.zhihu.com/?target=https%3A//arxiv.org/pdf/2203.17270.pdf"target="_blank" rel="external nofollow noopener noreferrer">《BEVFormer: Learning Bird’s-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>开源工程：https://github.com/zhiqi-li/BEVFormer</p>
+<p>论文: <a href="https://link.zhihu.com/?target=https%3A//arxiv.org/pdf/2203.17270.pdf"target="_blank" rel="external nofollow noopener noreferrer">《BEVFormer: Learning Bird’s-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>开源工程: <a href="https://github.com/zhiqi-li/BEVFormer"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/zhiqi-li/BEVFormer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <p>参考中文解读</p>
 <ol>
 <li><a href="https://zhuanlan.zhihu.com/p/495819042"target="_blank" rel="external nofollow noopener noreferrer">使用Transformer融合时空信息的自动驾驶感知框架<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 <li><a href="https://zhuanlan.zhihu.com/p/491890969"target="_blank" rel="external nofollow noopener noreferrer">3d camera-only detection: BEVFormer<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 <li><a href="https://zhuanlan.zhihu.com/p/496284695"target="_blank" rel="external nofollow noopener noreferrer">BEVFormer，通过一个时空Transformer学习 BEV表征<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
 </ol>
-<p>类似工作：
+<p>类似工作:
 Cross-view Transformers for real-time Map-view Semantic Segmentation
-论文：https://arxiv.org/pdf/2205.02833v1.pdf</p>
-<p>代码：https://github.com/bradyz/cross</p>
+论文: <a href="https://arxiv.org/pdf/2205.02833v1.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/pdf/2205.02833v1.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>代码: <a href="https://github.com/bradyz/cross"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/bradyz/cross<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <p>REF:
 [1]. <a href="https://zhuanlan.zhihu.com/p/538490215"target="_blank" rel="external nofollow noopener noreferrer">一文读懂BEVFormer论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
 <a href="https://zhuanlan.zhihu.com/p/543335939"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/543335939<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
@@ -10138,6 +10802,160 @@ Cross-view Transformers for real-time Map-view Semantic Segmentation
 [1]. htTps://www.cnblogs.com/Sherry4869/p/15162253.html</br>
 [2]. <a href="https://blog.csdn.net/zhuikefeng/article/details/108164117#t35"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhuikefeng/article/details/108164117#t35<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [3]. <a href="https://zhuanlan.zhihu.com/p/458156007"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/458156007<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
+]]></description></item><item><title>Effective STL [35] | 通过mismatch或lexicographical比较实现简单的忽略大小写字符串比较</title><link>https://jianye0428.github.io/posts/clause_35/</link><pubDate>Mon, 28 Aug 2023 07:58:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_35/</guid><description><![CDATA[<h2 id="怎么使用stl来进行忽略大小写的字符串比较">怎么使用STL来进行忽略大小写的字符串比较?</h2>
+<p>如果你<strong>忽略国际化问题而且只关注于设计成字符串strcmp那样的类型</strong>，这个任务很简单。</p>
+<p>如果你要有strcmp不具有的按语言处理字符串中的字符的能力（即，容纳文本的字符串是除了英语以外的语言）或程序使用了区域设置而不是默认的，这个任务很困难。</p>
+<p>想要使用<strong>忽略大小写</strong>比较的程序员通常需要两种不同的调用接口：</p>
+<ul>
+<li>一种类似strcmp（返回一个负数、零或正数）</li>
+<li>另一种类似operator（返回true或false）</li>
+</ul>
+<h2 id="确定两个字符除了大小写之外是否相等">确定两个字符除了大小写之外是否相等</h2>
+<p>类似<code>strcmp</code>进行的字符串比较，只考虑类似<code>strcmp</code>的字符串比较：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="c1">// 忽略大小写比较字符
+</span></span></span><span class="line"><span class="cl"><span class="c1">// c1和c2，如果c1 &lt; c2返回-1，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 如果c1==c2返回0，如果c1 &gt; c2返回1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">int</span> <span class="nf">ciCharCompare</span><span class="p">(</span><span class="kt">char</span> <span class="n">c1</span><span class="p">,</span> <span class="kt">char</span> <span class="n">c2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 这些语句的解释看下文
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">int</span> <span class="n">Ic1</span> <span class="o">=</span> <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c1</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">Ic2</span> <span class="o">=</span> <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">Ic1</span> <span class="o">&lt;</span> <span class="n">Ic2</span><span class="p">)</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">Ic1</span> <span class="o">&gt;</span> <span class="n">Ic2</span><span class="p">)</span> <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个函数遵循了strcmp，可以返回一个负数、零或正数，依赖于c1和c2之间的关系。</p>
+<p><strong>tolower</strong></p>
+<p>与strcmp不同的是，<code>ciCharCompare</code>在进行比较前把两个参数转化为小写，从而忽略大小写的字符比较。</p>
+<p>正如<code>&lt;cctype&gt;</code>（也是<code>&lt;ctype.h&gt;</code>）里的很多函数，tolower的参数和返回值类型是int，但除非这个int是EOF，它的值必须能表现为一个unsigned char。</p>
+<p>在C和C++中，char可能或可能不是有符号的（依赖于实现），当char有符号时，唯一确认它的值可以表现为unsigned char的方式是在调用tolower之前转换一下。</p>
+<p><strong>基于mismatch实现</strong></p>
+<p>给定了<code>ciCharCompare</code>，就很容易写出我们的第一个忽略大小写的两个字符串比较函数，提供了一个类似<code>strcmp</code>的接口。</p>
+<p><code>ciStringCompare</code>这个函数，返回一个负数、零或正数，依赖于要比较的字符串的关系。</p>
+<p>它基于<code>mismatch</code>算法，因为<code>mismatch</code>确定了两个区间中第一个对应的不相同的值的位置。</p>
+<p>我们必须确定一个字符串是否比另一个短，短的字符串作为第一个区间传递。</p>
+<p>因此我们可以把真正的工作放在一个叫做<code>ciStringCompareImpl</code>的函数，然后让<code>ciStringCompare</code>简单地确保传进去的实参顺序正确，如果实参交换了就调整返回值：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">ciStringCompareImpl</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 实现请看下文
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">int</span> <span class="nf">ciStringCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">s1</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">s2</span><span class="p">.</span><span class="n">size</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">ciStringCompareImpl</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">else</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">-</span><span class="n">ciStringCompareImpl</span><span class="p">(</span><span class="n">s2</span><span class="p">,</span> <span class="n">s1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在ciStringCompareImpl中，大部分工作由mismatch来完成。它返回一对迭代器，表示了区间中第一个对应的字符不相同的位置：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">ciStringCompareImpl</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">si</span><span class="p">,</span> <span class="k">const</span> <span class="n">strings</span> <span class="n">s2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// PSCI = “pair of string::const_iterator”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">typedef</span> <span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="o">::</span><span class="n">const_iterator</span><span class="p">,</span> <span class="n">string</span><span class="o">::</span><span class="n">const_iterator</span><span class="o">&gt;</span> <span class="n">PSCI</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 下文解释了为什么我们需要not2；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">PSCI</span> <span class="n">p</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">      <span class="n">mismatch</span><span class="p">(</span><span class="n">s1</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">s1</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s2</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">not2</span><span class="p">(</span><span class="n">ptr_fun</span><span class="p">(</span><span class="n">ciCharCompare</span><span class="p">)));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">first</span> <span class="o">==</span> <span class="n">s1</span><span class="p">.</span><span class="n">end</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 如果为真，s1等于s2或s1比s2短
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">second</span> <span class="o">==</span> <span class="n">s2</span><span class="p">.</span><span class="n">end</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">ciCharCompare</span><span class="p">(</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">first</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                       <span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">second</span><span class="p">);</span>  <span class="c1">// 两个字符串的关系 和不匹配的字符一样
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>比较过程</strong></p>
+<p>当字符匹配时这个判断式返回true，因为当判断式返回false时mismatch会停止。我们不能为此使用ciCharCompare，因为它返回-1、1或0，而当字符匹配时它返回0，就像strcmp。</p>
+<p>如果我们把ciCharCompare作为判断式传给mismatch，C++会把ciCharCompare的返回类型转换为bool，而当然bool中零的等价物是false，正好和我们想要的相反！同样的，当ciCharCompare返回1或-1，那会被解释成true，因为，就像C，所有非零整数值都看作true。这再次和我们想要的相反。</p>
+<p>要修正这个语义倒置，我们在ciCharCompare前面放上not2和ptr_fun。</p>
+<p><strong>std::not1 和 std::not2</strong>
+std::not1 和 std::not2是用来把“符合某种条件的函数对象”转换为反义函数对象的函数。</p>
+<p><code>std::ptr_fun</code>用来把函数指针封装为符合某种条件的函数对象的函数，C++11 里可以用<code>std::bind</code>或<code>std::function</code>代替</p>
+<h2 id="lexicographical_compare">lexicographical_compare</h2>
+<p>可以在关联容器中用作比较函数的函数，可以把ciCharCompare修改为一个有判断式接口的字符比较函数，然后把进行字符串比较的工作交给STL中名字第二长的算法——lexicographical_compare：</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 返回在忽略大小写的情况下c1是否在c2前面；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">bool</span> <span class="nf">ciCharLess</span><span class="p">(</span><span class="kt">char</span> <span class="n">c1</span><span class="p">,</span> <span class="kt">char</span> <span class="n">c2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 条款46解释了为什么一个函数对象可能 比函数好
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c1</span><span class="p">))</span> <span class="o">&lt;</span>
+</span></span><span class="line"><span class="cl">      <span class="n">tolower</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">c2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">bool</span> <span class="nf">ciStringCompare</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span> <span class="o">&amp;</span><span class="n">s2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 算法调用的讨论在下文
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">return</span> <span class="n">lexicographical_compare</span><span class="p">(</span><span class="n">s1</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">s1</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">s2</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">s2</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">                                 <span class="n">ciCharLess</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>lexicographical_compare是strcmp的泛型版本。</p>
+<p><strong>strcmp只对字符数组起作用，但lexicographical_compare对所有任何类型的值的区间都起作用。</strong></p>
+<p>同时，strcmp总是比较两个字符来看看它们的关系是相等、小于或大于另一个。lexicographical_compare可以传入一个决定两个值是否满足一个用户定义标准的二元判断式。</p>
+<p><strong>比较过程</strong></p>
+<p>在上面的调用中，lexicographical_compare用来寻找s1和s2第一个不同的位置，基于调用ciCharLess的结果。如果，使用那个位置的字符，ciCharLess返回true，lexicographical_compare也是；如果，在第一个字符不同的位置，从第一个字符串来的字符先于对应的来自第二个字符串的字符，第一个字符串就先于第二个。</p>
+<p>就像strcmp，lexicographical_compare认为两个相等值的区间是相等的，因此它对于这样的两个区间返回false：第一个区间不在第二个之前。</p>
+<p>也像strcmp，如果第一个区间在发现不同的对应值之前就结束了，lexicographical_compare返回true：一个先于任何区间的前缀是一个前缀。</p>
 ]]></description></item><item><title>KL Divergence 详解</title><link>https://jianye0428.github.io/posts/kldivergence/</link><pubDate>Sat, 26 Aug 2023 13:59:37 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/kldivergence/</guid><description><![CDATA[<h2 id="一-基本定义">一、 基本定义</h2>
 <p>假设给定事件 $x$, 则我们有以下定义:</p>
 <ol>
@@ -11944,227 +12762,4 @@ $$Attention(Q,K_i,V_i)\color{red}{\boxed{=softmax(\frac{Q^TK_i}{\sqrt{d_k}})V_i}
 <p>因为它可能花费线性时间的代价来产生一个和<code>const_iterator</code>等价的<code>iterator</code>，并且因为如果不能访问<code>const_iterator</code>所属的容器这个操作就无法完成。</p>
 <p>从这个角度出发，也许你需要重新审视你从<code>const_iterator</code>产生<code>iterator</code>的设计。</p>
 <p>当处理容器时尽量用<code>iterator</code>代替<code>const</code>和<code>reverse</code>迭代器。</p>
-]]></description></item><item><title>Effective STL [26] | 尽量用iterator代替const_iterator，reverse_iterator和const_reverse_iterator</title><link>https://jianye0428.github.io/posts/clause_26/</link><pubDate>Wed, 16 Aug 2023 19:06:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_26/</guid><description><![CDATA[<h2 id="4种迭代器">4种迭代器</h2>
-<p>每个标准容器类都提供4种迭代器类型:<code>iterator</code>,<code>const_iterator</code>，<code>reverse_iterator</code>和<code>const_reverse_iterator</code></p>
-<p>对于<code>container&lt;T&gt;</code>而言，<code>iterator</code>的作用相当于<code>T*</code>，而<code>const_iterator</code>则相当于<code>const T*</code>。</p>
-<p>增加一个<code>iterator</code>或者<code>const_iterator</code>可以在一个从容器开头趋向尾部的遍历中让你移动到容器的下一个元素。</p>
-<p><code>reverse_iterator</code>与<code>const_reverse_iterator</code>同样相当于对应的<code>T</code>和<code>const T</code>，所不同的是，增加<code>reverse_iterator</code>或者<code>const_reverse_iterator</code>会在从尾到头的遍历中让你移动到容器的下一个元素。</p>
-<h2 id="vectort的insert和erase的样式">vector<T>的insert和erase的样式</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">insert</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">position</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">iterator</span> <span class="nf">erase</span><span class="p">(</span><span class="n">iterator</span> <span class="n">rangeBegin</span><span class="p">,</span> <span class="n">iterator</span> <span class="n">rangeEnd</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这些方法只接受<code>iterator</code>类型的参数，而不是<code>const_iterator</code>、<code>reverse_iterator</code>或<code>const_reverse_iterator</code>。总是<code>iterator</code>。</p>
-<h2 id="迭代器之间存在的转换关系">迭代器之间存在的转换关系</h2>
-<p></p>
-<p>图中显示了从<code>iterator</code>到<code>const_iterator</code>、从<code>iterator</code>到<code>reverse_iterator</code>和从<code>reverse_iterator</code>到<code>const_reverse_iterator</code>可以进行隐式转换。</p>
-<p>并且，<code>reverse_iterator</code>可以通过调用其<code>base成员函数</code>转换为<code>iterator</code>。<code>const_reverse_iterator</code>也可以类似地通过<code>base</code>转换成为<code>const_iterator</code>。</p>
-<p>通过base得到的也许并非你所期待的iterator。</p>
-<p>而且，<strong>没有办法从一个const_iterator转换得到一个iterator，也无法从const_reverse_iterator得到reverse_iterator</strong>。</p>
-<p>所以，当你需要指出插入位置或删除的元素时，const迭代器几乎没有用。</p>
-<h2 id="尽量使用iterator取代const或者reverse类型的迭代器">尽量使用iterator取代const或者reverse类型的迭代器</h2>
-<ol>
-<li>
-<p><code>insert</code>和<code>erase</code>的一些版本要求<code>iterator</code>。如果你需要调用这些函数，你就必须产生<code>iterator</code>，而不能用<code>const</code>或<code>reverse iterators</code>。</p>
-</li>
-<li>
-<p>不可能把<code>const_iterator</code>隐式转换成<code>iterator</code>。从一个<code>const_iterator</code>产生一个<code>iterator</code>的技术并不普遍适用，而且不保证高效。</p>
-</li>
-<li>
-<p>从<code>reverse_iterator</code>转换而来的<code>iterator</code>在转换之后可能需要相应的调整。</p>
-</li>
-</ol>
-<p><code>iterator</code>与<code>reverse_iterator</code>之间的选择显而易见——依赖于从前到后或从后到前的遍历。</p>
-<p><strong>迭代器比较</strong></p>
-<p>当在<code>iterator</code>和<code>const_iterator</code>之间作选择的时候，你有更充分的理由选择<code>iterator</code>，即使<code>const_iterator</code>同样可行而且即使你并不需要调用容器类的任何成员函数。其中的令人讨厌的原因包括<code>iterator</code>与<code>const_iterator</code>之间的比较：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span> <span class="c1">// typedef可以极大地简化STL容器类和iterator的操作。
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">Iter</span> <span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span> <span class="c1">// 同一个容器
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">ci</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 比较iterator和const_iterator
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>唯一的变化是等号的一边的类型是<code>iterator</code>，而另一边的类型是<code>const_iterator</code>。</p>
-<p><strong>因为<code>iterator</code>应该在比较之前隐式的转换成<code>const_iterator</code>，真正的比较应该在两个<code>const_iterator</code>之间进行。</strong></p>
-<p><strong>如果一些实现将<code>const_iterator</code>的<code>operator==</code>作为<code>const_iterator</code>的一个成员函数而不是非成员函数。</strong></p>
-<p>而问题的解决之道显得非常有趣：只要像这样交换两个<code>iterator</code>的位置：</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">ci</span> <span class="o">==</span> <span class="n">i</span><span class="p">)...</span> <span class="c1">// 当上面比较无法通过编译时的解决方法
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>迭代器混用</strong></p>
-<p>不仅是比较是否相等，只要你在同一个表达式中混用<code>iterator</code>和<code>const_iterator</code>（或者<code>reverse_iterator</code>和<code>const_reverse_iterator</code>），这样的问题就可能会出现:</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 如果i与ci之间至少有三个元素...
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果迭代器的类型不同，你的正确的代码可能会被错误地拒绝。</p>
-<p>本例中最简单的解决方法是<strong>通过一个（安全的）映射把iterator转换为const_iterator</strong>:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">ConstIter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">-</span> <span class="n">ci</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span> <span class="p">...</span> <span class="c1">// 当上面的代码无法通过编译时的解决方法
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>避免这类问题的最简单的方法是减少混用不同类型的迭代器的机会。</strong></p>
-]]></description></item><item><title>Effective STL [25] | 熟悉非标准散列容器</title><link>https://jianye0428.github.io/posts/clause_25/</link><pubDate>Wed, 16 Aug 2023 08:21:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_25/</guid><description><![CDATA[<p><strong>STL没有散列表。</strong></p>
-<p>兼容STL的散列关联容器可以从多个来源获得，而且它们甚至有事实上的标准名字：<code>hash_set</code>、<code>hash_multiset</code>、<code>hash_map</code>和<code>hash_multimap</code>。在C++标准委员会的议案中，散列容器的名字是<code>unordered_set</code>、 <code>unordered_multiset</code>、<code>unordered_map</code>和<code>unordered_multimap</code>。</p>
-<p><strong>它们在接口、能力、内在数据结构和支持操作的相关效率方面不同。</strong></p>
-<p>最常见的两个来自<code>SGI</code>和<code>Dinkumware</code>，<code>STLport</code>也提供散列容器，但是<code>STLport</code>的散列容器是基于来自<code>SGI</code>的。</p>
-<p>散列容器是关联容器，它们需要知道储存在容器中的对象类型，用于这些对象的比较函数，以及用于这些对象的分配器。</p>
-<h2 id="散列容器声明">散列容器声明</h2>
-<p>散列容器需要散列函数的说明。下面是散列容器声明：</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">HashFunction</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">CompareFunction</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_container</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这非常接近于散列容器的SGI声明，主要差别是SGI为HashFunction和CompareFunction提供了默认类型。</p>
-<p><strong>SGI 设计举例</strong></p>
-<p><code>hash_set</code>的SGI声明看起来基本上像这样：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">HashFunction</span> <span class="o">=</span> <span class="n">hash</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">CompareFunction</span> <span class="o">=</span> <span class="n">equa_to</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"> <span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_set</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><code>SGI</code>设计的一个值得注意的方面是使用<code>equal_to</code>作为默认比较函数。<strong>这违背标准关联容器的约定——默认比较函数是less。</strong></p>
-<p><code>SGI</code>的散列容器确定在一个散列容器中的两个对象是否有相同的值是通过相等测试，而不是等价。</p>
-<p>因为散列关联容器，不像它们在标准中的（通常基于树）兄弟，不需要保持有序。</p>
-<p><strong>Dinkumware 设计举例</strong></p>
-<p>Dinkumware设计的散列容器采取一些不同的策略。它仍然允许你指定对象类型、散列函数类型、比较函数类型和分配器类型，但是<strong>它把默认的散列和比较函数移进一个单独的类似特性的叫做hash_compare的类</strong>，而且它把<code>hash_compare</code>作为容器模板的<code>HashingInfo</code>实参的默认值。</p>
-<p>这是<code>Dinkumware</code>的hash_set声明（再次为演示而调整过）:</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">CompareFunction</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_compare</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl"><span class="k">typename</span> <span class="n">HashingInfo</span> <span class="o">=</span> <span class="n">hash_compare</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">less</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">typename</span> <span class="n">Allocator</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_set</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这种接口设计有趣的地方是<code>HashingInfo</code>的使用。</p>
-<p><strong>容器的散列和比较函数储存在<code>HashingInfo</code>中，但HashingInfo类型也容纳了控制表中桶（bucket）最小数量，以及容器元素对桶的最大允许比率的枚举。</strong></p>
-<p>当这比率被超过时，表中桶的数量就增加，而表中的一些元素需要重新散列。（SGI提供具有类似控制表中桶和表中元素对桶比率的成员函数。）</p>
-<p><strong>hash_compare</strong></p>
-<p><code>hash_compare</code>（HashingInfo的默认值）看起来或多或少像这样:</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">CompareFunction</span> <span class="o">=</span> <span class="n">less</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">hash_compare</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="k">enum</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">bucket_size</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="c1">// 元素对桶的最大比率
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">min_buckets</span> <span class="o">=</span> <span class="mi">8</span> <span class="c1">// 桶的最小数量
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">};</span>
-</span></span><span class="line"><span class="cl">    <span class="n">size_t</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> <span class="c1">// 散列函数比较函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">bool</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="c1">// 忽略一些东西，包括 CompareFunction的使用
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>重载<code>operator()</code>（在这里是实现散列和比较函数）是比你可以想象的更经常出现的一个策略。</p>
-<p><code>Dinkumware</code>设计允许你写你自己的类似hash_compare的类（也许通过从<code>hash_compare</code>本身派生而来），而且只要你的类定义了<code>bucket_size</code>、<code>min_buckets</code>、两个<code>operator()</code>函数（一个带有一个实参，一个带有两个），加上已经省去的一些东西，就能使用它来控制Dinkumware的<code>hash_set</code>或<code>hash_multiset</code>的配置和行为。</p>
-<p><code>hash_map</code>和<code>hash_multimap</code>的配置控制也相似。</p>
-<h2 id="决策留给实现">决策留给实现</h2>
-<p>注意不管是SGI还是Dinkumware的设计，你都能把全部决策留给实现:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 建立一个int的散列表
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">hash_set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">intTable</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>要让这个可以编译，散列表必须容纳一个整数类型（例如int），因为<strong>默认散列函数一般局限于整数类型。</strong></p>
-<p><strong>实现方法不同</strong></p>
-<p>在后端，SGI和Dinkumware的实现方法非常不同。</p>
-<ol>
-<li>SGI利用常用的一个元素的单链表的指针数组（桶）组成的开放散列法。</li>
-<li>Dinkumware也利用了开放散列法，但是它的设计是基于一种新颖的数据结构——由迭代器（本质是桶）的数组组成的元素双向链表，迭代器的相邻对表示在每个桶里元素的范围。</li>
-</ol>
-<p><strong>链表不同</strong></p>
-<ol>
-<li>SGI实现在<strong>单链表</strong>中储存表的元素</li>
-<li>Dinkumware实现使用一个双向链表</li>
-</ol>
-<p><strong>迭代器种类不同</strong></p>
-<ol>
-<li>SGI的散列容器提供了前向迭代器，因此你得放弃进行反向迭代的能力：在SGI的散列容器中没有rbegin或者rend成员函数。</li>
-<li>用于Dinkumware散列容器的迭代器是双向的，所以它们可以提供前向和反向遍历。</li>
-</ol>
-<p><strong>内存使用量方面不同</strong></p>
-<p>SGI的设计比Dinkumware的节俭一点点。</p>
-<h2 id="结论">结论</h2>
-<p>虽然STL本身缺乏散列容器，兼容STL的散列容器（有不同的接口、能力和行为权衡）不难得到。就SGI和STLport的实现而言，你甚至可以免费下载得到它们。</p>
 ]]></description></item></channel></rss>
