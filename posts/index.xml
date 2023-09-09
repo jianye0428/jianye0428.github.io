@@ -1,4 +1,195 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 06 Sep 2023 19:40:01 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>BEVFormer 论文解读</title><link>https://jianye0428.github.io/posts/bevformer/</link><pubDate>Sun, 03 Sep 2023 19:31:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/bevformer/</guid><description><![CDATA[<h2 id="1-背景motivation">1. 背景/Motivation</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 06 Sep 2023 19:40:01 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>Effective STL [38] | 把仿函数类设计为用于值传递</title><link>https://jianye0428.github.io/posts/effective_stl_38/</link><pubDate>Wed, 06 Sep 2023 17:28:31 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/effective_stl_38/</guid><description><![CDATA[<h2 id="函数指针按值传递">函数指针按值传递</h2>
+<p>C和C++都不允许你真的把函数作为参数传递给其他函数。取而代之的是，你必须传指针给函数。</p>
+<p>比如，这里有一个标准库函数qsort的声明:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">qsort</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">base</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">nmemb</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">cmpfcn</span><span class="p">)(</span><span class="k">const</span> <span class="kt">void</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span><span class="p">));</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>一旦你忽略了所有的星号，就可以清楚地看出作为cmpfcn传递的实参，一个指向函数的指针，是从调用端拷贝（也就是，值传递）给qsort。这是C和C++标准库都遵循的一般准则:<strong>函数指针是值传递</strong>。</p>
+<p>STL中的习惯是当传给函数和从函数返回时函数对象也是值传递的（也就是拷贝）。</p>
+<p>最好的证据是标准的for_each声明，这个算法通过值传递获取和返回函数对象:</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">InputIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Function</span><span class="o">&gt;</span> <span class="n">Function</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 注意值返回， 注意值传递
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">for_each</span><span class="p">(</span><span class="n">InputIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">InputIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Function</span> <span class="n">f</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>实际上，值传递的情况并不是完全打不破的，因为for_each的调用者在调用点可以显式指定参数类型。比如，下面的代码可以使for_each通过引用传递和返回它的仿函数:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DoSomething</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="kt">int</span> <span class="n">x</span><span class="p">){...}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 方便的typedef
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">DequeIntIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">di</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 建立一个函数对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">DoSomething</span> <span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 调用for_each，参数类型是DequeIntIter和DoSomething&amp;；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 这迫使d按引用传递和返回
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">for_each</span><span class="o">&lt;</span><span class="n">DequeIntIter</span><span class="p">,</span> <span class="n">DoSomething</span> <span class="o">&amp;&gt;</span><span class="p">(</span><span class="n">di</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">di</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">d</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="保证拷贝传递行为正常">保证拷贝传递行为正常</h2>
+<p>因为函数对象以值传递和返回，你的任务就是确保当拷贝传递时你的函数对象行为良好。</p>
+<p>这暗示了2个东西:</p>
+<ol>
+<li><strong>你的函数对象应该很小。否则它们的拷贝会很昂贵。</strong></li>
+<li><strong>你的函数对象必须单态（也就是，非多态）——它们不能用虚函数。那是因为派生类对象以值传递代入基类类型的参数会造成切割问题: 在拷贝时，它们的派生部分被删除。</strong></li>
+</ol>
+<p>当然效率很重要，避免切割问题也是，但不是所有的仿函数都是小的、单态的。函数对象比真的函数优越的的原因之一是仿函数可以包含你需要的所有状态。</p>
+<p>有些函数对象自然会很重，保持传这样的仿函数给STL算法和传它们的函数版本一样容易是很重要的。</p>
+<h2 id="多态仿函数实现">多态仿函数实现</h2>
+<p>禁止多态仿函数是不切实际的。C++支持继承层次和动态绑定，这些特性在设计仿函数类和其他东西的时候一样有用。仿函数类如果缺少继承就像C++缺少“++”。</p>
+<p>带着你要放进你的仿函数类的数据和/或多态，把它们移到另一个类中。然后给你的仿函数一个指向这个新类的指针。</p>
+<p>比如，如果你想要建立一个包含很多数据的多态仿函数类。</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// BPFC = “Big Polymorphic Functor Class”
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 条款40解释了这个基类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Int</span> <span class="n">x</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 这个类有很多数据，所以用值传递
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 会影响效率
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">public</span> <span class="o">:</span> <span class="k">virtual</span> <span class="kt">void</span>
+</span></span><span class="line"><span class="cl">        <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>  <span class="c1">// 这是一个虚函数，所以切割时会出问题
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>建立一个包含一个指向实现类的指针的小而单态的类，然后把所有数据和虚函数放到实现类:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 用于修改的BPFC的新实现类
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFCImpl</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 以前在BPFC里的所有数据现在在这里
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"> <span class="c1">// 多态类需要虚析构函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">virtual</span> <span class="o">~</span><span class="n">BPFCImpl</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">virtual</span> <span class="kt">void</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">friend</span> <span class="k">class</span> <span class="nc">BPFC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">;</span>  <span class="c1">// 让BPFC可以访问这些数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 小的，单态版的BPFC
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span> <span class="o">:</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">BPFCImpl</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;*</span> <span class="n">pImpl</span><span class="p">;</span>  <span class="c1">// 这是BPFC唯一的数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 现在非虚；
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span>  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 调用BPFCImpl的真的虚函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">pImpl</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">()(</span><span class="n">val</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>BPFC::operator()</code>的实现例证了BPFC所有的虚函数是怎么实现的: 它们调用了在BPFCImpl中它们真的虚函数。</p>
+<p>结果是仿函数类（BPFC）是小而单态的，但可以访问大量状态而且行为多态。</p>
+<p>顺便说一句，这种实现方法在《Effective C++》的条款34中有。在Gamma等的《设计模式》中，这叫做“Bridge模式”。Sutter在他的《Exceptional C++》中叫它“Pimpl惯用法”。</p>
+<h2 id="总结">总结</h2>
+<p>从STL的视角看来，要记住的最重要的东西是<strong>使用这种技术的仿函数类必须支持合理方式的拷贝</strong>。</p>
+<p>唯一你必须担心的是BPFC的拷贝构造函数的行为，因为当在STL中被传递或从一个函数返回时，函数对象总是被拷贝——值传递。</p>
+<p>记得吗？那意味着两2件事: <strong>让它们小，而且让它们单态</strong>。</p>
+]]></description></item><item><title>BEVFormer 论文解读</title><link>https://jianye0428.github.io/posts/bevformer/</link><pubDate>Sun, 03 Sep 2023 19:31:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/bevformer/</guid><description><![CDATA[<h2 id="1-背景motivation">1. 背景/Motivation</h2>
 <h3 id="11-为什么视觉感知要用bev">1.1 为什么视觉感知要用BEV？</h3>
 <p>相机图像描述的是一个2D像素世界，然而自动驾驶中利用相机感知结果的后续决策、路径规划都是在车辆所处的3D世界下进行。由此引入的2D和3D维度不匹配，就导致基于相机感知结果直接进行自动驾驶变得异常困难。</p>
 <p>这种感知和决策规划的空间维度不匹配的矛盾，也体现在学开车的新手上。倒车泊车时，新手通过后视镜观察车辆周围，很难直观地构建车子与周围障碍物的空间联系，容易导致误操作剐蹭或需要尝试多次才能泊车成功，本质上还是新手从2D图像到3D空间的转换能力较弱。基于相机图像平面感知结果进行决策规划的自动驾驶AI，就好比缺乏空间理解力的驾驶新手，很难把车开好。</p>
@@ -1001,197 +1192,6 @@ std::not1 和 std::not2是用来把“符合某种条件的函数对象”转换
 <p>在上面的调用中，lexicographical_compare用来寻找s1和s2第一个不同的位置，基于调用ciCharLess的结果。如果，使用那个位置的字符，ciCharLess返回true，lexicographical_compare也是；如果，在第一个字符不同的位置，从第一个字符串来的字符先于对应的来自第二个字符串的字符，第一个字符串就先于第二个。</p>
 <p>就像strcmp，lexicographical_compare认为两个相等值的区间是相等的，因此它对于这样的两个区间返回false：第一个区间不在第二个之前。</p>
 <p>也像strcmp，如果第一个区间在发现不同的对应值之前就结束了，lexicographical_compare返回true：一个先于任何区间的前缀是一个前缀。</p>
-]]></description></item><item><title>Effective STL [37] | 把仿函数类设计为用于值传递</title><link>https://jianye0428.github.io/posts/effective_stl_38/</link><pubDate>Wed, 06 Sep 2023 17:28:31 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/effective_stl_38/</guid><description><![CDATA[<h2 id="函数指针按值传递">函数指针按值传递</h2>
-<p>C和C++都不允许你真的把函数作为参数传递给其他函数。取而代之的是，你必须传指针给函数。</p>
-<p>比如，这里有一个标准库函数qsort的声明:</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">qsort</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">base</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">nmemb</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">int</span> <span class="p">(</span><span class="o">*</span><span class="n">cmpfcn</span><span class="p">)(</span><span class="k">const</span> <span class="kt">void</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span><span class="p">));</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>一旦你忽略了所有的星号，就可以清楚地看出作为cmpfcn传递的实参，一个指向函数的指针，是从调用端拷贝（也就是，值传递）给qsort。这是C和C++标准库都遵循的一般准则:<strong>函数指针是值传递</strong>。</p>
-<p>STL中的习惯是当传给函数和从函数返回时函数对象也是值传递的（也就是拷贝）。</p>
-<p>最好的证据是标准的for_each声明，这个算法通过值传递获取和返回函数对象:</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">InputIterator</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Function</span><span class="o">&gt;</span> <span class="n">Function</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 注意值返回， 注意值传递
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">for_each</span><span class="p">(</span><span class="n">InputIterator</span> <span class="n">first</span><span class="p">,</span> <span class="n">InputIterator</span> <span class="n">last</span><span class="p">,</span> <span class="n">Function</span> <span class="n">f</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>实际上，值传递的情况并不是完全打不破的，因为for_each的调用者在调用点可以显式指定参数类型。比如，下面的代码可以使for_each通过引用传递和返回它的仿函数:</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DoSomething</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="kt">int</span> <span class="n">x</span><span class="p">){...}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 方便的typedef
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">iterator</span> <span class="n">DequeIntIter</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">di</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 建立一个函数对象
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">DoSomething</span> <span class="n">d</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 调用for_each，参数类型是DequeIntIter和DoSomething&amp;；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 这迫使d按引用传递和返回
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">for_each</span><span class="o">&lt;</span><span class="n">DequeIntIter</span><span class="p">,</span> <span class="n">DoSomething</span> <span class="o">&amp;&gt;</span><span class="p">(</span><span class="n">di</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">di</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">d</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="保证拷贝传递行为正常">保证拷贝传递行为正常</h2>
-<p>因为函数对象以值传递和返回，你的任务就是确保当拷贝传递时你的函数对象行为良好。</p>
-<p>这暗示了2个东西:</p>
-<ol>
-<li><strong>你的函数对象应该很小。否则它们的拷贝会很昂贵。</strong></li>
-<li><strong>你的函数对象必须单态（也就是，非多态）——它们不能用虚函数。那是因为派生类对象以值传递代入基类类型的参数会造成切割问题: 在拷贝时，它们的派生部分被删除。</strong></li>
-</ol>
-<p>当然效率很重要，避免切割问题也是，但不是所有的仿函数都是小的、单态的。函数对象比真的函数优越的的原因之一是仿函数可以包含你需要的所有状态。</p>
-<p>有些函数对象自然会很重，保持传这样的仿函数给STL算法和传它们的函数版本一样容易是很重要的。</p>
-<h2 id="多态仿函数实现">多态仿函数实现</h2>
-<p>禁止多态仿函数是不切实际的。C++支持继承层次和动态绑定，这些特性在设计仿函数类和其他东西的时候一样有用。仿函数类如果缺少继承就像C++缺少“++”。</p>
-<p>带着你要放进你的仿函数类的数据和/或多态，把它们移到另一个类中。然后给你的仿函数一个指向这个新类的指针。</p>
-<p>比如，如果你想要建立一个包含很多数据的多态仿函数类。</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// BPFC = “Big Polymorphic Functor Class”
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 条款40解释了这个基类
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">Int</span> <span class="n">x</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 这个类有很多数据，所以用值传递
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">  <span class="p">...</span>
-</span></span><span class="line"><span class="cl">      <span class="c1">// 会影响效率
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">public</span> <span class="o">:</span> <span class="k">virtual</span> <span class="kt">void</span>
-</span></span><span class="line"><span class="cl">        <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>  <span class="c1">// 这是一个虚函数，所以切割时会出问题
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>建立一个包含一个指向实现类的指针的小而单态的类，然后把所有数据和虚函数放到实现类:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 用于修改的BPFC的新实现类
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFCImpl</span> <span class="o">:</span> <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 以前在BPFC里的所有数据现在在这里
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">Widget</span> <span class="n">w</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">...</span>
-</span></span><span class="line"><span class="cl"> <span class="c1">// 多态类需要虚析构函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">virtual</span> <span class="o">~</span><span class="n">BPFCImpl</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">virtual</span> <span class="kt">void</span> <span class="nf">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">friend</span> <span class="k">class</span> <span class="nc">BPFC</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">;</span>  <span class="c1">// 让BPFC可以访问这些数据
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 小的，单态版的BPFC
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BPFC</span> <span class="o">:</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">public</span> <span class="n">unary_function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">BPFCImpl</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;*</span> <span class="n">pImpl</span><span class="p">;</span>  <span class="c1">// 这是BPFC唯一的数据
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 现在非虚；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">void</span> <span class="k">operator</span><span class="p">()(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">)</span> <span class="k">const</span>  <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 调用BPFCImpl的真的虚函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">pImpl</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">()(</span><span class="n">val</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><code>BPFC::operator()</code>的实现例证了BPFC所有的虚函数是怎么实现的: 它们调用了在BPFCImpl中它们真的虚函数。</p>
-<p>结果是仿函数类（BPFC）是小而单态的，但可以访问大量状态而且行为多态。</p>
-<p>顺便说一句，这种实现方法在《Effective C++》的条款34中有。在Gamma等的《设计模式》中，这叫做“Bridge模式”。Sutter在他的《Exceptional C++》中叫它“Pimpl惯用法”。</p>
-<h2 id="总结">总结</h2>
-<p>从STL的视角看来，要记住的最重要的东西是<strong>使用这种技术的仿函数类必须支持合理方式的拷贝</strong>。</p>
-<p>唯一你必须担心的是BPFC的拷贝构造函数的行为，因为当在STL中被传递或从一个函数返回时，函数对象总是被拷贝——值传递。</p>
-<p>记得吗？那意味着两2件事: <strong>让它们小，而且让它们单态</strong>。</p>
 ]]></description></item><item><title>变分自编码器 VAE 详解</title><link>https://jianye0428.github.io/posts/vae_1/</link><pubDate>Thu, 27 Jul 2023 10:53:41 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/vae_1/</guid><description><![CDATA[<!-- <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>quote<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -10571,7 +10571,7 @@ $$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
 <p>Ref:</br>
 [1]. <a href="https://hr-insist.github.io/C/More_Effective_C&#43;&#43;%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/"target="_blank" rel="external nofollow noopener noreferrer">More Effective C++<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
 [2]. <a href="https://zhuanlan.zhihu.com/p/368342605"target="_blank" rel="external nofollow noopener noreferrer">《More Effective C++》读书笔记<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>Effective STL [37] | 把仿函数类设计为用于值传递</title><link>https://jianye0428.github.io/posts/effective_stl_38/</link><pubDate>Wed, 06 Sep 2023 17:28:31 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/effective_stl_38/</guid><description><![CDATA[<h2 id="函数指针按值传递">函数指针按值传递</h2>
+]]></description></item><item><title>Effective STL [38] | 把仿函数类设计为用于值传递</title><link>https://jianye0428.github.io/posts/effective_stl_38/</link><pubDate>Wed, 06 Sep 2023 17:28:31 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/effective_stl_38/</guid><description><![CDATA[<h2 id="函数指针按值传递">函数指针按值传递</h2>
 <p>C和C++都不允许你真的把函数作为参数传递给其他函数。取而代之的是，你必须传指针给函数。</p>
 <p>比如，这里有一个标准库函数qsort的声明:</p>
 <div class="highlight" id="id-1"><div class="chroma">
