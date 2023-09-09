@@ -43,16 +43,16 @@
 <p>可从3个概念循序渐进地认识/理解BEV Queries: <strong>BEV平面 → BEV 感知空间 → BEV Queries</strong>。</p>
 <ul>
 <li>
-<p>BEV 平面
+<p><strong>BEV 平面</strong>
 BEV平面($R^{H\times W\times1}$)是以自车为中心的栅格化二维平面，H、W是BEV平面在x、y方向的栅格尺寸，此平面显性地与车辆周围横、纵向物理空间关联，一个栅格表示s米，论文中把BEV平面中的栅格叫做2D参考点(2D reference points)。例如论文中定义nuScenes数据集栅格尺寸200x200，对应[-51.2米, 51.2米]，那么s就是0.512米。</p>
 </li>
 <li>
-<p>BEV 感知空间
+<p><strong>BEV 感知空间</strong>
 BEV感知空间( $R^{H\times W\times N_{ref}}$ )把BEV平面在z轴方向选取 $N_{ref}$个<strong>3D参考点</strong>进行扩展，表示车辆周围有限空间。查看BEV开源工程可知，BEV感知空间的精确表示范围: 在nuScenes数据集中，是以Lidar作为中心点，前后各51.2m、左右各51.2m、向上3m、向下5m的矩形空间。
 仔细深究作者这样设置的用意，会发现蛮有意思/意义: nuScenes采集车上安装的Lidar距地面高约1.84m，[-5m, 3m]的设置让BEV Queries感知空间在自车轮胎接地点平面以上部分约4.84m，接地点平面以下部分约3.16m。前者确保不仅能感知高大目标物，如货车等，还能感知覆盖坡度9.5%(4.84m/51.2m100%)上坡场景，后者保证感知覆盖坡度6.2%(3.16m/51.2m100%)下坡场景。备注: 坡度=(高程差/水平距离)x100%，车辆前进100m的垂直上升/下降高度，我国规定城市道路最大纵坡8％，公路9％。</p>
 </li>
 <li>
-<p>BEV Queries
+<p><strong>BEV Queries</strong>
 BEV Queries是预定义的一组栅格形(grid-shaped)可学习参数，简称 $Q\in R^{H\times W\times C}$，它是对上述BEV 感知空间的特征描述，可直白地理解为学习完成了，它就变成了BEV features。
 BEV Queries的H、W与BEV平面在x、y方向的栅格尺寸定义一致，因此也继承了BEV平面显性地与车辆周围横、纵向物理空间关联的特性。但C是BEV Queries作为features时在channel维度的尺寸，并不显性地对应于BEV平面z轴的物理空间尺寸。特别指出，位于 $p=(x,y)$ 处的某个query $Q_{p}\in R^{1\times C}$，表示BEV queries中的一个栅格。在输入到BEVFormer之前，BEV Queries加上了可学习的位置编码(learnable positional embedding)。
 论文中多处提及BEV Queries和BEV features，它俩什么关系？本质上描述的是同一个东西么？
