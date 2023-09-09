@@ -14,7 +14,7 @@
 <p><strong>神经网络方法</strong>: 用神经网络生成BEV，其中的关键要找到合适的方法实现神经网络内部Feature Map空间尺寸上的变换。</p>
 <p>实现空间尺寸变换的神经网络主流操作有两种方法，如图2所示: MLP中的Fully Connected Layer和Transformer Cross Attention(图片引用自<a href="https://zhuanlan.zhihu.com/p/458076977"target="_blank" rel="external nofollow noopener noreferrer">《超长延迟的特斯拉AI Day解析: 讲明白FSD车端感知》<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</p>
 <p></p>
-<p>**MLP Fully Connected Layer方法: **</p>
+<p><strong>MLP Fully Connected Layer方法:</strong></p>
 <p>$$O=Act(W_{mlp}*X+b)$$</p>
 <p>忽略非线性激活函数和bias后，可以写成:</p>
 <p>$$O=W_{mlp}*X$$</p>
@@ -22,15 +22,15 @@
 <p>$$O=Softmax(Q*K^T)*V$$</p>
 <p>其中，K和V是输入图像特征X经线性变换后得到的；在最终输出的BEV视角下，把自车周围空间中的索引量称作 $\boldsymbol{\Phi}$</p>
 <p>$$O=Softmax(\Phi W_q*(XW_K)^T)*XW_V=W_{transformer}(X,\Phi)*XW_V$$</p>
-<p>BEV变换的本质是将输入的2D图像空间特征图转换成BEV特征图。在进行BEV转换之前，先通过多层CNN(或者任一图像处理backbone网络)在图像上提取特征，得到图像空间特征图层尺寸($h * w$)，即$X$的尺寸。 BEV变换输出O所在的BEV空间尺寸，是以自车位置为原点的前后左右各若干米范围内建立的栅格空间(x * y)。</p>
+<p>BEV变换的本质是将输入的2D图像空间特征图转换成BEV特征图。在进行BEV转换之前，先通过多层CNN(或者任一图像处理backbone网络)在图像上提取特征，得到图像空间特征图层尺寸($h * w$)，即$X$的尺寸。 BEV变换输出O所在的BEV空间尺寸，是以自车位置为原点的前后左右各若干米范围内建立的栅格空间($x * y$)。</p>
 <p>MLP Fully Connect Layer和Cross Attention的<font color=red><strong>显著差别</strong></font>在于作用于输入量X的系数W: 全联接层的W，一旦训练结束后在Inference阶段是固定不变的；而<font color=green>Cross Attention的Transformer的系数W，是输入量X和索引量的函数，在Inference阶段会根据输入量X和索引量的不同发生改变</font>。从这个角度来讲，使用Cross Attention来进行空间变换可能使模型获得更强的表达能力。</p>
-<p>TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思想，并未披露更多实现细节。<strong>论文BEVFormer充分研究了TESLA的技术思想后，利用Transformer融合图像的时、空特征，得到BEV Features，与TESLA的关键方法、实现效果都非常接近</strong>。BEVFormer既通过论文披露了详尽方法，又在2022年6月开源了工程，接下来就围绕BEVFormer介绍如何通过Transformer获取BEV Features。</p>
+<p>TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思想，并未披露更多实现细节。<font color=red><strong>论文BEVFormer充分研究了TESLA的技术思想后，利用Transformer融合图像的时、空特征，得到BEV Features，与TESLA的关键方法、实现效果都非常接近</strong></font>。BEVFormer既通过论文披露了详尽方法，又在2022年6月开源了工程，接下来就围绕BEVFormer介绍如何通过Transformer获取BEV Features。</p>
 <h2 id="2-methodstrategybevformer">2. Method/Strategy——BEVFormer</h2>
 <h3 id="21-overall-architecture">2.1 Overall Architecture</h3>
 <p>如下图3所示: BEVFormer主体部分有6层结构相同的<code>BEVFormer encoder layers</code>，每一层都是由以transformer为核心的modules(TSA+SCA)，再加上FF、Add和Norm组成。BEVFormer encoder layer结构中有3个特别的设计: <font color=red><strong>BEV Queries</strong></font>， <font color=red><strong>Spatial Cross-attention(SCA)</strong></font>和<font color=red><strong>Temporal Self-attention(TSA)</strong></font>。其中BEV Queries是栅格形可学习参数，承载着通过attention机制在multi-camera views中查询、聚合的features。SCA和TSA是以BEV Queries作为输入的注意力层，负责实施查询、聚合空间features(来自multi-camera images)和时间features(来自历史BEV)的过程。</p>
 <p>下面分步骤观察BEV完整模型的前向推理过程:</p>
 <ul>
-<li>在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features):  $F_t={\left.F_t^i\right.}<em>{i=1}^{N</em>{view}}$，其中 $F_{t}^{i}$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。</li>
+<li>在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features):  $F_t={\left.F_t^i\right.}<em>{i=1}^{N</em>{\text{view}}}$，其中 $F_{t}^{i}$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。</li>
 <li>在每个BEVFormer Encoder layer中，首先用BEV Queries Q通过TSA模块从 ${\boldsymbol{B}}_{t-1}$ 中查询并融合时域信息(the temporal information)，得到修正后的BEV Queries $Q^{\prime}$；</li>
 <li>然后在同一个BEVFormer Encoder layer中，对TSA“修证”过的BEV Queries $Q^{\prime}$ ，通过SCA模块从multi-camera features $F_{t}$ 查询并融合空域信息(spatial information)，得到进一步修正的BEV Queries $Q^{^{\prime\prime}}$ 。</li>
 <li>这一层encoder layer把经过两次修正的BEV features $Q^{^{\prime\prime}}$ (也可以叫做BEV Queries)进行FF计算，然后输出，作为下一个encoder layer的输入。</li>

@@ -33,7 +33,7 @@
 
 ![](images/BEVFormer_2.webp)
 
-**MLP Fully Connected Layer方法: **
+**MLP Fully Connected Layer方法:**
 
 $$O=Act(W_{mlp}*X+b)$$
 
@@ -49,11 +49,11 @@ $$O=Softmax(Q*K^T)*V$$
 
 $$O=Softmax(\Phi W_q*(XW_K)^T)*XW_V=W_{transformer}(X,\Phi)*XW_V$$
 
-BEV变换的本质是将输入的2D图像空间特征图转换成BEV特征图。在进行BEV转换之前，先通过多层CNN(或者任一图像处理backbone网络)在图像上提取特征，得到图像空间特征图层尺寸($h * w$)，即$X$的尺寸。 BEV变换输出O所在的BEV空间尺寸，是以自车位置为原点的前后左右各若干米范围内建立的栅格空间(x * y)。
+BEV变换的本质是将输入的2D图像空间特征图转换成BEV特征图。在进行BEV转换之前，先通过多层CNN(或者任一图像处理backbone网络)在图像上提取特征，得到图像空间特征图层尺寸($h * w$)，即$X$的尺寸。 BEV变换输出O所在的BEV空间尺寸，是以自车位置为原点的前后左右各若干米范围内建立的栅格空间($x * y$)。
 
 MLP Fully Connect Layer和Cross Attention的<font color=red>**显著差别**</font>在于作用于输入量X的系数W: 全联接层的W，一旦训练结束后在Inference阶段是固定不变的；而<font color=green>Cross Attention的Transformer的系数W，是输入量X和索引量的函数，在Inference阶段会根据输入量X和索引量的不同发生改变</font>。从这个角度来讲，使用Cross Attention来进行空间变换可能使模型获得更强的表达能力。
 
-TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思想，并未披露更多实现细节。**论文BEVFormer充分研究了TESLA的技术思想后，利用Transformer融合图像的时、空特征，得到BEV Features，与TESLA的关键方法、实现效果都非常接近**。BEVFormer既通过论文披露了详尽方法，又在2022年6月开源了工程，接下来就围绕BEVFormer介绍如何通过Transformer获取BEV Features。
+TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思想，并未披露更多实现细节。<font color=red>**论文BEVFormer充分研究了TESLA的技术思想后，利用Transformer融合图像的时、空特征，得到BEV Features，与TESLA的关键方法、实现效果都非常接近**</font>。BEVFormer既通过论文披露了详尽方法，又在2022年6月开源了工程，接下来就围绕BEVFormer介绍如何通过Transformer获取BEV Features。
 
 ## 2. Method/Strategy——BEVFormer
 ### 2.1 Overall Architecture
@@ -61,7 +61,7 @@ TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思
 如下图3所示: BEVFormer主体部分有6层结构相同的`BEVFormer encoder layers`，每一层都是由以transformer为核心的modules(TSA+SCA)，再加上FF、Add和Norm组成。BEVFormer encoder layer结构中有3个特别的设计: <font color=red>**BEV Queries**</font>， <font color=red>**Spatial Cross-attention(SCA)**</font>和<font color=red>**Temporal Self-attention(TSA)**</font>。其中BEV Queries是栅格形可学习参数，承载着通过attention机制在multi-camera views中查询、聚合的features。SCA和TSA是以BEV Queries作为输入的注意力层，负责实施查询、聚合空间features(来自multi-camera images)和时间features(来自历史BEV)的过程。
 
 下面分步骤观察BEV完整模型的前向推理过程:
-- 在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features):  $F_t=\{\left.F_t^i\right.\}_{i=1}^{N_{view}}$，其中 $F_{t}^{i}$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。
+- 在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features):  $F_t=\{\left.F_t^i\right.\}_{i=1}^{N_{\text{view}}}$，其中 $F_{t}^{i}$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。
 - 在每个BEVFormer Encoder layer中，首先用BEV Queries Q通过TSA模块从 ${\boldsymbol{B}}_{t-1}$ 中查询并融合时域信息(the temporal information)，得到修正后的BEV Queries $Q^{\prime}$；
 - 然后在同一个BEVFormer Encoder layer中，对TSA“修证”过的BEV Queries $Q^{\prime}$ ，通过SCA模块从multi-camera features $F_{t}$ 查询并融合空域信息(spatial information)，得到进一步修正的BEV Queries $Q^{^{\prime\prime}}$ 。
 - 这一层encoder layer把经过两次修正的BEV features $Q^{^{\prime\prime}}$ (也可以叫做BEV Queries)进行FF计算，然后输出，作为下一个encoder layer的输入。
