@@ -50,8 +50,7 @@ typedef vector<double, SharedMemoryAllocator<double> >
 SharedDoubleVec;
 ...
 { // 开始一个块
-SharedDoubleVec v; // 建立一个元素在
-// 共享内存中的vector
+SharedDoubleVec v; // 建立一个元素在共享内存中的vector
 ... // 结束这个块
 }
 ```
