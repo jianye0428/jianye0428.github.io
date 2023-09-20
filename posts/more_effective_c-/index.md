@@ -5,9 +5,9 @@
 
 ### 条款 1: 仔细区别 pointers和references
 
-没有所谓的 null reference。一个 reference 必须总代表某个对象。所以如果你有一个变量，其目的是用来指向（代表）另一个对象，但是也有可能它不指向（代表）任何对象，那么你应该使用 pointer，因为你可以将 pointer设为 null。换个角度看，如果这个变量总是必须代表一个对象，也就是说如果你的设计并不允许这个变量为 null，那么你应该使用reference。
+没有所谓的 null reference。一个 reference 必须总代表某个对象。所以如果你有一个变量，其目的是用来指向(代表)另一个对象，但是也有可能它不指向(代表)任何对象，那么你应该使用 pointer，因为你可以将 pointer设为 null。换个角度看，如果这个变量总是必须代表一个对象，也就是说如果你的设计并不允许这个变量为 null，那么你应该使用reference。
 
-Pointers 和 references 之间的另一个重要差异就是，pointers 可以被重新赋值，指向另一个对象，reference 却总是指向（代表）它最初获得的那个对象。
+Pointers 和 references 之间的另一个重要差异就是，pointers 可以被重新赋值，指向另一个对象，reference 却总是指向(代表)它最初获得的那个对象。
 
 一般而言，当你需要考虑“不指向任何对象”的可能性时，或是考虑“在不同时间指向不同对象”的能力时，你就应该采用 pointer。前一种情况你可以将 pointer设为 null，后一种情况你可以改变pointer 所指对象。而当你确定“总是会代表某个对象”，而且“一旦代表了该对象就不能够再改变”，那么你应该选用 reference。
 
@@ -126,7 +126,7 @@ int test_item_2()
 }
 ```
 
-### 条款 3: 绝对不要以多态（polymorphically）方式处理数组
+### 条款 3: 绝对不要以多态(polymorphically)方式处理数组
 
 C++允许你通过基类指针和引用来操作派生类数组。不过这根本就不是一个特性，因为这样的代码几乎从不如你所愿地那样运行。数组与多态不能用在一起。值得注意的是如果你不从一个具体类(concrete classes)(例如BST)派生出另一个具体类(例如BalancedBST)，那么你就不太可能犯这种使用多态性数组的错误。
 
@@ -163,7 +163,7 @@ int test_item_3()
 }
 ```
 
-### 条款4 避免无用的缺省构造函数
+### 条款 4: 避免无用的缺省构造函数
 
 构造函数能初始化对象，而**缺省构造函数**则可以不利用任何在建立对象时的外部数据就能初始化对象。有时这样的方法是不错的。例如一些行为特性与数字相仿的对象被初始化为空值或不确定的值也是合理的，还有比如链表、哈希表、图等等数据结构也可以被初始化为空容器。但不是所有的对象都属于上述类型，对于很多对象来说，不利用外部数据进行完全的初始化是不合理的。比如一个没有输入姓名的地址薄对象，就没有任何意义。
 
@@ -211,9 +211,9 @@ int test_item_4()
 }
 ```
 
-## 二、运算符（操作符）
+## 二、运算符(操作符)
 
-### 条款5: 谨慎定义类型转换函数
+### 条款 5: 谨慎定义类型转换函数
 
 1. C++ 允许内置数据类型之间(例如char和int，int和double等)进行隐式转换，对于内置类型之间的隐式转换有详细的规则，但不管怎样，这些都是语言提供的，既相对安全，我们又无法更改。
 
@@ -236,11 +236,11 @@ double d = 0.5 * r; // 将r的值转换为double，然后执行运算。
 
 2. 但是下面这个情况就会出问题: `std::cout << r`;
 
-如果你忘了为 Rational 类重载一个 operator<<，那么按道理应该打印不成功。但是编译器面对上述动作，它会想尽办法（包括找出一系列可接受的隐式类型转换）让函数调用动作成功。此时编译器发现 只需调用 Rational::operator double， 将 r 转换为 double，就可以成功调用 std::cout << r;，以浮点数的形式输出。
+如果你忘了为 Rational 类重载一个 operator<<，那么按道理应该打印不成功。但是编译器面对上述动作，它会想尽办法(包括找出一系列可接受的隐式类型转换)让函数调用动作成功。此时编译器发现 只需调用 Rational::operator double， 将 r 转换为 double，就可以成功调用 std::cout << r;，以浮点数的形式输出。
 
 解决办法就是以功能对等的另一个函数取代类型转换操作符。即: 定义一个 doube asDouble() const;函数。虽然使用时有些许不便，但“可因为不再默默调用那些不打算调用的函数而获得弥补”。C++ 标准库中的 string 类从没有 string 到 char* 的隐式类型转换操作符而采用 c_str 函数可能就是这个原因。
 
-3. 拥有单个参数（或除第一个参数外都有默认值的多参数）构造函数的类，很容易被隐式类型转换，最好加上 explicit 防止隐式类型转换。
+3. 拥有单个参数(或除第一个参数外都有默认值的多参数)构造函数的类，很容易被隐式类型转换，最好加上 explicit 防止隐式类型转换。
 ```c++
 template<class T>
 class Array{
@@ -261,7 +261,7 @@ for(int i=0; i<10; ++i){
 }
 ```
 
-`if(a == b[i])` 并不会报错。因为编译器发现只要调用 `Array\ constructor`（需一个 int 作为自变量），就可以把 int 转为 `Array\ object`。就会产生类似这样的代码:
+`if(a == b[i])` 并不会报错。因为编译器发现只要调用 `Array\ constructor`(需一个 int 作为自变量)，就可以把 int 转为 `Array\ object`。就会产生类似这样的代码:
 
 `if( a == static_cast<Array<int> >(b[i]))` 将 `b[i]` 转为 `Array`。此时程序会正常运行，但是结果却不尽人意。
 
@@ -293,7 +293,7 @@ public:
 
 4. 总结允许编译器执行隐式转换弊大于利，所以**非必要不要提供转换函数**！
 
-### 条款6: 区别 increment/decrement 操作符的前置和后置形式s
+### 条款 6: 区别 increment/decrement 操作符的前置和后置形式s
 
 1. 由于 increment/decrement 操作符的前置和后置式都是一元运算符，没有参数。因此重载时通过在后置式中加一个 int 型参数(哑元参数)加以区分，当后置式被调用时，编译器自动在为该参数指定一个0值。
 
@@ -335,9 +335,9 @@ const UPInt UPInt::operator++(int)
 2. 处理用户定制类型时，应该尽可能使用前置式。
 3. 后置式increment 和decrement 操作符的实现应以其前置式兄弟为基础。如此一来你就只需维护前置式版本，因为后置式版本会自动调整为一致的行为。
 
-### 条款7: 千万不要重载&&，|| 和，操作符
+### 条款 7: 千万不要重载&&，|| 和，操作符
 
-C++ 对于“真假值表达式” 采用所谓的“短路” 评估方式（short-circuit evaluation）。意思是一旦该表达式的真价值确定，及时表达式中还以后部分尚未检验，整个评估工作仍然结束。
+C++ 对于“真假值表达式” 采用所谓的“短路” 评估方式(short-circuit evaluation)。意思是一旦该表达式的真价值确定，及时表达式中还以后部分尚未检验，整个评估工作仍然结束。
 
 “函数调用”语义和所谓的“短路” 评估方式语义有两个重大的区别。第一，当函数调用动作被执行，所有参数值都必须评估完成，所以当我们调用 operator&&和 operator||时，两个参数都已评估完成。换句话说没有什么骤死式语义。第二，C++语言规范并未明确定义函数调用动作中各参数的评估顺序，所以没办法知道expression1 和 expression2 哪个会先被评估。这与骤死式评估法形成一个明确的对比，后者总是由左向右评估其自变量。
 
@@ -355,11 +355,11 @@ C++同样也有一些规则用来定义逗号操作符面对内建类型的行�
 
 - **new operator**: new操作符，用于动态分配内存并进行初始化, 它的动作分为两方面。第一，它分配足够的内存，用来放置某类型的对象。以上例而言，它分配足够放置一个string 对象的内存。第二，它调用一个 constructor，为刚才分配的内存中的那个对象设定初值。;
   - new operator，不能被重载
-  - 当你写出这样的代码：
+  - 当你写出这样的代码:
     ```c++
   	string *ps = new string(“Memory Mangement”);
 	```
-	你所使用的 new 是所谓的 new operator。它的动作分为两个方面：1、分配足够的内存，用来放置某类型的对象；2、调用 constructor，为刚才的内存中的那个对象设定初值。
+	你所使用的 new 是所谓的 new operator。它的动作分为两个方面: 1、分配足够的内存，用来放置某类型的对象；2、调用 constructor，为刚才的内存中的那个对象设定初值。
 
 - **operator new**: 标准库的函数，只分配内存不进行初始化(或者传递一个可用的内存地址)，可以自己进行重载，也可以主动调用。
   - 和 malloc 一样，operator new 的唯一任务就是分配内存。
@@ -392,7 +392,7 @@ exceptions 无法被忽略。如果一个函数利用“设定状态变量”的
 
 如果你需要一个“绝对不会被忽略的”异常信号发射方法，而且发射后的 stack处理过程又能够确保局部对象的 destructors 被调用，那么你需要 C++exceptions。它是最简单的方法了。
 
-### 条款9: 利用 destructors 避免泄漏资源
+### 条款 9: 利用 destructors 避免泄漏资源
 
 每当 new 一个新的对象，一定要确保成功 delete 它，否则就会造成内存泄漏。
 ```c++
@@ -425,11 +425,11 @@ void processAdoptions(istream& dataSource){
 }
 ```
 
-因为这种情况会需要删除两次pa，代码维护很麻烦，所以需要进行优化：
+因为这种情况会需要删除两次pa，代码维护很麻烦，所以需要进行优化:
 
 只要我们能够将 “一定得执行的清理代码” 移到 processAdoptions 函数的某个局部对象的 destructors 内即可。因为局部对象总是会在函数结束时被析构，不论函数如何结束。
 
-如何把 delete 动作从 processAdoptions 函数移到函数内的某个局部对象的 destructor 内：以一个 “类似指针的对象（智能指针）”取代指针 pa。当这个类似指针的对象被（自动）销毁，我们可以令其 destructor 调用 delete。
+如何把 delete 动作从 processAdoptions 函数移到函数内的某个局部对象的 destructor 内: 以一个 “类似指针的对象(智能指针)”取代指针 pa。当这个类似指针的对象被(自动)销毁，我们可以令其 destructor 调用 delete。
 
 ```c++
 void processAdoptions(istream& dataSource){
@@ -440,9 +440,9 @@ void processAdoptions(istream& dataSource){
 }
 ```
 
-### 条款10. 在 constructors 内阻止资源泄漏（resource leak）
+### 条款 10: 在 constructors 内阻止资源泄漏(resource leak)
 
-考虑下面的情况：
+考虑下面的情况:
 ```c++
 BookEntry::BookEntry():theImage(0), theAudioClip(0){
 	theImage = new Image(imageFileName);
@@ -458,7 +458,7 @@ BookEntry::~BookEntry(){
 
 由于C++ 不自动清理那些 “构造期间抛出 exceptions” 的对象，所以你必须设计你的 constructor，使得它们能够自动清理。通常只需将所有可能的 exceptions 捕捉起来，执行某种清理工作，然后重新抛出 exception，使它继续传播出去即可。
 
-解决办法一：
+解决办法一:
 ```c++
 BookEntry::BookEntry(){
     try{
@@ -491,26 +491,263 @@ BookEntry::BookEntry(const string& imageFileName, const string& audioClipFileNam
 
 `BookEntry::~BookEntry(){} // 不需要做什么事！`
 
-### 条款11. 禁止异常（exceptions）流出destructors之外
+### 条款 11: 禁止异常(exceptions)流出destructors之外
 
-两种情况下 destructor 会被调用。第一种情况是当对象在正常状态下被销毁，也就是当它离开了它的生存空间（scope）或是被明确地删除；第二种情况是当对象被 exception 处理机制——也就是exception 传播过程中的 stack-unwinding（栈展开）机制——销毁。
+两种情况下 destructor 会被调用。第一种情况是当对象在正常状态下被销毁，也就是当它离开了它的生存空间(scope)或是被明确地删除；第二种情况是当对象被 exception 处理机制——也就是exception 传播过程中的 stack-unwinding(栈展开)机制——销毁。
 
-因为如果控制权基于 exception 的因素离开 destructor，而此时正有另一个 exception 处于作用状态，C++会调用 terminate 函数。此函数的作为正如其名：将你的程序结束掉——它会立刻动手，甚至不等局部对象被销毁。
+因为如果控制权基于 exception 的因素离开 destructor，而此时正有另一个 exception 处于作用状态，C++会调用 terminate 函数。此函数的作为正如其名: 将你的程序结束掉——它会立刻动手，甚至不等局部对象被销毁。
 
-因此，有两个好理由支持我们“全力阻止exceptions传出 destructors之外”。第一，它可以避免 terminate函数在 exception传播过程的栈展开（stack-unwinding）机制中被调用；第二，它可以协助确保 destructors 完成其应该完成的所有事情。
+因此，有两个好理由支持我们“全力阻止exceptions传出 destructors之外”。第一，它可以避免 terminate函数在 exception传播过程的栈展开(stack-unwinding)机制中被调用；第二，它可以协助确保 destructors 完成其应该完成的所有事情。
 
 如何避免exception传出destructor之外呢?
 
-**在析构函数中使用`try{} catch(){}`, 并且在catch的`{}`中什么也不做。**
+**在析构函数中使用`try{} catch(){}`结构, 并且在catch的`{}`中什么也不做。**
 
-### 条款12.
+### 条款12: 了解“抛出一个exception”与“传递一个参数”或“调用一个虚函数”之间的差异
+
+你调用函数时，程序的控制权最终还会返回到函数的调用处，但是当你抛出一个异常时，控制权永远不会回到抛出异常的地方。
+
+C++规范要求被作为异常抛出的对象必须被复制。即使被抛出的对象不会被释放，也会进行拷贝操作。抛出异常运行速度比参数传递要慢。
+
+当异常对象被拷贝时，拷贝操作是由对象的拷贝构造函数完成的。该拷贝构造函数是对象的静态类型(static type)所对应类的拷贝构造函数，而不是对象的动态类型(dynamic type)对应类的拷贝构造函数。
+
+catch子句中进行异常匹配时可以进行两种类型转换:
+ - 第一种是继承类与基类间的转换。一个用来捕获基类的catch子句也可以处理派生类类型的异常。这种派生类与基类(inheritance_based)间的异常类型转换可以作用于数值、引用以及指针上。
+ - 第二种是允许从一个类型化指针(typed pointer)转变成无类型指针(untyped pointer)，所以带有const void*指针的catch子句能捕获任何类型的指针类型异常。
+
+catch子句匹配顺序总是取决于它们在程序中出现的顺序。因此一个派生类异常可能被处理其基类异常的catch子句捕获，即使同时存在有能直接处理该派生类异常的catch子句，与相同的try块相对应。不要把处理基类异常的catch子句放在处理派生类异常的catch子句的前面。
+
+把一个对象传递给函数或一个对象调用虚拟函数与把一个对象作为异常抛出，这之间有三个主要区别:
+ - 第一，异常对象在传递时总被进行拷贝；当通过传值方式捕获时，异常对象被拷贝了两次。对象作为参数传递给函数时不一定需要被拷贝。
+ - 第二，对象作为异常被抛出与作为参数传递给函数相比，前者类型转换比后者要少(前者只有两种转换形式)。
+ - 最后一点，catch子句进行异常类型匹配的顺序是它们在源代码中出现的顺序，第一个类型匹配成功的catch将被用来执行。当一个对象调用一个虚拟函数时，被选择的函数位于与对象类型匹配最佳的类里，即使该类不是在源代码的最前头。
+
+try_catch 介绍参考: https://blog.csdn.net/fengbingchun/article/details/65939258
+
+### 条款13: 以 by reference方式捕捉 exceptions
+**catch by pointer的问题:**
+他们是否应该删除他们接受的指针？如果是在堆中建立的异常对象，那他们必须删除它，否则会造成资源泄漏。如果不是在堆中建立的异常对象，他们绝对不能删除它，否则程序的行为将不可预测。通过指针捕获异常，将遇到一个哈姆雷
+特式的难题: 是删除还是不删除？这是一个难以回答的问题。所以你最好避开它。
+
+**catch by value的问题:**
+
+- 当它们被抛出时系统将对异常对象拷贝两次(参见条款 M12)。
+- 当抛出的是派生类对象，但是用基类捕获，会场生slicing 问题。
+
+**catch by reference的优势:**
+如果 catch by reference，你就可以避开对象删除问题，你也可以避开 exception objects 的切割(slicing)问题；你可以保留捕捉标准 exceptions 的能力；你也约束了 exception objects 需被复制的次数。
+
+通过指针捕获异常不符合C++语言本身的规范。四个标准的异常----bad_alloc(当operator new不能分配足够的内存时被抛出)；bad_cast(当dynamic_cast针对一个引用(reference)操作失败时被抛出)；bad_typeid(当dynamic_cast对空指针进行操作时被抛出)；bad_exception(用于unexpected异常)----都不是指向对象的指针，所以你必须通过值或引用来捕获它们。
+
+std::exception的介绍参考: https://blog.csdn.net/fengbingchun/article/details/78303734
 
 
+### 条款14: 审慎使用异常规格(exception specifications)
+
+如果一个函数抛出一个不在异常规格范围里的异常，系统在运行时能够检测出这个错误，然后一个特殊函数std::unexpected将被自动地调用(This function is automatically called when a function throws an exception that is not listed in its dynamic-exception-specifier.)。std::unexpected缺省的行为是调用函数std::terminate，而std::terminate缺省的行为是调用函数abort。应避免调用std::unexpected。
+
+- **避免踏上 unexpected之路的第一个技术是:** 不应该将 templates 和 exceptionspecifications 混合使用。
+- **避免踏上 unexpected之路的第二个技术是:** 如果A 函数内调用了 B 函数，而B 函数无 exceptionspecifications，那么 A 函数本身也不要设定exception specifications。
+- **避免踏上 unexpected 之路的第三个技术是:** 处理“系统”可能抛出的exceptions。其中最常见的就是 bad_alloc，那是在内存分配失败时由operator new和 operator new[]抛出的(见条款8)。
+
+### 条款15: 了解异常处理的系统开销
+
+异常功能是需要一定开销的,即使是完全没有进行使用,虽然在某些情况下可以进行异常功能的关闭,但前提是,当前的所有代码所有模块都没有进行异常功能的使用,一旦有一个模块使用了异常,将导致程序无法运行.
+
+抛出异常这个工作是比较消耗资源的,相对于平常的函数返回值,大约是3倍的资源消耗,但是不必恐慌,除非将异常作为了一种常规手段,否则偶尔的使用基本是不会影响整体效率的
+
+异常功能整体上会使程序变大 5%~10%,同时也一定比例的减慢程序的运行速度.
+
+这就是异常处理的系统开销。
+
+## 四、效率
+
+本章的内容从两个角度阐述效率的问题。
+- 第一是从语言独立的角度，关注那些你能在任何语言里都能使用的东西。C++为它们提供了特别吸引人的实现途径，因为它对封装的支持非常好，从而能够用更好的算法与数据结构来替代低效的类似实现，同时接口可以保持不变。
+- 第二是关注 C++语言本身。高性能的算法与数据结构虽然非常好，但如果实
+际编程中代码实现得很粗糙，效率也会降低得相当多。潜在危害性最大的错误是
+既容易犯而又不容易察觉的错误，濒繁地构造和释放大量的对象就是一种这样的
+错误。过多的对象构造和对象释放对于你的程序性能来说就象是在大出血，在每
+次建立和释放不需要的对象的过程中，宝贵的时间就这么流走了。这个问题在
+C++程序中很普遍，我将用四个条款来说明这些对象从哪里来的，在不影响程序
+代码正确性的基础上又如何消除它们。
+
+### 条款16: 谨记 80-20 法则
+
+80-20准则说的是大约20%的代码使用了80%的程序资源；大约20%的代码耗用了大约80%的运行时间；大约20%的代码使用了80%的内存；大约20%的代码执行80%的磁盘访问；80%的维护投入于大约20%的代码上。
+
+**基本的观点:** 软件整体的性能取决于代码组成中的一小部分。一个程序大量的资源是消耗在少部分的代码上面,所有的程序都符合这个规则,所以,我们要做的并不是对每一处代码都进行优化,虽然这么做固然很好,但是每个人的能力和精力是一个固定值,一味的优化80%部分的代码,提升的效果可能达不到20%中的几行代码,我们要善于利用各种工具,找到真正需要进行优化的逻辑,然后去进行优化.
+
+### 条款17: 考虑使用 lazy evaluation(缓式评估)
+
+lazy evaluation(缓式评估)。一旦你采用 lazy evaluation，就是以某种方式撰写你的 classes，使它们延缓运算，直到那些运算结果刻不容缓地被迫切需要为止。如果其运算结果一直不被需要，运算也就一直不执行。
+- **引用计数**
+这种“数据共享”的行动细节(及相应代码)在条款 29有详细叙述，其观念便是 lazy evaluation：在你真正需要之前，不必着急为某物做一个副本。取而代之的是，以拖延战术应付之——只要能够，就使用其他副本。在某些应用领域，你常有可能永远不需要提供那样一个副本。
+- **区别对待读取和写入**
+  ```c++
+  string s = "Homer's liad";
+  ...
+  cout << s[3];
+  s[3] = 'x';
+  ```
+  首先调用 operator[]用来读取 string 的部分值，但是第二次调用该函数是为了完成写操作。我们应能够区别对待读调用和写调用，因为读取reference-counted string 是很容易的，而写入这个 string 则需要在写入前对该string 值制作一个新拷贝。
+  为了能够这样做，需要在 operator[]里采取不同的措施(根据是为了完成读取操作而调用该函数还是为了完成写入操作而调用该函数)。我们如果判断调用 operator[]的 context 是读取操作还是写入操作呢？残酷的事实是我们不可能判断出来。通过使用 lazy evaluation 和条款 M30 中讲述的proxy class，我们可以推迟做出是读操作还是写操作的决定，直到我们能判断出正确的答案。
+- **Lazy Fetching (懒惰提取)**
+实现 lazy fetching 时，你必须面对一个问题：null 指针可能会在任何 member functions(包括const member functions，如 field1)内被赋值，以指向真正的数据。然而当你企图在 constmember functions 内修改 data members，编译器不会同意。所以你必须用某种方法告诉编译器说：“放轻松，我知道我正在干什么”。说这句话的最好方法就是将指针字段声明为 mutable，意思是这样的字段可以在任何member function 内被修改，甚至是在 const member functions 内(见条款 E21)。
+- **Lazy Expression Evaluation(懒惰表达式计算)**
+lazy evaluation 在许多领域中都可能有用途：可避免非必要的对象复制，可区别 operator[]的读取和写动作，可避免非必要的数据库读取动作，可避免非必要的数值计算动作。
+
+### 条款18: 分期摊还预期的计算成本
+
+现在我鼓励你改善软件性能的方法是：令你的代码超前进度地做“要求以外”的更多工作。此条款背后的哲学可称为超急评估(over-eager evaluation): 在被要求之前就先把事情做下去。
+
+Over-eager evaluation 背后的观念是，如果你预期程序常常会用到某个计算，你可以降低每次计算的平均成本，办法就是设计一份数据结构以便能够极有效率地处理需求。
+
+**Caching** 是“分期摊还预期计算之成本”的一种做法,即caching(缓存)那些已经被计算出来而以后还有可能需要的值。
+
+**Prefetching**(预先取出)是另一种做法。Prefetch需要空间放置被 prefetch 的东西，但是它减少了访问它们所需
+的时间。
+
+以上两种方法都是通过**以空间换时间**的方式来提高代码的运行效率。
+
+可通过over-eager evaluation 如 caching和prefetching 等做法分期摊还预期运算成本——和我在条款 17 所提的 lazy evaluation 并不矛盾。当你必须支持某些运算而其结果并不总是需要的时候，lazy evaluation 可以改善程序效率。当你必须支持某些运算而其结果几乎总是被需要，或其结果常常被多次需要的时候，over-eager evaluation 可以改善程序效率。
+
+### 条款19: 理解临时对象的来源
+
+```c++
+size_t countChar(const std::string& str, char ch)
+{
+	// 建立一个string类型的临时对象，通过以buffer做为参数调用string的构造函数来初始化这个临时对象,
+	// countChar的参数str被绑定在这个临时的string对象上，当countChar返回时，临时对象自动释放
+
+	// 将countChar(const std::string& str, char ch)修改为countChar(std::string& str, char ch)则会error
+	return 1;
+}
+
+#define MAX_STRING_LEN 64
+
+int test_item_19()
+{
+	char buffer[MAX_STRING_LEN];
+	char c;
+
+	std::cin >> c >> std::setw(MAX_STRING_LEN) >> buffer;
+	std::cout<<"There are "<<countChar(buffer, c)<<" occurrences of the character "<<c<<" in "<<buffer<<std::endl;
+
+	return 0;
+}
+```
+C++真正的所谓的临时对象是不可见的——不会在你的源代码中出现。只要你产生一个 non-heap object(非堆对象) 而没有为它命名，便诞生了一个临时对象。此等匿名对象通常发生于两种情况：一是当隐式类型转换(implicit type conversions)被施行起来以求函数调用能够成功；二是当函数返回对象的时候。
+
+仅当通过传值(by value)方式传递对象或传递常量引用(reference-to-const)参数时，才会发生这些类型转换。当传递一个非常量引用(reference-to-non-const)参数对象，就不会发生。
+
+C++语言禁止为**非常量引用(reference-to-non-const)**产生临时对象。
+
+在这些优化策略中，最常见也最有用的就是所谓的“返回值优化(return value optimization)”。
+
+临时对象可能很耗成本，所以你应该尽可能消除它们。然而更重要的是，如何训练出锐利的眼力，看出可能产生临时对象的地方。任何时候只要你看到一个 reference-to-const 参数，就极可能会有一个临时对象被产生出来绑定至该参数上。任何时候只要你看到函数返回一个对象，就会产生临时对象(并于稍后销毁)。
+
+### 条款20: 协助完成返回值优化 (RVO)
+```c++
+class Rational20 {
+public:
+	Rational20(int numerator = 0, int denominator = 1) {}
+
+	int numerator() const { return 1; }
+	int denominator() const { return 2; }
+};
+
+const Rational20 operator*(const Rational20& lhs, const Rational20& rhs)
+{
+	// 以某种方法返回对象，能让编译器消除临时对象的开销：这种技巧是返回constructor argument而不是直接返回对象
+	return Rational20(lhs.numerator() * rhs.numerator(), lhs.denominator() * rhs.denominator());
+}
+
+int test_item_20()
+{
+	Rational20 a = 10;
+	Rational20 b(1, 2);
+	Rational20 c = a * b;
+
+	return 0;
+}
+```
+我们可以用某种特殊写法来撰写函数，使它在返回对象时，能够让编译器消除临时对象的成本。我们的伎俩是：**返回所谓的 constructor arguments以取代对象。**
+
+此特殊的优化行为——利用函数的 return 点消除一个局部临时对象（并可能用函数调用端的某对象取代）——不但广为人知而且很普遍地被实现出来。它甚至有个专属名称：return value optimization。
 
 
+### 条款21: 通过重载避免隐式类型转换
+```c++
+class UPInt21 { // unlimited precision integers class
+public:
+	UPInt21() {}
+	UPInt21(int value) {}
+};
 
+const UPInt21 operator+(const UPInt21& lhs, const UPInt21& rhs) // add UPInt21+UPInt21
+{
+	return UPInt21(1);
+}
 
+const UPInt21 operator+(const UPInt21& lhs, int rhs) // add UPInt21+int
+{
+	return UPInt21(1);
+}
 
+const UPInt21 operator+(int lhs, const UPInt21& rhs) // add int+UPInt21
+{
+	return UPInt21(1);
+}
+
+int test_item_21()
+{
+	UPInt21 upi1, upi2;
+	UPInt21 upi3 = upi1 + upi2; // 正确，没有由upi1或upi2生成临时对象
+	upi3 = upi1 + 10; // 正确,没有由upi1或10生成临时对象
+	upi3 = 10 + upi2; // 正确，没有由10或upi2生成临时对象
+
+	// 注意：注释掉上面的operator+(UPInt21&, int)和operator+(int, UPInt21&)也正确，但是会通过临时对象把10转换为UPInt21
+
+	return 0;
+}
+```
+在C++中有一条规则是每一个重载的operator必须带有一个用户定义类型(user-defined type)的参数。
+
+利用重载避免临时对象的方法不只是用在operator函数上。
+
+没有必要实现大量的重载函数，除非你有理由确信程序使用重载函数以后其整体效率会有显著的提高。
+
+### 条款22: 考虑用运算符的赋值形式(op=)取代其单独形式(op)
+
+```c++
+class Rational22 {
+public:
+	Rational22(int numerator = 0, int denominator = 1) {}
+	Rational22& operator+=(const Rational22& rhs) { return *this; }
+	Rational22& operator-=(const Rational22& rhs) { return *this; }
+};
+
+// operator+根据operator+=实现
+const Rational22 operator+(const Rational22& lhs, const Rational22& rhs)
+{
+	return Rational22(lhs) += rhs;
+}
+
+// operator-根据operator-=实现
+const Rational22 operator-(const Rational22& lhs, const Rational22& rhs)
+{
+	return Rational22(lhs) -= rhs;
+}
+```
+就C++来说，operator+、operator=和operator+=之间没有任何关系，因此如果你想让三个operator同时存在并具有你所期望的关系，就必须自己实现它们。同理，operator-, *, /, 等等也一样。
+
+要确保操作符的复合形式（例如，operator+=）和其独身形式（例如，operator+）之间的自然关系能够存在，一个好方法就是以前者为基础实现后者（见条款 6）。
+
+3 个与效率有关的情况值得注意:
+- 第一，一般而言，复合操作符比其对应的独身版本效率高，因为独身版本通常必须返回一个新对象，而我们必须因此负担一个临时对象的构造和析构成本（见条款 19和 20及条款 E23）。至于复合版本则是直接将结果写入其左端自变量，所以不需要产生一个临时对象来放置返回值。
+- 第二，如果同时提供某个操作符的复合形式和独身形式，便允许你的客户在效率与便利性之间做取舍（虽然那是极其困难的抉择）。
+- 第三、自古以来匿名对象总是比命名对象更容易被消除，所以当你面临命名对象或临时对象的抉择时，最好选择临时对象。它应该绝不会比其命名兄弟耗用更多成本，反倒是极有可能降低成本（尤其在搭配旧式编译器时）。
 
 
 
@@ -519,7 +756,8 @@ BookEntry::BookEntry(const string& imageFileName, const string& audioClipFileNam
 
 Ref:</br>
 [1]. [More Effective C++](https://hr-insist.github.io/C/More_Effective_C++%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/)</br>
-[2]. [《More Effective C++》读书笔记](https://zhuanlan.zhihu.com/p/368342605)
+[2]. [《More Effective C++》读书笔记](https://zhuanlan.zhihu.com/p/368342605)</br>
+[3]. https://blog.csdn.net/fengbingchun/article/details/102990753
 
 ---
 
