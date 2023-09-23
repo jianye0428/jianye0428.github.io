@@ -141,7 +141,7 @@ class hash_set;
 SGI 的实现把表的元素放在一个单向链表中，而 Dinkumware 的实现则使用了双向链表。
 
 
-ref:
+ref: </br>
 [1]. https://www.cnblogs.com/Sherry4869/p/15128250.html</br>
 [2]. https://blog.csdn.net/zhuikefeng/article/details/108164117#t42
 

@@ -1,4 +1,117 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective-stl/</link><description>Effective STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 15 Sep 2023 21:32:17 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective-stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL 精读总结 [3] | 关联容器</title><link>https://jianye0428.github.io/posts/partthree/</link><pubDate>Fri, 15 Sep 2023 21:32:17 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partthree/</guid><description><![CDATA[<h1 id="前言">前言</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Effective STL - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/effective-stl/</link><description>Effective STL - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 21 Sep 2023 19:30:07 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/effective-stl/" rel="self" type="application/rss+xml"/><item><title>Effective STL 精读总结 [4] | 迭代器</title><link>https://jianye0428.github.io/posts/partfour/</link><pubDate>Thu, 21 Sep 2023 19:30:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partfour/</guid><description><![CDATA[<h1 id="前言">前言</h1>
+<blockquote>
+<p>Effective-STL总结系列分为七部分，本文为第四部分，涉及原书第四章，内容范围Rule26~29。为方便书写，Rule26简写为R26。</p>
+</blockquote>
+<div class="details admonition Note">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Effective-STL系列List<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">本博客站点系列内容如下：</br>
+💡 <a href="https://jianye0428.github.io/posts/partone/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版) 精读总结(一)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/parttwo/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版) 精读总结(二)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/partthree/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版) 精读总结(三)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+💡 <a href="https://jianye0428.github.io/posts/partfour/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版) 精读总结(四)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></div>
+    </div>
+  </div>
+<h2 id="r26-iterator-优先于-const_interatorreverse_interator-及-const_reverse_interator">R26: iterator 优先于 const_interator、reverse_interator 及 const_reverse_interator</h2>
+<ol>
+<li>STL中所有的标准容器都提供了4种迭代器类型，对容器类container<T>而言，iterator类型相当于T*，const_iterator相当于const T*。reverse_iterator和const_reverse_iterator递增的效果是从容器的尾部反向遍历到头部。</li>
+<li>对于vector容器的insert函数和erase函数，这些函数只接受iterator类型的参数，而不是const_iterator、reverse_iterator或者const_reverse_iterator。下面这张图展示了不同类型迭代器之间的关系。黑色箭头，并且上面未标函数的表示隐式类型转换，标函数的表示显示类型转换，但是需要注意的是，通过base()得到的迭代器或许并非是你期望的迭代器类型。也可以看出想隐式转换const_iterator到iterator是不可行的。从reverse_iterator转换来的iterator在使用之前可能需要进行相应的调整，条款28将更详细地说明这一点。由此可见，尽量使用iterator，而不是const或reverse型的迭代器，可以使容器的使用更为简单有效，并且可以避免潜在的问题。</li>
+</ol>
+<p>不同类型的迭代器之间的关系:
+</p>
+<ol start="3">
+<li>假设有个iterator i和一个const_iterator ci指向同一个对象，但是在比较这两个迭代器时，即if(i == ci)的结果却是假，甚至不能通过编译，因为这些STL实现将const_iterator的operator==作为成员函数，而不是一个非成员函数，ci不能隐式转成i，但是i可以隐式转成ci，所以判断if(ci == i)是真。避免这种问题最简单的办法是减少混用不同类型的迭代器，尽量使用iterator来代替const_iterator。</li>
+</ol>
+<h2 id="r27-使用-distance-和-advance-将容器的-const_interator-转换成-iterator">R27: 使用 distance 和 advance 将容器的 const_interator 转换成 iterator</h2>
+<ol>
+<li>首先考虑类型转换达到该条款的目的，包括两种代码，Iter i(ci);和Iter i(const_cast<Iter>(ci));，这两种代码都不能通过编译，原因在于iterator和const_iterator是完全不同的两个类，相当于int和complex<double>之间互转，当然不可能成功。不过对于vector和string来说，上面的代码可能通过编译，因为大多数STL将vector<T>::iterator和vector<T>::const_iterator分别定义为T<em>和const T</em>，string::iterator和string::const_iterator定义为char<em>和const char</em>，因此对于这两个容器强转可能是成功的，但是即使在这两个容器种，reverse_iterator和const_reverse_iterator仍然是两个类，它们之间是不能强转的。</li>
+<li>可以通过distance函数进行转换，代码如下：
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"> <span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> <span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> <span class="n">IntDeque</span> <span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> <span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> <span class="n">Iter</span> <span class="nf">i</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">begin</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl"> <span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span><span class="c1">//目前不能通过编译，但是思想是通过distance计算出ci和begin之间的距离，然后移动这么多距离
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div>上面这个程序不能通过编译的原因是distance函数只能接受一种类型的迭代器，而i和ci是两种不同的迭代器。要通过编译最简单的方法是显示指定distance使用的类型，即advance(i, distance<ConstIter>(i, ci));除了达成效率，再考虑这么做的效率如何，它的执行效率取决于你使用的迭代器，对于随机访问迭代器（vector、string和deque），它是常数时间操作，对于双向迭代器（其他所有），它是线性时间操作。</li>
+</ol>
+<h2 id="r28-正确理解由reverse_iterator的base成员函数所产生的iterator的用法">R28: 正确理解由reverse_iterator的base()成员函数所产生的iterator的用法</h2>
+<p></p>
+<p>假设通过reverse_iterator查找容器中值为3的元素，ri表示3的位置，但是在调用base()函数将其转换成iterator类型时，因为偏移变成i所指向的位置。假设要在ri的位置插入新元素，我们预期新元素会插入在现在元素3的位置，然后3和其后的元素需要往右移动一个位置，但是因为insert会将新元素插入到迭代器指向位置的前面，而逆序遍历的顺序是由后向前的，所以会将新元素插入在3的“后面”，实际对reverse_iterator来说就是“前面”。所以如果是在reverse_iterator类型ri位置插入，只需要在ir.base()位置插入即可。但是如果是在ri位置删除元素，则需要在ri.base()位置前面的位置执行删除。但是其中还是有坑，请看如下代码：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//这段代码通不过编译
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">reverse_iterator</span> <span class="n">ri</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">rbegin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">rend</span><span class="p">(),</span> <span class="mi">3</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="o">--</span><span class="n">ri</span><span class="p">.</span><span class="n">base</span><span class="p">());</span><span class="c1">//iterator的--是左移，reverse_iterator的--是右移
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段代码对于vector和string不能通过编译的原因在于，这两种容器的iterator和const_iterator是以内置指针的方式实现的，所以ri.base()的结果是一个指针，而C和C++都规定了从函数返回的指针不应该被修改。所以必须换个调用方式：v.erase((++ri).base());，先让ri左移再取指针。</p>
+<h2 id="r29-对于逐个字符的输入请考虑使用istreambufiterator">R29: 对于逐个字符的输入请考虑使用istreambuf::iterator</h2>
+<p>假设你想将一个文本文件中的内容拷贝到一个string对象中，考虑如下的实现方式：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;inputData.txt&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span> <span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span><span class="c1">//注意第一个参数用括号包起来
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>但是这种读取方式是不包含空白字符的，因为istream_iterator使用operator&raquo;完成读操作，而默认情况下operator&raquo;会跳过空白字符，假定你要保留空白字符，可以更改这种默认行为，如下代码:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;inputData.txt&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">inputFile</span><span class="p">.</span><span class="n">unsetf</span><span class="p">(</span><span class="n">ios</span><span class="o">::</span><span class="n">skipws</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span> <span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span><span class="c1">//注意第一个参数用括号包起来
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>上述代码是可以完成要求的功能的，但是你会发现它并不够快，istream_iterator内部使用的operator&raquo;实际上执行了格式化输出，这意味着每次调用operator&raquo;操作符，都会执行许多附加的操作。一种更为有效的途径是使用istreambuf_iterator，istreambuf_iterator的使用方法与istream_iterator大致相同，但是istream_iterator<char>使用operator&raquo;从输入流中读取单个字符，而istreambuf_iterator<char>从一个输入流的缓冲区读取下一个字符。使用的代码就是将istream_iterator改成istreambuf_iterator。</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;inputData.txt&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istreambuf_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span> <span class="n">istreambuf_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span><span class="c1">//注意第一个参数用括号包起来
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>同样对于非格式化的逐个字符的输出，也可以考虑使用ostreambuf_iterator替换ostream_iterator。</p>
+<p>ref:
+[1]. <a href="https://www.cnblogs.com/Sherry4869/p/15128250.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/Sherry4869/p/15128250.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://blog.csdn.net/zhuikefeng/article/details/108164117#t42"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhuikefeng/article/details/108164117#t42<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3]. <a href="https://zhuanlan.zhihu.com/p/458156007"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/458156007<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Effective STL 精读总结 [3] | 关联容器</title><link>https://jianye0428.github.io/posts/partthree/</link><pubDate>Fri, 15 Sep 2023 21:32:17 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/partthree/</guid><description><![CDATA[<h1 id="前言">前言</h1>
 <blockquote>
 <p>Effective-STL总结系列分为七部分，本文为第一部分，涉及原书第一章，内容范围Rule01~12。为方便书写，Rule12简写为R12。</p>
 </blockquote>
@@ -198,7 +311,7 @@
 </div>
 </div><p>注意: 与标准关联容器不同， SGI 的散列容器使用 equal_to 作为默认的比较函数，通过测试两个对象是否相等而不是等价来决定容器中的两个对象是否相等。
 SGI 的实现把表的元素放在一个单向链表中，而 Dinkumware 的实现则使用了双向链表。</p>
-<p>ref:
+<p>ref: </br>
 [1]. <a href="https://www.cnblogs.com/Sherry4869/p/15128250.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/Sherry4869/p/15128250.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [2]. <a href="https://blog.csdn.net/zhuikefeng/article/details/108164117#t42"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhuikefeng/article/details/108164117#t42<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>Effective STL 精读总结 [2] | vector 和 string</title><link>https://jianye0428.github.io/posts/parttwo/</link><pubDate>Sun, 10 Sep 2023 16:17:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/parttwo/</guid><description><![CDATA[<h1 id="前言">前言</h1>
@@ -3150,247 +3263,4 @@ std::not1 和 std::not2是用来把“符合某种条件的函数对象”转换
 <p>SGI的设计比Dinkumware的节俭一点点。</p>
 <h2 id="结论">结论</h2>
 <p>虽然STL本身缺乏散列容器，兼容STL的散列容器（有不同的接口、能力和行为权衡）不难得到。就SGI和STLport的实现而言，你甚至可以免费下载得到它们。</p>
-]]></description></item><item><title>Effective STL [24] | 当关乎效率时应该在map::operator[]和map-insert之间仔细选择</title><link>https://jianye0428.github.io/posts/clause_24/</link><pubDate>Tue, 15 Aug 2023 08:10:23 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_24/</guid><description><![CDATA[<h2 id="example-map插入">Example map插入</h2>
-<p>假设有一个支持默认构造函数以及从一个double构造和赋值的Widget类:</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl"><span class="n">Widget</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="n">Widget</span><span class="p">(</span><span class="kt">double</span> <span class="n">weight</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">Widget</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="kt">double</span> <span class="n">weight</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>假设我们想建立一个从int到Widget的map，而且我们想有初始化有特定值的映射:</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">map</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Widget</span><span class="o">&gt;</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.50</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">m</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">3.67</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">m</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mf">10.5</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">m</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="mf">45.8</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">m</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0003</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>map operator[] 工作原理</strong></p>
-<p>map的<code>operator[]</code>函数是个奇怪的东西。它与vector、deque和string的<code>operator[]</code>函数无关，也和内建的数组operator[]无关。</p>
-<p><code>map::operator[]</code>被设计为简化“添加或更新”功能。即，给定<code>map&lt;K, V&gt; m</code>;这个表达式</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">m</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>检查键k是否已经在map里。如果不，就添加上，以v作为它的对应值。如果k已经在map里，它的关联值被更新成v。</strong></p>
-<p>这项工作的原理是<code>operator[]</code>返回一个与k关联的值对象的引用。然后v赋值给所引用（<code>从operator[]</code>返回的）的对象。</p>
-<p>当要更新一个已存在的键的关联值时很直接，因为已经有<code>operator[]</code>可以用来返回引用的值对象。</p>
-<p>但是如果k还不在map里，<code>operator[]</code>就没有可以引用的值对象。那样的话，它使用值类型的默认构造函数从头开始建立一个，然后<code>operator[]</code>返回这个新建立对象的引用。</p>
-<p>让我们再次地看看原先例子的第一部分：</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">map</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Widget</span><span class="o">&gt;</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.50</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>表达式<code>m[1]</code>是<code>m.operator[](1)</code>的简化，所以这是一个<code>map::operator[]</code>的调用。</p>
-<p>这个函数必须返回一个Widget的引用，因为m 的映射类型是Widget。</p>
-<p>在这里，m里面还没有任何东西，所以键1在map里没有入口。因此<code>operator[]</code>默认构造一个Widget来作为关联到1的值，然后返回到那个Widget的引用。</p>
-<p>最后，Widget成为赋值目标：被赋值的值是1.50。</p>
-<p>所以，下面这个语句</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.50</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>功能上等价于这个:</strong></p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="c1">// 方便的 typedef
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">typedef</span> <span class="n">map</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Widget</span><span class="o">&gt;</span> <span class="n">IntWidgetMap</span><span class="p">;</span> 
-</span></span><span class="line"><span class="cl"><span class="c1">// 用键1建立新映射入口和一个默认构造的值对象；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">pair</span><span class="o">&lt;</span><span class="n">IntWidgetMap</span><span class="o">::</span><span class="n">iterator</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span>
-</span></span><span class="line"><span class="cl"> <span class="n">m</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">IntWidgetMap</span><span class="o">::</span><span class="n">value_type</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">Widget</span><span class="p">()));</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 赋值给值类型
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">result</span><span class="p">.</span><span class="n">first</span><span class="o">-&gt;</span><span class="n">second</span> <span class="o">=</span> <span class="mf">1.50</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>现在已经很清楚为什么这种方法可能降低性能了：先默认构造一个Widget，然后我们立即赋给它新值。</strong></p>
-<p><strong><code>map insert</code>更高效</strong></p>
-<p>如果<strong>用想要的值构造Widget比默认构造Widget然后进行赋值显然更高效</strong>，就应该用直截了当的insert调用来替换operator[]的使用（包括它的构造加赋值）:</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">m</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">IntWidgetMap</span><span class="o">::</span><span class="n">value_type</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.50</span><span class="p">));</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这与上面的那些代码有相同的最终效果，除了它<strong>通常节省了3次函数调用</strong>：</p>
-<ol>
-<li>一个建立临时的默认构造Widget对象</li>
-<li>一个销毁那个临时的对象</li>
-<li>一个对Widget的赋值操作。</li>
-</ol>
-<p>这些函数调用越昂贵，你通过使用map-insert代替<code>map::operator[]</code>就能节省越多。</p>
-<p>上面的代码利用了每个标准容器都提供的value_type typedef。这typedef没有什么特别重要的，但对于map和multimap（以及非标准容器的hash_map和hash_multimap——参见条款25），记住它是很重要的，容器元素的类型总是某种pair。</p>
-<p>之前谈及的<code>operator[]</code>被设计为简化“添加或更新”功能，而且现在我们理解了当“增加”被执行时，<code>insert</code>比<code>operator[]</code>更高效。当做更新时，情形正好相反，也就是，当一个等价的键这已经在map里时。</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 使用operator[]来把k的值更新为v
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">m</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 来把k的值更新为v使用insert
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">m</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">IntWidgetMap</span><span class="o">::</span><span class="n">value_type</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)).</span><span class="n">first</span><span class="o">-&gt;</span><span class="n">second</span> <span class="o">=</span> <span class="n">v</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="operator-与-insert-权衡">operator[] 与 insert 权衡</h2>
-<p>insert的调用需要<code>IntWidgetMap::value_type</code>类型的实参（即<code>pair&lt;int, Widget&gt;</code>），所以当调用insert时，我们必须构造和析构一个那种类型的对象。那耗费了一对构造函数和析构函数，也会造成一个Widget的构造和析构，因为<code>pair&lt;int, Widget&gt;</code>本身包含了一个Widget对象，<strong>operator[]没有使用pair对象，所以没有构造和析构pair和Widget。</strong></p>
-<div class="details admonition Note open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Note<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p>情形选择:</p>
-<ol>
-<li>因此出于对效率的考虑，当给<code>map</code>添加一个元素时，我们断定<code>insert</code>比<code>operator[]</code>好；</li>
-<li>从效率和美学考虑，当更新已经在<code>map</code>里的元素值时<code>operator[]</code>更好。</li>
-</ol>
-</div>
-    </div>
-  </div>
-<p>如果STL提供一个两全其美的函数，即，在句法上吸引人的包中的高效的“添加或更新”功能:</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 如果键k不再map m中；高效地把pair(k, v)添加到m中；
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 否则高效地把和k关联的值更新为v。
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 返回一个指向添加或修改的pair的迭代器
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">iterator</span> <span class="n">affectedPair</span> <span class="o">=</span>
-</span></span><span class="line"><span class="cl"> <span class="n">efficientAddOrUpdate</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>但是，在STL内没有像这样的函数，正如下面的代码所演示的，自己写一个并不难。那些注释总结了正在做什么，而且随后的段落也提供了一些附加的解释。</p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// map的类型KeyArgType和ValueArgtype是类型参数的原因请看下面
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">MapType</span><span class="p">,</span> <span class="k">typename</span> <span class="n">KeyArgType</span><span class="p">,</span> <span class="k">typename</span> <span class="n">ValueArgtype</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">typename</span> <span class="n">MapType</span><span class="o">::</span><span class="n">iterator</span> <span class="n">efficientAddOrUpdate</span><span class="p">(</span><span class="n">MapType</span><span class="o">&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="k">const</span> <span class="n">KeyArgType</span><span class="o">&amp;</span> <span class="n">k</span><span class="p">,</span> <span class="k">const</span> <span class="n">ValueArgtype</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="c1">// 找到k在或应该在哪里；
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">typename</span> <span class="n">MapType</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Ib</span> <span class="o">=</span> <span class="n">m</span><span class="p">.</span><span class="n">lower_bound</span><span class="p">(</span><span class="n">k</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 如果Ib指向一个pair, 它的键等价于k...
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span> <span class="k">if</span><span class="p">(</span><span class="n">Ib</span> <span class="o">!=</span> <span class="n">m</span><span class="p">.</span><span class="n">end</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="p">(</span><span class="n">m</span><span class="p">.</span><span class="n">key_comp</span><span class="p">()(</span><span class="n">k</span><span class="p">,</span> <span class="n">Ib</span><span class="o">-&gt;</span><span class="n">first</span><span class="p">)))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="c1">// 更新这个pair的值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="n">Ib</span><span class="o">-&gt;</span><span class="n">second</span> <span class="o">=</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="c1">// 并返回指向pair的迭代器
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">return</span> <span class="n">Ib</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"> <span class="p">}</span> <span class="k">else</span><span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">typedef</span> <span class="k">typename</span> <span class="n">MapType</span><span class="o">::</span><span class="n">value_type</span> <span class="n">MVT</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">       <span class="c1">// 把pair(k, v)添加到m并// 返回指向新map元素的迭代器
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">return</span> <span class="n">m</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">Ib</span><span class="p">,</span> <span class="n">MVT</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl"> <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>执行一个高效的增加或更新，我们需要能<strong>找出k的值是否在map中; 如果是这样，那它在哪里; 如果不是，它该被插入哪里。</strong></p>
-<p>这个工作是为<code>low_bound</code>量身定做的，所以在这里我们调用那个函数。确定lower_bound是否用我们要寻找的键找到了一个元素，我们对后半部分进行一个等价测试，一定要对map使用正确的比较函数: 通过<code>map::key_comp</code>提供的比较函数。等价测试的结果告诉我们应该进行增加还是更新。</p>
-<p>如果是更新，代码很直截了当。插入分支更有趣，因为它使用了insert的“提示”形式。结构<code>m.insert(Ib，MVT(k，v))</code>“提示”了**<code>Ib</code>鉴别出了键等价于k的新元素正确的插入位置，而且保证如果提示正确，那么插入将在分摊的常数时间内发生，而不是对数时间**。在<code>efficientAddOrUpdate</code>里，我们知道Ib鉴别出了适当的插入位置，因此insert的调用被保证为是一次常数时间操作。</p>
-<p><strong>KeyArgType和ValueArgType</strong></p>
-<p>这个实现的一个有趣方面是<code>KeyArgType</code>和<code>ValueArgType</code>不必是储存在map里的类型。它们只需要可以转换到储存在map里的类型。</p>
-<p>一个可选的方法是去掉类型参数<code>KeyArgType</code>和<code>ValueArgType</code>，改为使用<code>MapType::key_type</code>和<code>MapType::mapped_type</code>。</p>
-<p>但是，如果我们那么做，<strong>在调用时我们可能强迫发生不必要的类型转换</strong>:</p>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">map</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">Widget</span><span class="o">&gt;</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 别忘了Widget接受从一个double赋值：
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">Widget</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span>
-</span></span><span class="line"><span class="cl">    <span class="n">Widget</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="kt">double</span> <span class="n">weight</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">...</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>现在考虑<code>efficientAddOrUpdate</code>的调用:</p>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">efficientAddOrUpdate</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>假设是一次更新操作，即，m已经包含键是10的元素。那样的话，上面的模板推断出<code>ValueArgType</code>是<code>double</code>，<strong>函数体直接把1.5作为double赋给与10相关的那个Widget</strong>。那是通过调用<code>Widget::operator(double)</code>完成的。</p>
-<p>如果我们用了<code>MapType::mapped_type</code>作为<code>efficientAddOrUpdate</code>的第3个参数的类型，在调用时我们得把1.5转化成一个Widget，那样的话我们就得<strong>花费本来不需要的一次Widget构造（以及随后的析构）</strong>。</p>
-<h2 id="结论">结论</h2>
-<p>当关乎效率时应该在map::operator[]和map-insert之间仔细选择。</p>
-<p><font color=red>如果你要更新已存在的map元素，operator[]更好，但如果你要增加一个新元素，insert则有优势。</font></p>
 ]]></description></item></channel></rss>
