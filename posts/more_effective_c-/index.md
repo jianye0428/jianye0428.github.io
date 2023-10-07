@@ -805,9 +805,64 @@ C++规范书上说，只有当某种类型拥有至少一个虚函数，才保�
 
 RTTI被设计为在类的vtbl基础上实现。
 
-## 五、技术
+## 五、技术 (Techniques，Idioms，Patterns)
 
-### 条款25:
+### 条款25: 将构造函数和非成员函数虚拟化
+
+由于它产生新对象，所以行为仿若 constructor，但它能够产生不同类型的对象，所以我们称它为一个 virtual constructor。所谓 virtualconstructor 是某种函数，视其获得的输入，可产生不同类型的对象。**Virtual constructors 在许多情况下有用，其中之一就是从磁盘（或网络或磁带等）读取对象信息。**
+
+有一种特别的 virtual constructor——所谓 virtual copyconstructor——也被广泛地运用。Virtual copy constructor 会返回一个指针，指向其调用者（某对象）的一个新副本。基于这种行为，virtual copy constructors 通常以 copySelf 或cloneSelf 命名，或者像下面一样命名为 clone。
+
+当 derived class 重新定义其base class 的一个虚函数时，不再需要一定得声明与原本相同的返回类型。如果函数的返回类型是个指针（或reference），指向一个base class，那么 derived class 的函数可以返回一个指针（或reference），指向该 base class 的一个 derived class。
+
+既然一个函数能够构造出不同类型的新对象是可以理解的，那么同样也存在这样的非成员函数，可以根据参数的不同动态类型而其行为特性也不同。
+
+
+### 条款26: 限制某个类所能产生的对象数量
+
+每当即将产生一个对象，我们确知一件事情：会有一个 constructor被调用。“阻止某个 class 产出对象”的最简单方法就是将其constructors 声明为 private。
+
+### 条款27: 要求（或禁止）对象产生于 heap之中
+
+所谓 abstract base class是一个不能够被实例化的 base class。也就是说它至少有一个纯虚函数。所谓 mixin（“mix in”）class则提供一组定义完好的能力，能够与其derived class所可能提供的其他任何能力（条款 E7）兼容。如此的 classes几乎总是abstract。我们于是可以形成一个所谓的 abstract mixin base class，用来为 derivedclasses提供“判断某指针是否以 operator new 分配出来”的能力。
+
+### 条款28: 灵巧(smart)指针
+当你以 smart pointers 取代 C++的内建指针（亦即所谓的 dumbpointers），你将获得以下各种指针行为的控制权：
+
+- 构造和析构（Construction and Destruction）。你可以决定smart pointer 被产生以及被销毁时发生什么事。通常我们会给smart pointers 一个默认值 0，以避免“指针未获初始化”的头痛问题。某些 smart pointers 有责任删除它们所指的对象——当指向该对象的最后一个 smart pointer 被销毁时。这是消除资源泄漏问题的一大进步。
+- 复制和赋值（Copying and Assignment）。当一个 smartpointer 被复制或涉及赋值动作时，你可以控制发生什么事。某些smart pointer 会希望在此时刻自动为其所指之物进行复制或赋值动作，也就是执行所谓的深复制（deep copy）。另一些 smartpointer则可能只希望指针本身被复制或赋值就好。还有一些则根本不允许复制和赋值。不论你希望什么样的行为，smart pointers 都可以让你如愿。
+- 解引（Dereferencing）。当 client 解引（取用）smart pointer所指之物时，你有权决定发生什么事情。例如你可以利用 smartpointers 协助实现出条款 17所说的 lazy fetching 策略。
+
+Smart pointer的构造行为通常明确易解：确定一个目标物（通常是利用smart pointer的 constructor自变量），然后让 smart pointer内部的 dumb pointer指向它。如果尚未决定目标物，就将内部指针设为 0，或是发出一个错误消息（可能是抛出 exception）。
+
+重点很简单：不要提供对 dumb pointers的隐式转换操作符，除非不得已。
+
+大多数灵巧指针模板如下:
+```c++
+// 大多数灵巧指针模板
+template<class T>
+class SmartPtr {
+public:
+	SmartPtr(T* realPtr = 0); // 建立一个灵巧指针指向dumb pointer(内建指针)所指的对象，未初始化的指针，缺省值为0(null)
+	SmartPtr(const SmartPtr& rhs); // 拷贝一个灵巧指针
+	~SmartPtr(); // 释放灵巧指针
+	// make an assignment to a smart ptr
+	SmartPtr& operator=(const SmartPtr& rhs);
+	T* operator->() const; // dereference一个灵巧指针以访问所指对象的成员
+	T& operator*() const; // dereference灵巧指针
+
+private:
+	T* pointee; // 灵巧指针所指的对象
+};
+```
+
+灵巧指针是一种外观和行为都被设计成与内建指针相类似的对象，不过它能提供更多的功能。它们有许多应用的领域，包括资源管理和重复代码任务的自动化。
+
+在C++11中auto_ptr已经被废弃，用unique_ptr替代。
+
+std::unique_ptr的使用参考：https://blog.csdn.net/fengbingchun/article/details/52203664
+
+
 
 Ref:</br>
 [1]. [More Effective C++](https://hr-insist.github.io/C/More_Effective_C++%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/)</br>
