@@ -62,7 +62,7 @@ TESLA在2021年AI Day上仅介绍了用Transformer转换BEV Features的技术思
 
 下面分步骤观察BEV完整模型的前向推理过程:
 
-- 在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features): $x = 1$, $F_t = \{F^i_t\}$, $F_t=\{{F_t^i}\}_{i=1}^{N_{\text{view}}}$，其中 $F_t^i$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。
+- 在t时刻，输入车上多个视角相机的图像到backbone，输出各图像的多尺度特征(multi-scale features): $x = 1$, $F_t = \{F^i_t\}$, $F_t={\{{F_t^i}\}}_{i=1}^{N_{\text{view}}}$，其中 $F_t^i$ 是第i个视角相机的feature，$N_{view}$ 是多个相机视角的总数。同时，还要保留t-1时刻的BEV Features ${\boldsymbol{B}}_{t-1}$。
 - 在每个BEVFormer Encoder layer中，首先用BEV Queries Q通过TSA模块从 ${\boldsymbol{B}}_{t-1}$ 中查询并融合时域信息(the temporal information)，得到修正后的BEV Queries $Q^{\prime}$；
 - 然后在同一个BEVFormer Encoder layer中，对TSA“修证”过的BEV Queries $Q^{\prime}$ ，通过SCA模块从multi-camera features $F_{t}$ 查询并融合空域信息(spatial information)，得到进一步修正的BEV Queries $Q^{^{\prime\prime}}$ 。
 - 这一层encoder layer把经过两次修正的BEV features $Q^{^{\prime\prime}}$ (也可以叫做BEV Queries)进行FF计算，然后输出，作为下一个encoder layer的输入。
