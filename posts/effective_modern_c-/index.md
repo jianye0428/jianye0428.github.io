@@ -1,4 +1,4 @@
-# Effective_modern_c++
+# Effective Modern C++ 阅读笔记
 
 ## Effective Modern C++ 笔记
 
