@@ -1,0 +1,625 @@
+<!doctype html><html itemscope itemtype=http://schema.org/WebPage lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=2"><meta name=robots content="noodp"><title>C++ Concurrency in Action | Processes and Threads - yejian's blog</title><meta name=author content="Jian YE">
+<meta name=author-link content="https://github.com/jianye0428"><meta name=description content="进程 在进程模型中，计算机上所有可运行的软件，通常也包括操作系统，被组织成若干顺序进程（sequential process），简称进程（process），一个进程就是就是一个正在执行程序的实例，包括程序计数器、寄存器和变量的当前值 概念上来说，每个进程有自己的虚拟 CPU，但实际上真正的 CPU（假设只有一"><meta name=keywords content="C++_Concurrency"><meta itemprop=name content="C++ Concurrency in Action | Processes and Threads"><meta itemprop=description content="进程 在进程模型中，计算机上所有可运行的软件，通常也包括操作系统，被组织成若干顺序进程（sequential process），简称进程（process），一个进程就是就是一个正在执行程序的实例，包括程序计数器、寄存器和变量的当前值 概念上来说，每个进程有自己的虚拟 CPU，但实际上真正的 CPU（假设只有一"><meta itemprop=datePublished content="2023-11-19T13:06:06+08:00"><meta itemprop=dateModified content="2023-11-19T14:49:14+08:00"><meta itemprop=wordCount content="11960"><meta itemprop=image content="https://jianye0428.github.io/images/favicon/jian_icon.png"><meta itemprop=keywords content="C++_Concurrency,"><meta property="og:title" content="C++ Concurrency in Action | Processes and Threads"><meta property="og:description" content="进程 在进程模型中，计算机上所有可运行的软件，通常也包括操作系统，被组织成若干顺序进程（sequential process），简称进程（process），一个进程就是就是一个正在执行程序的实例，包括程序计数器、寄存器和变量的当前值 概念上来说，每个进程有自己的虚拟 CPU，但实际上真正的 CPU（假设只有一"><meta property="og:type" content="article"><meta property="og:url" content="https://jianye0428.github.io/posts/processesandthreads/"><meta property="og:image" content="https://jianye0428.github.io/images/favicon/jian_icon.png"><meta property="article:section" content="posts"><meta property="article:published_time" content="2023-11-19T13:06:06+08:00"><meta property="article:modified_time" content="2023-11-19T14:49:14+08:00"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://jianye0428.github.io/images/favicon/jian_icon.png"><meta name=twitter:title content="C++ Concurrency in Action | Processes and Threads"><meta name=twitter:description content="进程 在进程模型中，计算机上所有可运行的软件，通常也包括操作系统，被组织成若干顺序进程（sequential process），简称进程（process），一个进程就是就是一个正在执行程序的实例，包括程序计数器、寄存器和变量的当前值 概念上来说，每个进程有自己的虚拟 CPU，但实际上真正的 CPU（假设只有一"><meta name=application-name content="菠菜阿九时代峰峻啊；数量可根据；"><meta name=apple-mobile-web-app-title content="菠菜阿九时代峰峻啊；数量可根据；"><meta name=theme-color data-light=#ffffff data-dark=#252627 content="#ffffff"><meta name=msapplication-TileColor content="#da532c"><link rel="shortcut icon" type=image/png href=/jian_icon.png><link rel=icon type=image/png sizes=32x32 href=/jian_icon.png><link rel=icon type=image/png sizes=16x16 href=/jian_icon.png><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link rel=manifest href=/site.webmanifest><link rel=canonical href=https://jianye0428.github.io/posts/processesandthreads/><link rel=prev href=https://jianye0428.github.io/posts/memorymanagement/><link rel=stylesheet href=/css/style.min.css><link rel=stylesheet href=/lib/fontawesome-free/all.min.css><link rel=stylesheet href=/lib/animate/animate.min.css><script type=application/ld+json>{"@context":"http://schema.org","@type":"BlogPosting","headline":"C++ Concurrency in Action | Processes and Threads","inLanguage":"zh-CN","mainEntityOfPage":{"@type":"WebPage","@id":"https:\/\/jianye0428.github.io\/posts\/processesandthreads\/"},"image":["https:\/\/jianye0428.github.io\/images\/favicon\/jian_icon.png"],"genre":"posts","keywords":"C\u002b\u002b_Concurrency","wordcount":11960,"url":"https:\/\/jianye0428.github.io\/posts\/processesandthreads\/","datePublished":"2023-11-19T13:06:06+08:00","dateModified":"2023-11-19T14:49:14+08:00","publisher":{"@type":"Organization","name":"Jian YE","logo":"https:\/\/jianye0428.github.io\/images\/favicon\/jian_icon.png"},"author":{"@type":"Person","name":"Jian YE"},"description":""}</script></head><body data-header-desktop=sticky data-header-mobile=auto><script>(window.localStorage?.getItem("theme")?localStorage.getItem("theme")==="dark":"auto"==="auto"?window.matchMedia("(prefers-color-scheme: dark)").matches:"auto"==="dark")&&document.body.setAttribute("data-theme","dark")</script><div class=wrapper data-page-style=wide><header class="desktop animate__faster" id=header-desktop><div class=header-wrapper data-github-corner=right><div class=header-title><a href=/ title="yejian's blog"><img loading=lazy src=/images/favicon/jian_icon.png srcset="/images/favicon/jian_icon.png, /images/favicon/jian_icon.png 1.5x, /images/favicon/jian_icon.png 2x" sizes=auto data-title="yejian's blog" data-alt="yejian's blog" class=logo style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span class=header-title-text>Jian's Blog</span></a><span class=header-subtitle></span></div><nav><ul class=menu><li class=menu-item><a class=menu-link href=/posts/><i class="fa-solid fa-archive fa-fw fa-sm" aria-hidden=true></i> 所有文章</a></li><li class=menu-item><a class=menu-link href=/categories/><i class="fa-solid fa-th fa-fw fa-sm" aria-hidden=true></i> 分类</a></li><li class=menu-item><a class=menu-link href=/tags/><i class="fa-solid fa-tags fa-fw fa-sm" aria-hidden=true></i> 标签</a></li><li class=menu-item><a class=menu-link href=/friends/ title=友情链接><i class="fa-solid fa-users fa-fw fa-sm" aria-hidden=true></i> 友链</a></li><li class=menu-item><a class=menu-link href=/guestbook/><i class="fa-solid fa-comments fa-fw fa-sm" aria-hidden=true></i> 留言</a></li><li class="menu-item has-children"><a class=menu-link href=/about/><i class="fa-solid fa-user-tie fa-fw fa-sm" aria-hidden=true></i> 关于</a><i class="dropdown-icon fa-solid fa-chevron-down" aria-hidden=true></i><ul class=sub-menu><li class=menu-item><a class=menu-link href=/projects/ title=项目><i class="fa-solid fa-laptop-code fa-fw fa-sm" aria-hidden=true></i> 我的项目</a></li></ul></li><li class="menu-item delimiter"></li><li class="menu-item search" id=search-desktop><input type=text placeholder=搜索文章标题或内容…… id=search-input-desktop>
+<a href=javascript:void(0); class="search-button search-toggle" id=search-toggle-desktop title=搜索><i class="fa-solid fa-search fa-fw" aria-hidden=true></i>
+</a><a href=javascript:void(0); class="search-button search-clear" id=search-clear-desktop title=清空><i class="fa-solid fa-times-circle fa-fw" aria-hidden=true></i>
+</a><span class="search-button search-loading" id=search-loading-desktop><i class="fa-solid fa-spinner fa-fw fa-spin" aria-hidden=true></i></span></li><li class="menu-item theme-switch" title=切换主题><i class="fa-solid fa-adjust fa-fw" aria-hidden=true></i></li></ul></nav></div></header><header class="mobile animate__faster" id=header-mobile><div class=header-container><div class=header-wrapper><div class=header-title><a href=/ title="yejian's blog"><img loading=lazy src=/images/favicon/jian_icon.png srcset="/images/favicon/jian_icon.png, /images/favicon/jian_icon.png 1.5x, /images/favicon/jian_icon.png 2x" sizes=auto data-title=/images/favicon/jian_icon.png data-alt=/images/favicon/jian_icon.png class=logo style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span class=header-title-text>Jian's Blog</span></a><span class=header-subtitle></span></div><div class=menu-toggle id=menu-toggle-mobile><span></span><span></span><span></span></div></div><nav><ul class=menu id=menu-mobile><li class=search-wrapper><div class="search mobile" id=search-mobile><input type=text placeholder=搜索文章标题或内容…… id=search-input-mobile>
+<a href=javascript:void(0); class="search-button search-toggle" id=search-toggle-mobile title=搜索><i class="fa-solid fa-search fa-fw" aria-hidden=true></i>
+</a><a href=javascript:void(0); class="search-button search-clear" id=search-clear-mobile title=清空><i class="fa-solid fa-times-circle fa-fw" aria-hidden=true></i>
+</a><span class="search-button search-loading" id=search-loading-mobile><i class="fa-solid fa-spinner fa-fw fa-spin" aria-hidden=true></i></span></div><a href=javascript:void(0); class=search-cancel id=search-cancel-mobile>取消</a></li><li class=menu-item><a class=menu-link href=/posts/><i class="fa-solid fa-archive fa-fw fa-sm" aria-hidden=true></i> 所有文章</a></li><li class=menu-item><a class=menu-link href=/categories/><i class="fa-solid fa-th fa-fw fa-sm" aria-hidden=true></i> 分类</a></li><li class=menu-item><a class=menu-link href=/tags/><i class="fa-solid fa-tags fa-fw fa-sm" aria-hidden=true></i> 标签</a></li><li class=menu-item><a class=menu-link href=/friends/ title=友情链接><i class="fa-solid fa-users fa-fw fa-sm" aria-hidden=true></i> 友链</a></li><li class=menu-item><a class=menu-link href=/guestbook/><i class="fa-solid fa-comments fa-fw fa-sm" aria-hidden=true></i> 留言</a></li><li class=menu-item><span class=nested-item><a class=menu-link href=/about/><i class="fa-solid fa-user-tie fa-fw fa-sm" aria-hidden=true></i> 关于</a>
+<i class="dropdown-icon fa-solid fa-chevron-right" aria-hidden=true></i></span><ul class=sub-menu><li class=menu-item><a class=menu-link href=/projects/ title=项目><i class="fa-solid fa-laptop-code fa-fw fa-sm" aria-hidden=true></i> 我的项目</a></li></ul></li><li class="menu-item text-center"><a class=menu-link href=https://github.com/jianye0428/ title=GitHub rel="noopener noreferrer" target=_blank><i class='fa-brands fa-github fa-fw' aria-hidden=true></i></a></li><li class="menu-item menu-system"><span class="menu-system-item theme-switch" title=切换主题><i class="fa-solid fa-adjust fa-fw" aria-hidden=true></i></span></li></ul></nav></div></header><div class="search-dropdown desktop"><div id=search-dropdown-desktop></div></div><div class="search-dropdown mobile"><div id=search-dropdown-mobile></div></div><main class="container container-reverse"><aside class=toc id=toc-auto><h2 class=toc-title>目录&nbsp;<i class="toc-icon fa-solid fa-angle-down fa-fw" aria-hidden=true></i></h2><div class=toc-content id=toc-content-auto></div></aside><aside class=aside-custom></aside><article class="page single"><div class=header><h1 class="single-title animate__animated animate__flipInX"><span>C++ Concurrency in Action | Processes and Threads</span></h1></div><div class=post-meta><div class=post-meta-line><span class=post-author><a href=https://github.com/jianye0428 title=作者 target=_blank rel="external nofollow noopener noreferrer author" class=author><img loading=lazy src="https://gravatar.loli.net/avatar/75a41975a5281767bf6bdba838de4238?s=32&amp;d=mp" srcset="https://gravatar.loli.net/avatar/75a41975a5281767bf6bdba838de4238?s=32&amp;d=mp, https://gravatar.loli.net/avatar/75a41975a5281767bf6bdba838de4238?s=32&amp;d=mp 1.5x, https://gravatar.loli.net/avatar/75a41975a5281767bf6bdba838de4238?s=32&amp;d=mp 2x" sizes=auto data-title="Jian YE" data-alt="Jian YE" class=avatar style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'>&nbsp;Jian YE</a></span>
+<span class=post-category>收录于 <a href=/categories/c++/><i class="fa-regular fa-folder fa-fw" aria-hidden=true></i> C++</a></span></div><div class=post-meta-line><span title="发布于 2023-11-19 13:06:06"><i class="fa-regular fa-calendar-alt fa-fw me-1" aria-hidden=true></i><time datetime=2023-11-19>2023-11-19</time></span>&nbsp;<span title="更新于 2023-11-19 14:49:14"><i class="fa-regular fa-edit fa-fw me-1" aria-hidden=true></i><time datetime=2023-11-19>2023-11-19</time></span>&nbsp;<span><i class="fa-solid fa-pencil-alt fa-fw me-1" aria-hidden=true></i>约 11960 字</span>&nbsp;<span><i class="fa-regular fa-clock fa-fw me-1" aria-hidden=true></i>预计阅读 24 分钟</span>&nbsp;<span id=busuanzi_container_page_pv class="busuanzi_visitors comment-visitors" data-flag-title="C++ Concurrency in Action | Processes and Threads">
+<i class="fa-regular fa-eye fa-fw me-1" aria-hidden=true></i><span id=busuanzi_value_page_pv>-</span>&nbsp;次阅读
+</span>&nbsp;</div></div><div class="details toc" id=toc-static data-kept=false><div class="details-summary toc-title"><span>目录</span>
+<span><i class="details-icon fa-solid fa-angle-right" aria-hidden=true></i></span></div><div class="details-content toc-content" id=toc-content-static><nav id=TableOfContents><ul><li><a href=#进程>进程</a></li><li><a href=#线程>线程</a></li><li><a href=#进程间通信inter-process-communication>进程间通信（Inter Process Communication）</a></li><li><a href=#生产者-消费者问题>生产者-消费者问题</a></li><li><a href=#信号量semaphore>信号量（semaphore）</a></li><li><a href=#互斥量mutex>互斥量（mutex）</a></li><li><a href=#管程monitor>管程（monitor）</a></li><li><a href=#消息传递message-passing>消息传递（message passing）</a></li><li><a href=#屏障barrier>屏障（barrier）</a></li><li><a href=#调度>调度</a></li><li><a href=#调度算法的评价指标>调度算法的评价指标</a></li><li><a href=#批处理系统中的调度>批处理系统中的调度</a><ul><li><a href=#先来先服务first-come-first-servedfcfs>先来先服务（First-Come First-Served，FCFS）</a></li><li><a href=#最短作业优先shortest-job-firstsjf>最短作业优先（Shortest Job First，SJF）</a></li><li><a href=#最短剩余时间优先shortest-remaining-time-nextsrtn>最短剩余时间优先（Shortest Remaining Time Next，SRTN）</a></li><li><a href=#高响应比优先highest-response-ratio-nexthrrn>高响应比优先（Highest Response Ratio Next，HRRN）</a></li></ul></li><li><a href=#交互式系统中的调度>交互式系统中的调度</a><ul><li><a href=#时间片轮转调度round-robin-schedulingrr>时间片轮转调度（Round-Robin Scheduling，RR）</a></li><li><a href=#优先级调度>优先级调度</a></li><li><a href=#多级反馈队列调度>多级反馈队列调度</a></li><li><a href=#最短进程优先>最短进程优先</a></li><li><a href=#保证调度>保证调度</a></li><li><a href=#彩票调度lottery-scheduling>彩票调度（Lottery Scheduling）</a></li><li><a href=#公平分享调度>公平分享调度</a></li></ul></li></ul></nav></div></div><div class=content id=content data-end-flag=（完）><h2 id=进程>进程</h2><ul><li>在进程模型中，计算机上所有可运行的软件，通常也包括操作系统，被组织成若干顺序进程（sequential process），简称进程（process），一个进程就是就是一个正在执行程序的实例，包括程序计数器、寄存器和变量的当前值</li><li>概念上来说，每个进程有自己的虚拟 CPU，但实际上真正的 CPU（假设只有一个 CPU）在各进程之间来回切换，同一时刻实际只有一个进程在运行</li><li>实际只有一个物理程序计数器。每个进程运行时，它的逻辑程序计数器被装入实际的程序计数器。当进程结束时，物理程序计数器保存到内存中该进程的逻辑程序计数器中</li><li>进程创建主要有四种形式<ul><li>系统初始化：启动系统时会创建若干进程，包括和用户交互的前台进程和停在后台的守护进程，守护进程可以通过 UNIX 的 ps 指令或 Window 的任务管理器查看</li><li>运行中的程序执行创建进程的系统调用：比如启动一个程序，该程序要启动更多进程来分配任务</li><li>用户请求创建一个新进程：比如用户双击图标启动程序</li><li>大型机批处理作业的初始化</li></ul></li><li>创建进程的系统调用在 UNIX 中是 <code>fork</code>，在 Windows 中是 <code>CreateProcess</code>，进程创建后，父子进程有不同的地址空间</li><li>进程终止通常也有四种形式<ul><li>正常退出（自愿的）：比如点击浏览器的关闭图标。进程退出的系统调用在 UNIX 中是 <code>exit</code>，在 Windows 中是 <code>ExitProcess</code></li><li>出错退出（自愿的）：比如执行 <code>cc foo.c</code> 编译 <code>foo.c</code> 而该文件不存在</li><li>严重错误（非自愿）：比如执行非法指令、引用不存在的内存、除数是零，UNIX中会希望自行处理这些错误以通知操作系统，进程会收到信号被中断而非终止</li><li>被其他进程杀死（非自愿）：UNIX 中是 <code>kill</code>，Windows 中是 <code>TerminateProcess</code></li></ul></li><li>UNIX中，进程和其所有子进程（包括其后裔）组成一个进程组，当用户发出一个键盘信号，该信号会发送给进程组所有成员</li><li>Windows中没有进程层次的概念，所有进程地位相同</li><li>进程阻塞有两种情况，一是正常情况，比如操作系统调度另一个进程占用 CPU，二是异常情况，比如没有足够的 CPU 可调用</li><li>进程有三种状态：运行、就绪、阻塞</li></ul><div class=highlight id=id-1><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>运行 &lt;-&gt; 就绪
+</span></span><span class=line><span class=cl>  ↘    ↗
+</span></span><span class=line><span class=cl>    阻塞
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>运行：该时刻实际占用 CPU
+</span></span><span class=line><span class=cl>就绪：操作系统调度了其他进程运行而暂时停止
+</span></span><span class=line><span class=cl>阻塞：逻辑上不能继续运行，比如等待用户输入</span></span></code></pre></td></tr></table></div></div><ul><li>操作系统通过维护一张进程表（一个结构数组）来实现进程模型，每个进程占一个表项（即进程控制块，Processing Control Block）。PCB 包含了进程状态的主要信息，如程序计数器、堆栈指针、内存分配状态、所打开的文件状态、账号和调度信息、进程状态切换时必须保存的信息</li><li>所有中断都从保存寄存器开始，通常会保存到当前进程的 PCB 中。一个进程在执行过程中可能中断几千次，但恢复时，被中断的进程都将返回到与中断发生前完全相同的状态</li><li>发生中断后，操作系统最底层的工作过程<ul><li>中断硬件将程序计数器、程序状态字、寄存器压入堆栈</li><li>硬件从中断向量装入新的程序计数器</li><li>通过汇编保存寄存器值（因为这类操作无法用高级语言完成）</li><li>通过汇编设置新的堆栈</li><li>运行C语言（假设操作系统用C编写）中断服务例程</li><li>调用调度程序，决定接下来要运行的进程</li><li>C返回到汇编</li><li>通过汇编运行新进程</li></ul></li><li>假设一个进程等待 I/O 操作与其在内存中停留的时间比为 <code>p</code>，则 <code>n</code> 个进程都在等待（此时 CPU 空转）的概率为 <code>p ^ n</code>，CPU 利用率为 <code>1 - p ^ n</code>，因此一般（该模型只是粗略情况）I/O 时间越短、运行进程越多，CPU 利用率越高</li></ul><div class=highlight id=id-2><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>假如内存为 8G，操作系统和相关表格占 2G，用户程序也占 2G，内存最多容纳 3 个用户程序
+</span></span><span class=line><span class=cl>假设 80% 时间用于等待 I/O 操作
+</span></span><span class=line><span class=cl>CPU 利用率 = 1 - 0.8 ^ 3 = 49%
+</span></span><span class=line><span class=cl>如果增加 8G 内存，则最多容纳 7 个用户程序
+</span></span><span class=line><span class=cl>CPU 利用率 = 1 - 0.8 ^ 7 = 79%，吞吐量提高为 79% - 49% = 30%
+</span></span><span class=line><span class=cl>如果再增加 8G 内存，则最多容纳 11 个用户程序
+</span></span><span class=line><span class=cl>CPU 利用率 = 1 - 0.8 ^ 11 = 91%，吞吐量只提高了 12%，可见第一次增加内存比较划算</span></span></code></pre></td></tr></table></div></div><h2 id=线程>线程</h2><ul><li>正如进程提供的抽象使得避免了对中断、定时器、上下文切换的考虑，多线程提供了一种新抽象，即并行实例共享同一地址空间和所有可用数据，这正是多进程模型（地址空间不同）无法表达的</li><li>第二个需要多线程的理由是，线程更轻量，创建和撤销都更快（通常创建一个线程比创建一个进程快 10 - 100 倍）</li><li>第三个理由是多核 CPU 系统中，多线程为真正的并行提供了可能</li><li>线程包含一个程序计数器（记录接下来要执行哪一条指令）、寄存器（保存线程当前的工作变量）、堆栈指针（记录执行历史，每个线程的堆栈有一帧，每一帧保存一个已调用但还未返回的过程，如局部变量、返回地址）</li><li>各线程可以访问进程地址空间的每一个内存地址，因此一个线程可以读写甚至清除另一个线程的堆栈。线程之间没有保护，因为不可能，也没必要</li><li>除了共享地址空间，线程还共享同一个打开文件集、子进程、定时器及相关信号量</li><li>线程可以处在运行、就绪、阻塞、终止等状态中的任何一个</li><li>thread_yield 允许线程自动放弃 CPU 转让给另一个线程运行，提供这个调用是因为，不同于进程，线程库不能利用时钟中断强制线程让出 CPU</li><li>实现线程包主要有两种方式，一是用户级线程（User-Level Thread），二是内核级线程（Kernel-Level Thread），另外也有混合实现</li><li>用户级线程把整个线程包放在用户空间中，内核对其一无所知，不需要内核支持，可以在不支持线程的操作系统上实现。在用户空间管理线程时，每个进程需要有其专用的线程表（thread table），这些表和内核中的进程表类似，只不过记录的是各个线程的属性，如程序计数器、寄存器、堆栈指针和状态等。该线程表由运行时系统管理，当线程转换到就绪或阻塞状态时，在线程表中存放重启该线程所需的信息，与内核在进程表中存放进程的信息完全一样</li><li>用户级线程允许进程有自己定制的调度算法，具有更好的可扩展性（因为内核级线程需要一些固定表格空间和堆栈空间），性能更好。用户级线程的切换需要少量机器指令，而内核级线程需要完整的上下文切换，修改内存映像，使高速缓存失效，这导致了若干数量级的延迟</li><li>用户级线程的问题是如何实现阻塞系统调用，比如线程读取键盘，在没有按下任何按键之前不能让该线程实际进行该系统调用，因为这会停止所有线程。另一个问题是，如果一个线程开始运行，则其所在进程的其他线程就不能运行，除非运行线程自动放弃 CPU。而使用内核级线程时，线程阻塞在 I/O 上时，不需要将整个进程挂起</li><li>内核级线程的线程表（和用户级线程的线程表一样，记录寄存器、状态和其他信息）存在于内核中，当一个线程希望创建一个新线程或撤销一个已有线程时，将进行一个系统调用，这个系统调用通过对线程表的更新完成创建或撤销工作</li><li>当内核级线程阻塞时，内核可以运行同一进程中的另一线程，或者运行另一个进程的线程。而对于用户级线程，运行时系统始终运行其所在进程的线程，直到内核剥夺 CPU（或没有可运行的线程存在）为止</li><li>在内核中创建或撤销线程的代价较大，因此内核级线程被撤销时，系统会将其标记为不可运行的，但其内核数据结构未受影响，之后必须创建新线程时就重新启动一个旧线程。用户级线程也可以这样回收，但因为管理代价很小，所以没必要</li></ul><h2 id=进程间通信inter-process-communication>进程间通信（Inter Process Communication）</h2><ul><li>对共享内存进行访问的程序片段称为临界区（critical region、critical section），如果同一时刻临界区只有一个进程，就能避免 race condition</li><li>单处理器系统中实现这点的简单做法是，在每个进程刚进入临界区后立即屏蔽所有中断，在即将离开时再打开中断。屏蔽中断后，时钟中断也被屏蔽。CPU 只有发生时钟中断或其他中断才会进行进程切换，这样 CPU 就不会切换到其他进程</li><li>但这个方案并不好，因为把屏蔽中断的权力交给用户进程是不明智的，如果一个进程屏蔽中断后不打开，就可能导致整个系统终止。此外如果系统是多处理器，则屏蔽中断只对执行了 disable 指令的 CPU 有效，其他 CPU 仍将运行</li><li>对于内核来说，更新变量或列表的几条指令期间屏蔽中断很方便，因此屏蔽中断对操作系统本身是一项很有用的技术，但对用户进程则不是一种合适的互斥机制</li><li>第二种方式是一种软件方案，假设有一个共享锁变量，其初始值为 0，当进程要进入临界区时，首先测试锁，如果值为 0 则将锁设为1并进入临界区，如果锁的值已经为 1，则进程等待其值为 0</li><li>这种方式的问题在于，如果在一个进程检查到锁为 0，并要将锁设为 1 之前，恰好另一个线程被调度运行将锁设为 1，而第一个进程恢复运行时也将把锁设为 1 并进入临界区，此时临界区就有了两个进程</li><li>第三种方式是忙等待（busy waiting），用一个循环不断测试变量值，直到变量值改变才进入临界区，用于忙等待的锁称为自旋锁（spin lock）。这种方式的问题是，在循环中浪费了大量 CPU 时间，应该避免，除非等待时间非常短才有使用的理由</li></ul><div class=highlight id=id-3><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=c1>// 进程 A
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=n>x</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=n>critical_region</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=n>x</span> <span class=o>=</span> <span class=nb>true</span><span class=p>;</span>  <span class=c1>// 允许进程 B 进入临界区
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>noncritical_region</span><span class=p>();</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>// 进程 B
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=o>!</span><span class=n>x</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=n>critical_region</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=n>x</span> <span class=o>=</span> <span class=nb>false</span><span class=p>;</span>  <span class=c1>// 允许进程 A 进入临界区
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>noncritical_region</span><span class=p>();</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><ul><li>第四种方式是 1981 年由 G. L. Peterson 提出的 Peterson 算法</li></ul><div class=highlight id=id-4><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>constexpr</span> <span class=kt>int</span> <span class=n>N</span> <span class=o>=</span> <span class=mi>2</span><span class=p>;</span>  <span class=c1>// 进程数量为2
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>int</span> <span class=n>turn</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>         <span class=c1>// 轮到的进程
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>vector</span><span class=o>&lt;</span><span class=kt>bool</span><span class=o>&gt;</span> <span class=n>interested</span><span class=p>(</span><span class=n>N</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>enter_region</span><span class=p>(</span><span class=kt>int</span> <span class=n>process</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kt>int</span> <span class=n>other</span> <span class=o>=</span> <span class=mi>1</span> <span class=o>-</span> <span class=n>process</span><span class=p>;</span>  <span class=c1>// 另一进程（进程号为 0 或 1）
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>interested</span><span class=p>[</span><span class=n>process</span><span class=p>]</span> <span class=o>=</span> <span class=nb>true</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>turn</span> <span class=o>=</span> <span class=n>process</span><span class=p>;</span>  <span class=c1>// turn 只有一个，即使两个进程调用也只有后一个赋值会保留
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=k>while</span> <span class=p>(</span><span class=n>turn</span> <span class=o>==</span> <span class=n>process</span> <span class=o>&amp;&amp;</span> <span class=n>interested</span><span class=p>[</span><span class=n>other</span><span class=p>])</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>leave_region</span><span class=p>(</span><span class=kt>int</span> <span class=n>process</span><span class=p>)</span> <span class=p>{</span>  <span class=c1>// 调用上述函数完成后调用此函数
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=n>interested</span><span class=p>[</span><span class=n>process</span><span class=p>]</span> <span class=o>=</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>// 若进程 A 调用 enter_region 则很快返回，
+</span></span></span><span class=line><span class=cl><span class=c1>// 此时进程 B 调用将在 while 循环挂起，
+</span></span></span><span class=line><span class=cl><span class=c1>// 直到进程 A 调用 leave_region
+</span></span></span><span class=line><span class=cl><span class=c1>// 若进程 AB 同时调用 enter_region，
+</span></span></span><span class=line><span class=cl><span class=c1>// turn 为后赋值者，
+</span></span></span><span class=line><span class=cl><span class=c1>// 则先赋值者退出循环并调用 leave_region，后赋值者再退出循环
+</span></span></span></code></pre></td></tr></table></div></div><ul><li>第五种方式是一种硬件方式，需要借助 TSL 指令，即测试并加锁（test and set lock），该指令是一个原子操作，执行 TSL 指令的 CPU 将锁住内存总线以禁止其他 CPU 在指令结束前访问该内存</li></ul><div class=highlight id=id-5><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=n>TSL</span> <span class=n>RX</span><span class=p>,</span> <span class=n>LOCK</span> <span class=c1>// 将内存字 LOCK 读到寄存器 RX 中，然后在该内存地址写一个非零值，读写是原子操作
+</span></span></span></code></pre></td></tr></table></div></div><ul><li>为了使用 TSL 指令实现互斥，用一个共享变量 <code>LOCK</code> 来协调对内存的访问，其值为 0 时任何进程都能用 TSL 指令将值设为 1 并读写共享内存，操作结束时再用 move 指令将值重置为 0</li></ul><div class=highlight id=id-6><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-asm data-lang=asm><span class=line><span class=cl><span class=nl>enter_region:</span>
+</span></span><span class=line><span class=cl>    <span class=nf>TSL</span> <span class=no>REGISTER</span><span class=p>,</span> <span class=no>LOCK</span>  <span class=c1>;复制锁到寄存器并设置值为 1
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>CMP</span> <span class=no>REGISTER</span><span class=p>,</span> <span class=c1>#0    ;值是否为 0
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>JNE</span> <span class=no>enter_region</span>    <span class=c1>;不是 0 则循环
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>RET</span>                 <span class=c1>;返回，进入临界区
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=nl>leave_region:</span>
+</span></span><span class=line><span class=cl>    <span class=nf>MOVE</span> <span class=no>LOCK</span><span class=p>,</span> <span class=c1>#0
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>RET</span></span></span></code></pre></td></tr></table></div></div><ul><li>可以用 XCHG 指令替代 TSL 指令，它原子交换两个位置的内容</li></ul><div class=highlight id=id-7><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-asm data-lang=asm><span class=line><span class=cl><span class=nl>enter_region:</span>
+</span></span><span class=line><span class=cl>    <span class=nf>MOVE</span> <span class=no>REGISTER</span><span class=p>,</span> <span class=c1>#1    ;在寄存器放一个 1
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>XCHG</span> <span class=no>REGISTER</span><span class=p>,</span> <span class=no>LOCK</span>  <span class=c1>;原子交换寄存器和锁变量的内容
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>CMP</span> <span class=no>REGISTER</span><span class=p>,</span> <span class=c1>#0     ;值是否为 0
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>JNE</span> <span class=no>enter_region</span>     <span class=c1>;不是 0 则循环
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>RET</span>                  <span class=c1>;返回，进入临界区
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=nl>leave_region:</span>
+</span></span><span class=line><span class=cl>    <span class=nf>MOVE</span> <span class=no>LOCK</span><span class=p>,</span> <span class=c1>#0
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>RET</span></span></span></code></pre></td></tr></table></div></div><ul><li>Peterson 算法和 TSL 或 XCHG 解法同样都有忙等待的问题，它们的本质都是在进程进入临界区时检查是否允许进入，不允许则原地等待直到允许为止</li></ul><h2 id=生产者-消费者问题>生产者-消费者问题</h2><ul><li>两个进程共享一个固定大小的缓冲区，生产者进程将消息放入缓冲区，消费者进程从缓冲区取出消息</li></ul><div class=highlight id=id-8><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>constexpr</span> <span class=kt>int</span> <span class=n>N</span> <span class=o>=</span> <span class=mi>100</span><span class=p>;</span>  <span class=c1>// 缓冲区的槽数
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kt>int</span> <span class=n>cnt</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>            <span class=c1>// 缓冲区数据数
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>producer</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>item</span> <span class=o>=</span> <span class=n>produce_item</span><span class=p>();</span>  <span class=c1>// 生成新数据
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>cnt</span> <span class=o>==</span> <span class=n>N</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>sleep</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=n>insert_item</span><span class=p>(</span><span class=n>item</span><span class=p>);</span>  <span class=c1>// 将消息放入缓冲区
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=o>++</span><span class=n>cnt</span><span class=p>;</span>              <span class=c1>// 1
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>cnt</span> <span class=o>==</span> <span class=mi>1</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>wakeup</span><span class=p>(</span><span class=n>consumer</span><span class=p>);</span>  <span class=c1>// 2
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>consumer</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>cnt</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>sleep</span><span class=p>();</span>  <span class=c1>// 3
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>item</span> <span class=o>=</span> <span class=n>remove_item</span><span class=p>();</span>  <span class=c1>// 从缓冲区取一个数据
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=o>--</span><span class=n>cnt</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>cnt</span> <span class=o>==</span> <span class=n>N</span> <span class=o>-</span> <span class=mi>1</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>wakeup</span><span class=p>(</span><span class=n>producer</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=n>consume_item</span><span class=p>(</span><span class=n>item</span><span class=p>);</span>  <span class=c1>// 打印数据
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>// 问题在于 cnt 的访问存在 race condition，
+</span></span></span><span class=line><span class=cl><span class=c1>// 如果消费者执行到 3 处，cnt 为 0，在即将 sleep 之前，
+</span></span></span><span class=line><span class=cl><span class=c1>// 生产者在此之后才执行到 1 处，此时 cnt 为 1，执行到 2 处，调用 wakeup，
+</span></span></span><span class=line><span class=cl><span class=c1>// 但此时消费者还未 sleep，因此 wakeup 的信号丢失，没有实际作用，
+</span></span></span><span class=line><span class=cl><span class=c1>// 接着消费者 sleep，生产者开始下一轮循环，
+</span></span></span><span class=line><span class=cl><span class=c1>// 生产者下一轮循环到 1 处，cnt 为 2，到 2 处，不再调用 wakeup，消费者保持 sleep，
+</span></span></span><span class=line><span class=cl><span class=c1>// 生产者继续之后的循环，并且每一轮都不会唤醒消费者，
+</span></span></span><span class=line><span class=cl><span class=c1>// 最终生产者执行到 cnt 为 N 时 sleep，两个进程都将永久 sleep
+</span></span></span></code></pre></td></tr></table></div></div><h2 id=信号量semaphore>信号量（semaphore）</h2><ul><li>信号量是由 E. W. Dijkstra 于 1965 年提出的一种方法，它使用一个整型变量作为信号量，值为 0 表示没有保存下来的唤醒操作，值为正数表示唤醒操作的次数</li><li>信号量有 down 和 up 两种操作，Dijkstra 在论文中称其为 P 和 V 操作（荷兰语中的 Proberen 意为尝试，Verhogen 意为增加或升高）</li><li>down 操作检查值是否大于 0，若大于 0 则减 1 并继续，若为 0 则进程睡眠，并且此时 down 操作未结束</li><li>up 操作对值加 1。如果有进程在信号量上睡眠，无法完成一个先前的 down 操作，则由系统选择其中一个以允许完成其 down 操作。于是，对一个有睡眠进程的信号量执行一次 up 操作，信号量值仍为 0，但睡眠进程少了一个</li><li>down 操作和 up 操作中的所有操作都是原子的，一般作为系统调用实现。操作系统只要在执行测试信号量、更新信号量、使进程睡眠等操作时暂时屏蔽全部中断，这些动作只需要几条指令，所以屏蔽中断不会带来什么副作用。如果使用多个 CPU，则每个信号量应由一个一个锁保护，使用 TSL 或 XCHG 指令来确保同一时刻只有一个 CPU 对信号量进行操作</li><li>注意，这里使用 TSL 或 XCHG 指令来防止多 CPU 同时访问一个信号量，与生产者或消费者用忙等待来等待对方腾出或填充缓冲区是完全不同的。信号量操作只需要几毫秒，而生产者或消费者则可能需要任意长时间</li><li>使用三个信号量解决生产者-消费者问题：full 记录已充满的缓冲槽数，初值为 0；empty 记录空的缓冲槽数，初值为缓冲区中槽的数目；mutex 确保生产者和消费者不会同时访问缓冲区，初值为 1</li><li>供多个进程使用的信号量初值为 1，保证同时只有一个进程可以进入临界区，这种信号量称为二元信号量（binary semaphore）。如果每个进程进入临界区前执行一个 down 操作，并在刚退出时执行一个 up 操作，就能实现互斥</li></ul><div class=highlight id=id-9><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>constexpr</span> <span class=kt>int</span> <span class=n>N</span> <span class=o>=</span> <span class=mi>100</span><span class=p>;</span>  <span class=c1>// 缓冲区的槽数
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=k>using</span> <span class=n>semaphore</span> <span class=o>=</span> <span class=kt>int</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>semaphore</span> <span class=n>mutex</span> <span class=o>=</span> <span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>semaphore</span> <span class=n>empty</span> <span class=o>=</span> <span class=n>N</span><span class=p>;</span>  <span class=c1>// 缓冲区空槽数
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=n>semaphore</span> <span class=n>full</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>   <span class=c1>// 缓冲区满槽数
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>producer</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>item</span> <span class=o>=</span> <span class=n>produce_item</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=n>down</span><span class=p>(</span><span class=o>&amp;</span><span class=n>empty</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>down</span><span class=p>(</span><span class=o>&amp;</span><span class=n>mutex</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>insert_item</span><span class=p>(</span><span class=n>item</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>up</span><span class=p>(</span><span class=o>&amp;</span><span class=n>mutex</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>up</span><span class=p>(</span><span class=o>&amp;</span><span class=n>full</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>consumer</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>down</span><span class=p>(</span><span class=o>&amp;</span><span class=n>full</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>down</span><span class=p>(</span><span class=o>&amp;</span><span class=n>mutex</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>item</span> <span class=o>=</span> <span class=n>remove_item</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=n>up</span><span class=p>(</span><span class=o>&amp;</span><span class=n>mutex</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>up</span><span class=p>(</span><span class=o>&amp;</span><span class=n>empty</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>consume_item</span><span class=p>(</span><span class=n>item</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><ul><li>信号量的另一个作用是实现同步（synchronization），这里 full 和 empty 保证缓冲区满时生产者停止运行，缓冲区空时消费者停止运行</li></ul><h2 id=互斥量mutex>互斥量（mutex）</h2><ul><li>如果不需要信号量的计数功能，可以使用其称为互斥量的简化版本。互斥量仅适用于管理共享资源或一小段代码。互斥量实现简单且有效，在实现用户空间线程包时十分有用</li><li>互斥量只有加锁和解锁两种状态，只需要一个二进制位表示，不过实际上一般用整型量，0 表示解锁，其他值表示加锁</li><li>线程需要访问临界区时调用 mutex_lock，如果互斥量是解锁的则临界区可用，调用成功，线程可以进入临界区，否则线程被阻塞，直到临界区中的线程完成并调用 mutex_unlock。如果多个线程阻塞在该互斥量上，则随机选择一个线程并允许它获得锁</li><li>用 TSL 或 XCHG 指令就可以很容易地在用户空间实现互斥量</li></ul><div class=highlight id=id-10><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-asm data-lang=asm><span class=line><span class=cl><span class=nl>mutex_lock:</span>
+</span></span><span class=line><span class=cl>    <span class=nf>TSL</span> <span class=no>REGISTER</span><span class=p>,</span> <span class=no>MUTEX</span>  <span class=c1>;将互斥量复制到寄存器，并将互斥量置为 1
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>CMP</span> <span class=no>REGISTER</span><span class=p>,</span> <span class=c1>#0
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>JZE</span> <span class=no>ok</span>               <span class=c1>;如果互斥量为 0，它被解锁，所以返回
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>CALL</span> <span class=no>thread_yield</span>    <span class=c1>;互斥量忙，调度另一个线程
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>JMP</span> <span class=no>mutex_lock</span>       <span class=c1>;稍后再试
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=nl>ok:</span> <span class=nf>RET</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nl>mutex_unlock:</span>
+</span></span><span class=line><span class=cl>    <span class=nf>MOVE</span> <span class=no>MUTEX</span><span class=p>,</span> <span class=c1>#0       ;将互斥量置0
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nf>RET</span></span></span></code></pre></td></tr></table></div></div><ul><li>thread_yield 只是调用用户空间线程调度程序，运行十分快捷，这样 mutex_lock 和 mutex_unlock 都不需要任何内核调用。用户级线程通过互斥量的这个过程即可实现同步，而同步过程仅需要少量指令</li></ul><h2 id=管程monitor>管程（monitor）</h2><ul><li>如果把生产者代码中的两个 down 操作交换顺序，使得 mutex 在 empty 之前减 1，就会导致死锁，因此使用信号量要十分小心。为了更易于编写正确的程序，Brinch Hansen 和 Hoare 提出了一种称为管程的高级同步原语</li><li>一个管程是由过程、变量、数据结构等组成的一个集合，它们组成一个特殊的模块或软件包，进程可以在任何需要的时候调用管程中的过程，但不能在管程之外声明的过程中直接访问管程内的数据结构</li><li>任一时刻管程中只能有一个活跃进程，这一特性使得管程能有效地完成互斥。管程是编程语言的组成部分，编译器知道其特殊性，进入管程时的互斥由编译器负责，通常做法是使用互斥量或二元信号量。这样就不需要程序员安排互斥，出错的可能性就小很多</li><li>管程提供了互斥的简便途径，但此外还需要一种方法使得进程在无法继续运行时被阻塞，这个方法就是引入条件变量（condition variable）</li><li>当一个管程过程发现它无法继续运行时（如生产者发现缓冲区满），则会在某个条件变量（如 full）上执行 wait 操作，该操作将阻塞当前进程，并将另一个在管程外的进程调入管程。另一个进程可以通过对同一条件变量执行 signal 操作唤醒阻塞进程</li><li>为了避免管程中有两个活跃进程，执行 signal 操作之后有两种规则。Hoare 建议让新唤醒的进程运行，挂起另一个进程。Brinch Hansen 建议执行 signal 的进程必须立即退出管程，即 signal 语句只能作为一个管程过程的最后一条语句。后者在概念上更简单，并且更容易实现。第三种方法是，让发信号者继续运行，直到其退出管程，才允许等待的进程开始运行</li><li>如果一个条件变量上有若干进程正在等待，则对其执行 signal 操作之后，系统调度程序只能选择其中一个恢复运行</li><li>如果一个条件变量没有等待进程，则对其执行 signal 会丢失信号，因此 wait 操作必须在 signal 之前。这与之前提到的 sleep 和 wakeup 的关键区别是，管程的自动互斥保证了在 wait 完成之前不会先 signal</li></ul><h2 id=消息传递message-passing>消息传递（message passing）</h2><ul><li>管程和信号量通过共享内存解决 CPU 互斥问题，但没有提供不同机器间（比如局域网中的机器）的信息交换方法</li><li>消息传递使用 send 和 receive 原语来实现进程间通信，它们像信号量而不像管程，是系统调用而非语言成分</li></ul><div class=highlight id=id-11><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=n>send</span><span class=p>(</span><span class=n>destination</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>message</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=n>receive</span><span class=p>(</span><span class=n>source</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>message</span><span class=p>);</span></span></span></code></pre></td></tr></table></div></div><ul><li>send 向一个给定目标发送一条消息，receive 从一个给定源（或者任意源）接收一条消息，如果没有消息可用则接收者可能被阻塞直至有一条消息到达，或者带着一个错误码立即返回</li><li>消息传递系统面临许多设计难点：比如消息可能被网络丢失，需要三次握手来确认信息到达情况；比如发送方未收到确认，因此重发消息导致接收方收到两条相同消息，接收方需要区分新老消息；比如身份认证（authentication）问题，客户端如何确认通信的是一个文件服务器还是冒充者</li><li>消息传递方式可以有许多变体，一种对消息进行编址的方式是，为每个进程分配一个唯一地址，让消息按进程的地址编址。另一种方式是引入一种称为信箱（mailbox）的数据结构，用来对一定数量的消息进行缓冲。使用信箱时，send 和 receive 调用的地址参数就是信箱而非进程的地址</li></ul><div class=highlight id=id-12><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>constexpr</span> <span class=kt>int</span> <span class=n>N</span> <span class=o>=</span> <span class=mi>100</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>producer</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>message</span> <span class=n>m</span><span class=p>;</span>  <span class=c1>// 消息缓冲区
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>item</span> <span class=o>=</span> <span class=n>produce_item</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=n>receive</span><span class=p>(</span><span class=n>consumer</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>m</span><span class=p>);</span>    <span class=c1>// 等待消费者发送空缓冲区
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>build_message</span><span class=p>(</span><span class=o>&amp;</span><span class=n>m</span><span class=p>,</span> <span class=n>item</span><span class=p>);</span>  <span class=c1>// 建立一个待发送的消息
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>send</span><span class=p>(</span><span class=n>consumer</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>m</span><span class=p>);</span>       <span class=c1>// 发送数据项给消费者
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>void</span> <span class=nf>consumer</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>message</span> <span class=n>m</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>for</span> <span class=p>(</span><span class=kt>int</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>N</span><span class=p>;</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>send</span><span class=p>(</span><span class=n>producer</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>m</span><span class=p>);</span>  <span class=c1>// 发送 N 个空缓冲区
+</span></span></span><span class=line><span class=cl><span class=c1></span>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>receive</span><span class=p>(</span><span class=n>producer</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>m</span><span class=p>);</span>        <span class=c1>// 接收包含数据项的消息
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=kt>int</span> <span class=n>item</span> <span class=o>=</span> <span class=n>extract_item</span><span class=p>(</span><span class=o>&amp;</span><span class=n>m</span><span class=p>);</span>  <span class=c1>// 将数据项从消息中提取出来
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>send</span><span class=p>(</span><span class=n>producer</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>m</span><span class=p>);</span>           <span class=c1>// 将空缓冲区发送回生产者
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>consume_item</span><span class=p>(</span><span class=n>item</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><ul><li>使用信箱的另一种极端方法是彻底取消缓冲。采取这种方法时，如果 send 在 receive 之前执行则发送进程被阻塞，直到 receive 发生，反之亦然。执行 receive 时，消息可以直接从发送者复制到接收者，不用任何中间缓冲。这种方案常被称为会和（rendezvous），实现起来更容易，但降低了灵活性，因为发送者和接收者一定要以步步紧接的方式运行</li><li>通常在并行程序设计系统中使用消息传递，一个著名的消息传递系统是消息传递接口（Message-Passing Interface，MPI），它广泛应用于科学计算</li></ul><h2 id=屏障barrier>屏障（barrier）</h2><ul><li>屏障是一种用于进程组的同步机制，只有所有进程就绪时才能进入下一阶段。每个阶段的结尾设置一个屏障，当一个进程到达屏障时将被阻拦，直到所有进程到达屏障为止</li></ul><h2 id=调度>调度</h2><ul><li>几乎所有进程的 I/O 请求和计算都是交替突发的，如果进程花费大量时间在计算上，则称为计算密集型（compute-bound），如果大量时间花费在等待 I/O 上，则称为 I/O 密集型（I/O-bound）</li><li>随着 CPU 变得越来越快，更多的进程倾向为 I/O 密集型。这种现象的原因是 CPU 的改进比磁盘的改进快得多，所以未来对 I/O 密集型进程的调度处理更为重要</li><li>调度的基本思想是，如果需要运行 I/O 密集型进程，就应该让它尽快得到机会，以便发出磁盘请求并保持磁盘始终忙碌</li><li>根据如何处理时钟中断，可以把调度算法分为非抢占式和抢占式两类</li><li>非抢占式调度算法挑选一个进程，然后让该进程运行直至阻塞，或直到该进程自动释放 CPU。即使该进程运行了几个小时也不会被强迫挂起，这样导致时钟中断发生时不会进行调度。在处理完时钟中断后，如果没有更高优先级的进程，则被中断的进程将继续运行</li><li>抢占式调度算法挑选一个进程，让该进程运行某个固定时段的最大值，时段结束时将挂起该进程，并挑选另一个进程运行。抢占式调度需要在时间间隔的末端发生时钟中断，以便把 CPU 控制返回给调度程序，如果没有可用的时钟，就只能选择非抢占式调度</li><li>不同的应用领域有不同的目标，也就需要不同的调度算法。环境可以划分为三种<ul><li>批处理：广泛用于商业领域，比如处理薪水清单、账目收入、账目支出、利息计算，批处理系统不会有用户在旁边急切等待响应，因此通常使用非抢占式算法，或对每个进程都有长时间周期的抢占式算法，这样减少了进程切换从而改进了性能</li><li>交互式：必须使用抢占式算法，以避免 CPU 被一个进程霸占而拒绝为其他进程服务。服务器也归于此类，因为通常要服务多个突发的远程用户</li><li>实时：有时不需要抢占，因为进程了解它们可能会长时间得不到运行，所以通常很快地完成各自工作并阻塞</li></ul></li></ul><h2 id=调度算法的评价指标>调度算法的评价指标</h2><ul><li>对于批处理系统，调度算法的评价指标主要有三个<ul><li>吞吐量（throughout）：系统单位时间内完成的作业数量，比如 10 道作业花费 100 秒，则吞吐量为 0.1 道/秒</li><li>周转时间（turnaround time）：一个批处理作业从提交开始到完成的统计平均时间</li><li>CPU 利用率：CPU 忙碌时间相对总时间的占比</li></ul></li><li>对于交互式系统，评价指标最重要的是最小响应时间，即从发出命令到得到响应之间的时间</li><li>实时系统的特点是或多或少必须满足截止时间，多数实时系统中，可预测性十分重要，比如如果多媒体实时系统的音频进程运行错误太多，音质就会明显下降，为此实时系统的调度算法必须是高度可预测和有规律的</li></ul><h2 id=批处理系统中的调度>批处理系统中的调度</h2><h3 id=先来先服务first-come-first-servedfcfs>先来先服务（First-Come First-Served，FCFS）</h3><ul><li>非抢占式。进程按照请求 CPU 的先后顺序调度，优点是公平，算法实现简单，不会导致进程饥饿（Starvation，等待时间对进程响应带来明显影响）</li></ul><div class=highlight id=id-13><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>进程 到达时间 运行时间
+</span></span><span class=line><span class=cl>P1   0        7
+</span></span><span class=line><span class=cl>P2   2        4
+</span></span><span class=line><span class=cl>P3   4        1
+</span></span><span class=line><span class=cl>P4   5        4
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>先到先服务，因此调度顺序为 P1 -&gt; P2 -&gt; P3 -&gt; P4
+</span></span><span class=line><span class=cl>P1      P2   P3 P4
+</span></span><span class=line><span class=cl>------- ---- -  ----
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>周转时间 = 完成时间 - 到达时间
+</span></span><span class=line><span class=cl>P1 = 7 - 0 = 7
+</span></span><span class=line><span class=cl>P2 = 11 - 2 = 9
+</span></span><span class=line><span class=cl>P3 = 12 - 4 = 8  // 只运行 1，却需要等待 8，可见 FCFS 算法对短作业不利
+</span></span><span class=line><span class=cl>P4 = 16 - 5 = 11
+</span></span><span class=line><span class=cl>平均周转时间 = 8.75
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>带权周转时间 = 周转时间 / 运行时间
+</span></span><span class=line><span class=cl>P1 = 7 / 7 = 1
+</span></span><span class=line><span class=cl>P2 = 9 / 4 = 2.25
+</span></span><span class=line><span class=cl>P3 = 8 / 1 = 8
+</span></span><span class=line><span class=cl>P4 = 11 / 4 = 2.75
+</span></span><span class=line><span class=cl>平均带权周转时间 = 3.5
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>等待时间 = 周转时间 - 运行时间（不考虑等待 I/O 操作的时间）
+</span></span><span class=line><span class=cl>P1 = 7 - 7 = 0
+</span></span><span class=line><span class=cl>P2 = 9 - 4 = 5
+</span></span><span class=line><span class=cl>P3 = 8 - 1 = 7
+</span></span><span class=line><span class=cl>P4 = 11 - 4 = 7
+</span></span><span class=line><span class=cl>平均等待时间 = 4.75</span></span></code></pre></td></tr></table></div></div><h3 id=最短作业优先shortest-job-firstsjf>最短作业优先（Shortest Job First，SJF）</h3><ul><li>非抢占式。选择已到达的且运行时间最短的进程，运行时间相同则先到达的先运行。目标是追求最短的平均周转时间、平均带权周转时间、平均等待时间，缺点是不公平，对短作业有利，对长作业不利，如果一直有短作业到达可能导致长作业饥饿</li></ul><div class=highlight id=id-14><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>进程 到达时间 运行时间
+</span></span><span class=line><span class=cl>P1   0        7
+</span></span><span class=line><span class=cl>P2   2        4
+</span></span><span class=line><span class=cl>P3   4        1
+</span></span><span class=line><span class=cl>P4   5        4
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>P1 先到达，P1 运行结束时 P2、P3、P4 均到达，P3 运行时间最短先运行
+</span></span><span class=line><span class=cl>P2、P4 运行时间相同，P2 先到达，因此 P2 先于 P4 运行
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>最终调度顺序为 P1 -&gt; P3 -&gt; P2 -&gt; P4
+</span></span><span class=line><span class=cl>P1      P3 P2    P4
+</span></span><span class=line><span class=cl>------- -  ----  ----
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>周转时间 = 完成时间 - 到达时间
+</span></span><span class=line><span class=cl>P1 = 7 - 0 = 7
+</span></span><span class=line><span class=cl>P2 = 12 - 2 = 10
+</span></span><span class=line><span class=cl>P3 = 8 - 4 = 4
+</span></span><span class=line><span class=cl>P4 = 16 - 5 = 11
+</span></span><span class=line><span class=cl>平均周转时间 = 8
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>带权周转时间 = 周转时间 / 运行时间
+</span></span><span class=line><span class=cl>P1 = 7 / 7 = 1
+</span></span><span class=line><span class=cl>P2 = 10 / 4 = 2.5
+</span></span><span class=line><span class=cl>P3 = 4 / 1 = 4
+</span></span><span class=line><span class=cl>P4 = 11 / 4 = 2.75
+</span></span><span class=line><span class=cl>平均带权周转时间 = 2.56
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>等待时间 = 周转时间 - 运行时间（不考虑等待 I/O 操作的时间）
+</span></span><span class=line><span class=cl>P1 = 7 - 7 = 0
+</span></span><span class=line><span class=cl>P2 = 10 - 4 = 6
+</span></span><span class=line><span class=cl>P3 = 4 - 1 = 3
+</span></span><span class=line><span class=cl>P4 = 11 - 4 = 7
+</span></span><span class=line><span class=cl>平均等待时间 = 4</span></span></code></pre></td></tr></table></div></div><h3 id=最短剩余时间优先shortest-remaining-time-nextsrtn>最短剩余时间优先（Shortest Remaining Time Next，SRTN）</h3><ul><li>SRTN 是 SJF 的抢占式版本，每当新进程加入时，调度程序总是选择剩余运行时间最短的进程运行，如果当前进程剩余运行时间比新进程长，则挂起当前进程而运行新进程</li></ul><div class=highlight id=id-15><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>进程 到达时间 运行时间
+</span></span><span class=line><span class=cl>P1   0        7
+</span></span><span class=line><span class=cl>P2   2        4
+</span></span><span class=line><span class=cl>P3   4        1
+</span></span><span class=line><span class=cl>P4   5        4
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>P2 到达时，P1 剩余 5，P2 为 4，运行 P2
+</span></span><span class=line><span class=cl>P3 到达时，P1 剩余 5，P2 剩余 2，P3 为 1，运行 P3
+</span></span><span class=line><span class=cl>P4 到达时，P3 运行结束，P1 剩余 5，P2 剩余 2，P4 为 4，运行 P2
+</span></span><span class=line><span class=cl>最后依次运行 P4 和 P1
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>最终调度顺序为 P1 -&gt; P2 -&gt; P3 -&gt; P2 -&gt; P4 -&gt; P1
+</span></span><span class=line><span class=cl>P1 P2 P3 P2 P4    P1
+</span></span><span class=line><span class=cl>-- -- -  -- ----  -----
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>周转时间 = 完成时间 - 到达时间
+</span></span><span class=line><span class=cl>P1 = 16 - 0 = 16
+</span></span><span class=line><span class=cl>P2 = 7 - 2 = 5
+</span></span><span class=line><span class=cl>P3 = 5 - 4 = 1
+</span></span><span class=line><span class=cl>P4 = 11 - 5 = 6
+</span></span><span class=line><span class=cl>平均周转时间 = 7
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>带权周转时间 = 周转时间 / 运行时间
+</span></span><span class=line><span class=cl>P1 = 16 / 7 = 2.29
+</span></span><span class=line><span class=cl>P2 = 5 / 4 = 1.25
+</span></span><span class=line><span class=cl>P3 = 1 / 1 = 1
+</span></span><span class=line><span class=cl>P4 = 6 / 4 = 1.5
+</span></span><span class=line><span class=cl>平均带权周转时间 = 1.51
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>等待时间 = 周转时间 - 运行时间（不考虑等待 I/O 操作的时间）
+</span></span><span class=line><span class=cl>P1 = 16 - 7 = 9
+</span></span><span class=line><span class=cl>P2 = 5 - 4 = 1
+</span></span><span class=line><span class=cl>P3 = 1 - 1 = 0
+</span></span><span class=line><span class=cl>P4 = 6 - 4 = 2
+</span></span><span class=line><span class=cl>平均等待时间 = 3</span></span></code></pre></td></tr></table></div></div><h3 id=高响应比优先highest-response-ratio-nexthrrn>高响应比优先（Highest Response Ratio Next，HRRN）</h3><ul><li>非抢占式。在所有已到达进程中选择响应比（<code>等待时间 / 运行时间 + 1</code>）最高的运行，综合 FCFS 和 SJF 的优点，等待时间长、运行时间短的优先，避免长作业饥饿的问题</li></ul><div class=highlight id=id-16><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>进程 到达时间 运行时间
+</span></span><span class=line><span class=cl>P1   0        7
+</span></span><span class=line><span class=cl>P2   2        4
+</span></span><span class=line><span class=cl>P3   4        1
+</span></span><span class=line><span class=cl>P4   5        4
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>响应比 = （等待时间 + 运行时间） / 运行时间
+</span></span><span class=line><span class=cl>P1 运行至结束，P2、P3、P4 均到达，响应比分别为
+</span></span><span class=line><span class=cl>P2 = (5 + 4) / 4 = 2.25
+</span></span><span class=line><span class=cl>P3 = (3 + 1) / 1 = 4
+</span></span><span class=line><span class=cl>P4 = (2 + 4) / 4 = 1.5
+</span></span><span class=line><span class=cl>运行 P3，P3 结束时，响应比分别为
+</span></span><span class=line><span class=cl>P2 = (6 + 4) / 4 = 2.5
+</span></span><span class=line><span class=cl>P4 = (3 + 4) / 4 = 1.75
+</span></span><span class=line><span class=cl>运行 P2，最后运行 P4
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>最终调度顺序为 P1 -&gt; P3 -&gt; P2 -&gt; P4
+</span></span><span class=line><span class=cl>P1      P3 P2    P4
+</span></span><span class=line><span class=cl>------- -  ----  ----</span></span></code></pre></td></tr></table></div></div><h2 id=交互式系统中的调度>交互式系统中的调度</h2><h3 id=时间片轮转调度round-robin-schedulingrr>时间片轮转调度（Round-Robin Scheduling，RR）</h3><ul><li>RR 是一种简单公平的抢占式调度算法，并且可以避免饥饿。每个进程被分配一个时间片（quantum）。时间片结束时，如果进程还在运行，则剥夺 CPU 并分配给另一个进程。如果进程在时间片结束前阻塞或结束，则 CPU 立即切换。RR 算法实现很容易，只需要维护一张进程队列表</li></ul><div class=highlight id=id-17><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>A -&gt; B -&gt; C -&gt; D
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>若 A 用完时间片，但仍在运行，则插入到队列尾
+</span></span><span class=line><span class=cl>B -&gt; C -&gt; D -&gt; A
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>若 B 用完时间片，但仍在运行，并到达一个新进程 E，则先插入新进程
+</span></span><span class=line><span class=cl>C -&gt; D -&gt; A -&gt; E -&gt; B
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>若 C 用完时间片之前就结束了，则直接切换到下一个进程
+</span></span><span class=line><span class=cl>D -&gt; A -&gt; E -&gt; B</span></span></code></pre></td></tr></table></div></div><ul><li>需要考虑的是时间片的长度，假设时间片为 4 ms，上下文切换为 1 ms，则 CPU 完成 4 ms 工作后将浪费 1 ms 进行上下文切换（context switch），即浪费了 20% 的时间。但如果时间片太大，就会退化为 FCFS，导致增大响应时间。通常为了提高 CPU 效率，设置时间片时，切换开销占比应不超过 1%</li></ul><h3 id=优先级调度>优先级调度</h3><ul><li>为每个进程设置优先级，在已到达进程中，选择优先级最高的运行，可以为抢占式或非抢占式</li><li>比如对于操作系统来说，I/O 密集型进程的优先级应该更高。I/O 密集型继承多数时间用于等待 I/O 结束，因此需要 CPU 时应立即分配给它以便启动下一个 I/O 请求，这样就可以在另一个进程计算的同时执行 I/O 操作</li><li>一种简单做法是将优先级设置为 <code>1 / f</code>，<code>f</code> 为该进程在上一时间片中的运行时间占比。比如在 50 ms 时间片中，使用 1 ms 的进程优先级为 50，使用 25 ms 的进程优先级为 2。将进程按优先级分组，再使用 RR 算法调度高优先级组中的进程</li></ul><h3 id=多级反馈队列调度>多级反馈队列调度</h3><ul><li>CTSS（Compatible Time Sharing System）是最早使用优先级调度的系统之一，但存在进程切换速度太慢的问题，其设计者意识到设置较长的时间片可以减少切换次数，但长时间片又会影响到响应时间。最终的解决方法是多级反馈队列调度，它是对 FCFS、SJF、RR、优先级调度的折中权衡</li><li>设置多个优先级队列，每个级别对应不同长度的时间片，比如第一级（最高级）时间片为 1，第二级为 2，第三级为 4，以此类推</li><li>如果一个进程用完当前级别时间片后仍未运行完，则加入下一级队列队尾，如果已经位于最后一级则放回该级队尾</li><li>高优先级队列为空时，才会调度低优先级队列，因此可能导致低优先级进程饥饿</li><li>比如一个进程需要 100 个时间片，第一次分配 1 个时间片，第二次分配 2 个，接下来是 4、8、16、32、64，最后一次使用 64 中的 37 个即可结束工作，一共进行 7 次切换。如果使用 RR 算法，则需要 100 次切换</li></ul><h3 id=最短进程优先>最短进程优先</h3><ul><li>关键在于如何从可运行进程中找出最短的一个</li><li>一种方法是根据过去的行为进行预测。假设某终端每条命令的估计运行时间为 <code>T0</code>，测量到下一次运行时间为 <code>T1</code>，则估计时间可以修正为 <code>a * T0 + (1 - a) * T1</code>，比如设 <code>a</code> 为 <code>1 / 2</code> 可以得到序列如下</li></ul><div class=highlight id=id-18><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>T0
+</span></span><span class=line><span class=cl>T0/2 + T1/2
+</span></span><span class=line><span class=cl>T0/4 + T1/4 + T2/2
+</span></span><span class=line><span class=cl>T0/8 + T1/8 + T2/4 + T3/2  // T0 在此时估计时间中的占比下降到 1/8</span></span></code></pre></td></tr></table></div></div><h3 id=保证调度>保证调度</h3><ul><li>向用户作出明确的性能保证，然后实现它。比如有 <code>n</code> 个进程运行的单用户系统中，如果所有进程等价，则每个进程获得 <code>1 / n</code> 的CPU时间，为了实现所作的保证，系统跟踪每个进程已使用的 CPU 时间，并计算应获得的时间，然后转向已用时间最少的进程，直到超过最接近的竞争者</li></ul><h3 id=彩票调度lottery-scheduling>彩票调度（Lottery Scheduling）</h3><ul><li>保证调度的想法不错，但很难实现。彩票调度既可以给出类似预测结果，并且实现非常简单。其基本思想是为进程提供各种系统资源（如 CPU 时间）的彩票，一旦需要做出调度决策时，就随机抽出一张彩票，拥有该彩票的进程获取该资源</li><li>比如系统掌握每秒 50 次的一种彩票，作为奖励每个获奖者可以获得 20 ms 的 CPU 时间</li><li>可以给更重要的进程额外的彩票，以增加其获胜的机会，比如出售 100 张彩票，一个进程持有其中 20 张，则每次抽奖该进程就有 20% 的取胜机会，在较长运行时间中该进程就会得到 20% 的 CPU</li><li>彩票调度可以解决其他方法很难解决的问题，比如一个视频服务器上有若干提供视频流的进程，每个流的帧率不同，假设帧率分别为 10、20、25，那么给这些进程分别分配 10、20、25 张彩票，它们就会自动按照接近 10:20:25 的比例划分 CPU 的使用</li></ul><h3 id=公平分享调度>公平分享调度</h3><ul><li>之前的调度关注的都是进程本身，而没有关注进程所有者。假设两个用户分别启动 9 个进程和 1 个进程，使用 RR 算法，则两者分别得到 90% 和 10% 的 CPU 时间。为了避免这种情况，在调度处理之前应该考虑进程拥有者</li></ul></div><div class=post-reward><div class=comment>Buy me a coffee~</div><input type=checkbox class=reward-input name=reward id=fi-reward hidden>
+<label class=reward-button for=fi-reward>赞赏</label><div class=reward-ways data-mode=fixed><div><img loading=lazy src=/images/alipay.png srcset="/images/alipay.png, /images/alipay.png 1.5x, /images/alipay.png 2x" sizes=auto data-title="Jian YE 支付宝" data-alt="Jian YE 支付宝" style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span data-animation>支付宝</span></div><div><img loading=lazy src=/images/wechatpay.png srcset="/images/wechatpay.png, /images/wechatpay.png 1.5x, /images/wechatpay.png 2x" sizes=auto data-title="Jian YE 微信" data-alt="Jian YE 微信" style="background:url(/svg/loading.min.svg)no-repeat 50%" onload='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e);this.dataset.lazyloaded=""' onerror='this.title=this.dataset.title,this.alt=this.dataset.alt;for(const e of["style","data-title","data-alt","onerror","onload"])this.removeAttribute(e)'><span data-animation>微信</span></div></div></div><div class=post-footer id=post-footer><div class=post-info><div class=post-info-line><div class=post-info-mod><span title="更新于 2023-11-19 14:49:14">更新于 2023-11-19&nbsp;<a class=git-hash href=https://github.com/jianye0428/JianBlog/commit/92c74e060bb914ea8de4dae82ec8388092c129ce rel="external nofollow noopener noreferrer" target=_blank title="commit by yejian(18817571704@163.com) 92c74e060bb914ea8de4dae82ec8388092c129ce: feat: add c++ concurrency ref files"><i class="fa-solid fa-hashtag fa-fw" aria-hidden=true></i>92c74e0</a></span></div></div><div class=post-info-line><div class=post-info-md><span><a href=/posts/processesandthreads/index.md title=阅读原始文档 class=link-to-markdown>阅读原始文档</a></span><span><a href=https://github.com/jianye0428/JianBlog/edit/docs/content/posts/C++/C++_Concurrency_in_Action/References/ProcessesAndThreads/index.md title=编辑此页 target=_blank rel="external nofollow noopener noreferrer" class=link-to-edit>编辑此页</a></span></div><div class=post-info-share><span><a href=javascript:void(0); title="分享到 Twitter" data-sharer=twitter data-url=https://jianye0428.github.io/posts/processesandthreads/ data-title="C++ Concurrency in Action | Processes and Threads" data-hashtags=C++_Concurrency><i class="fa-brands fa-twitter fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 Facebook" data-sharer=facebook data-url=https://jianye0428.github.io/posts/processesandthreads/ data-hashtag=C++_Concurrency><i class="fa-brands fa-facebook-square fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 Linkedin" data-sharer=linkedin data-url=https://jianye0428.github.io/posts/processesandthreads/><i class="fa-brands fa-linkedin fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 微博" data-sharer=weibo data-url=https://jianye0428.github.io/posts/processesandthreads/ data-title="C++ Concurrency in Action | Processes and Threads"><i class="fa-brands fa-weibo fa-fw" aria-hidden=true></i></a>
+<a href=javascript:void(0); title="分享到 百度" data-sharer=baidu data-url=https://jianye0428.github.io/posts/processesandthreads/ data-title="C++ Concurrency in Action | Processes and Threads"><i data-svg-src=/lib/simple-icons/icons/baidu.min.svg aria-hidden=true></i></a></span></div></div></div><div class=post-info-more><section class=post-tags><i class="fa-solid fa-tags fa-fw me-1" aria-hidden=true></i><a href=/tags/c++_concurrency/ class=post-tag>C++_Concurrency</a></section><section><span><a href=javascript:void(0); onclick=window.history.back()>返回</a></span>&nbsp;|&nbsp;<span><a href=/>主页</a></span></section></div><div class=post-nav><a href=/posts/memorymanagement/ class=post-nav-item rel=prev title="C++ Concurrency in Action | Memory Management"><i class="fa-solid fa-angle-left fa-fw" aria-hidden=true></i>C++ Concurrency in Action | Memory Management</a></div></div></article></main><footer class=footer><div class=footer-container><div class="footer-line powered">由 <a href=https://gohugo.io/ target=_blank rel="external nofollow noopener noreferrer" title="Hugo 0.120.4">Hugo</a> 强力驱动 | 主题 - <a href=https://github.com/hugo-fixit/FixIt target=_blank rel=external title="FixIt v0.2.18"><img class=fixit-icon src=/fixit.min.svg alt="FixIt logo">&nbsp;FixIt</a></div><div class="footer-line copyright" itemscope itemtype=http://schema.org/CreativeWork><i class="fa-regular fa-copyright fa-fw" aria-hidden=true></i>
+<span itemprop=copyrightYear>2018 - 2023</span><span class=author itemprop=copyrightHolder>
+<a href=https://github.com/jianye0428 target=_blank rel="external nofollow noopener noreferrer">Jian YE</a></span><span class="license footer-divider"><a rel="license external nofollow noopener noreferrer" href=https://creativecommons.org/licenses/by-nc/4.0/ target=_blank>CC BY-NC 4.0</a></span></div><div class="footer-line statistics order-first"><span class=site-time title=网站运行中……><i class="fa-solid fa-heartbeat fa-fw animate-icon" aria-hidden=true></i><span class="ms-1 d-none">博客已运行</span><span class="run-times ms-1">网站运行中……</span></span></div><div class="footer-line visitor"><span id=busuanzi_container_site_uv title=总访客数><i class="fa-regular fa-user fa-fw" aria-hidden=true></i>&nbsp;<span id=busuanzi_value_site_uv><i class="fa-solid fa-spinner fa-spin fa-fw" aria-hidden=true></i></span></span><span id=busuanzi_container_site_pv class=footer-divider title=总访问量><i class="fa-regular fa-eye fa-fw" aria-hidden=true></i>&nbsp;<span id=busuanzi_value_site_pv><i class="fa-solid fa-spinner fa-spin fa-fw" aria-hidden=true></i></span></span></div></div></footer></div><div class=widgets><div class="fixed-buttons animate__faster d-none"><div class="fixed-button back-to-top" role=button aria-label=回到顶部><i class="fa-solid fa-arrow-up fa-fw" aria-hidden=true></i><span class=variant-numeric>0%</span></div></div><a href=https://github.com/jianye0428/JianBlog title="在 GitHub 上查看程式碼，訂閱請點 Watch" target=_blank rel="external nofollow" class="github-corner right d-none-mobile"><svg viewBox="0 0 250 250" aria-hidden="true"><path d="M0 0 115 115h15l12 27L250 250V0z"/><path d="M128.3 109C113.8 99.7 119 89.6 119 89.6 122 82.7 120.5 78.6 120.5 78.6 119.2 72 123.4 76.3 123.4 76.3 127.3 80.9 125.5 87.3 125.5 87.3 122.9 97.6 130.6 101.9 134.4 103.2" fill="currentcolor" style="transform-origin:130px 106px" class="octo-arm"/><path d="M115 115C114.9 115.1 118.7 116.5 119.8 115.4l13.9-13.8C136.9 99.2 139.9 98.4 142.2 98.6 133.8 88 127.5 74.4 143.8 58 148.5 53.4 154 51.2 159.7 51 160.3 49.4 163.2 43.6 171.4 40.1 171.4 40.1 176.1 42.5 178.8 56.2 183.1 58.6 187.2 61.8 190.9 65.4 194.5 69 197.7 73.2 200.1 77.6 213.8 80.2 216.3 84.9 216.3 84.9 212.7 93.1 206.9 96 205.4 96.6 205.1 102.4 203 107.8 198.3 112.5 181.9 128.9 168.3 122.5 157.7 114.1 157.9 116.9 156.7 120.9 152.7 124.9L141 136.5C139.8 137.7 141.6 141.9 141.8 141.8z" fill="currentcolor" class="octo-body"/></svg></a><div id=mask></div><div class=reading-progress-bar style=left:0;top:0;--bg-progress:#000;--bg-progress-dark:#fff></div><noscript><div class=noscript-warning>FixIt 主题在启用 JavaScript 的情况下效果最佳。</div></noscript></div><link rel=stylesheet href=/lib/katex/katex.min.css><link rel=stylesheet href=/lib/cookieconsent/cookieconsent.min.css><link rel=stylesheet href=/lib/pace/themes/blue/pace-theme-minimal.css><script src=/lib/autocomplete/autocomplete.min.js defer></script><script src=/lib/algoliasearch/algoliasearch-lite.umd.min.js defer></script><script src=/lib/instant-page/instantpage.min.js async defer type=module></script><script src=/lib/twemoji/twemoji.min.js defer></script><script src=/lib/sharer/sharer.min.js async defer></script><script src=/lib/katex/katex.min.js defer></script><script src=/lib/katex/auto-render.min.js defer></script><script src=/lib/katex/mhchem.min.js defer></script><script src=/lib/cookieconsent/cookieconsent.min.js defer></script><script src=/lib/pangu/pangu.min.js defer></script><script src=/lib/cell-watermark/watermark.min.js defer></script><script src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js async defer></script><script src=/lib/pace/pace.min.js async defer></script><script>window.config={autoBookmark:!0,code:{copyTitle:"复制到剪贴板",editLockTitle:"锁定可编辑代码块",editUnLockTitle:"解锁可编辑代码块",editable:!0,maxShownLines:50},comment:{enable:!1},cookieconsent:{content:{dismiss:"同意",link:"了解更多",message:"本网站使用 Cookies 来改善您的浏览体验。"},enable:!0,palette:{button:{background:"#f0f0f0"},popup:{background:"#1aa3ff"}},theme:"edgeless"},enablePWA:!0,math:{delimiters:[{display:!0,left:"$$",right:"$$"},{display:!0,left:"\\[",right:"\\]"},{display:!0,left:"\\begin{equation}",right:"\\end{equation}"},{display:!0,left:"\\begin{equation*}",right:"\\end{equation*}"},{display:!0,left:"\\begin{align}",right:"\\end{align}"},{display:!0,left:"\\begin{align*}",right:"\\end{align*}"},{display:!0,left:"\\begin{alignat}",right:"\\end{alignat}"},{display:!0,left:"\\begin{alignat*}",right:"\\end{alignat*}"},{display:!0,left:"\\begin{gather}",right:"\\end{gather}"},{display:!0,left:"\\begin{CD}",right:"\\end{CD}"},{display:!1,left:"$",right:"$"},{display:!1,left:"\\(",right:"\\)"}],strict:!1},pangu:{enable:!0,selector:"article"},search:{algoliaAppID:"MTJNHU0JVB",algoliaIndex:"index",algoliaSearchKey:"5486225134d99f43826da401ee9bad57",highlightTag:"em",maxResultLength:10,noResultsFound:"没有找到结果",snippetLength:50,type:"algolia"},siteTime:"2018-05-28T20:01:01+08:00",twemoji:!0,watermark:{appendto:".wrapper>main",colspacing:30,content:'<img style="height: 0.85rem;" src="/images/favicon/jian_icon.png" alt="logo" /> jianye',enable:!0,fontfamily:"MMT_LRH,沐目体",fontsize:1.1,height:20,opacity:.0125,rotate:15,rowspacing:60,width:150}}</script><script src=/js/theme.min.js defer></script><script src=/js/custom.min.js defer></script></body></html>
