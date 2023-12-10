@@ -194,3 +194,29 @@
 > 作者: [Jian YE](https://github.com/jianye0428)  
 > URL: https://jianye0428.github.io/posts/installation/  
 
+im ~/.vim/colors/
+    ```
+- 安装YCM(YouCompleteMe)
+    根据~/.vimrc按装YCM
+
+    ```shell
+    cd ~/.vim/plugged/YouCompleteMe/
+    ./install.py --clang-completer
+    ```
+- 安装ctags
+    ```shell
+    sudo apt-get install exuberant-ctags
+    ```
+- 其他主题直接编辑:PlugInstall进行安装
+
+### 3.2 reference
+- 参考链接:
+    [1] https://github.com/ycm-core/YouCompleteMe/wiki/Building-Vim-from-source
+    [2] https://wizardforcel.gitbooks.io/use-vim-as-ide/content/0.html
+
+
+---
+
+> 作者: [Jian YE](https://github.com/jianye0428)  
+> URL: https://jianye0428.github.io/posts/installation/  
+
