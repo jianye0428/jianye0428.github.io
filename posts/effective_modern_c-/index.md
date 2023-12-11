@@ -1262,7 +1262,7 @@ auto result = findRecord( /* arguments */ );
 在我们使用模板时候，nullptr 的优势将更加引人注目。假设你有这样的一些函数，只有当对应的互斥量被锁定的时候，这些函数才可以被调用，每个函数的参数是不同类型的指针：
 
 ```c++
-int f1(std::shared_ptr<Widget> spw);    // call these only when the appropriate mutex is locked
+int f1(`std::shared_ptr`<Widget> spw);    // call these only when the appropriate mutex is locked
 double f2(std::unique_ptr<Widget> upw);
 bool f3(Widget* pw);
 ```
@@ -2581,7 +2581,7 @@ int main() {
 // 输出：8:8
 ```
 
-std::unique_ptr 内部几乎不用维护其他信息（std::shared_ptr 需要维护引用计数），当它离开作用域，是通过 delete 删除指向的资源。但是，如果自定义了删除器，则会增加内存占用。
+std::unique_ptr 内部几乎不用维护其他信息（`std::shared_ptr` 需要维护引用计数），当它离开作用域，是通过 delete 删除指向的资源。但是，如果自定义了删除器，则会增加内存占用。
 
 ```c++
 #include<iostream>
@@ -2759,50 +2759,50 @@ int main()
 }
 ```
 
-std::unique_ptr 可以直接隐式转换为 std::shared_ptr。
+std::unique_ptr 可以直接隐式转换为 `std::shared_ptr`。
 
 ```c++
-std::shared_ptr<Investment> sp =   // converts std::unique_ptr
-  makeInvestment( arguments );     // to std::shared_ptr
+`std::shared_ptr`<Investment> sp =   // converts std::unique_ptr
+  makeInvestment( arguments );     // to `std::shared_ptr`
 ```
 
 {{<admonition quote "总结" false>}}
 - std::unique_ptr 是一个小的、快的、move-only 的智能指针，它能用来管理资源，并且独占资源的所有权。
 - 默认情况下，std::unique_ptr 资源的销毁是用 delete 进行的，但也可以用户自定义 deleter。用带状态的 deleter 和函数指针作为 deleter 会增加 std::unique_ptr 对象的大小。
-- 很容易将 std::unique_ptr 转换为 std::shared_ptr。
+- 很容易将 std::unique_ptr 转换为 `std::shared_ptr`。
 {{</admonition>}}
 
 
-#### [Item 19: Use std::shared_ptr for shared-ownership resource management.](https://blog.csdn.net/Dong_HFUT/article/details/123599599)
+#### [Item 19: Use `std::shared_ptr` for shared-ownership resource management.](https://blog.csdn.net/Dong_HFUT/article/details/123599599)
 
-上文中介绍了 std::unique_ptr ，它对指向的资源拥有独占所有权。本文介绍一种新的智能指针：std::shared_ptr，它和其他指向该资源的指针有共享所有权，它可以拷贝和传递，并且通过引用计数来管理资源的生命周期。
+上文中介绍了 std::unique_ptr ，它对指向的资源拥有独占所有权。本文介绍一种新的智能指针：`std::shared_ptr`，它和其他指向该资源的指针有共享所有权，它可以拷贝和传递，并且通过引用计数来管理资源的生命周期。
 
 ![](images/item_19_01.png)
 
-std::shared_ptr 的模型如上图所示：它包含两个指针，一个指向对象的原始指针和一个指向控制块的原始指针。所以 std::shared_ptr 的内存占用总是原始指针的两倍。
+``std::shared_ptr`` 的模型如上图所示：它包含两个指针，一个指向对象的原始指针和一个指向控制块的原始指针。所以 ``std::shared_ptr`` 的内存占用总是原始指针的两倍。
 
 **引用计数**
 
-std::shared_ptr 是通过共享所有权的语义来管理对象的生命周期。对于指向该对象的所有 std::shared_ptr，它们都不独占这个对象，它们合作来管理这个对象的生命周期：当最后一个指向对象的 std::shared_ptr 不再指向这个对象（比如，std::shared_ptr 被销毁了或者指向了别的对象），std::shared_ptr 会销毁它指向的对象。
+``std::shared_ptr`` 是通过共享所有权的语义来管理对象的生命周期。对于指向该对象的所有 ``std::shared_ptr``，它们都不独占这个对象，它们合作来管理这个对象的生命周期：当最后一个指向对象的 ``std::shared_ptr`` 不再指向这个对象（比如，``std::shared_ptr`` 被销毁了或者指向了别的对象），``std::shared_ptr`` 会销毁它指向的对象。
 
-std::shared_ptr 实际是通控制块的引用计数（reference counter）来管理对象的生命周期。一个 std::shared_ptr 可以通过查看引用计数知道有多少个 std::shared_ptr 指向该对象。引用计数更新如下：
-  - std::shared_ptr 的构造函数会通常增加引用计数。但是对于 move 构造函数：从一个std::shared_ptr 移动构造一个std::shared_ptr 会将源 std::shared_ptr 设置为 nullptr，源 std::shared_ptr 不再指向资源，并且新的 std::shared_ptr 开始指向资源。所以，它不需要维护引用计数。
-  - std::shared_ptr 的析构函数会减少引用计数。
-  - 拷贝 operator= 既增加也减少引用计数：如果 sp1 和 sp2 是指向不同对象的 std::shared_ptr，赋值操作 “sp1 = sp2” 会修改 sp1 来让它指向 sp2 指向的对象。这个赋值操作的效果就是：原本被 sp1 指向的对象的引用计数减一，同时被 sp2 指向的对象的引用计数加一。
+``std::shared_ptr`` 实际是通控制块的引用计数（reference counter）来管理对象的生命周期。一个 ``std::shared_ptr`` 可以通过查看引用计数知道有多少个 ``std::shared_ptr`` 指向该对象。引用计数更新如下：
+  - ``std::shared_ptr`` 的构造函数会通常增加引用计数。但是对于 move 构造函数：从一个``std::shared_ptr`` 移动构造一个``std::shared_ptr`` 会将源 ``std::shared_ptr`` 设置为 nullptr，源 ``std::shared_ptr`` 不再指向资源，并且新的 ``std::shared_ptr`` 开始指向资源。所以，它不需要维护引用计数。
+  - ``std::shared_ptr`` 的析构函数会减少引用计数。
+  - 拷贝 operator= 既增加也减少引用计数：如果 sp1 和 sp2 是指向不同对象的 ``std::shared_ptr``，赋值操作 “sp1 = sp2” 会修改 sp1 来让它指向 sp2 指向的对象。这个赋值操作的效果就是：原本被 sp1 指向的对象的引用计数减一，同时被 sp2 指向的对象的引用计数加一。
 
-如果一个std::shared_ptr 查询到一个引用计数在一次自减后变成 0 了，这就意味着没有别的 std::shared_ptr 指向这个资源了，所以 std::shared_ptr 就会销毁这个资源。
+如果一个``std::shared_ptr`` 查询到一个引用计数在一次自减后变成 0 了，这就意味着没有别的 ``std::shared_ptr`` 指向这个资源了，所以 ``std::shared_ptr`` 就会销毁这个资源。
 
 ```c++
 #include <iostream>
 #include <memory>
 
 int main() {
-  std::shared_ptr<int> p1 = std::make_shared<int>(3);
-  std::shared_ptr<int> p2 = std::move(p1);
+  `std::shared_ptr`<int> p1 = std::make_shared<int>(3);
+  `std::shared_ptr`<int> p2 = std::move(p1);
   std::cout << "==== p1.use_count() = " << p1.use_count() << std::endl;
   std::cout << "==== p2.use_count() = " << p2.use_count() << std::endl;
-  std::shared_ptr<int> p3 = std::make_shared<int>(4);
-  std::shared_ptr<int> p4(p2);
+  `std::shared_ptr`<int> p3 = std::make_shared<int>(4);
+  `std::shared_ptr`<int> p4(p2);
   std::cout << "==== p3.use_count() = " << p3.use_count() << std::endl;
   std::cout << "==== p2.use_count() = " << p2.use_count() << std::endl;
   p4 = p3;
@@ -2824,7 +2824,7 @@ int main() {
 
 **自定义deleter**
 
-上一篇文章介绍过 std::unique_ptr 可以自定义 deleter，并且会增加 std::unique_ptr 占用内存大小。std::shared_ptr 默认也使用 delete 来销毁资源，也支持自定义 deleter，但是其实现机制和 std::unique_ptr 不同。std::unique_ptr 的 deleter 是智能指针的一部分，但是对于 std::shared_ptr 并非如此，它的 deleter 是属于 control block，因此 std::shared_ptr 占用内存大小不会因为自定义 deleter 而改变。
+上一篇文章介绍过 `std::unique_ptr` 可以自定义 `deleter`，并且会增加 `std::unique_ptr` 占用内存大小。``std::shared_ptr`` 默认也使用 delete 来销毁资源，也支持自定义 `deleter`，但是其实现机制和 `std::unique_ptr` 不同。`std::unique_ptr` 的 `deleter` 是智能指针的一部分，但是对于 ``std::shared_ptr`` 并非如此，它的 `deleter` 是属于 control block，因此 ``std::shared_ptr`` 占用内存大小不会因为自定义 `deleter` 而改变。
 
 ```c++
 auto loggingDel = [](Widget *pw)
@@ -2834,42 +2834,42 @@ auto loggingDel = [](Widget *pw)
 				  };
 std::unique_ptr<Widget, decltype(loggingDel)> // deleter type is
   upw(new Widget, loggingDel);                // part of ptr type
-std::shared_ptr<Widget>         // deleter type is not
+`std::shared_ptr`<Widget>         // deleter type is not
   spw(new Widget, loggingDel);  // part of ptr type
 ```
 
-std::shared_ptr 这样的设计更加灵活。看下面的例子：
+``std::shared_ptr`` 这样的设计更加灵活。看下面的例子：
 
 ```c++
 auto customDeleter1 = [](Widget *pw) { … }; // custom deleters,
 auto customDeleter2 = [](Widget *pw) { … }; // each with a different type
-std::shared_ptr<Widget> pw1(new Widget, customDeleter1);
-std::shared_ptr<Widget> pw2(new Widget, customDeleter2);
+`std::shared_ptr`<Widget> pw1(new Widget, customDeleter1);
+`std::shared_ptr`<Widget> pw2(new Widget, customDeleter2);
 
-std::vector<std::shared_ptr<Widget>> vpw{ pw1, pw2 };
+std::vector<`std::shared_ptr`<Widget>> vpw{ pw1, pw2 };
 ```
 
-pw1 和 pw2 具有相同的类型，可以放到一个容器中。它们能互相赋值，并且它们都能被传给一个函数作为参数，只要这个函数的参数是std::shared_ptr类型。但是对于有自定义 deleter 的两个 std::unique_ptr，因为类型不同，无法做到这些功能。
+pw1 和 pw2 具有相同的类型，可以放到一个容器中。它们能互相赋值，并且它们都能被传给一个函数作为参数，只要这个函数的参数是`std::shared_ptr`类型。但是对于有自定义 `deleter` 的两个 `std::unique_ptr`，因为类型不同，无法做到这些功能。
 
 **控制块**
 
-上面介绍的引用计数和自定义 deleter 都是存在 std::shared_ptr 指向的控制块中。一个对象的控制块应该被指向这个对象的第一个 std::shared_ptr创建。通常，一个创建 std::shared_ptr 的函数不可能知道是否有其他 std::shared_ptr 已经指向这个对象，所以控制块的创建需要遵循以下规则：
+上面介绍的引用计数和自定义 deleter 都是存在 `std::shared_ptr` 指向的控制块中。一个对象的控制块应该被指向这个对象的第一个 `std::shared_ptr`创建。通常，一个创建 `std::shared_ptr` 的函数不可能知道是否有其他 `std::shared_ptr` 已经指向这个对象，所以控制块的创建需要遵循以下规则：
 - std::make_shared 总是创建一个控制块，它制造一个新对象，所以当 std::make_shared 被调用的时，这个对象没有控制块。
-当一个 std::shared_ptr 的构造来自一个独占所有权的智能指针（std::unique_ptr 或 std::auto_ptr）时，创造一个控制块。独占所有权的指针不使用控制块，所以原来的被指向的对象没有控制块。
-- 当使用一个原始指针构造 std::shared_ptr 时，它创造一个控制块。如果你想使用一个已有控制块的对象来创建一个std::shared_ptr 的话，你可以传入一个 std::shared_ptr 或一个 std::weak_ptr 作为构造函数的参数，但不能传入一个原始指针。使用 std::shared_ptr 或 std::weak_ptr 作为构造函数的参数不会创建一个新的控制块，因为它们能依赖传入的智能指针来指向必要的控制块。
+当一个 `std::shared_ptr` 的构造来自一个独占所有权的智能指针（`std::unique_ptr` 或 `std::auto_ptr`）时，创造一个控制块。独占所有权的指针不使用控制块，所以原来的被指向的对象没有控制块。
+- 当使用一个原始指针构造 `std::shared_ptr` 时，它创造一个控制块。如果你想使用一个已有控制块的对象来创建一个`std::shared_ptr` 的话，你可以传入一个 `std::shared_ptr` 或一个 `std::weak_ptr` 作为构造函数的参数，但不能传入一个原始指针。使用 `std::shared_ptr` 或 `std::weak_ptr` 作为构造函数的参数不会创建一个新的控制块，因为它们能依赖传入的智能指针来指向必要的控制块。
 
-这些规则产生一个结果：用一个原始指针来构造超过一个的 std::shared_ptr 的对象时，会让这个对象拥有多个控制块。
+这些规则产生一个结果：用一个原始指针来构造超过一个的 `std::shared_ptr` 的对象时，会让这个对象拥有多个控制块。
 
 ```c++
 auto pw = new int;
-std::shared_ptr<int> spw1(pw);
-std::shared_ptr<int> spw2(pw);
+`std::shared_ptr`<int> spw1(pw);
+`std::shared_ptr`<int> spw2(pw);
 ```
 
-使用原始指针变量作为 std::shared_ptr 构造函数的参数时，有一个特别让人惊奇的方式（涉及到 this 指针）会产生多个控制块。
+使用原始指针变量作为 `std::shared_ptr` 构造函数的参数时，有一个特别让人惊奇的方式（涉及到 this 指针）会产生多个控制块。
 
 ```c++
-std::vector<std::shared_ptr<Widget> processedWidget;
+std::vector<`std::shared_ptr`<Widget> processedWidget;
 class Widget {
   public:
     ...
@@ -2881,18 +2881,18 @@ void Widget::process() {
 }
 ```
 
-这段代码能编译，但是它传入一个原始指针（this）给一个 std::shared_ptr 的容器。因此 std::shared_ptr 的构造函数将为它指向的 Widget（*this）创建一个新的控制块。但是，如果在成员函数外面已经有 std::shared_ptr 指向这个 Widget，则会导致资源的 double free。例如如下代码：
+这段代码能编译，但是它传入一个原始指针（this）给一个 `std::shared_ptr` 的容器。因此 `std::shared_ptr` 的构造函数将为它指向的 Widget（*this）创建一个新的控制块。但是，如果在成员函数外面已经有 `std::shared_ptr` 指向这个 Widget，则会导致资源的 double free。例如如下代码：
 
 ```c++
-std::shared_ptr<Widget> w(new Widget, loggingDel);
+`std::shared_ptr`<Widget> w(new Widget, loggingDel);
 w->process();
 ```
 
-如果你的类被 std::shared_ptr 管理，你可以继承 std::enable_shared_from_this，这样就能用this指针安全地创建一个std::shared_ptr。
+如果你的类被 `std::shared_ptr` 管理，你可以继承 std::enable_shared_from_this，这样就能用this指针安全地创建一个`std::shared_ptr`。
 
 ```c++
 class Widget;
-std::vector<std::shared_ptr<Widget>> processedWidget;
+std::vector<`std::shared_ptr`<Widget>> processedWidget;
 auto loggingDel = [](Widget *pw) {
   delete pw;
 };
@@ -2905,18 +2905,18 @@ void Widget::process()  {
 }
 int main() {
   {
-    std::shared_ptr<Widget> w(new Widget, loggingDel);
+    `std::shared_ptr`<Widget> w(new Widget, loggingDel);
     w->process();
   }
   return 0;
 }
 ```
 
-在使用 shared_from_this 返回 this 指针的 std::shared_ptr 的时候 shared_from_this 会先搜索当前对象的控制块，如果有就不会再创建控制块了。所以以上代码就不会产生 double free 的问题了。
+在使用 shared_from_this 返回 this 指针的 `std::shared_ptr` 的时候 shared_from_this 会先搜索当前对象的控制块，如果有就不会再创建控制块了。所以以上代码就不会产生 double free 的问题了。
 
-但是，这个设计依赖于当前的对象已经有一个相关联的控制块了。也就是说，必须已经有一个 std::shared_ptr 指向当前的对象。如果没有，shared_from_this 也会抛出异常，它的行为还将是未定义的。
+但是，这个设计依赖于当前的对象已经有一个相关联的控制块了。也就是说，必须已经有一个 `std::shared_ptr` 指向当前的对象。如果没有，shared_from_this 也会抛出异常，它的行为还将是未定义的。
 
-为了防止用户在一个 std::shared_ptr 指向这个对象前，调用成员函数（这个成员函数调用了 shared_from_this），继承自std::enable_shared_from_this 的类通常将它们的构造函数为申明为 private，并且让用户通过调用一个返回 std::shared_ptr 的工厂函数来创建对象。
+为了防止用户在一个 `std::shared_ptr` 指向这个对象前，调用成员函数（这个成员函数调用了 shared_from_this），继承自std::enable_shared_from_this 的类通常将它们的构造函数为申明为 private，并且让用户通过调用一个返回 `std::shared_ptr` 的工厂函数来创建对象。
 
 ```c++
 class Widget: public std::enable_shared_from_this<Widget> {
@@ -2924,7 +2924,7 @@ public:
   // factory function that perfect-forwards args
   // to a private ctor
   template<typename... Ts>
-  static std::shared_ptr<Widget> create(Ts&&... params);
+  static `std::shared_ptr`<Widget> create(Ts&&... params);
   …
   void process(); // as before
   …
@@ -2933,23 +2933,23 @@ private:
 };
 ```
 
-此外，std::shared_ptr 另外一个和 std::unique_ptr 不同的地方是：std::shared_ptr 的 API 被设计为只能作为单一对象的指针。没有 std::shared_ptr<T[]>，但是使用 std::array，std::vector 和 std::string 可以满足这样的需求。
+此外，`std::shared_ptr` 另外一个和 std::unique_ptr 不同的地方是：`std::shared_ptr` 的 API 被设计为只能作为单一对象的指针。没有 `std::shared_ptr`<T[]>，但是使用 std::array，std::vector 和 std::string 可以满足这样的需求。
 
 {{<admonition quote "总结" false>}}
-- std::shared_ptr 为任意共享所有权的资源提供一种自动垃圾回收的便捷方式。
-- 较之于 std::unique_ptr，std::shared_ptr 对象占用的内存通常大两倍，控制块会产生开销，需要原子引用计数修改操作。
-- 默认资源销毁是通过 delete，但是也支持自定义 deleter。自定义 deleter 的类型对 std::shared_ptr 的类型没有影响。
-- 避免从原始指针变量上创建 std::shared_ptr。
+- `std::shared_ptr` 为任意共享所有权的资源提供一种自动垃圾回收的便捷方式。
+- 较之于 std::unique_ptr，`std::shared_ptr` 对象占用的内存通常大两倍，控制块会产生开销，需要原子引用计数修改操作。
+- 默认资源销毁是通过 delete，但是也支持自定义 deleter。自定义 deleter 的类型对 `std::shared_ptr` 的类型没有影响。
+- 避免从原始指针变量上创建 `std::shared_ptr`。
 {{</admonition>}}
 
 
-#### [Item 20: Use std::weak_ptr for std::shared_ptr like pointers that can dangle.](https://blog.csdn.net/Dong_HFUT/article/details/123612236)
+#### [Item 20: Use std::weak_ptr for `std::shared_ptr` like pointers that can dangle.](https://blog.csdn.net/Dong_HFUT/article/details/123612236)
 
 **std::weak_ptr 的特点**
 
-std::weak_ptr 通常不会单独使用，一般是与 std::shared_ptr 搭配使用，可以将 std::weak_ptr 类型指针视为 std::shared_ptr 指针的一种辅助工具，借用 std::weak_ptr 类型指针， 可以获取 std::shared_ptr 指针的一些状态信息，例如有多少 std::shared_ptr 指针指向相同的资源、std::shared_ptr 指针指向的内存是否已经被释放等。
+std::weak_ptr 通常不会单独使用，一般是与 `std::shared_ptr` 搭配使用，可以将 std::weak_ptr 类型指针视为 `std::shared_ptr` 指针的一种辅助工具，借用 std::weak_ptr 类型指针， 可以获取 `std::shared_ptr` 指针的一些状态信息，例如有多少 `std::shared_ptr` 指针指向相同的资源、`std::shared_ptr` 指针指向的内存是否已经被释放等。
 
-std::weak_ptr 常常是通过 std::shared_ptr 构造而来，它和 std::shard_ptr 指向的相同的位置。但是，std::weak_ptr 不会影响对象的引用计数，也就是说，std::weak_ptr 被创建时，引用计数不会增加，当它被释放时，引用计数也不会减少。
+std::weak_ptr 常常是通过 `std::shared_ptr` 构造而来，它和 std::shard_ptr 指向的相同的位置。但是，std::weak_ptr 不会影响对象的引用计数，也就是说，std::weak_ptr 被创建时，引用计数不会增加，当它被释放时，引用计数也不会减少。
 
 ```c++
 auto spw =                     // after spw is constructed, the pointed-to Widget's
@@ -2962,13 +2962,13 @@ auto spw =                     // after spw is constructed, the pointed-to Widge
   if (wpw.expired()) … // if wpw doesn't point to an object…
 ```
 
-std::weak_ptr 没有解引用操作，但可以将它转换为 std::shared_ptr，使用 lock 可以保证线程安全。
+std::weak_ptr 没有解引用操作，但可以将它转换为 `std::shared_ptr`，使用 lock 可以保证线程安全。
 
 ```c++
-std::shared_ptr<Widget> spw1 = wpw.lock(); // if wpw's expired, spw1 is null
+`std::shared_ptr`<Widget> spw1 = wpw.lock(); // if wpw's expired, spw1 is null
 auto spw2 = wpw.lock(); // same as above, but uses auto
 
-std::shared_ptr<Widget> spw3(wpw); // if wpw's expired, throw std::bad_weak_ptr
+`std::shared_ptr`<Widget> spw3(wpw); // if wpw's expired, throw std::bad_weak_ptr
 ```
 
 **std::weak_ptr 的典型应用**
@@ -2977,7 +2977,7 @@ std::shared_ptr<Widget> spw3(wpw); // if wpw's expired, throw std::bad_weak_ptr
 
 <font color=red>循环引用</font>
 
-std::weak_ptr 的一个典型应用是解决 std::shared_ptr 的内存泄露问题----循环引用。看下面的代码：
+std::weak_ptr 的一个典型应用是解决 `std::shared_ptr` 的内存泄露问题----循环引用。看下面的代码：
 
 ```c++
  #include <iostream>
@@ -3002,8 +3002,8 @@ class B {
 };
 
 int main() {
-  std::shared_ptr<A> aa = make_shared<A>(); // aa 引用计数为 1
-  std::shared_ptr<B> bb = make_shared<B>(); // bb 引用计数为 1
+  `std::shared_ptr`<A> aa = make_shared<A>(); // aa 引用计数为 1
+  `std::shared_ptr`<B> bb = make_shared<B>(); // bb 引用计数为 1
 
   aa->b = bb;// bb 引用计数为 2
   bb->a = aa;// aa 引用计数为 2
@@ -3016,7 +3016,7 @@ A constructor
 B constructor
 ```
 
-从运行结果可以看到 A 和 B 都调用了构造函数，却没有调用析构函数，导致了资源泄露。原因是 main 函数结束后，两个对象的引用计数都为 1 ，导致 std::shared_ptr 没有调用析构函数。解决办法是将 A 和 B 对象中 shared_ptr 换成 weak_ptr 即可。
+从运行结果可以看到 A 和 B 都调用了构造函数，却没有调用析构函数，导致了资源泄露。原因是 main 函数结束后，两个对象的引用计数都为 1 ，导致 `std::shared_ptr` 没有调用析构函数。解决办法是将 A 和 B 对象中 shared_ptr 换成 weak_ptr 即可。
 
 <font color=red>带缓存的工厂方法</font>
 
@@ -3180,12 +3180,12 @@ custom delInvmt called....0x1258cd0
 ~Stock() called....
 ```
 
-对象的缓存管理器需要一个类似 std::shared_ptr 的指针，但又想这些对象的生存期可以由调用者来管理来管理，因而使用 std::weak_ptr 可以满足这种需求。
+对象的缓存管理器需要一个类似 `std::shared_ptr` 的指针，但又想这些对象的生存期可以由调用者来管理来管理，因而使用 std::weak_ptr 可以满足这种需求。
 
 
 {{<admonition quote "总结" false>}}
-- 对类似 std::shared_ptr 可能悬空的指针，使用 std::weak_ptr。
-- std::weak_ptr 的潜在使用场景包括：caching、observer lists、避免 std::shared_ptr 的循环引用。
+- 对类似 `std::shared_ptr` 可能悬空的指针，使用 std::weak_ptr。
+- std::weak_ptr 的潜在使用场景包括：caching、observer lists、避免 `std::shared_ptr` 的循环引用。
 {{</admonition>}}
 
 
@@ -3214,7 +3214,7 @@ std::make_unique 和 std::make_shared 是三个 make 函数中的两个，第三
 auto upw1(std::make_unique<Widget>());       // with make func
 std::unique_ptr<Widget> upw2(new Widget);    // without make func
 auto spw1(std::make_shared<Widget>());       // with make func
-std::shared_ptr<Widget> spw2(new Widget);    // without make func
+`std::shared_ptr`<Widget> spw2(new Widget);    // without make func
 ```
 使用 make 函数的第一个优点是支持 auto，避免重复代码，使得代码更加清晰好维护。
 
@@ -3224,23 +3224,23 @@ std::shared_ptr<Widget> spw2(new Widget);    // without make func
 使用 make 函数的第二个优点跟异常安全有关。先看下面这个例子：
 
 ```c++
-void processWidget(std::shared_ptr<Widget> spw, int priority);  // declare
+void processWidget(`std::shared_ptr`<Widget> spw, int priority);  // declare
 
-processWidget(std::shared_ptr<Widget>(new Widget), computePriority());  // potential resource leak!
+processWidget(`std::shared_ptr`<Widget>(new Widget), computePriority());  // potential resource leak!
 processWidget(std::make_shared<Widget>(), computePriority());           // no potential resource leak
 ```
 
 如果使用 new，processWidget 调用时，产生如下步骤：
 - 执行 new Widget
-- 执行 std::shared_ptr 的构造
+- 执行 `std::shared_ptr` 的构造
 - 执行 computePriority()
 
-但是，编译器可能不一定产生上述代码顺序。new Widget 肯定时要在 std::shared_ptr 的构造函数之前执行，但 computePriority() 可能在这两个步骤的前、中或后产生，可能时这样：
+但是，编译器可能不一定产生上述代码顺序。new Widget 肯定时要在 `std::shared_ptr` 的构造函数之前执行，但 computePriority() 可能在这两个步骤的前、中或后产生，可能时这样：
 - 执行 new Widget
 - 执行 computePriority()
-- 执行 std::shared_ptr 的构造
+- 执行 `std::shared_ptr` 的构造
 
-如果 computePriority() 产生异常，第一步 new 的 Widget 还未被 std::shared_ptr 接管，会产生内存泄漏。使用 make 函数则不会有这样的问题。
+如果 computePriority() 产生异常，第一步 new 的 Widget 还未被 `std::shared_ptr` 接管，会产生内存泄漏。使用 make 函数则不会有这样的问题。
 
 
 <font color=red>效率更高</font>
@@ -3248,11 +3248,11 @@ processWidget(std::make_shared<Widget>(), computePriority());           // no po
 使用 make 函数的第三个优点是可以避免多次内存分配、效率更高。
 
 ```c++
-std::shared_ptr<Widget> spw(new Widget);
+`std::shared_ptr`<Widget> spw(new Widget);
 auto spw = std::make_shared<Widget>();
 ```
 
-使用 new，需要分配两次内存，一次分配 Widget 的内存，一次分配控制块的内存。若使用 make 函数，则只需要分配一次内存块，make 函数（std::shared_ptr 和 std::allocate_shared）会申请一块内存同时存储 Widget 和控制块。
+使用 new，需要分配两次内存，一次分配 Widget 的内存，一次分配控制块的内存。若使用 make 函数，则只需要分配一次内存块，make 函数（`std::shared_ptr` 和 std::allocate_shared）会申请一块内存同时存储 Widget 和控制块。
 
 **make函数的缺陷**
 
@@ -3266,7 +3266,7 @@ auto spw = std::make_shared<Widget>();
 auto widgetDeleter = [](Widget* pw) { … };
 
 std::unique_ptr<Widget, decltype(widgetDeleter)>  upw(new Widget, widgetDeleter);
-std::shared_ptr<Widget> spw(new Widget, widgetDeleter);
+`std::shared_ptr`<Widget> spw(new Widget, widgetDeleter);
 ```
 
 <font color=red>语义歧义</font>
@@ -3282,7 +3282,7 @@ std::vector<int> p2{10, 20};  // two elements: 10 and 20
 
 ```c++
 auto sp1 = std::make_shared<std::vector<int>>(10, 20);
-std::shared_ptr<std::vector<int>> sp2(new std::vector{10,20});
+`std::shared_ptr`<std::vector<int>> sp2(new std::vector{10,20});
 ```
 
 但是，Item 30 将会给出一个变通方案：使用auto类型推导来从初始化列表创建一个 std::initializer_list 对象，然后传入 auto 创建的对象给 make 函数：
@@ -3303,24 +3303,24 @@ std::weak_ptr 是通过检查控制块中的引用计数（非 weak counter）�
 ```c++
 class ReallyBigType { … };
 auto pBigObj = std::make_shared<ReallyBigType>();  // create very large object via std::make_shared
-…    // create std::shared_ptrs and std::weak_ptrs to large object, use them to work with it
+…    // create `std::shared_ptr`s and std::weak_ptrs to large object, use them to work with it
 
-…    // final std::shared_ptr to object destroyed here, but std::weak_ptrs to it remain
+…    // final `std::shared_ptr` to object destroyed here, but std::weak_ptrs to it remain
 
 …    // during this period, memory formerly occupied by large object remains allocated
 
 …    // final std::weak_ptr to object destroyed here;  memory for control block and object is released
 ```
 
-如果使用 new，因为是两块内存块，只要最后一个指向 ReallyBigType 对象的 std::shared_ptr 销毁了，这个对象的内存就能被释放：
+如果使用 new，因为是两块内存块，只要最后一个指向 ReallyBigType 对象的 `std::shared_ptr` 销毁了，这个对象的内存就能被释放：
 
 ```c++
 class ReallyBigType { … }; // as before
-std::shared_ptr<ReallyBigType> pBigObj(new ReallyBigType);  // create very large object via new
+`std::shared_ptr`<ReallyBigType> pBigObj(new ReallyBigType);  // create very large object via new
 
-… // as before, create std::shared_ptrs and std::weak_ptrs to object, use them with it
+… // as before, create `std::shared_ptr`s and std::weak_ptrs to object, use them with it
 
-… // final std::shared_ptr to object destroyed here, but std::weak_ptrs to it remain; memory for object is deallocated
+… // final `std::shared_ptr` to object destroyed here, but std::weak_ptrs to it remain; memory for object is deallocated
 
 … // during this period, only memory for the control block remains allocated
 
@@ -3331,24 +3331,24 @@ std::shared_ptr<ReallyBigType> pBigObj(new ReallyBigType);  // create very large
 讲完 make 的优缺点，我们回顾下上面说过的一个使用 new 可能导致内存泄漏的问题：
 
 ```c++
-void processWidget(std::shared_ptr<Widget> spw, int priority);  // as before
+void processWidget(`std::shared_ptr`<Widget> spw, int priority);  // as before
 void cusDel(Widget *ptr); // custom deleter
 
-processWidget(std::shared_ptr<Widget>(new Widget, cusDel),    // potential resource leak!
+processWidget(`std::shared_ptr`<Widget>(new Widget, cusDel),    // potential resource leak!
               computePriority());
 ```
 
 如果修改如下：
 
 ```c++
-std::shared_ptr<Widget> spw(new Widget, cusDel);
+`std::shared_ptr`<Widget> spw(new Widget, cusDel);
 processWidget(spw, computePriority());  // correct, but not optimal; see below
 ```
 
-这样可以避免内存泄漏，但是效率不高。可能存在异常泄漏的版本，我们传递给 processWidget 的是一个右值，而上面这个安全版本传递的是左值。传递右值只需要 move，而传递左值必须要拷贝，拷贝一个 std::shared_ptr 要求对它的引用计数进行一个原子的自增操作，但是 move 一个 std::shared_ptr 不需要修改引用计数。因此，上面的安全版本可以通过 move 来优化：
+这样可以避免内存泄漏，但是效率不高。可能存在异常泄漏的版本，我们传递给 processWidget 的是一个右值，而上面这个安全版本传递的是左值。传递右值只需要 move，而传递左值必须要拷贝，拷贝一个 `std::shared_ptr` 要求对它的引用计数进行一个原子的自增操作，但是 move 一个 `std::shared_ptr` 不需要修改引用计数。因此，上面的安全版本可以通过 move 来优化：
 
 ```c++
-std::shared_ptr<Widget> spw(new Widget, cusDel);
+`std::shared_ptr`<Widget> spw(new Widget, cusDel);
 processWidget(std::move(spw),  computePriority()); // both efficient and exception safe
 ```
 
@@ -3359,7 +3359,7 @@ processWidget(std::move(spw),  computePriority()); // both efficient and excepti
 {{<admonition quote "总结" false>}}
 - 和直接使用 new 相比，make 函数消除了代码重复、提高了异常安全性。对于 std::make_shared和 std::allocate_shared，生成的代码更小更快。
 - 不适合使用 make 函数的情况包括需要指定自定义删除器和希望用大括号初始化。
-- 对于std::shared_ptrs, make函数可能不被建议的其他情况包括 (1)有自定义内存管理的类和 (2)特别关注内存的系统、非常大的对象，以及 std::weak_ptrs 比对应的 std::shared_ptrs 存在的时间更长。
+- 对于`std::shared_ptr`s, make函数可能不被建议的其他情况包括 (1)有自定义内存管理的类和 (2)特别关注内存的系统、非常大的对象，以及 std::weak_ptrs 比对应的 `std::shared_ptr`s 存在的时间更长。
 {{</admonition>}}
 
 #### [Item 22: When using the Pimpl Idiom, define special member functions in the implementation file.](https://blog.csdn.net/Dong_HFUT/article/details/123704824)
@@ -3667,7 +3667,7 @@ Widget& Widget::operator=(const Widget& rhs)  // copy operator=
 
 到目前为止，以上代码的实现是比较完整的了。
 
-为了实现 Pimpl 技术，std::unique_ptr 是合适的，因为 pImpl 指针对 Impl 有独有所有权。如果你使用 std::shared_ptr 代替 std::unique_ptr，以上出现的问题将不会出现。示例如下：
+为了实现 Pimpl 技术，std::unique_ptr 是合适的，因为 pImpl 指针对 Impl 有独有所有权。如果你使用 `std::shared_ptr` 代替 std::unique_ptr，以上出现的问题将不会出现。示例如下：
 
 ```c++
 // in "widget.h"
@@ -3678,7 +3678,7 @@ public:
   ...
 private:
   struct Impl;
-  std::shared_ptr<Impl> pImpl;
+  `std::shared_ptr`<Impl> pImpl;
 };
 
 // in "widget.cpp"
@@ -3703,12 +3703,12 @@ auto w2(std::move(w1)); // move-construct w2
 w1 = std::move(w2);     // move-assign w1
 ```
 
-std::shared_ptr 的 deleter 不是其自身的一部分，属于控制块，我们的代码不会包含删除器的代码，因此不需要自定义析构函数，那么 move 和 copy 操作都会自定生成。而 std::shared_ptr 又是值语义的，拷贝也不会发生问题（通过引用计数进行内存管理）。
+`std::shared_ptr` 的 deleter 不是其自身的一部分，属于控制块，我们的代码不会包含删除器的代码，因此不需要自定义析构函数，那么 move 和 copy 操作都会自定生成。而 `std::shared_ptr` 又是值语义的，拷贝也不会发生问题（通过引用计数进行内存管理）。
 
 {{<admonition quote "总结" false>}}
 - pImpl 惯用法通过减少类实现和类使用者之间的编译依赖来减少编译时间。
 - 对于std::unique_ptr 类型的 pImpl 指针，需要在头文件的类里声明特殊的成员函数，但是在实现文件里面来实现他们。即使是编译器自动生成的代码可以工作，也要这么做。
-- 以上的建议只适用于 std::unique_ptr，不适用于 std::shared_ptr。
+- 以上的建议只适用于 std::unique_ptr，不适用于 `std::shared_ptr`。
 {{</admonition>}}
 
 ### CH05: Rvalue References, Move Semantics, and Perfect Forwarding
@@ -3991,7 +3991,7 @@ public:
   …
 private:
   std::string name;
-  std::shared_ptr<SomeDataStructure> p;
+  `std::shared_ptr`<SomeDataStructure> p;
 };
 ```
 
@@ -4022,7 +4022,7 @@ public:
   …
 private:
   std::string name;
-  std::shared_ptr<SomeDataStructure> p;
+  `std::shared_ptr`<SomeDataStructure> p;
 };
 
 std::string getWidgetName(); // factory function
@@ -5952,7 +5952,7 @@ bool doWork(std::function<bool(int)> filter, // returns whether
 隐式 detach。析构函数调用时，隐式调用 detach 分离线程。doWork 可以快速返回，但可能导致 bug。因为 doWork 结束后，其内部的 goodVals 会被释放，但线程还在运行，并且访问 goodVals ，将导致程序崩溃。
 由于 `joinable` 的线程会导致严重的后果，因此标准委员会决定禁止这样的事情发生（通过让程序停止运行的方式）。这就需要程序员确保 `std::thread` 对象在离开其定义的作用域的所有路径上都是 un`joinable` 。但是想要覆盖所有的路径并非易事，return、continue、goto、break 或者异常等都能跳出作用域。
 
-无论何时，想在出作用域的路径上执行某个动作，常用的方法是将这个动作放入到一个局部对象的析构函数中。这种对象被成为 RAII（Resource Acquisition Is Initialization）对象，产生这个对象的类是 RAII 类。RAII 类在标准库中很常见，例如 STL 容器（每个容器的析构函数销毁容器中的内容并释放它的内存）中的智能指针（std::unique_ptr 析构函数调用它的 deleter 删除它指向的对象，std::shared_ptr 和 std::weak_ptr 的析构函数中会减少引用计数）、std::fstream 对象（析构函数关闭相应的文件）。但是 `std::thread` 对象没有标准的 RAII 类，这可能是标准委员会拒绝将 join 和 detach 作为默认选项，因为他们也不知道这个类应该有什么样的行为。
+无论何时，想在出作用域的路径上执行某个动作，常用的方法是将这个动作放入到一个局部对象的析构函数中。这种对象被成为 RAII（Resource Acquisition Is Initialization）对象，产生这个对象的类是 RAII 类。RAII 类在标准库中很常见，例如 STL 容器（每个容器的析构函数销毁容器中的内容并释放它的内存）中的智能指针（std::unique_ptr 析构函数调用它的 deleter 删除它指向的对象，`std::shared_ptr` 和 std::weak_ptr 的析构函数中会减少引用计数）、std::fstream 对象（析构函数关闭相应的文件）。但是 `std::thread` 对象没有标准的 RAII 类，这可能是标准委员会拒绝将 join 和 detach 作为默认选项，因为他们也不知道这个类应该有什么样的行为。
 
 好在实现这样的一个类也并非难事。例如，你可以让用户指定 ThreadRAII 类在销毁时选择 join 还是 detach：
 
@@ -6856,20 +6856,20 @@ vs.emplace_back(50, 'x');  // ditto
 在决定是否使用 `emplace` 的时候，还有另外两个因素需要注意。第一个因素就是资源管理。例如：
 
 ```c++
-std::list<std::shared_ptr<Widget>> ptrs;
+std::list<`std::shared_ptr`<Widget>> ptrs;
 ```
 
-如果你要添加一个自定义 deleter 的 std::shared_ptr 对象，那么无法使用 std::make_shared_ptr 来创建（详见Item 21）。只能使用 std::shared_ptr 管理原始指针:
+如果你要添加一个自定义 deleter 的 `std::shared_ptr` 对象，那么无法使用 std::make_shared_ptr 来创建（详见Item 21）。只能使用 `std::shared_ptr` 管理原始指针:
 
 ```c++
 void killWidget(Widget* pWidget);
 
-ptrs.push_back(std::shared_ptr<Widget>(new Widget, killWidget));
+ptrs.push_back(`std::shared_ptr`<Widget>(new Widget, killWidget));
 // ptrs.push_back({ new Widget, killWidget });  // ditto
 ```
 
-这样会先创建一个临时的 std::shared_ptr 对象，然后再传给 push_back。如果使用 emplace 接口，原则上临时对象的创建是可以避免的，但是这里创建临时对象却是必要的，考虑下面的过程：
-  1. 首先，临时的 std::shared_ptr<Widge> 对象（temp）被创建。
+这样会先创建一个临时的 `std::shared_ptr` 对象，然后再传给 push_back。如果使用 emplace 接口，原则上临时对象的创建是可以避免的，但是这里创建临时对象却是必要的，考虑下面的过程：
+  1. 首先，临时的 `std::shared_ptr`<Widge> 对象（temp）被创建。
   2. 然后， push_back 接受 temp 的引用。在 分配节点（用于接收 temp 的拷贝）的时候发生 OOM（out-of-memory）。
   3. 最后，异常从 push_back 传出后，temp 被销毁，它所管理的 Widget 对象也通过 killWidget 进行释放。
 
@@ -6882,10 +6882,10 @@ ptrs.emplace_back(new Widget, killWidget);
   1. new Widget 创建的原始指针被完美转发到 emplace_back 内部构造器，此时发生 OOM。
   2. 异常从 push_back 传出后，原始指针是 Widget 唯一访问路径，它直接被销毁，但其管理的内存却没办法释放，就会发生内存泄漏。
 
-对于 std::unique_ptr 也有类似的问题。出现这样问题的根本原因是 std::shared_ptr 和 std::unique_ptr 对资源的管理取决于它们是否立即接管了这个资源，而 emplace 的完美转发机制延迟了资源管理对象的创建，这就给资源异常留下了可能的机会。这也是为什么建议使用 std::make_shared 和 std::make_unique 创建对象的原因。其实不应该将 “new Widget” 这样的表达式直接传给传统插入和 emplace 这样的函数，而应该直接传智能指针对象，像下面这样：
+对于 std::unique_ptr 也有类似的问题。出现这样问题的根本原因是 `std::shared_ptr` 和 std::unique_ptr 对资源的管理取决于它们是否立即接管了这个资源，而 emplace 的完美转发机制延迟了资源管理对象的创建，这就给资源异常留下了可能的机会。这也是为什么建议使用 std::make_shared 和 std::make_unique 创建对象的原因。其实不应该将 “new Widget” 这样的表达式直接传给传统插入和 emplace 这样的函数，而应该直接传智能指针对象，像下面这样：
 
 ```c++
-std::shared_ptr<Widget> spw(new Widget,  // create Widget and
+`std::shared_ptr`<Widget> spw(new Widget,  // create Widget and
                             killWidget); // have spw manage it
 ptrs.push_back(std::move(spw));          // add spw as rvalue
 ```
@@ -6893,7 +6893,7 @@ ptrs.push_back(std::move(spw));          // add spw as rvalue
 或者:
 
 ```c++
-std::shared_ptr<Widget> spw(new Widget, killWidget);
+`std::shared_ptr`<Widget> spw(new Widget, killWidget);
 ptrs.emplace_back(std::move(spw));
 ```
 

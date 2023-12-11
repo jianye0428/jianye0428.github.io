@@ -863,7 +863,373 @@ private:
 std::unique_ptr的使用参考：https://blog.csdn.net/fengbingchun/article/details/52203664
 
 
+### 条款29: Reference counting（引用计数）
 
+```c++
+class String {
+public:
+	String(const char* initValue = "");
+	String(const String& rhs);
+	String& operator=(const String& rhs);
+	const char& operator[](int index) const; // for const String
+	char& operator[](int index); // for non-const String
+	~String();
+
+private:
+	// StringValue的主要目的是提供一个空间将一个特别的值和共享此值的对象的数目联系起来
+	struct StringValue { // holds a reference count and a string value
+		int refCount;
+		char* data;
+		bool shareable; // 标志，以指出它是否为可共享的
+		StringValue(const char* initValue);
+		~StringValue();
+	};
+
+	StringValue* value; // value of this String
+};
+
+String::String(const char* initValue) : value(new StringValue(initValue))
+{}
+
+String::String(const String& rhs)
+{
+	if (rhs.value->shareable) {
+		value = rhs.value;
+		++value->refCount;
+	} else {
+		value = new StringValue(rhs.value->data);
+	}
+}
+
+String& String::operator=(const String& rhs)
+{
+	if (value == rhs.value) { // do nothing if the values are already the same
+		return *this;
+	}
+
+	if (value->shareable && --value->refCount == 0) { // destroy *this's value if no one else is using it
+		delete value;
+	}
+
+	if (rhs.value->shareable) {
+		value = rhs.value; // have *this share rhs's value
+		++value->refCount;
+	} else {
+		value = new StringValue(rhs.value->data);
+	}
+
+	return *this;
+}
+
+const char& String::operator[](int index) const
+{
+	return value->data[index];
+}
+
+char& String::operator[](int index)
+{
+	// if we're sharing a value with other String objects, break off a separate copy of the value fro ourselves
+	if (value->refCount > 1) {
+		--value->refCount; // decrement current value's refCount, becuase we won't be using that value any more
+		value = new StringValue(value->data); // make a copy of the value for ourselves
+	}
+
+	value->shareable = false;
+	// return a reference to a character inside our unshared StringValue object
+	return value->data[index];
+}
+
+String::~String()
+{
+	if (--value->refCount == 0) {
+		delete value;
+	}
+}
+
+String::StringValue::StringValue(const char* initValue) : refCount(1), shareable(true)
+{
+	data = new char[strlen(initValue) + 1];
+	strcpy(data, initValue);
+}
+
+String::StringValue::~StringValue()
+{
+	delete[] data;
+}
+
+// 基类，任何需要引用计数的类都必须从它继承
+class RCObject {
+public:
+	void addReference() { ++refCount; }
+	void removeReference() { if (--refCount == 0) delete this; } // 必须确保RCObject只能被构建在堆中
+	void markUnshareable() { shareable = false; }
+	bool isShareable() const { return shareable; }
+	bool isShared() const { return refCount > 1; }
+
+protected:
+	RCObject() : refCount(0), shareable(true) {}
+	RCObject(const RCObject& rhs) : refCount(0), shareable(true) {}
+	RCObject& operator=(const RCObject& rhs) { return *this; }
+	virtual ~RCObject() = 0;
+
+private:
+	int refCount;
+	bool shareable;
+
+};
+
+RCObject::~RCObject() {} // virtual dtors must always be implemented, even if they are pure virtual and do nothing
+
+// template class for smart pointers-to-T objects. T must support the RCObject interface, typically by inheriting from RCObject
+template<class T>
+class RCPtr {
+public:
+	RCPtr(T* realPtr = 0) : pointee(realPtr) { init(); }
+	RCPtr(const RCPtr& rhs) : pointee(rhs.pointee) { init(); }
+	~RCPtr() { if (pointee) pointee->removeReference(); }
+
+	RCPtr& operator=(const RCPtr& rhs)
+	{
+		if (pointee != rhs.pointee) { // skip assignments where the value doesn't change
+			if (pointee)
+				pointee->removeReference(); // remove reference to current value
+
+			pointee = rhs.pointee; // point to new value
+			init(); // if possible, share it else make own copy
+		}
+
+		return *this;
+	}
+
+	T* operator->() const { return pointee; }
+	T& operator*() const { return *pointee; }
+
+private:
+	T* pointee; // dumb pointer this object is emulating
+
+	void init() // common initialization
+	{
+		if (pointee == 0) // if the dumb pointer is null, so is the smart one
+			return;
+
+		if (pointee->isShareable() == false) // if the value isn't shareable copy it
+			pointee = new T(*pointee);
+
+		pointee->addReference(); // note that there is now a new reference to the value
+	}
+};
+
+// 将StringValue修改为是从RCObject继承
+// 将引用计数功能移入一个新类(RCObject)，增加了灵巧指针(RCPtr)来自动处理引用计数
+class String2 {
+public:
+	String2(const char* value = "") : value(new StringValue(value)) {}
+	const char& operator[](int index) const { return value->data[index]; } // for const String2
+
+	char& operator[](int index) // for non-const String2
+	{
+		if (value->isShared())
+			value = new StringValue(value->data);
+		value->markUnshareable();
+		return value->data[index];
+	}
+
+private:
+	// StringValue的主要目的是提供一个空间将一个特别的值和共享此值的对象的数目联系起来
+	struct StringValue : public RCObject { // holds a reference count and a string value
+		char* data;
+
+		StringValue(const char* initValue) { init(initValue); }
+		StringValue(const StringValue& rhs) { init(rhs.data); }
+
+		void init(const char* initValue)
+		{
+			data = new char[strlen(initValue) + 1];
+			strcpy(data, initValue);
+		}
+
+		~StringValue() { delete [] data; }
+	};
+
+	RCPtr<StringValue> value; // value of this String2
+
+};
+
+int test_item_29()
+{
+	String s1("More Effective C++");
+	String s2 = s1;
+	s1 = s2;
+	fprintf(stdout, "char: %c\n", s1[2]);
+	String s3 = s1;
+	s3[5] = 'x';
+
+	return 0;
+}
+```
+
+引用计数是这样一个技巧，它允许多个有相同值的对象共享这个值的实现。这个技巧有两个常用动机。第一个是简化跟踪堆中的对象的过程。一旦一个对象通过调用new被分配出来，最要紧的就是记录谁拥有这个对象，因为其所有者----并且只有其所有者----负责对这个对象调用delete。但是，所有权可以被从一个对象传递到另外一个对象(例如通过传递指针型参数)。引用计数可以免除跟踪对象所有权的担子，因为当使用引用计数后，对象自己拥有自己。当没人再使用它时，它自己自动销毁自己。因此，引用计数是个简单的垃圾回收体系。第二个动机是由于一个简单的常识。如果很多对象有相同的值，将这个值存储多次是很无聊的。更好的办法是让所有的对象共享这个值的实现。这么做不但节省内存，而且可以使得程序运行更快，因为不需要构造和析构这个值的拷贝。
+
+引用计数介绍参考：https://blog.csdn.net/fengbingchun/article/details/85861776
+
+实现引用计数不是没有代价的。每个被引用的值带一个引用计数，其大部分操作都需要以某种形式检查或操作引用计数。对象的值需要更多的内存，而我们在处理它们时需要执行更多的代码。引用计数是基于对象通常共享相同的值的假设的优化技巧。如果假设不成立的话，引用计数将比通常的方法使用更多的内存和执行更多的代码。另一方面，如果你的对象确实有具有相同值的趋势，那么引用计数将同时节省时间和空间。
+
+reference counting 建构出垃圾回收机制（garbage collection）的一个简单形式。Reference counting 的第二个发展动机则只是为了实现一种常识。如果许多对象有相同的值，将那个值存储多次是件愚蠢的事。最好是让所有等值对象共享一份实值就好。
+
+“和其他对象共享一份实值，直到我们必须对自己所拥有的那一份实值进行写动作”，这个观念在计算机科学领域中有很长的历史。特别是在操作系统领域，各进程（processes）之间往往允许共享某些内存分页（memory pages），直到它们打算修改属于自己的那一分页。这项技术是如此普及，因而有一个专用名称：copy-on-write（写时才复制）。这是提升效率的一般化做法（也就是 lazyevaluation，缓式评估，见条款 17）中的一剂“特效药”。
+
+第一个步骤是，首先产生一个 base class RCObject，作为“reference-counted 对象”之用。任何 class 如果希望自动拥有reference counting 能力，都必须继承自这个 class。RCObject 将“引用计数器”本身以及用以增减计数值的函数封装进来。此外还包括一个函数，用来将不再被使用（也就是其引用次数为 0）的对象值销毁掉。最后，它还内含一个成员，用来追踪其值是否“可共享”，并提供查询其值、将该成员设为 false 等相关函数。没有必要提供一个函数让外界设定该成员为true，因为所有的对象值在默认情况下均为可共享。一如先前所提示，一旦某个对象被贴上“不可共享”标签，就没有办法再恢复其“可共享”的身份了。
+
+简单地说，以下是使用 reference counting 改善效率的最适当时机：
+
+相对多数的对象共享相对少量的实值。如此的共享行为通常是通过assignment operators 和 copy constructors。“对象/实值”数量比愈高，reference counting 带来的利益愈大。
+对象实值的产生或销毁成本很高，或是它们使用许多内存。不过即使这种情况，reference counting还是不能为你带来任何利益，除非实值可被多个对象共享。
+这一次我们以惯例规范来达成目标。RCObject 的设计目的是用来作为有引用计数能力之“实值对象”的基类，而那些“实值对象”应该只被 RCPtr smart pointers取用。此外，应该只有确知“实值对象”共享性的所谓“应用对象”才能将“实值对象”实例化。描述“实值对象”的那些 classes 不应该被外界看到。在我们的例子中，描述“实值对象”者为 StringValue，我们令它成为“应用对象”String内的私有成员，以限制其用途。只有 String 才能够产生 StringValue对象，所以，确保所有 StringValue 对象皆以 new 分配而得，是String class 作者的责任。
+
+### 条款30: Proxy classes（替身类、代理类）
+
+```c++
+template<class T>
+class Array2D { // 使用代理实现二维数组
+public:
+	Array2D(int i, int j) : i(i), j(j)
+	{
+		data.reset(new T[i*j]);
+	}
+
+	class Array1D { // Array1D是一个代理类，它的实例扮演的是一个在概念上不存在的一维数组
+	public:
+		Array1D(T* data) : data(data) {}
+		T& operator[](int index) { return data[index]; }
+		const T& operator[](int index) const { return data[index]; }
+
+	private:
+		T* data;
+	};
+
+	Array1D operator[](int index) { return Array1D(data.get()+j*index); }
+	const Array1D operator[](int index) const { return Array1D(data.get()+j*index); }
+
+private:
+	std::unique_ptr<T[]> data;
+	int i, j;
+};
+
+// 可以通过代理类帮助区分通过operator[]进行的是读操作还是写操作
+class String30 {
+public:
+	String30(const char* value = "") : value(new StringValue(value)) {}
+
+	class CharProxy { // proxies for string chars
+	public:
+		CharProxy(String30& str, int index) : theString(str), charIndex(index) {}
+
+		CharProxy& operator=(const CharProxy& rhs)
+		{
+			// if the string is haring a value with other String objects,
+			// break off a separate copy of the value for this string only
+			if (theString.value->isShared())
+				theString.value = new StringValue(theString.value->data);
+
+			// now make the assignment: assign the value of the char
+			// represented by rhs to the char represented by *this
+			theString.value->data[charIndex] = rhs.theString.value->data[rhs.charIndex];
+			return *this;
+		}
+
+		CharProxy& operator=(char c)
+		{
+			if (theString.value->isShared())
+				theString.value = new StringValue(theString.value->data);
+			theString.value->data[charIndex] = c;
+			return *this;
+		}
+
+		operator char() const { return theString.value->data[charIndex]; }
+
+	private:
+		String30& theString;
+		int charIndex;
+	};
+
+	const CharProxy operator[](int index) const // for const String30
+	{
+		return CharProxy(const_cast<String30&>(*this), index);
+	}
+
+	CharProxy operator[](int index) // for non-const String30
+	{
+		return CharProxy(*this, index);
+	}
+
+	//friend class CharProxy;
+private:
+	// StringValue的主要目的是提供一个空间将一个特别的值和共享此值的对象的数目联系起来
+	struct StringValue : public RCObject { // holds a reference count and a string value
+		char* data;
+
+		StringValue(const char* initValue) { init(initValue); }
+		StringValue(const StringValue& rhs) { init(rhs.data); }
+
+		void init(const char* initValue)
+		{
+			data = new char[strlen(initValue) + 1];
+			strcpy(data, initValue);
+		}
+
+		~StringValue() { delete [] data; }
+	};
+
+	RCPtr<StringValue> value; // value of this String30
+
+};
+
+int test_item_30()
+{
+	Array2D<float> data(10, 20);
+	fprintf(stdout, "%f\n", data[3][6]);
+
+	String30 s1("Effective C++"), s2("More Effective C++"); // reference-counted strings using proxies
+	fprintf(stdout, "%c\n", s1[5]); // still legal, still works
+	s2[5] = 'x'; // also legal, also works
+	s1[3] = s2[8]; // of course it's legal, of course it works
+
+	//char* p = &s1[1]; // error, 通常,取proxy对象地址的操作与取实际对象地址的操作得到的指针，其类型是不同的,重载CharProxy类的取地址运算可消除这个不同
+
+	return 0;
+}
+```
+
+凡“用来代表（象征）其他对象”的对象，常被称为 proxy objects（替身对象），而用以表现 proxy objects者，我们称为 proxy classes。
+
+虽然或许不可能知道operator[] 是在左值或右值情境下被调用，我们还是可以区分读和写——只要将我们所要的处理动作延缓，直至知道operator[] 的返回结果将如何被使用为止。我们需要知道的，就是如何延缓我们的决定（决定对象究竟是被读或被写），直到 operator[] 返回。这是条款 17 的缓式评估（lazyevaluation）例子之一。
+
+Proxy class 让我们得以买到我们所要的时间，因为我们可以修改operator[]，令它返回字符串中字符的 proxy，而不返回字符本身。然后我们可以等待，看看这个 proxy如何被运用。如果它被读，我们可以（有点过时地）将 operator[] 的调用动作视为一个读取动作。如果它被写，我们必须将 operator[] 的调用视为一个写动作。
+
+稍后你会看到代码。首先，重要的是了解我们即将使用的 proxies。对于一个proxy，你只有 3件事情可做：
+
+产生它，本例也就是指定它代表哪一个字符串中的哪一个字符。
+以它作为赋值动作（assignment）的目标（接受端），这种情况下你是对它所代表的字符串内的字符做赋值动作。如果这么使用，proxy 代表的将是“调用operator[] 函数”的那个字符串的左值运用。
+以其他方式使用之。如果这么使用，proxy 表现的是“调用operator[] 函数”的那个字符串的右值运用。
+Proxy classes 允许我们完成某些十分困难或几乎不可能完成的行为。多维数组是其中之一，左值/右值的区分是其中之二，压抑隐式转换（见条款 5）是其中之三。
+
+最后，当 class 的身份从“与真实对象合作”移转到“与替身对象（proxies）合作”，往往会造成 class语义的改变，因为 proxyobjects 所展现的行为常常和真正对象的行为有些隐微差异。
+
+### 条款31: 让函数根据一个以上的对象类型来决定如何虚化
+
+假设你必须以 C++完成任务，也就是你必须自行想办法完成上述需求（常被称为 double-dispatching）。此名称来自面向对象程序设计社区，在那个领域里，人们把一个“虚函数调用动作”称为一个“message dispatch”（消息分派）。因此某个函数调用如果根据两个参数而虚化，自然而然地就被称为“double dispatch”。更广泛的情况（函数根据多个参数而虚化）则被称为 multiple dispatch。
+
+虚函数+ RTTI（运行时期类型辨识）
+只使用虚函数
+自行仿真虚函数表格（Virtual Function Tables）
+访问者模式
+
+## 六、杂项讨论
+
+### 条款32:
+### 条款33:
+### 条款34:
+### 条款35:
 Ref:</br>
 [1]. [More Effective C++](https://hr-insist.github.io/C/More_Effective_C++%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/)</br>
 [2]. [《More Effective C++》读书笔记](https://zhuanlan.zhihu.com/p/368342605)</br>

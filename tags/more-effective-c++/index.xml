@@ -1206,6 +1206,666 @@ lazy evaluation 在许多领域中都可能有用途：可避免非必要的对�
 </div><p>灵巧指针是一种外观和行为都被设计成与内建指针相类似的对象，不过它能提供更多的功能。它们有许多应用的领域，包括资源管理和重复代码任务的自动化。</p>
 <p>在C++11中auto_ptr已经被废弃，用unique_ptr替代。</p>
 <p>std::unique_ptr的使用参考：https://blog.csdn.net/fengbingchun/article/details/52203664</p>
+<h3 id="条款29-reference-counting引用计数">条款29: Reference counting（引用计数）</h3>
+<div class="highlight" id="id-26"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span><span class="lnt">159
+</span><span class="lnt">160
+</span><span class="lnt">161
+</span><span class="lnt">162
+</span><span class="lnt">163
+</span><span class="lnt">164
+</span><span class="lnt">165
+</span><span class="lnt">166
+</span><span class="lnt">167
+</span><span class="lnt">168
+</span><span class="lnt">169
+</span><span class="lnt">170
+</span><span class="lnt">171
+</span><span class="lnt">172
+</span><span class="lnt">173
+</span><span class="lnt">174
+</span><span class="lnt">175
+</span><span class="lnt">176
+</span><span class="lnt">177
+</span><span class="lnt">178
+</span><span class="lnt">179
+</span><span class="lnt">180
+</span><span class="lnt">181
+</span><span class="lnt">182
+</span><span class="lnt">183
+</span><span class="lnt">184
+</span><span class="lnt">185
+</span><span class="lnt">186
+</span><span class="lnt">187
+</span><span class="lnt">188
+</span><span class="lnt">189
+</span><span class="lnt">190
+</span><span class="lnt">191
+</span><span class="lnt">192
+</span><span class="lnt">193
+</span><span class="lnt">194
+</span><span class="lnt">195
+</span><span class="lnt">196
+</span><span class="lnt">197
+</span><span class="lnt">198
+</span><span class="lnt">199
+</span><span class="lnt">200
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">String</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">String</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">initValue</span> <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="n">String</span><span class="p">(</span><span class="k">const</span> <span class="n">String</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="n">String</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">String</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="k">const</span> <span class="kt">char</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> <span class="c1">// for const String
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="kt">char</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">);</span> <span class="c1">// for non-const String
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="o">~</span><span class="n">String</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// StringValue的主要目的是提供一个空间将一个特别的值和共享此值的对象的数目联系起来
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">struct</span> <span class="nc">StringValue</span> <span class="p">{</span> <span class="c1">// holds a reference count and a string value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="kt">int</span> <span class="n">refCount</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">		<span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">		<span class="kt">bool</span> <span class="n">shareable</span><span class="p">;</span> <span class="c1">// 标志，以指出它是否为可共享的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="n">StringValue</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">initValue</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">		<span class="o">~</span><span class="n">StringValue</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">	<span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">StringValue</span><span class="o">*</span> <span class="n">value</span><span class="p">;</span> <span class="c1">// value of this String
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">String</span><span class="o">::</span><span class="n">String</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">initValue</span><span class="p">)</span> <span class="o">:</span> <span class="n">value</span><span class="p">(</span><span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">initValue</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">String</span><span class="o">::</span><span class="n">String</span><span class="p">(</span><span class="k">const</span> <span class="n">String</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">shareable</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="n">value</span> <span class="o">=</span> <span class="n">rhs</span><span class="p">.</span><span class="n">value</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">		<span class="o">++</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">refCount</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="n">value</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">String</span><span class="o">&amp;</span> <span class="n">String</span><span class="o">::</span><span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">String</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">==</span> <span class="n">rhs</span><span class="p">.</span><span class="n">value</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// do nothing if the values are already the same
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">(</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">shareable</span> <span class="o">&amp;&amp;</span> <span class="o">--</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">refCount</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// destroy *this&#39;s value if no one else is using it
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">delete</span> <span class="n">value</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">shareable</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="n">value</span> <span class="o">=</span> <span class="n">rhs</span><span class="p">.</span><span class="n">value</span><span class="p">;</span> <span class="c1">// have *this share rhs&#39;s value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="o">++</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">refCount</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="n">value</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="kt">char</span><span class="o">&amp;</span> <span class="n">String</span><span class="o">::</span><span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="k">const</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">char</span><span class="o">&amp;</span> <span class="n">String</span><span class="o">::</span><span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// if we&#39;re sharing a value with other String objects, break off a separate copy of the value fro ourselves
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="p">(</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">refCount</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="o">--</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">refCount</span><span class="p">;</span> <span class="c1">// decrement current value&#39;s refCount, becuase we won&#39;t be using that value any more
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="n">value</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span> <span class="c1">// make a copy of the value for ourselves
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">value</span><span class="o">-&gt;</span><span class="n">shareable</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// return a reference to a character inside our unshared StringValue object
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">return</span> <span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">String</span><span class="o">::~</span><span class="n">String</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">(</span><span class="o">--</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">refCount</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">delete</span> <span class="n">value</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">String</span><span class="o">::</span><span class="n">StringValue</span><span class="o">::</span><span class="n">StringValue</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">initValue</span><span class="p">)</span> <span class="o">:</span> <span class="n">refCount</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">shareable</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="n">data</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">char</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">initValue</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">	<span class="n">strcpy</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">initValue</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">String</span><span class="o">::</span><span class="n">StringValue</span><span class="o">::~</span><span class="n">StringValue</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">delete</span><span class="p">[]</span> <span class="n">data</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 基类，任何需要引用计数的类都必须从它继承
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">RCObject</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">void</span> <span class="n">addReference</span><span class="p">()</span> <span class="p">{</span> <span class="o">++</span><span class="n">refCount</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">void</span> <span class="nf">removeReference</span><span class="p">()</span> <span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="o">--</span><span class="n">refCount</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">delete</span> <span class="k">this</span><span class="p">;</span> <span class="p">}</span> <span class="c1">// 必须确保RCObject只能被构建在堆中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="kt">void</span> <span class="nf">markUnshareable</span><span class="p">()</span> <span class="p">{</span> <span class="n">shareable</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">bool</span> <span class="nf">isShareable</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">shareable</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">bool</span> <span class="nf">isShared</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">refCount</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">protected</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">RCObject</span><span class="p">()</span> <span class="o">:</span> <span class="n">refCount</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">shareable</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="n">RCObject</span><span class="p">(</span><span class="k">const</span> <span class="n">RCObject</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="o">:</span> <span class="n">refCount</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">shareable</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="n">RCObject</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">RCObject</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="o">~</span><span class="n">RCObject</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">int</span> <span class="n">refCount</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">bool</span> <span class="n">shareable</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">RCObject</span><span class="o">::~</span><span class="n">RCObject</span><span class="p">()</span> <span class="p">{}</span> <span class="c1">// virtual dtors must always be implemented, even if they are pure virtual and do nothing
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// template class for smart pointers-to-T objects. T must support the RCObject interface, typically by inheriting from RCObject
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">RCPtr</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">RCPtr</span><span class="p">(</span><span class="n">T</span><span class="o">*</span> <span class="n">realPtr</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">:</span> <span class="n">pointee</span><span class="p">(</span><span class="n">realPtr</span><span class="p">)</span> <span class="p">{</span> <span class="n">init</span><span class="p">();</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="n">RCPtr</span><span class="p">(</span><span class="k">const</span> <span class="n">RCPtr</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="o">:</span> <span class="n">pointee</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">pointee</span><span class="p">)</span> <span class="p">{</span> <span class="n">init</span><span class="p">();</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="o">~</span><span class="n">RCPtr</span><span class="p">()</span> <span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="n">pointee</span><span class="p">)</span> <span class="n">pointee</span><span class="o">-&gt;</span><span class="n">removeReference</span><span class="p">();</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">RCPtr</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">RCPtr</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="p">(</span><span class="n">pointee</span> <span class="o">!=</span> <span class="n">rhs</span><span class="p">.</span><span class="n">pointee</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// skip assignments where the value doesn&#39;t change
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">if</span> <span class="p">(</span><span class="n">pointee</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="n">pointee</span><span class="o">-&gt;</span><span class="n">removeReference</span><span class="p">();</span> <span class="c1">// remove reference to current value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">			<span class="n">pointee</span> <span class="o">=</span> <span class="n">rhs</span><span class="p">.</span><span class="n">pointee</span><span class="p">;</span> <span class="c1">// point to new value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="n">init</span><span class="p">();</span> <span class="c1">// if possible, share it else make own copy
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">T</span><span class="o">*</span> <span class="k">operator</span><span class="o">-&gt;</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">pointee</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">*</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="o">*</span><span class="n">pointee</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">T</span><span class="o">*</span> <span class="n">pointee</span><span class="p">;</span> <span class="c1">// dumb pointer this object is emulating
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="kt">void</span> <span class="nf">init</span><span class="p">()</span> <span class="c1">// common initialization
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="p">(</span><span class="n">pointee</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="c1">// if the dumb pointer is null, so is the smart one
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="p">(</span><span class="n">pointee</span><span class="o">-&gt;</span><span class="n">isShareable</span><span class="p">()</span> <span class="o">==</span> <span class="nb">false</span><span class="p">)</span> <span class="c1">// if the value isn&#39;t shareable copy it
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="n">pointee</span> <span class="o">=</span> <span class="k">new</span> <span class="n">T</span><span class="p">(</span><span class="o">*</span><span class="n">pointee</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="n">pointee</span><span class="o">-&gt;</span><span class="n">addReference</span><span class="p">();</span> <span class="c1">// note that there is now a new reference to the value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 将StringValue修改为是从RCObject继承
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 将引用计数功能移入一个新类(RCObject)，增加了灵巧指针(RCPtr)来自动处理引用计数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">String2</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">String2</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">value</span> <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="p">)</span> <span class="o">:</span> <span class="n">value</span><span class="p">(</span><span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">const</span> <span class="kt">char</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">];</span> <span class="p">}</span> <span class="c1">// for const String2
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="kt">char</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="c1">// for non-const String2
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="p">(</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">isShared</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">			<span class="n">value</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">		<span class="n">value</span><span class="o">-&gt;</span><span class="n">markUnshareable</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// StringValue的主要目的是提供一个空间将一个特别的值和共享此值的对象的数目联系起来
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">struct</span> <span class="nc">StringValue</span> <span class="o">:</span> <span class="k">public</span> <span class="n">RCObject</span> <span class="p">{</span> <span class="c1">// holds a reference count and a string value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="n">StringValue</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">initValue</span><span class="p">)</span> <span class="p">{</span> <span class="n">init</span><span class="p">(</span><span class="n">initValue</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="n">StringValue</span><span class="p">(</span><span class="k">const</span> <span class="n">StringValue</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span> <span class="n">init</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">data</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="kt">void</span> <span class="nf">init</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">initValue</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="n">data</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">char</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">initValue</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">			<span class="n">strcpy</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">initValue</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="o">~</span><span class="n">StringValue</span><span class="p">()</span> <span class="p">{</span> <span class="k">delete</span> <span class="p">[]</span> <span class="n">data</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">RCPtr</span><span class="o">&lt;</span><span class="n">StringValue</span><span class="o">&gt;</span> <span class="n">value</span><span class="p">;</span> <span class="c1">// value of this String2
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">test_item_29</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="n">String</span> <span class="n">s1</span><span class="p">(</span><span class="s">&#34;More Effective C++&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="n">String</span> <span class="n">s2</span> <span class="o">=</span> <span class="n">s1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="n">s1</span> <span class="o">=</span> <span class="n">s2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="n">fprintf</span><span class="p">(</span><span class="n">stdout</span><span class="p">,</span> <span class="s">&#34;char: %c</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">s1</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">	<span class="n">String</span> <span class="n">s3</span> <span class="o">=</span> <span class="n">s1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="n">s3</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;x&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>引用计数是这样一个技巧，它允许多个有相同值的对象共享这个值的实现。这个技巧有两个常用动机。第一个是简化跟踪堆中的对象的过程。一旦一个对象通过调用new被分配出来，最要紧的就是记录谁拥有这个对象，因为其所有者&mdash;-并且只有其所有者&mdash;-负责对这个对象调用delete。但是，所有权可以被从一个对象传递到另外一个对象(例如通过传递指针型参数)。引用计数可以免除跟踪对象所有权的担子，因为当使用引用计数后，对象自己拥有自己。当没人再使用它时，它自己自动销毁自己。因此，引用计数是个简单的垃圾回收体系。第二个动机是由于一个简单的常识。如果很多对象有相同的值，将这个值存储多次是很无聊的。更好的办法是让所有的对象共享这个值的实现。这么做不但节省内存，而且可以使得程序运行更快，因为不需要构造和析构这个值的拷贝。</p>
+<p>引用计数介绍参考：https://blog.csdn.net/fengbingchun/article/details/85861776</p>
+<p>实现引用计数不是没有代价的。每个被引用的值带一个引用计数，其大部分操作都需要以某种形式检查或操作引用计数。对象的值需要更多的内存，而我们在处理它们时需要执行更多的代码。引用计数是基于对象通常共享相同的值的假设的优化技巧。如果假设不成立的话，引用计数将比通常的方法使用更多的内存和执行更多的代码。另一方面，如果你的对象确实有具有相同值的趋势，那么引用计数将同时节省时间和空间。</p>
+<p>reference counting 建构出垃圾回收机制（garbage collection）的一个简单形式。Reference counting 的第二个发展动机则只是为了实现一种常识。如果许多对象有相同的值，将那个值存储多次是件愚蠢的事。最好是让所有等值对象共享一份实值就好。</p>
+<p>“和其他对象共享一份实值，直到我们必须对自己所拥有的那一份实值进行写动作”，这个观念在计算机科学领域中有很长的历史。特别是在操作系统领域，各进程（processes）之间往往允许共享某些内存分页（memory pages），直到它们打算修改属于自己的那一分页。这项技术是如此普及，因而有一个专用名称：copy-on-write（写时才复制）。这是提升效率的一般化做法（也就是 lazyevaluation，缓式评估，见条款 17）中的一剂“特效药”。</p>
+<p>第一个步骤是，首先产生一个 base class RCObject，作为“reference-counted 对象”之用。任何 class 如果希望自动拥有reference counting 能力，都必须继承自这个 class。RCObject 将“引用计数器”本身以及用以增减计数值的函数封装进来。此外还包括一个函数，用来将不再被使用（也就是其引用次数为 0）的对象值销毁掉。最后，它还内含一个成员，用来追踪其值是否“可共享”，并提供查询其值、将该成员设为 false 等相关函数。没有必要提供一个函数让外界设定该成员为true，因为所有的对象值在默认情况下均为可共享。一如先前所提示，一旦某个对象被贴上“不可共享”标签，就没有办法再恢复其“可共享”的身份了。</p>
+<p>简单地说，以下是使用 reference counting 改善效率的最适当时机：</p>
+<p>相对多数的对象共享相对少量的实值。如此的共享行为通常是通过assignment operators 和 copy constructors。“对象/实值”数量比愈高，reference counting 带来的利益愈大。
+对象实值的产生或销毁成本很高，或是它们使用许多内存。不过即使这种情况，reference counting还是不能为你带来任何利益，除非实值可被多个对象共享。
+这一次我们以惯例规范来达成目标。RCObject 的设计目的是用来作为有引用计数能力之“实值对象”的基类，而那些“实值对象”应该只被 RCPtr smart pointers取用。此外，应该只有确知“实值对象”共享性的所谓“应用对象”才能将“实值对象”实例化。描述“实值对象”的那些 classes 不应该被外界看到。在我们的例子中，描述“实值对象”者为 StringValue，我们令它成为“应用对象”String内的私有成员，以限制其用途。只有 String 才能够产生 StringValue对象，所以，确保所有 StringValue 对象皆以 new 分配而得，是String class 作者的责任。</p>
+<h3 id="条款30-proxy-classes替身类代理类">条款30: Proxy classes（替身类、代理类）</h3>
+<div class="highlight" id="id-27"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Array2D</span> <span class="p">{</span> <span class="c1">// 使用代理实现二维数组
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">Array2D</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">)</span> <span class="o">:</span> <span class="n">i</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">j</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="n">data</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">T</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="n">j</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">class</span> <span class="nc">Array1D</span> <span class="p">{</span> <span class="c1">// Array1D是一个代理类，它的实例扮演的是一个在概念上不存在的一维数组
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">		<span class="n">Array1D</span><span class="p">(</span><span class="n">T</span><span class="o">*</span> <span class="n">data</span><span class="p">)</span> <span class="o">:</span> <span class="n">data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">		<span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">];</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">];</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">		<span class="n">T</span><span class="o">*</span> <span class="n">data</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">Array1D</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nf">Array1D</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="o">+</span><span class="n">j</span><span class="o">*</span><span class="n">index</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">const</span> <span class="n">Array1D</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="nf">Array1D</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="o">+</span><span class="n">j</span><span class="o">*</span><span class="n">index</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">T</span><span class="p">[]</span><span class="o">&gt;</span> <span class="n">data</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 可以通过代理类帮助区分通过operator[]进行的是读操作还是写操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">class</span> <span class="nc">String30</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="n">String30</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">value</span> <span class="o">=</span> <span class="s">&#34;&#34;</span><span class="p">)</span> <span class="o">:</span> <span class="n">value</span><span class="p">(</span><span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">class</span> <span class="nc">CharProxy</span> <span class="p">{</span> <span class="c1">// proxies for string chars
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">		<span class="n">CharProxy</span><span class="p">(</span><span class="n">String30</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="o">:</span> <span class="n">theString</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n">charIndex</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="n">CharProxy</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">CharProxy</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// if the string is haring a value with other String objects,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// break off a separate copy of the value for this string only
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">if</span> <span class="p">(</span><span class="n">theString</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">isShared</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">				<span class="n">theString</span><span class="p">.</span><span class="n">value</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">theString</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="c1">// now make the assignment: assign the value of the char
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// represented by rhs to the char represented by *this
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="n">theString</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">charIndex</span><span class="p">]</span> <span class="o">=</span> <span class="n">rhs</span><span class="p">.</span><span class="n">theString</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">rhs</span><span class="p">.</span><span class="n">charIndex</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="n">CharProxy</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="kt">char</span> <span class="n">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">(</span><span class="n">theString</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">isShared</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">				<span class="n">theString</span><span class="p">.</span><span class="n">value</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringValue</span><span class="p">(</span><span class="n">theString</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">			<span class="n">theString</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">charIndex</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">operator</span> <span class="nf">char</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">theString</span><span class="p">.</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">[</span><span class="n">charIndex</span><span class="p">];</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">		<span class="n">String30</span><span class="o">&amp;</span> <span class="n">theString</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">		<span class="kt">int</span> <span class="n">charIndex</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">const</span> <span class="n">CharProxy</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="k">const</span> <span class="c1">// for const String30
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nf">CharProxy</span><span class="p">(</span><span class="k">const_cast</span><span class="o">&lt;</span><span class="n">String30</span><span class="o">&amp;&gt;</span><span class="p">(</span><span class="o">*</span><span class="k">this</span><span class="p">),</span> <span class="n">index</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">CharProxy</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">index</span><span class="p">)</span> <span class="c1">// for non-const String30
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nf">CharProxy</span><span class="p">(</span><span class="o">*</span><span class="k">this</span><span class="p">,</span> <span class="n">index</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">//friend class CharProxy;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">private</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// StringValue的主要目的是提供一个空间将一个特别的值和共享此值的对象的数目联系起来
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">struct</span> <span class="nc">StringValue</span> <span class="o">:</span> <span class="k">public</span> <span class="n">RCObject</span> <span class="p">{</span> <span class="c1">// holds a reference count and a string value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="kt">char</span><span class="o">*</span> <span class="n">data</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="n">StringValue</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">initValue</span><span class="p">)</span> <span class="p">{</span> <span class="n">init</span><span class="p">(</span><span class="n">initValue</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="n">StringValue</span><span class="p">(</span><span class="k">const</span> <span class="n">StringValue</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span> <span class="n">init</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">data</span><span class="p">);</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="kt">void</span> <span class="nf">init</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">initValue</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="n">data</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">char</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">initValue</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">			<span class="n">strcpy</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">initValue</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="o">~</span><span class="n">StringValue</span><span class="p">()</span> <span class="p">{</span> <span class="k">delete</span> <span class="p">[]</span> <span class="n">data</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">RCPtr</span><span class="o">&lt;</span><span class="n">StringValue</span><span class="o">&gt;</span> <span class="n">value</span><span class="p">;</span> <span class="c1">// value of this String30
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">test_item_30</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="n">Array2D</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">data</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">	<span class="n">fprintf</span><span class="p">(</span><span class="n">stdout</span><span class="p">,</span> <span class="s">&#34;%f</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="mi">6</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="n">String30</span> <span class="n">s1</span><span class="p">(</span><span class="s">&#34;Effective C++&#34;</span><span class="p">),</span> <span class="n">s2</span><span class="p">(</span><span class="s">&#34;More Effective C++&#34;</span><span class="p">);</span> <span class="c1">// reference-counted strings using proxies
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="n">fprintf</span><span class="p">(</span><span class="n">stdout</span><span class="p">,</span> <span class="s">&#34;%c</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">s1</span><span class="p">[</span><span class="mi">5</span><span class="p">]);</span> <span class="c1">// still legal, still works
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="n">s2</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;x&#39;</span><span class="p">;</span> <span class="c1">// also legal, also works
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="n">s1</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">s2</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span> <span class="c1">// of course it&#39;s legal, of course it works
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//char* p = &amp;s1[1]; // error, 通常,取proxy对象地址的操作与取实际对象地址的操作得到的指针，其类型是不同的,重载CharProxy类的取地址运算可消除这个不同
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>凡“用来代表（象征）其他对象”的对象，常被称为 proxy objects（替身对象），而用以表现 proxy objects者，我们称为 proxy classes。</p>
+<p>虽然或许不可能知道operator[] 是在左值或右值情境下被调用，我们还是可以区分读和写——只要将我们所要的处理动作延缓，直至知道operator[] 的返回结果将如何被使用为止。我们需要知道的，就是如何延缓我们的决定（决定对象究竟是被读或被写），直到 operator[] 返回。这是条款 17 的缓式评估（lazyevaluation）例子之一。</p>
+<p>Proxy class 让我们得以买到我们所要的时间，因为我们可以修改operator[]，令它返回字符串中字符的 proxy，而不返回字符本身。然后我们可以等待，看看这个 proxy如何被运用。如果它被读，我们可以（有点过时地）将 operator[] 的调用动作视为一个读取动作。如果它被写，我们必须将 operator[] 的调用视为一个写动作。</p>
+<p>稍后你会看到代码。首先，重要的是了解我们即将使用的 proxies。对于一个proxy，你只有 3件事情可做：</p>
+<p>产生它，本例也就是指定它代表哪一个字符串中的哪一个字符。
+以它作为赋值动作（assignment）的目标（接受端），这种情况下你是对它所代表的字符串内的字符做赋值动作。如果这么使用，proxy 代表的将是“调用operator[] 函数”的那个字符串的左值运用。
+以其他方式使用之。如果这么使用，proxy 表现的是“调用operator[] 函数”的那个字符串的右值运用。
+Proxy classes 允许我们完成某些十分困难或几乎不可能完成的行为。多维数组是其中之一，左值/右值的区分是其中之二，压抑隐式转换（见条款 5）是其中之三。</p>
+<p>最后，当 class 的身份从“与真实对象合作”移转到“与替身对象（proxies）合作”，往往会造成 class语义的改变，因为 proxyobjects 所展现的行为常常和真正对象的行为有些隐微差异。</p>
+<h3 id="条款31-让函数根据一个以上的对象类型来决定如何虚化">条款31: 让函数根据一个以上的对象类型来决定如何虚化</h3>
+<p>假设你必须以 C++完成任务，也就是你必须自行想办法完成上述需求（常被称为 double-dispatching）。此名称来自面向对象程序设计社区，在那个领域里，人们把一个“虚函数调用动作”称为一个“message dispatch”（消息分派）。因此某个函数调用如果根据两个参数而虚化，自然而然地就被称为“double dispatch”。更广泛的情况（函数根据多个参数而虚化）则被称为 multiple dispatch。</p>
+<p>虚函数+ RTTI（运行时期类型辨识）
+只使用虚函数
+自行仿真虚函数表格（Virtual Function Tables）
+访问者模式</p>
+<h2 id="六杂项讨论">六、杂项讨论</h2>
+<h3 id="条款32">条款32:</h3>
+<h3 id="条款33">条款33:</h3>
+<h3 id="条款34">条款34:</h3>
+<h3 id="条款35">条款35:</h3>
 <p>Ref:</br>
 [1]. <a href="https://hr-insist.github.io/C/More_Effective_C&#43;&#43;%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0/"target="_blank" rel="external nofollow noopener noreferrer">More Effective C++<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [2]. <a href="https://zhuanlan.zhihu.com/p/368342605"target="_blank" rel="external nofollow noopener noreferrer">《More Effective C++》读书笔记<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
