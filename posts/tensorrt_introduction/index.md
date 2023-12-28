@@ -59,9 +59,10 @@ TensorRT优化方法主要有以下几种方式，最主要的是前面两种。
 
     |Precision|	Dynamic Range|
     |:----------:|:------------------:|
-    |     FP32   | −3.4×1038 +3.4×1038|
-    |     FP16 	 |   −65504 +65504    |
-    |     INT8 	 |    −128 +127       |
+    |     FP32   | −3.4×1038 ~ 3.4×1038|
+    |     FP16 	 |   −65504 ~ 65504    |
+    |     INT8 	 |    −128 ~ 127       |
+    |     UINT8  |     0 ~ 256       |
 
     INT8只有256个不同的数值，使用INT8来表示 FP32精度的数值，肯定会丢失信息，造成性能下降。不过TensorRT会提供完全自动化的校准（Calibration ）过程，会以最好的匹配性能将FP32精度的数据降低为INT8精度，最小化性能损失。
 
@@ -148,14 +149,21 @@ OSS 和 GA 两个版本:
    1. [oss版本路径]export TRT_SOURCE=/home/yejian/TensorRT/TensorRT_7.2.1
    2. [GA Release 版本路径]export TRT_RELEASE=/home/yejian/TensorRT/TensorRT_7.2.1/TensorRT-7.2.1.6/TensorRT-7.2.1.6
 
-
-4. Build TensorRT RSS (这一步需要在编写自定义算子的时候编译通过，参能调用自定义算子)
+4. 测试确保安装成功
+```
+cd /home/yejian/TensorRT/TensorRT-8.6.1.6/samples/sampleOnnxMNIST
+make
+../../bin
+./sample_onnx_mnist
+```
+5. Build TensorRT RSS (这一步需要在编写自定义算子的时候编译通过，才能调用自定义算子)
     ```
     cd $TRT_OSSPATH
     mkdir -p build && cd build
     cmake .. -DTRT_LIB_DIR=$TRT_LIBPATH -DTRT_OUT_DIR=`pwd`/out
     make -j$(nproc)
     ```
+ref: https://blog.csdn.net/Msjiangmei/article/details/132585145
 
 ## 自定义算子开发 -- ScatterElements
 
