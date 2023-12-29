@@ -11,13 +11,13 @@
     ```shell
     apt-get install sudo
     ```
-   赋予用户sudo权限:
+   赋予用户`sudo`权限:
     ```shell
     sudo usermod -a -G adm username
     sudo usermod -a -G sudo username
     su [name]
     ```
-    在文件/etc/sudoers 中更改用户的sudo权限:
+    在文件`/etc/sudoers`中更改用户的`sudo`权限:
     ```text
     # sudoers file.
     #
@@ -101,9 +101,9 @@
      cmake --version
      ```
 
-## 四、 openmpi installation
+## 四、 Openmpi Installation
 
-([Ref Link](https://blog.csdn.net/songbaiyao/article/details/72858184))
+[Ref Link](https://blog.csdn.net/songbaiyao/article/details/72858184)
 Install `openmpi` with command line:
 ```shell
 sudo apt-get install openmpi-bin openmpi-doc libopenmpi-dev
@@ -116,18 +116,20 @@ conda install openmpi
 ## 五、 Anaconda下安装jupyter notebook
 
 1、 安装jupyter notebook
-    `conda intall jupyter notebook`
+  ```shell
+  conda intall jupyter notebook
+  ```
 
 2、 安装nbextensions
-    ```
-    pip install jupyter_contrib_nbextensions
-    jupyter contrib nbextension install --user
-    ```
+  ```shell
+  pip install jupyter_contrib_nbextensions
+  jupyter contrib nbextension install --user
+  ```
 3、 安装nbextensions_configurator
-    ```
-    pip install jupyter_nbextensions_configurator
-    jupyter nbextensions_configurator enable --user
-    ```
+  ```shell
+  pip install jupyter_nbextensions_configurator
+  jupyter nbextensions_configurator enable --user
+  ```
 4、 在`codemirror.css`文件中更改字体
 
 
