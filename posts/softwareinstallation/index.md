@@ -104,33 +104,68 @@
 ## 四、 Openmpi Installation
 
 [Ref Link](https://blog.csdn.net/songbaiyao/article/details/72858184)
-Install `openmpi` with command line:
+
+1. Install `openmpi` with command line:
 ```shell
 sudo apt-get install openmpi-bin openmpi-doc libopenmpi-dev
 ```
-在conda下安装openmapi:
+2. 在conda下安装openmapi:
 ```shell
 conda install openmpi
 ```
 
 ## 五、 Anaconda下安装jupyter notebook
 
-1、 安装jupyter notebook
+1. 安装jupyter notebook
   ```shell
-  conda intall jupyter notebook
+  pip intall jupyter notebook==6.1.0
   ```
 
-2、 安装nbextensions
+2. 安装nbextensions
   ```shell
   pip install jupyter_contrib_nbextensions
   jupyter contrib nbextension install --user
   ```
-3、 安装nbextensions_configurator
+  如果遇到如下报错信息:
+  ```shell
+  ModuleNotFoundError: No module named 'notebook.base'
+  ```
+  注意: 一般由于notebook版本>=7.0.0导致
+  原因: [Notebook的版本太高了，将notebook的版本降到`6.1.0`](https://itsourcecode.com/modulenotfounderror/modulenotfounderror-no-module-named-notebook-base/)
+  ```shell
+  pip install jupyter notebook==6.1.0
+  # 或者 pip install --upgrade notebook==6.1.0
+  ```
+  然后再重新安装插件。
+
+3. 安装nbextensions_configurator
   ```shell
   pip install jupyter_nbextensions_configurator
   jupyter nbextensions_configurator enable --user
   ```
-4、 在`codemirror.css`文件中更改字体
+
+4. 启动jupyter Notebook
+  ```shell
+  jupyter notebook
+  ```
+  若如下报错:
+  ```shell
+  ModuleNotFoundError: No module named 'jupyter_server.contents'
+  TypeError: warn() missing 1 required keyword-only argument: 'stacklevel'
+  ```
+  则执行以下命令安装`traitlets`库:
+  ```shell
+  pip install traitlets==5.9.0
+  ```
+5. 在`codemirror.css`文件中更改字体
+  文件路径: `/home/{$USERNAME}/miniconda3/envs/pytorch/lib/python3.8/site-packages/notebook/static/components/codemirror/lib/codemirror.css`
+6. 推荐安装的几个jupyter插件:
+   - zenmode
+   - table of content(2)
+   - Autopep8
+   - variable inspector
+   - ExecuteTime
+   - Hide input all 隐藏代码输入
 
 
 
