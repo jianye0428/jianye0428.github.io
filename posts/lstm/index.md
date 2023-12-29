@@ -5,7 +5,7 @@
 
 BP网络和CNN网络没有时间维，和传统的机器学习算法理解起来相差无几，CNN在处理彩色图像的3通道时，也可以理解为叠加多层，图形的三维矩阵当做空间的切片即可理解，写代码的时候照着图形一层层叠加即可。如下图是一个普通的BP网络和CNN网络。
 <center>
-  <img src="images/1_01.jpg" width="640" height="320" align=center>
+  <img src="images/1_01.jpg" width="640" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
   <br>
   <div style="color:orange; border-bottom: 1px solid #d9d9d9;
   display: inline-block;
@@ -23,6 +23,17 @@ BP网络和CNN网络没有时间维，和传统的机器学习算法理解起来
 </center>
 
 <br>
+
+<center>
+  <img style="border-radius: 0.3125em;
+  box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);"
+  src="images/.jpg">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9;
+  display: inline-block;
+  color: #999;
+  padding: 2px;">BP Network</div>
+</center>
 
 图中的隐含层、卷积层、池化层、全连接层等，都是实际存在的，一层层前后叠加，在空间上很好理解，因此在写代码的时候，基本就是看图写代码，比如用keras就是：
 
