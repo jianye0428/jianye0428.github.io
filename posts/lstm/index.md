@@ -54,7 +54,7 @@ model.add(Dense(10, activation='softmax'))
 <center>
   <img src="images/2_01.png" width="640" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
   <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">LSTM Architecture</div>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">LSTM Architecture Overview</div>
 </center>
 
 这是RNN循环神经网络经典的结构图，LSTM只是对隐含层节点A做了改进，整体结构不变，因此本文讨论的也是这个结构的可视化问题。
@@ -264,6 +264,8 @@ REF:
   [4].https://zhuanlan.zhihu.com/p/36455374
   [5].https://www.zhihu.com/question/41949741/answer/318771336
   [6].https://blog.csdn.net/android_ruben/article/details/80206792
+  to be added:<br>
+  [7].https://www.analyticsvidhya.com/blog/2021/01/understanding-architecture-of-lstm/
 
 
 
