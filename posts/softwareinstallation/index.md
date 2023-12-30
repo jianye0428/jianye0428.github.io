@@ -78,7 +78,20 @@
     conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/peterjc123/
     conda config --set show_channel_urls yes
     ```
+  3. anaconda 环境文件`environment.yml`使用参考
+      创建环境:
+      ```shell
+      conda env create -f environment.yml -n myenv
+      ```
+      导出当前环境配置:
+      ```shell
+      conda env export > environment.yml
+      ```
 
+      更新环境:
+      ```shell
+      conda env update -f environment.yml
+      ```
 ## 三、 Cmake Installation
 
 [Ref Link](https://blog.csdn.net/liushao1031177/article/details/119799007)
