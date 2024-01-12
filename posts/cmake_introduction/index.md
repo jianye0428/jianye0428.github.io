@@ -158,11 +158,11 @@ The `cpack` executable is used to create installers for projects. CPack works mu
 
 cpack 可执行文件用来创建项目的安装器。
 
-ref:
-[1]. [CMake 构建工具](https://mp.weixin.qq.com/s/d3wFZoyDwah5qO4UWvvXtg)
-[2]. https://aosabook.org/en/cmake.html
-[3]. https://blog.feabhas.com/2021/07/cmake-part-1-the-dark-arts/
-[4]. https://blog.feabhas.com/2021/07/cmake-part-2-release-and-debug-builds/
+## 8. Reference
+[1]. [CMake 构建工具](https://mp.weixin.qq.com/s/d3wFZoyDwah5qO4UWvvXtg)<br>
+[2]. https://aosabook.org/en/cmake.html<br>
+[3]. https://blog.feabhas.com/2021/07/cmake-part-1-the-dark-arts/<br>
+[4]. https://blog.feabhas.com/2021/07/<br>cmake-part-2-release-and-debug-builds/<br>
 
 ---
 
