@@ -13,7 +13,7 @@
 ```
 
 本项目只包含了一个源文件hello_world.cpp和一个CMake文件。
-> 源码地址: https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter1/01
+> 源码地址: https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_1/hello-world
 
 
 {{<admonition quote "注意" true>}}
@@ -57,10 +57,12 @@ add_executable(
   今后，笔记中CMake的版本要求都为3.10。vscode中CMake Tool插件使用debug功能要求CMake版本不低于3.10。如果使用的系统ubuntu 16.04的话，需要升级CMake版本，windows请自行安装高于3.10版本的CMake。
 
 - **`project(hello-world LANGUAGES CXX)`**
+
   声明了项目的名称和支持的编程语言，且该命令必须生命在cmake_minimum_required之后。一旦声明了项目的名称后，可以使用宏定义${PROJECT_NAME}进行调用。
   在CMake中，C++是默认的编程语言。不过在实际编写代码过程中，仍建议使用LANGUAGES选项在project命令中显示地声明项目的语言。
 
-- `add_executable(${PROJECT_NAME} hello_world.cpp}`
+- **`add_executable(${PROJECT_NAME} hello_world.cpp}`**
+
   CMake创建一个新可执行文件，其名字为${PROJECT_NAME}（也可以使用其他任意的名字）。这个可执行文件是通过编译和链接源文件hello_world.cpp生成的。
 
   CMake将为编译器使用默认设置，并自动生成工具。

@@ -1,4 +1,1611 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 12 Jan 2024 14:19:06 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [1] 单个源文件编译为可执行文件</title><link>https://jianye0428.github.io/posts/cmake_note_1/</link><pubDate>Fri, 12 Jan 2024 14:19:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_1/</guid><description><![CDATA[<h3 id="一项目结构">一、项目结构</h3>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 12 Jan 2024 15:16:22 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>CMake | [2] 多目录多文件的CMake构建方式</title><link>https://jianye0428.github.io/posts/cmake_note_2/</link><pubDate>Fri, 12 Jan 2024 15:16:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_2/</guid><description><![CDATA[<h3 id="一项目结构">一、项目结构</h3>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── include
+</span></span><span class="line"><span class="cl">│   └── message.h
+</span></span><span class="line"><span class="cl">├── src
+</span></span><span class="line"><span class="cl">│   └── message.cpp
+</span></span><span class="line"><span class="cl">├── hello_world.cpp
+</span></span><span class="line"><span class="cl">└── CMakeLists.txt</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目结构是为了让我们开发人员对项目更加清晰，使代码结构更加清晰（模块化）。一般我们的项目比较简单时，可以构建为如上的项目结构。但是在构建大型项目时，项目结构会更加复杂，具体请参考下节内容。</p>
+<p>这里我们构建了include目录和src目录，include目录主要存放的是CPP文件的头文件，即函数的声明，为使用它的文件提供API。src目录主要是存放的函数的具体实现。</p>
+<blockquote>
+<p>源码地址:</p>
+</blockquote>
+<h3 id="二messageh">二、message.h</h3>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#ifndef MESSAGE_HEADER_H_
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define MESSAGE_HEADER_H_
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Message</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Message</span><span class="p">()</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">Print</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span><span class="n">message</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="cp">#endif </span><span class="c1">// ! MESSAGE_HEADER_H_
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="三messagecpp">三、message.cpp</h3>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;message.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">Message</span><span class="o">::</span><span class="n">Print</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span><span class="n">message</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">message</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="四hello_worldcpp">四、hello_world.cpp</h3>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;message.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Message</span> <span class="n">message</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">message</span><span class="p">.</span><span class="n">Print</span><span class="p">(</span><span class="s">&#34;Hello, CMake World!&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">message</span><span class="p">.</span><span class="n">Print</span><span class="p">(</span><span class="s">&#34;Goodbye, CMake World!&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">EXIT_SUCCESS</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="五cmake文件">五、CMake文件</h3>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">HEADER</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/*.h</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">SOURCE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/src/*.cpp</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">HEADER</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">SOURCE</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>代码释义:</strong></p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-42"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将<code>include</code>目录下的所有文件包含进来，这样include目录下的message.h将会被包含到整个项目中。如果我们在细分目录中使用包含某一模块的头文件，我们可以在具体模块的CMakeLists.txt中使用该命令，且要包含的头文件的可见性只有该模块，其他模块不可见，具体使用方法，请参考下节内容。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-43"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">HEADER</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/*.h</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">SOURCE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/src/*.cpp</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果<code>include</code>目录和<code>src</code>目录中有多个头文件和源文件，使用如上命令可以将所有头文件集合到HEADER和SOURCE自定义宏定义中，使用时的命令为<code>${HEADER}</code>和<code>${SOURCE}</code>。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-44"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">HEADER</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">SOURCE</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这将结合<code>include</code>目录下的文件和src目录下的文件以及<code>hello_world.cpp</code>生成名为<code>hello-world</code>的可执行文件。</p></div>
+    </div>
+  </div>
+<h3 id="六构建及编译">六、构建及编译</h3>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake ..</span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建过程:</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 9.4.0
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ -- works
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/02/build</span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建可执行文件并输出:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">Scanning dependencies of target hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 33%<span class="o">]</span> Building CXX object CMakeFiles/hello-world.dir/src/message.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 66%<span class="o">]</span> Building CXX object CMakeFiles/hello-world.dir/hello_world.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Linking CXX executable hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上一篇我们没有讲将执行cmake命令后生成的MakeFile文件，其如何构建出可执行文件的具体操作，只是简单的说MakeFile需要make命令执行。</p>
+<p>在我们执行完cmake ..后，将生成MakeFile文件，然后执行make后便可以生成可执行文件。</p>
+<p>这里我们进行补充说明：如果我们在GNU/Linux上，执行CMake ..后会生成MakeFile文件，然后执行make命令即可生成可执行文件；在Windows上，执行cmake ..后会生成sln文件，需要使用VS进行打开，然后对其进行生成操作。Windows生成sln文件后的具体操作过程请参考最后一些补充内容。除此之外，我们可以执行以下命令，不分平台直接构建出可执行文件:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cmake --build .</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="七静态库和动态库简介">七、静态库和动态库简介</h3>
+<p>首先，如果对程序的生命周期的不清楚，请先移步<a href="https://mp.weixin.qq.com/s?__biz=MzkxMzI5Mjk4Mg==&amp;mid=2247483658&amp;idx=1&amp;sn=70144d3480b23fe13f447e3ef715a6a9&amp;chksm=c17eaad3f60923c50560d65017f44bff5e95b79765d4fce5e3f0f2f586c95799d1d671c4d945&amp;token=1465071518&amp;lang=zh_CN&amp;scene=21#wechat_redirect"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>进行学习。</p>
+<h4 id="71-静态库">7.1 静态库</h4>
+<p>在链接阶段，会将汇编生成的目标文件<code>.o</code>与引用到的库<strong>一起链接打包到可执行文件中</strong>。这个链接方式为<strong>静态链接</strong>，所需要的.o（unix系统）称为静态库。</p>
+<ul>
+<li>静态库对函数库的链接是放在编译时期完成的。</li>
+<li>程序在运行时与函数库再无瓜葛，移植方便。</li>
+<li>浪费空间和资源，因为所有相关的目标文件与牵涉到的函数库被链接成一个可执行文件。</li>
+<li>静态库对程序的更新、部署和发布会带来麻烦。如果静态库libxxx.o更新了，所有使用它的应用程序都需要重新编译、发布给用户。</li>
+</ul>
+<h4 id="72-动态库">7.2 动态库</h4>
+<p>动态库在程序编译时并不会链接到目标代码中，而是<strong>在程序运行时才被载入</strong>。不同的应用程序如果调用相同的库，那么在内存只需要有一份该共享库的实例，规避了空间浪费。</p>
+<p>动态库在程序运行时才被载入，也解决了静态库对程序的更新、部署和发布带来的问题，用户只需要更新动态库即可，增量更新。</p>
+<p>Windows与Linux执行文件格式不同，在创建动态库的时候有一些差异：</p>
+<ul>
+<li>在Windows系统下的执行文件格式是PE格式，动态库需要一个DllMain函数做初始化的入口，通常在导出函数的声明时需要有_declspec(dllexport)关键字。</li>
+<li>Linux下gcc编译的执行文件默认是ELF格式，不需要初始化入口，亦不需要函数做特别的声明，编写比较方便</li>
+</ul>
+<h3 id="八构建和链接静态库">八、构建和链接静态库</h3>
+<h4 id="81-项目结构">8.1 项目结构</h4>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── message-module
+</span></span><span class="line"><span class="cl">│   ├── include
+</span></span><span class="line"><span class="cl">│   │   └── message.h
+</span></span><span class="line"><span class="cl">│   ├── src
+</span></span><span class="line"><span class="cl">│   │   └── message.cpp
+</span></span><span class="line"><span class="cl">│   └── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── hello_world.cpp
+</span></span><span class="line"><span class="cl">└── CMakeLists.txt</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在实际的项目开发过程中，我们的项目结构往往会由很多个模块组成，每个模块通过一个单独的CMakeLists.txt去控制，最后在根目录下的CMakeLists.txt中将各个模块组合使用。</p>
+<p>本项目中为了简化学习，只构建了一个message-module模块，构建多个模块的方式同理。其中项目中的所有CPP源文件与第一节内容相同，这里就不展开描述了。</p>
+<p>源码地址:https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_2/message_static_lib</p>
+<h4 id="82-message-module目录下的cmakelists">8.2 message-module目录下的CMakeLists</h4>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">HEADER</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/*.h</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">SOURCE</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/src/*.cpp</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_library</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">    <span class="s">STATIC</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">HEADER</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">SOURCE</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>代码释义:</strong>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-45"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">add_library</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">    <span class="s">STATIC</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">HEADER</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">SOURCE</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>add_library</code>生成必要的构建指令，将指定的源码编译到库中。第一个参数是目标名。整个项目中，可使用相同的名称来引用库。生成的库的实际名称将由CMake通过在前面添加前缀lib和适当的扩展名作为后缀来形成。生成库是根据第二个参数(STATIC或SHARED)和操作系统确定的，本项目是将目标文件生成静态库。</p></div>
+    </div>
+  </div></p>
+<h4 id="83-根目录下的cmakelists">8.3 根目录下的CMakeLists</h4>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 设置可执行文件到bin文件夹下
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">set</span><span class="p">(</span><span class="s">EXECUTE_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/bin</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">EXECUTE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 设置静态库到lib文件夹下
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">set</span><span class="p">(</span><span class="s">LIB_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_ARCHIVE_OUTPUT_DIRECTORY</span>  <span class="o">${</span><span class="nv">LIB_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_subdirectory</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_link_libraries</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>代码释义:</strong></p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-46"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="c"># 设置可执行文件到bin文件夹下
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">set</span><span class="p">(</span><span class="s">EXECUTE_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/bin</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">EXECUTE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 设置静态库到lib文件夹下
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">set</span><span class="p">(</span><span class="s">LIB_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_ARCHIVE_OUTPUT_DIRECTORY</span>  <span class="o">${</span><span class="nv">LIB_FILE</span><span class="o">}</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在构建项目时，我们为了使得项目结构更加清晰，使得生成的可执行文件、静态库以及动态库等文件能够存放在合适的位置。这样的构建方式有助于我们在项目重构、项目优化、debug的时候逻辑更加清晰。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-47"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个命令同第一节内容，因为hello_world.cpp要使用message-module模块的API，且与该CMakeLists.txt在相同层级的目录，所以需要将message-module模块的API包含进去。</p></div>
+    </div>
+  </div>
+<p>如果hello_world.cpp中使用到了多个模块，则此处可以包含多个模块的API：</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module/include</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/xxx-module/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-48"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">add_subdirectory</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将我们的message-module添加进来进行编译，这个函数命令将寻找message-module目录下的CMakeLists.txt，如果该目录下没有CMakeLists.txt将报错。</p></div>
+    </div>
+  </div>
+<p>由于在本项目中，hello_world.cpp要使用message-module模块中编译生成的静态库，所以add_subdirectory命令将message-module添加到项目中, add_subdirectory的顺序必须要先于add_executable命令。</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-49"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_link_libraries</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>add_executable</code>命令将<code>hello_world.cpp</code>编译成可执行文件，其名字为项目名称<code>hello-world</code>，该可执行文件使用<code>target_link_libraries</code>命令将<code>message-module</code>模块下编译生成的静态库<code>test_message</code>链接到可执行文件中。</p>
+<p>注意：在子模块message-module中编译生成的test_message是全局可见的，即任何模块或者根目录下的CMakeLists.txt都可以直接使用test_message进行调用。</p>
+</div>
+    </div>
+  </div>
+<h4 id="84-构建以及编译">8.4 构建以及编译</h4>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake ..</span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建及编译过程:</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 9.4.0
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ -- works
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/03/build</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="c1"># cmake --build .</span>
+</span></span><span class="line"><span class="cl">make</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">Scanning dependencies of target test_message
+</span></span><span class="line"><span class="cl">[ 25%] Building CXX object message-module/CMakeFiles/test_message.dir/src/message.cpp.o
+</span></span><span class="line"><span class="cl">[ 50%] Linking CXX static library ../lib/libtest_message.a
+</span></span><span class="line"><span class="cl">[ 50%] Built target test_message
+</span></span><span class="line"><span class="cl">Scanning dependencies of target hello-world
+</span></span><span class="line"><span class="cl">[ 75%] Building CXX object CMakeFiles/hello-world.dir/hello_world.cpp.o
+</span></span><span class="line"><span class="cl">[100%] Linking CXX executable bin/hello-world
+</span></span><span class="line"><span class="cl">[100%] Built target hello-world</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以通过编译日志看到，首先编译了<code>message-module</code>模块，并将编译生成的<code>libtest_message.a</code>存档到了<code>../lib/</code>，即build文件夹中的lib目录中。然后链接<code>hello-world</code>所需要的依赖项，此时便将<code>test-message</code>链接到了<code>hello-world</code>中，最终生成可执行文件<code>hello-world</code>，并将其存放到<code>bin</code>目录中，即build文件夹下的bin目录。</p>
+<h3 id="九只链接链接三方库静态">九、只链接链接三方库（静态）</h3>
+<p>我们在构建实际项目过程中，一个项目往往需要链接许多的三方库，抑或是我们将自己的算法以静态库的形式发布，通常需要为我们的项目链接三方库。本节讲其中的一种，后续涉及到三方库的链接将讲述所有链接的方式。关于<code>third-party</code>模块下<code>include</code>文件夹下的<code>message.h</code>头文件与前面相同，lib文件夹下的<code>libtest_message.a</code>是第三节编译生成的静态库。</p>
+<h4 id="91-项目结构">9.1 项目结构</h4>
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── third-party
+</span></span><span class="line"><span class="cl">│   ├── include
+</span></span><span class="line"><span class="cl">│   │   └── message.h
+</span></span><span class="line"><span class="cl">│   └── lib
+</span></span><span class="line"><span class="cl">│       └── libtest_message.a
+</span></span><span class="line"><span class="cl">├── hello_world.cpp
+</span></span><span class="line"><span class="cl">└── CMakeLists.txt</span></span></code></pre></td></tr></table>
+</div>
+</div><p>一般，我们将三方库放到项目中一个<code>third-party</code>的文件夹下，当然你也可以随意命名。三方库<code>third-party</code>中包含<code>include</code>和<code>lib</code>分别存放三方库的API和静态库。</p>
+<p>源码地址:https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_2/message_static_lib_third_party</p>
+<h4 id="92-cmakeliststxt">9.2 CMakeLists.txt</h4>
+<div class="highlight" id="id-20"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 设置可执行文件到bin文件夹下
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">set</span><span class="p">(</span><span class="s">EXECUTE_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/bin</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">EXECUTE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">TEST_MESSAGE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/third-party/lib/libtest_message.a</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/third-party/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_link_libraries</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">TEST_MESSAGE</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>代码释义:</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-50"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">set</span><span class="p">(</span><span class="s">TEST_MESSAGE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/third-party/lib/libtest_message.a</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将三方库中的静态库定义为TEST_MESSAGE，方便后续使用${TEST_MESSAGE}进行调用。当然你也可以直接在target_link_libraries命令中使用${CMAKE_SOURCE_DIR}/third-party/lib/libtest_message.a进行链接，但是这么做是不推荐的。如果多个模块都使用到了该库，那么定义为宏的方式更加方便和清晰。</p>
+<p>今后，我们都将定义出来的宏统一采用了大写，意和CMake自身变量命名对其。</p>
+</div>
+    </div>
+  </div>
+<h4 id="93-构建及编译">9.3 构建及编译</h4>
+<div class="highlight" id="id-21"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake ..</span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建及编译过程:</p>
+<div class="highlight" id="id-22"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 9.4.0
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ -- works
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/04/build</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-23"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cmake --build .</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-24"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">Scanning dependencies of target hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Building CXX object CMakeFiles/hello-world.dir/hello_world.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Linking CXX executable bin/hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="十编译和连接动态库">十、编译和连接动态库</h3>
+<p>动态库的编写需要区分平台，在GNU/Linux平台上，动态库的编写和调用与静态库没有差别，但是在Windows平台上动态库的编写和调用需要做一定的修改。</p>
+<h4 id="101-gnulinux平台上动态库的编译和链接">10.1 GNU/Linux平台上动态库的编译和链接</h4>
+<p>在GNU/Linux上生成动态库的方法和静态库生成的方法类似，其目录结构等都与静态库相同，只有在使用<code>add_library</code>命令时，参数<code>STATIC</code>改为<code>SHARE</code>即可,相关项目结构和<code>CMakeLists.txt</code>如下。</p>
+<div class="highlight" id="id-25"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── message-module
+</span></span><span class="line"><span class="cl">│   ├── include
+</span></span><span class="line"><span class="cl">│   │   └── message.h
+</span></span><span class="line"><span class="cl">│   ├── src
+</span></span><span class="line"><span class="cl">│   │   └── message.cpp
+</span></span><span class="line"><span class="cl">│   └── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── hello_world.cpp
+</span></span><span class="line"><span class="cl">└── CMakeLists.txt</span></span></code></pre></td></tr></table>
+</div>
+</div><p>源码地址: <a href="https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_2/message_dynamic_lib"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_2/message_dynamic_lib<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>配置动态库的<code>CMakeLists.txt</code>:</p>
+<div class="highlight" id="id-26"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cmake_minimum_required<span class="o">(</span>VERSION 3.10 FATAL_ERROR<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">project<span class="o">(</span>hello-world LANGUAGES CXX<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 设置可执行文件到bin文件夹下</span>
+</span></span><span class="line"><span class="cl">set<span class="o">(</span>EXECUTE_FILE <span class="si">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="si">}</span>/bin<span class="o">)</span>
+</span></span><span class="line"><span class="cl">set<span class="o">(</span>CMAKE_RUNTIME_OUTPUT_DIRECTORY <span class="si">${</span><span class="nv">EXECUTE_FILE</span><span class="si">}</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 设置动态库到lib文件夹下</span>
+</span></span><span class="line"><span class="cl">set<span class="o">(</span>LIB_FILE <span class="si">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="si">}</span>/lib<span class="o">)</span>
+</span></span><span class="line"><span class="cl">set<span class="o">(</span>CMAKE_LIBRARY_OUTPUT_DIRECTORY  <span class="si">${</span><span class="nv">LIB_FILE</span><span class="si">}</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">include_directories<span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="si">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="si">}</span>/message-module/include
+</span></span><span class="line"><span class="cl"><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">add_subdirectory<span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="si">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="si">}</span>/message-module
+</span></span><span class="line"><span class="cl"><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">add_executable<span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="si">${</span><span class="nv">PROJECT_NAME</span><span class="si">}</span>
+</span></span><span class="line"><span class="cl">    <span class="si">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="si">}</span>/hello_world.cpp
+</span></span><span class="line"><span class="cl"><span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">target_link_libraries<span class="o">(</span>
+</span></span><span class="line"><span class="cl">    <span class="si">${</span><span class="nv">PROJECT_NAME</span><span class="si">}</span>
+</span></span><span class="line"><span class="cl">    test_message
+</span></span><span class="line"><span class="cl"><span class="o">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里我们设置动态库存放的路径的宏为CMAKE_LIBRARY_OUTPUT_DIRECTORY。</p>
+<p>源码地址：</p>
+<h4 id="102-gnulinux只链接三方库动态库">10.2 GNU/Linux只链接三方库（动态库）</h4>
+<p>在<code>GNU/Linux</code>上链接动态库的方法和静态库生成的方法类似，其目录结构等都与静态库相同，只有在使用add_library命令时，参数STATIC改为SHARE即可,相关项目结构和<code>CMakeLists.txt</code>如下。</p>
+<p>目录结构:</p>
+<div class="highlight" id="id-27"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── third-party
+</span></span><span class="line"><span class="cl">│   ├── include
+</span></span><span class="line"><span class="cl">│   │   └── message.h
+</span></span><span class="line"><span class="cl">│   └── lib
+</span></span><span class="line"><span class="cl">│       └── libtest_message.so
+</span></span><span class="line"><span class="cl">├── hello_world.cpp
+</span></span><span class="line"><span class="cl">└── CMakeLists.txt</span></span></code></pre></td></tr></table>
+</div>
+</div><p>源码地址: <a href="https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_2/message_dynamic_lib_third_party"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_2/message_dynamic_lib_third_party<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p><code>CMakeLists.txt</code>文件:</p>
+<div class="highlight" id="id-28"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 设置可执行文件到bin文件夹下
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">set</span><span class="p">(</span><span class="s">EXECUTE_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/bin</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">EXECUTE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">TEST_MESSAGE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/third-party/lib/libtest_message.so</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/third-party/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_link_libraries</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">TEST_MESSAGE</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="103-windows平台上动态库的编译和链接">10.3 Windows平台上动态库的编译和链接</h4>
+<p>注意：通过实践发现，Windows中<code>CMAKE_LIBRARY_OUTPUT_DIRECTORY</code>没有作用。在Windows中生成的动态库将会自动生成到可执行文件所在的目录。</p>
+<p>前面我们说Windows平台中生成动态库的源码和静态库是不同的，在Windows平台中，在导出动态库时除了会生成<code>.dll</code>动态库之外，还会生成一个<code>.lib</code>文件。注意，这个<code>.lib</code>文件和静态库的<code>.lib</code>文件是不同的，它里面并不保存代码生成的二进制文件，而是所有需要导出符号的符号表。因此这个<code>.lib</code>文件和编译生成的静态库<code>.lib</code>相比较而言会小的多。</p>
+<p>符号表是需要我们在编写源码时进行指定的，如果我们将一个符号导出（符号可以指类、函数等各种类型）,需要在其前面加上<code>__declspec(dllexport)</code>标志，这样这个符号的相关信息就会在导出的<code>.lib</code>中的符号表中了。</p>
+<p>如果在源码中没有任何的<code>__declspec(dllexport)</code>,依然可以成功的编译出动态库，但是并不会生成保存符号表的<code>.lib</code>文件。</p>
+<div class="highlight" id="id-29"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nf">__declspec</span><span class="p">(</span><span class="n">dllexport</span><span class="p">)</span> <span class="n">Message</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Message</span><span class="p">()</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="n">Print</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span><span class="n">message</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了导出符号标识符<code>__declspec(dllexport)</code>以外，作为用户使用动态库的时候，对应的头文件的符号还需要<code>__declspec(dllimport)</code>标识符来表示这个符号是从动态库导入的。</p>
+<div class="highlight" id="id-30"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nf">__declspec</span><span class="p">(</span><span class="n">dllimport</span><span class="p">)</span> <span class="n">Message</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Message</span><span class="p">()</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="n">Print</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span><span class="n">message</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>一般，一个库文件我们并不想对导入和导出分别写两个几乎同样的头文件，因此可以使用宏定义来代替直接使用<code>__declspec(dllexport)</code>和<code>__declspec(dllimport)</code>关键字。</p>
+<div class="highlight" id="id-31"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#ifndef MESSAGE_HEADER_H_
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define MESSAGE_HEADER_H_
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#ifdef SHARED_LIB_EXPORT
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#define SHARED_LIB_EXPORT __declspec(dllexport)
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#else
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#define SHARED_LIB_EXPORT __declspec(dllimport)
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#endif
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">SHARED_LIB_EXPORT</span> <span class="n">Message</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Message</span><span class="p">()</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">Print</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span><span class="n">message</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#endif </span><span class="c1">// ! MESSAGE_HEADER_H_
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样我们只需要在编译（导出）这个库的时候，给编译器添加<code>SHARED_LIB_EXPORT</code>宏。而在使用该库的时候什么都不定义即可。</p>
+<p><font color=red>我们通常编写一个头文件来专门管理<code>SHARED_LIB_EXPORT</code>宏定义。</font>为了使得我们的代码在Linux中平台以及静态库的情况，我们的头文件编写如下：</p>
+<div class="highlight" id="id-32"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#ifndef EXPORT_LIB_HEADER_H_
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define EXPORT_LIB_HEADER_H_
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#ifdef SHARED_LIB_BUILD
+</span></span></span><span class="line"><span class="cl"><span class="cp">#ifdef _WIN32
+</span></span></span><span class="line"><span class="cl"><span class="cp">#ifdef SHARED_LIB_EXPORT
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SHARED_LIB_API __declspec(dllexport)
+</span></span></span><span class="line"><span class="cl"><span class="cp">#else
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SHARED_LIB_API __declspec(dllimport)
+</span></span></span><span class="line"><span class="cl"><span class="cp">#endif  </span><span class="c1">// SHARED_LIB_EXPORT
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#else
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SHARED_LIB_API
+</span></span></span><span class="line"><span class="cl"><span class="cp">#endif  </span><span class="c1">// _WIN32
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#else
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SHARED_LIB_API
+</span></span></span><span class="line"><span class="cl"><span class="cp">#endif  </span><span class="c1">// SHARED_LIB_BUILD
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#endif </span><span class="c1">// ! EXPORT_LIB_HEADER_H_
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们除了使用<code>SHARED_LIB_API</code>宏定义来判断是否导出为动态库以外，还使用了编译器自带的<code>_WIN32</code>宏来判断是实在windows平台上以及使用。<code>SHARED_LIB_BUILD</code>来判断是否正在编译动态库。</p>
+<p>有了这个头文件之后，我们只需要在导出符号表的头文件中包含该头文件，就可以使用<code>SHARED_LIB_API</code>宏定义了。</p>
+<p>除此之外，上述的头文件可以通过CMake提供的<code>GenerateExportHeader</code>命令自动生成。关于该命令的使用在后续介绍中会详细的进行探索。</p>
+<p><strong>项目结构:</strong></p>
+<div class="highlight" id="id-33"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── message-module
+</span></span><span class="line"><span class="cl">│   ├── include
+</span></span><span class="line"><span class="cl">│   │  └── message.h
+</span></span><span class="line"><span class="cl">│   ├── src
+</span></span><span class="line"><span class="cl">│   │   └── message.cpp
+</span></span><span class="line"><span class="cl">│   └── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── hello_world.cpp
+</span></span><span class="line"><span class="cl">└── CMakeLists.txt</span></span></code></pre></td></tr></table>
+</div>
+</div><p>源码地址:https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_2/message_shared_lib_in_windows</p>
+<p><strong>message.h</strong></p>
+<div class="highlight" id="id-34"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp">#ifndef MESSAGE_HEADER_H_
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define MESSAGE_HEADER_H_
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nf">__declspec</span><span class="p">(</span><span class="n">dllexport</span><span class="p">)</span> <span class="n">Message</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Message</span><span class="p">()</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">Print</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span><span class="n">message</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl"><span class="cp">#endif </span><span class="c1">// ! MESSAGE_HEADER_H_
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>message.cpp</strong></p>
+<div class="highlight" id="id-35"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;message.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">Message</span><span class="o">::</span><span class="n">Print</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span><span class="n">message</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">message</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>message-module下的CMakeLists.txt</strong></p>
+<div class="highlight" id="id-36"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">HEADER</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/*.h</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">SOURCE</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/src/*.cpp</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_library</span><span class="p">(</span><span class="s">test_message</span> <span class="s">SHARED</span> <span class="o">${</span><span class="nv">SOURCE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_library</span><span class="p">(</span><span class="s">test_message::test_message</span> <span class="s">ALIAS</span> <span class="s">test_message</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_include_directories</span><span class="p">(</span><span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">    <span class="s">PUBLIC</span>
+</span></span><span class="line"><span class="cl">    <span class="o">$&lt;</span><span class="nv">BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}</span><span class="o">&gt;</span><span class="s">/include</span>
+</span></span><span class="line"><span class="cl">    <span class="o">$&lt;</span><span class="nv">INSTALL_INTERFACE:include</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set_target_properties</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="s">CXX_STANDARD</span> <span class="s">11</span>
+</span></span><span class="line"><span class="cl">    <span class="s">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="s">True</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">TARGETS</span> <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">        <span class="s">EXPORT</span> <span class="s">message_export_target</span>
+</span></span><span class="line"><span class="cl">        <span class="s">RUNTIME</span> <span class="s">DESTINATION</span> <span class="s2">&#34;bin&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">LIBRARY</span> <span class="s">DESTINATION</span> <span class="s2">&#34;lib&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">ARCHIVE</span> <span class="s">DESTINATION</span> <span class="s2">&#34;lib&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/</span>
+</span></span><span class="line"><span class="cl">        <span class="s">DESTINATION</span> <span class="s2">&#34;include&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">FILES_MATCHING</span> <span class="s">PATTERN</span> <span class="s2">&#34;*.h&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/</span>
+</span></span><span class="line"><span class="cl">        <span class="s">DESTINATION</span> <span class="s2">&#34;include&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">FILES_MATCHING</span> <span class="s">PATTERN</span> <span class="s2">&#34;*.hpp&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>代码释义:</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-51"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">add_library</span><span class="p">(</span><span class="s">test_message::test_message</span> <span class="s">ALIAS</span> <span class="s">test_message</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>添加别名，以便库可以在构建树中使用，例如在测试时。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-52"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">target_include_directories</span><span class="p">(</span><span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">    <span class="s">PUBLIC</span>
+</span></span><span class="line"><span class="cl">  <span class="o">$&lt;</span><span class="nv">BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}</span><span class="o">&gt;</span><span class="s">/include</span>
+</span></span><span class="line"><span class="cl">    <span class="o">$&lt;</span><span class="nv">INSTALL_INTERFACE:include</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>设置 test_message 的包含路径。其中，<code>PUBLIC</code> 表示这些头文件路径将会被暴露给该目标的依赖项，即其他目标可以通过依赖该目标来访问这些头文件路径。
+<code>BUILD_INTERFACE</code>表示在构建时使用的头文件路径;INSTALL_INTERFACE表示在安装时使用的头文件路径，即将该目标安装到其他地方时，头文件将会被安装到 include 目录下。
+综上，这段代码的作用是将当前项目的根目录添加到 “test_message” 目标的头文件包含路径中，以便在编译和安装时能够正确地访问这些头文件。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-53"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">set_target_properties</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="s">CXX_STANDARD</span> <span class="s">11</span>
+</span></span><span class="line"><span class="cl">    <span class="s">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="s">True</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>设置 <code>test_message</code> 的相关属性，关于<code>target_include_directories</code>和<code>set_target_properties</code>的具体使用情况，我们将在以后做详细讲解。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-54"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">install</span><span class="p">(</span><span class="s">TARGETS</span> <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">        <span class="s">EXPORT</span> <span class="s">message_export_target</span>
+</span></span><span class="line"><span class="cl">        <span class="s">RUNTIME</span> <span class="s">DESTINATION</span> <span class="s2">&#34;bin&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">LIBRARY</span> <span class="s">DESTINATION</span> <span class="s2">&#34;lib&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">ARCHIVE</span> <span class="s">DESTINATION</span> <span class="s2">&#34;lib&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>安装一个名为 “test_message” 的目标（在Windows上需要将编译出来的sln文件使用vs打开，然后再属性栏中的INSTALL右键生成，即可执行install命令）。其中，TARGETS 表示要安装的目标名称，即 test_message。
+<code>EXPORT message_export_target</code> 表示将该目标导出到一个名为 “message_export_target” 的 CMake 配置文件中，以便其他项目可以使用该目标。
+<strong>注意:</strong> 我们在根目录下已经指定了’install’安装目录的根目录。
+<code>RUNTIME DESTINATION ${CMAKE_SOURCE_DIR}/output/bin</code>表示将该目标的可执行文件安装到当前项目的 bin 目录下。
+<code>LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/output/lib</code>表示将该目标的共享库文件安装到 当前项目的 lib 目录下。
+<code>ARCHIVE DESTINATION ${CMAKE_SOURCE_DIR}/output/lib</code>)表示将该目标的静态库文件安装到 当前项目的 lib 目录下。
+<strong>注意:</strong> 在Windows构建动态库时，动态库dll会被安装到当前项目的bin目录下，目标文件.lib文件会被安装到项目的lib目录下。
+综上，这段代码的作用是将 “test_message” 目标的可执行文件、共享库文件和静态库文件安装到指定的目录下，并将该目标导出到一个 CMake 配置文件中，以便其他项目可以使用该目标。关于生成cmake相关配置文件详见下一篇内容。本项目仅用此命令做输出库的相关文件的功能。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-55"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">install</span><span class="p">(</span><span class="n">DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">include</span><span class="o">/</span>
+</span></span><span class="line"><span class="cl">        <span class="n">DESTINATION</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">output</span><span class="o">/</span><span class="n">include</span>
+</span></span><span class="line"><span class="cl">        <span class="n">FILES_MATCHING</span> <span class="n">PATTERN</span> <span class="s">&#34;*.h&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">install</span><span class="p">(</span><span class="n">DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">include</span><span class="o">/</span>
+</span></span><span class="line"><span class="cl">        <span class="n">DESTINATION</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">output</span><span class="o">/</span><span class="n">include</span>
+</span></span><span class="line"><span class="cl">        <span class="n">FILES_MATCHING</span> <span class="n">PATTERN</span> <span class="s">&#34;*.hpp&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将当前目录下的<code>include</code>目录中的<code>.hpp</code>和<code>.h</code>安装到当前项目下的<code>output</code>目录下的<code>include</code>文件中。关于install命令的具体使用方法，我们将以后做详细解释。</p></div>
+    </div>
+  </div>
+<p><strong>根目录下的CMakeLists.txt</strong></p>
+<div class="highlight" id="id-37"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 设置可执行文件到bin文件夹下
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">set</span><span class="p">(</span><span class="s">EXECUTE_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/bin</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">EXECUTE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 设置动态库到lib文件夹下
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">set</span><span class="p">(</span><span class="s">LIB_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_LIBRARY_OUTPUT_DIRECTORY</span>  <span class="o">${</span><span class="nv">LIB_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">if</span><span class="p">(</span><span class="s">CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>  <span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_INSTALL_PREFIX</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/output/</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_subdirectory</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_link_libraries</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>代码释义:</strong></p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-56"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">if</span><span class="p">(</span><span class="s">CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>  <span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_INSTALL_PREFIX</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/output/</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果没有指定<code>install</code>的目录，则设置install的目录为<code>${CMAKE_SOURCE_DIR}/output/</code>。</p></div>
+    </div>
+  </div>
+<h4 id="104-windows上只链接第三方库动态库">10.4 Windows上只链接第三方库（动态库）</h4>
+<p>Windows平台上链接动态库的使用方法和GNU/Linux平台上有所不同，我们在链接时需要将符号表文件lib进行连接，然后将对应的动态库文件dll文件拷贝到环境变量或者可执行文件所在的目录下，可知行文件才可以正常过执行。</p>
+<p><strong>项目结构</strong></p>
+<div class="highlight" id="id-38"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── third-party
+</span></span><span class="line"><span class="cl">│   ├── include
+</span></span><span class="line"><span class="cl">│   │   └── message.h
+</span></span><span class="line"><span class="cl">│   ├── lib
+</span></span><span class="line"><span class="cl">│   │   └── test_message.lib
+</span></span><span class="line"><span class="cl">│  └── bin
+</span></span><span class="line"><span class="cl">│    └── test_message.dll
+</span></span><span class="line"><span class="cl">├── hello_world.cpp
+</span></span><span class="line"><span class="cl">└── CMakeLists.txt</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目中使用的<code>third-party</code>使用的是上一节内容中在Windows上生成的动态库。文件hello_world.cpp与上一节内容相同，我们不再对其进行描述。</p>
+<p>源码地址:https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_2/message_shared_lib_third_party_in_windows</p>
+<p><strong>CMakeLists.txt</strong></p>
+<div class="highlight" id="id-39"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-cmake" data-lang="cmake"><span class="line"><span class="cl"><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">EXECUTE_FILE</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/bin</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">EXECUTE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">TEST_MESSAGE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/third-party/lib/test_message.lib</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/third-party/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_link_libraries</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">TEST_MESSAGE</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">if</span> <span class="p">(</span><span class="s">MSVC</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>  <span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">MODEL</span> <span class="s2">&#34;${CMAKE_SOURCE_DIR}/third-party/bin/*.dll&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>  <span class="nb">add_custom_command</span><span class="p">(</span><span class="s">TARGET</span> <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span> <span class="s">POST_BUILD</span>
+</span></span><span class="line"><span class="cl">                     <span class="s">COMMAND</span> <span class="o">${</span><span class="nv">CMAKE_COMMAND</span><span class="o">}</span> <span class="s">-E</span> <span class="s">copy_if_different</span>
+</span></span><span class="line"><span class="cl">                     <span class="o">${</span><span class="nv">MODEL</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">                     <span class="o">$&lt;</span><span class="nv">TARGET_FILE_DIR:${PROJECT_NAME}</span><span class="o">&gt;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>代码释义:</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-57"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">set</span><span class="p">(</span><span class="s">TEST_MESSAGE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/third-party/lib/test_message.lib</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>链接三方库的符号表</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-58"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">if</span> <span class="p">(</span><span class="s">MSVC</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>  <span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">MODEL</span> <span class="s2">&#34;${CMAKE_SOURCE_DIR}/third-party/bin/*.dll&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>  <span class="nb">add_custom_command</span><span class="p">(</span><span class="s">TARGET</span> <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span> <span class="s">POST_BUILD</span>
+</span></span><span class="line"><span class="cl">                     <span class="s">COMMAND</span> <span class="o">${</span><span class="nv">CMAKE_COMMAND</span><span class="o">}</span> <span class="s">-E</span> <span class="s">copy_if_different</span>
+</span></span><span class="line"><span class="cl">                     <span class="o">${</span><span class="nv">MODEL</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">                     <span class="o">$&lt;</span><span class="nv">TARGET_FILE_DIR:${PROJECT_NAME}</span><span class="o">&gt;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将我们之前生成的动态库文件dll文件手动复制到可执行文件所在的目录中。关于add_custom_command用法我们之后章节将作详细详解。</p></div>
+    </div>
+  </div>
+<h3 id="十一补充">十一、补充</h3>
+<p>在window上使用vs生成可执行文件和执行install命令。
+首先，我们首先新建一个build目录，并进入该目录。</p>
+<div class="highlight" id="id-40"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后使用<code>cmake</code>进行构建项目。</p>
+<div class="highlight" id="id-41"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cmake ..</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后在<code>build</code>目录下可以看到<code>sln</code>文件，使用<code>vs</code>打开。</p>
+<p><strong>构建所有</strong>: 在vs中的解决方案资源管理器中右键ALL_BUILD，然后点击生成</p>
+<p>编译生成hello-world进程，右键hello-world,然后点击生成。如果我们使用CMake在一个项目中生成了多个进程，我们在测试某一个进程时，在对应的进程上右键设为启动项目即可。</p>
+<p><strong>执行install安装命令</strong>: 在INSTALL上右键，然后点击生成即可。注意：只有当我们的CMake中有install命令时，VS中才会出现INTALL选项。</p>
+]]></description></item><item><title>CMake 笔记 | [1] 单个源文件编译为可执行文件</title><link>https://jianye0428.github.io/posts/cmake_note_1/</link><pubDate>Fri, 12 Jan 2024 14:19:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_1/</guid><description><![CDATA[<h3 id="一项目结构">一、项目结构</h3>
 <div class="highlight" id="id-1"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -18,7 +1625,7 @@
 </div>
 </div><p>本项目只包含了一个源文件hello_world.cpp和一个CMake文件。</p>
 <blockquote>
-<p>源码地址: <a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter1/01"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter1/01<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>源码地址: <a href="https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_1/hello-world"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_1/hello-world<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 </blockquote>
 <div class="details admonition quote open">
     <div class="details-summary admonition-title">
@@ -89,13 +1696,13 @@
 今后，笔记中CMake的版本要求都为3.10。vscode中CMake Tool插件使用debug功能要求CMake版本不低于3.10。如果使用的系统ubuntu 16.04的话，需要升级CMake版本，windows请自行安装高于3.10版本的CMake。</p>
 </li>
 <li>
-<p><strong><code>project(hello-world LANGUAGES CXX)</code></strong>
-声明了项目的名称和支持的编程语言，且该命令必须生命在cmake_minimum_required之后。一旦声明了项目的名称后，可以使用宏定义${PROJECT_NAME}进行调用。
+<p><strong><code>project(hello-world LANGUAGES CXX)</code></strong></p>
+<p>声明了项目的名称和支持的编程语言，且该命令必须生命在cmake_minimum_required之后。一旦声明了项目的名称后，可以使用宏定义${PROJECT_NAME}进行调用。
 在CMake中，C++是默认的编程语言。不过在实际编写代码过程中，仍建议使用LANGUAGES选项在project命令中显示地声明项目的语言。</p>
 </li>
 <li>
-<p><code>add_executable(${PROJECT_NAME} hello_world.cpp}</code>
-CMake创建一个新可执行文件，其名字为${PROJECT_NAME}（也可以使用其他任意的名字）。这个可执行文件是通过编译和链接源文件hello_world.cpp生成的。</p>
+<p><strong><code>add_executable(${PROJECT_NAME} hello_world.cpp}</code></strong></p>
+<p>CMake创建一个新可执行文件，其名字为${PROJECT_NAME}（也可以使用其他任意的名字）。这个可执行文件是通过编译和链接源文件hello_world.cpp生成的。</p>
 <p>CMake将为编译器使用默认设置，并自动生成工具。</p>
 </li>
 </ul>
@@ -25191,117 +26798,4 @@ delete 函数的优势是它可以应用于任何函数，而不仅仅是成员�
 [2]. <a href="https://blog.csdn.net/Dong_HFUT/article/details/127155670"target="_blank" rel="external nofollow noopener noreferrer">Effective Modern C++ 完全解读笔记汇总<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [3]. <a href="https://zhuanlan.zhihu.com/p/553706181"target="_blank" rel="external nofollow noopener noreferrer">Effective modern C++ 学习笔记<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [4]. <a href="https://blog.csdn.net/fengbingchun/article/details/104136592"target="_blank" rel="external nofollow noopener noreferrer">Effective Modern C++42招独家技巧助你改善C++11和C++14的高效用法笔记<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
-]]></description></item><item><title>Effective STL 精读总结 [4] | 迭代器</title><link>https://jianye0428.github.io/posts/effective_stl_part_four/</link><pubDate>Thu, 21 Sep 2023 19:30:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/effective_stl_part_four/</guid><description><![CDATA[<h1 id="前言">前言</h1>
-<blockquote>
-<p>Effective-STL总结系列分为七部分，本文为第四部分，涉及原书第四章，内容范围Rule26~29。为方便书写，Rule26简写为R26。</p>
-</blockquote>
-<div class="details admonition Note">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-pencil-alt fa-fw" aria-hidden="true"></i>Effective-STL系列List<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">本博客站点系列内容如下：</br>
-💡 <a href="https://jianye0428.github.io/posts/partone/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版) 精读总结(一)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-💡 <a href="https://jianye0428.github.io/posts/parttwo/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版) 精读总结(二)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-💡 <a href="https://jianye0428.github.io/posts/partthree/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版) 精读总结(三)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-💡 <a href="https://jianye0428.github.io/posts/partfour/"target="_blank" rel="external nofollow noopener noreferrer">Effective STL(第3版) 精读总结(四)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></div>
-    </div>
-  </div>
-<h2 id="r26-iterator-优先于-const_interatorreverse_interator-及-const_reverse_interator">R26: iterator 优先于 const_interator、reverse_interator 及 const_reverse_interator</h2>
-<ol>
-<li>STL中所有的标准容器都提供了4种迭代器类型，对容器类container<T>而言，iterator类型相当于T*，const_iterator相当于const T*。reverse_iterator和const_reverse_iterator递增的效果是从容器的尾部反向遍历到头部。</li>
-<li>对于vector容器的insert函数和erase函数，这些函数只接受iterator类型的参数，而不是const_iterator、reverse_iterator或者const_reverse_iterator。下面这张图展示了不同类型迭代器之间的关系。黑色箭头，并且上面未标函数的表示隐式类型转换，标函数的表示显示类型转换，但是需要注意的是，通过base()得到的迭代器或许并非是你期望的迭代器类型。也可以看出想隐式转换const_iterator到iterator是不可行的。从reverse_iterator转换来的iterator在使用之前可能需要进行相应的调整，条款28将更详细地说明这一点。由此可见，尽量使用iterator，而不是const或reverse型的迭代器，可以使容器的使用更为简单有效，并且可以避免潜在的问题。</li>
-</ol>
-<p>不同类型的迭代器之间的关系:
-</p>
-<ol start="3">
-<li>假设有个iterator i和一个const_iterator ci指向同一个对象，但是在比较这两个迭代器时，即if(i == ci)的结果却是假，甚至不能通过编译，因为这些STL实现将const_iterator的operator==作为成员函数，而不是一个非成员函数，ci不能隐式转成i，但是i可以隐式转成ci，所以判断if(ci == i)是真。避免这种问题最简单的办法是减少混用不同类型的迭代器，尽量使用iterator来代替const_iterator。</li>
-</ol>
-<h2 id="r27-使用-distance-和-advance-将容器的-const_interator-转换成-iterator">R27: 使用 distance 和 advance 将容器的 const_interator 转换成 iterator</h2>
-<ol>
-<li>首先考虑类型转换达到该条款的目的，包括两种代码，Iter i(ci);和Iter i(const_cast<Iter>(ci));，这两种代码都不能通过编译，原因在于iterator和const_iterator是完全不同的两个类，相当于int和complex<double>之间互转，当然不可能成功。不过对于vector和string来说，上面的代码可能通过编译，因为大多数STL将vector<T>::iterator和vector<T>::const_iterator分别定义为T<em>和const T</em>，string::iterator和string::const_iterator定义为char<em>和const char</em>，因此对于这两个容器强转可能是成功的，但是即使在这两个容器种，reverse_iterator和const_reverse_iterator仍然是两个类，它们之间是不能强转的。</li>
-<li>可以通过distance函数进行转换，代码如下：
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"> <span class="k">typedef</span> <span class="n">deque</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">IntDeque</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"> <span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">iterator</span> <span class="n">Iter</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"> <span class="k">typedef</span> <span class="n">IntDeque</span><span class="o">::</span><span class="n">const_iterator</span> <span class="n">ConstIter</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="n">IntDeque</span> <span class="n">d</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"> <span class="n">ConstIter</span> <span class="n">ci</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"> <span class="n">Iter</span> <span class="nf">i</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">begin</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl"> <span class="n">advance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">distance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ci</span><span class="p">));</span><span class="c1">//目前不能通过编译，但是思想是通过distance计算出ci和begin之间的距离，然后移动这么多距离
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div>上面这个程序不能通过编译的原因是distance函数只能接受一种类型的迭代器，而i和ci是两种不同的迭代器。要通过编译最简单的方法是显示指定distance使用的类型，即advance(i, distance<ConstIter>(i, ci));除了达成效率，再考虑这么做的效率如何，它的执行效率取决于你使用的迭代器，对于随机访问迭代器（vector、string和deque），它是常数时间操作，对于双向迭代器（其他所有），它是线性时间操作。</li>
-</ol>
-<h2 id="r28-正确理解由reverse_iterator的base成员函数所产生的iterator的用法">R28: 正确理解由reverse_iterator的base()成员函数所产生的iterator的用法</h2>
-<p></p>
-<p>假设通过reverse_iterator查找容器中值为3的元素，ri表示3的位置，但是在调用base()函数将其转换成iterator类型时，因为偏移变成i所指向的位置。假设要在ri的位置插入新元素，我们预期新元素会插入在现在元素3的位置，然后3和其后的元素需要往右移动一个位置，但是因为insert会将新元素插入到迭代器指向位置的前面，而逆序遍历的顺序是由后向前的，所以会将新元素插入在3的“后面”，实际对reverse_iterator来说就是“前面”。所以如果是在reverse_iterator类型ri位置插入，只需要在ir.base()位置插入即可。但是如果是在ri位置删除元素，则需要在ri.base()位置前面的位置执行删除。但是其中还是有坑，请看如下代码：</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">//这段代码通不过编译
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;::</span><span class="n">reverse_iterator</span> <span class="n">ri</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">rbegin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">rend</span><span class="p">(),</span> <span class="mi">3</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">v</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="o">--</span><span class="n">ri</span><span class="p">.</span><span class="n">base</span><span class="p">());</span><span class="c1">//iterator的--是左移，reverse_iterator的--是右移
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这段代码对于vector和string不能通过编译的原因在于，这两种容器的iterator和const_iterator是以内置指针的方式实现的，所以ri.base()的结果是一个指针，而C和C++都规定了从函数返回的指针不应该被修改。所以必须换个调用方式：v.erase((++ri).base());，先让ri左移再取指针。</p>
-<h2 id="r29-对于逐个字符的输入请考虑使用istreambufiterator">R29: 对于逐个字符的输入请考虑使用istreambuf::iterator</h2>
-<p>假设你想将一个文本文件中的内容拷贝到一个string对象中，考虑如下的实现方式：</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;inputData.txt&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span> <span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span><span class="c1">//注意第一个参数用括号包起来
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>但是这种读取方式是不包含空白字符的，因为istream_iterator使用operator&raquo;完成读操作，而默认情况下operator&raquo;会跳过空白字符，假定你要保留空白字符，可以更改这种默认行为，如下代码:</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;inputData.txt&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">inputFile</span><span class="p">.</span><span class="n">unsetf</span><span class="p">(</span><span class="n">ios</span><span class="o">::</span><span class="n">skipws</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span> <span class="n">istream_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span><span class="c1">//注意第一个参数用括号包起来
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>上述代码是可以完成要求的功能的，但是你会发现它并不够快，istream_iterator内部使用的operator&raquo;实际上执行了格式化输出，这意味着每次调用operator&raquo;操作符，都会执行许多附加的操作。一种更为有效的途径是使用istreambuf_iterator，istreambuf_iterator的使用方法与istream_iterator大致相同，但是istream_iterator<char>使用operator&raquo;从输入流中读取单个字符，而istreambuf_iterator<char>从一个输入流的缓冲区读取下一个字符。使用的代码就是将istream_iterator改成istreambuf_iterator。</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ifstream</span> <span class="nf">inputFile</span><span class="p">(</span><span class="s">&#34;inputData.txt&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">string</span> <span class="nf">fileData</span><span class="p">((</span><span class="n">istreambuf_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">inputFile</span><span class="p">)),</span> <span class="n">istreambuf_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span><span class="c1">//注意第一个参数用括号包起来
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>同样对于非格式化的逐个字符的输出，也可以考虑使用ostreambuf_iterator替换ostream_iterator。</p>
-<p>ref:
-[1]. <a href="https://www.cnblogs.com/Sherry4869/p/15128250.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/Sherry4869/p/15128250.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://blog.csdn.net/zhuikefeng/article/details/108164117#t42"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/zhuikefeng/article/details/108164117#t42<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[3]. <a href="https://zhuanlan.zhihu.com/p/458156007"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/458156007<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item></channel></rss>
