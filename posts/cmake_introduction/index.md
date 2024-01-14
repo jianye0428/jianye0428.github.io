@@ -3,13 +3,20 @@
 
 ## 1. 总览
 
+**什么是CMake？**
+> CMake是个一个开源的跨平台自动化建构系统，用来管理软件建置的程序，并不相依于某特定编译器。并可支持多层目录、多个应用程序与多个库。 它用配置文件控制建构过程（build process）的方式和Unix的make相似，只是CMake的配置文件取名为CMakeLists.txt。
+> CMake并不直接建构出最终的软件，而是产生标准的建构档（如Unix的Makefile或Windows Visual C++的projects/workspaces），然后再依一般的建构方式使用。
+> 这使得熟悉某个集成开发环境（IDE）的开发者可以用标准的方式建构他的软件，这种可以使用各平台的原生建构系统的能力是CMake和SCons等其他类似系统的区别之处。
+> 它首先允许开发者编写一种平台无关的CMakeList.txt 文件来定制整个编译流程，然后再根据目标用户的平台进一步生成所需的本地化 Makefile 和工程文件，如 Unix的 Makefile 或 Windows 的 Visual Studio 工程。从而做到“Write once, run everywhere”。
+> 显然，CMake 是一个比上述几种 make 更高级的编译配置工具。“CMake”这个名字是"Cross platform MAke"的缩写。虽然名字中含有"make"，但是CMake和Unix上常见的“make”系统是分开的，而且更为高端。 它可与原生建置环境结合使用，例如：make、苹果的Xcode与微软的Visual Studio。
+
 CMake is not a build system like Unix Make but a build system generator. Its purpose is to take your description of a project and generate a set of configuration files to build that project.
 
 CMake 是构建系统的生成器。它的目标是：根据你对项目的描述信息，去生成一系列的配置文件，来编译构建项目。
 
-As part of the generation of build configuration files CMake also analyses source code to create a dependency graph of components so that when building the project unnecessary recompilation steps can be omitted to reduce build times. For larger projects this can reduce build times down from tens of minutes or hours, to a few minutes, perhaps even less than one minute.
+As part of the generation of build configuration files, CMake also analyses source code to create a dependency graph of components so that when building the project unnecessary recompilation steps can be omitted to reduce build times. For larger projects this can reduce build times down from tens of minutes or hours, to a few minutes, perhaps even less than one minute.
 
-作为构建配置文件生成的一部分，CMake 还会去分析源码，来创建各个部分之间的依赖图，所以在构建项目时，不必要的重编步骤就会被省略掉。这样节省了大量构建的事件。
+作为构建配置文件生成的一部分，CMake 还会去分析源码，来创建各个部分之间的依赖图，所以在构建项目时，不必要的重编步骤就会被省略掉。这样节省了大量构建的时间。
 
 <br>
 <center>
@@ -18,7 +25,8 @@ As part of the generation of build configuration files CMake also analyses sourc
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">CMake Build Process</div>
 </center>
 <br>
-In addition to a build system, over the years CMake has evolved into a family of development tools: CMake, CTest, CPack, and CDash. CMake is the build tool responsible for building software. CTest is a test driver tool, used to run regression tests. CPack is a packaging tool used to create platform-specific installers for software built with CMake. CDash is a web application for displaying testing results and performing continuous integration testing.
+
+In addition to a build system, over the years CMake has evolved into a family of development tools: **CMake**, **CTest**, **CPack**, and **CDash**. CMake is the build tool responsible for building software. CTest is a test driver tool, used to run regression tests. CPack is a packaging tool used to create platform-specific installers for software built with CMake. CDash is a web application for displaying testing results and performing continuous integration testing.
 
 除了构建系统，CMake 还发展出一系列工具：CMake 是构建工具，CTest 是用于回归测试的测试工具，CPack 是用于为用 CMake 构建的软件创建指定平台安装器的打包工具，CDash 是展示测试结构和执行持续集成测试的 web 端应用。
 
@@ -162,7 +170,9 @@ cpack 可执行文件用来创建项目的安装器。
 [1]. [CMake 构建工具](https://mp.weixin.qq.com/s/d3wFZoyDwah5qO4UWvvXtg)<br>
 [2]. https://aosabook.org/en/cmake.html<br>
 [3]. https://blog.feabhas.com/2021/07/cmake-part-1-the-dark-arts/<br>
-[4]. https://blog.feabhas.com/2021/07/<br>cmake-part-2-release-and-debug-builds/<br>
+[4]. https://blog.feabhas.com/2021/07/cmake-part-2-release-and-debug-builds/<br>
+[5]. [深入理解CMake：优化构建过程，提升开发效率](https://mp.weixin.qq.com/s/chn-sEBob9Dxo10cJoaUgg)
+
 
 ---
 
