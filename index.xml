@@ -1,4 +1,627 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 15 Jan 2024 09:07:13 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | 条件语句、选项命令以及指定编译器</title><link>https://jianye0428.github.io/posts/cmake_note_4/</link><pubDate>Mon, 15 Jan 2024 09:07:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_4/</guid><description><![CDATA[<h2 id="一条件语句">一、条件语句</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 15 Jan 2024 12:54:34 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [5] 构建类型(Debug、Release以及其他)</title><link>https://jianye0428.github.io/posts/cmake_note_5/</link><pubDate>Mon, 15 Jan 2024 12:54:34 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_5/</guid><description><![CDATA[<h2 id="一基本概念构建类型">一、基本概念构建类型</h2>
+<p><code>CMake</code>可以识别的构建类型是：</p>
+<ul>
+<li>Debug：用于在没有优化的情况下，使用带有调试符号构建库或者可执行文件</li>
+<li>Release: 用于构建的优化的库或者可执行文件，不包含调试符号</li>
+<li>RelWithDebInfo：用于构建较少的优化库或者可执行文件，包含调试符号</li>
+<li>MinSizeRel：用于不增加目标代码大小的优化方式，来构建库或者可执行文件</li>
+</ul>
+<p>控制生成构建系统使用的配置变量是<code>CMAKE_BUILD_TYPE</code>，该变量默认为空。</p>
+<p>这里我们仍然选择<a href="https://jianye0428.github.io/posts/cmake_note_3/"target="_blank" rel="external nofollow noopener noreferrer">CMake第三篇—动态库和静态库的补充中的代码<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，但是这里我们对CMakeLists.txt稍作修改。</p>
+<h2 id="二项目结构">二、项目结构</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── cmake
+</span></span><span class="line"><span class="cl">│   └── message_config.cmake.in
+</span></span><span class="line"><span class="cl">├── message-module
+</span></span><span class="line"><span class="cl">│   ├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">│   ├── include
+</span></span><span class="line"><span class="cl">│   │   ├── message_export_lib.h
+</span></span><span class="line"><span class="cl">│   │   └── message.h
+</span></span><span class="line"><span class="cl">│   └── src
+</span></span><span class="line"><span class="cl">│       └── message.cpp
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">└── hello_world.cpp
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="m">4</span> directories, <span class="m">9</span> files</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目源码: <a href="https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_5/message_module_lib_standard"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_5/message_module_lib_standard<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h3 id="21-message-module模块下的cmakeliststxt">2.1 message-module模块下的CMakeLists.txt</h3>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">SOURCE_FILE</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/src/*.cpp</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">if</span> <span class="p">(</span><span class="s">BUILD_SHARED_LIBS</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">add_library</span><span class="p">(</span><span class="s">test_message</span> <span class="s">SHARED</span> <span class="o">${</span><span class="nv">SOURCE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">target_compile_definitions</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PUBLIC</span> <span class="s">-DMESSAGE_LIB_SHARED_BUILD</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">target_compile_definitions</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PRIVATE</span> <span class="s">-DMESSAGE_LIB_EXPORTS</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">else</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">add_library</span><span class="p">(</span><span class="s">test_message</span> <span class="s">STATIC</span> <span class="o">${</span><span class="nv">SOURCE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 添加别名，以便库可以在构建树中使用，例如在测试时
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">add_library</span><span class="p">(</span><span class="s">test_message::test_message</span> <span class="s">ALIAS</span> <span class="s">test_message</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_include_directories</span><span class="p">(</span><span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">    <span class="s">PUBLIC</span>
+</span></span><span class="line"><span class="cl">    <span class="o">$&lt;</span><span class="nv">BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}</span><span class="o">&gt;</span><span class="s">/include</span>
+</span></span><span class="line"><span class="cl">    <span class="o">$&lt;</span><span class="nv">INSTALL_INTERFACE:include</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set_target_properties</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="s">CXX_STANDARD</span> <span class="s">11</span>
+</span></span><span class="line"><span class="cl">    <span class="s">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="s">True</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set_target_properties</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="s">DEBUG_POSTFIX</span> <span class="s2">&#34;_debug&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">RELEASE_POSTFIX</span> <span class="s2">&#34;_release&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">TARGETS</span> <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">        <span class="s">EXPORT</span> <span class="s">message_export_target</span>
+</span></span><span class="line"><span class="cl">        <span class="s">RUNTIME</span> <span class="s">DESTINATION</span> <span class="s2">&#34;bin&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">LIBRARY</span> <span class="s">DESTINATION</span> <span class="s2">&#34;lib&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">ARCHIVE</span> <span class="s">DESTINATION</span> <span class="s2">&#34;lib&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/</span>
+</span></span><span class="line"><span class="cl">        <span class="s">DESTINATION</span> <span class="s2">&#34;include&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">FILES_MATCHING</span> <span class="s">PATTERN</span> <span class="s2">&#34;*.h&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/</span>
+</span></span><span class="line"><span class="cl">        <span class="s">DESTINATION</span> <span class="s2">&#34;include&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">FILES_MATCHING</span> <span class="s">PATTERN</span> <span class="s2">&#34;*.hpp&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">EXPORT</span> <span class="s">message_export_target</span>
+</span></span><span class="line"><span class="cl">        <span class="s">FILE</span> <span class="s">message_lib.cmake</span>
+</span></span><span class="line"><span class="cl">        <span class="s">DESTINATION</span> <span class="s">lib/cmake/test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include</span><span class="p">(</span><span class="s">CMakePackageConfigHelpers</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># generate the config file that is includes the exports
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">configure_package_config_file</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/cmake/message_config.cmake.in</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;${CMAKE_SOURCE_DIR}/cmake/message_config.cmake&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">INSTALL_DESTINATION</span> <span class="s2">&#34;lib/cmake/test_message&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># generate the version file for the config file
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">write_basic_package_version_file</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;${CMAKE_SOURCE_DIR}/cmake/message_config_version.cmake&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">VERSION</span> <span class="s2">&#34;${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">COMPATIBILITY</span> <span class="s">AnyNewerVersion</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">FILES</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/cmake/message_config.cmake</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/cmake/message_config_version.cmake</span>
+</span></span><span class="line"><span class="cl">    <span class="s">DESTINATION</span> <span class="s">lib/cmake/test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">export</span><span class="p">(</span><span class="s">EXPORT</span> <span class="s">message_export_target</span> <span class="s">FILE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/cmake/message_config_version.cmake</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>代码释义:
+这里，我们基本上没有做修改，只添加了以下内容：
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">set_target_properties</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="s">DEBUG_POSTFIX</span> <span class="s2">&#34;_debug&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">RELEASE_POSTFIX</span> <span class="s2">&#34;_release&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这将在 <code>debug</code> 构建模式下将库名后缀设置为 <code>_debug</code>，在 <code>release</code> 构建模式下将库名后缀设置为 <code>_release</code>。
+然后，可以使用 <code>test_message_debug</code> 或 <code>test_message_release</code> 来引用库。当然，我们其实可以使用<code>find_package</code>，然后直接使用库的别名<code>test_message</code>即可。</p></div>
+    </div>
+  </div></p>
+<h3 id="22-根目录下的cmakeliststxt">2.2 根目录下的CMakeLists.txt</h3>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_ARCHIVE_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_LIBRARY_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/bin</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">option</span><span class="p">(</span><span class="s">BUILD_SHARED_LIBS</span> <span class="s2">&#34;Specifies the type of libraries (SHARED or STATIC) to build&#34;</span> <span class="s">OFF</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># Set install direcotory
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">if</span><span class="p">(</span><span class="s">CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>  <span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_INSTALL_PREFIX</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/output/</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">if</span><span class="p">(</span><span class="s">NOT</span> <span class="s">CMAKE_BUILD_TYPE</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_BUILD_TYPE</span> <span class="s">Release</span> <span class="s">CACHE</span> <span class="s">STRING</span> <span class="s2">&#34;Build type&#34;</span> <span class="s">FORCE</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;Build type:                                       ${CMAKE_BUILD_TYPE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Debug configuration:                     ${CMAKE_C_FLAGS_DEBUG}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Release configuration:                   ${CMAKE_C_FLAGS_RELEASE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Release configuration with Debug info:   ${CMAKE_C_FLAGS_RELWITHDEBINFO}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, minimal Release configuration:           ${CMAKE_C_FLAGS_MINSIZEREL}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Debug configuration:                   ${CMAKE_CXX_FLAGS_DEBUG}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Release configuration:                 ${CMAKE_CXX_FLAGS_RELEASE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Release configuration with Debug info: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, minimal Release configuration:         ${CMAKE_CXX_FLAGS_MINSIZEREL}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_subdirectory</span><span class="p">(</span><span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_link_libraries</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里，我们添加了以下内容：</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">if</span><span class="p">(</span><span class="s">NOT</span> <span class="s">CMAKE_BUILD_TYPE</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_BUILD_TYPE</span> <span class="s">Release</span> <span class="s">CACHE</span> <span class="s">STRING</span> <span class="s2">&#34;Build type&#34;</span> <span class="s">FORCE</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;Build type:                                       ${CMAKE_BUILD_TYPE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Debug configuration:                     ${CMAKE_C_FLAGS_DEBUG}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Release configuration:                   ${CMAKE_C_FLAGS_RELEASE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Release configuration with Debug info:   ${CMAKE_C_FLAGS_RELWITHDEBINFO}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, minimal Release configuration:           ${CMAKE_C_FLAGS_MINSIZEREL}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Debug configuration:                   ${CMAKE_CXX_FLAGS_DEBUG}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Release configuration:                 ${CMAKE_CXX_FLAGS_RELEASE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Release configuration with Debug info: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, minimal Release configuration:         ${CMAKE_CXX_FLAGS_MINSIZEREL}&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>首先，检查是否设置了<strong>构建类型</strong>。如果没有，则将构建类型设置为 <code>Release</code>。然后，它使用 <code>message</code> 命令输出各种编译标志，包括 <code>C</code> 和 <code>C++</code> 的 <code>Debug</code> 和 <code>Release</code> 配置，以及最小 <code>Release</code> 配置和<font color=red>带有调试信息的 <code>Release</code></font>配置。这些信息对于调试和优化构建非常有用。</p></div>
+    </div>
+  </div>
+<h3 id="23-验证输出">2.3 验证输出</h3>
+<p>我们执行以下命令，这里没有指定构建类型，即默认构建类型为<code>Release</code>。</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake ..</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 7.5.0
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ - skipped
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build type:                                       Release
+</span></span><span class="line"><span class="cl">-- C flags, Debug configuration:
+</span></span><span class="line"><span class="cl">-- C flags, Release configuration:
+</span></span><span class="line"><span class="cl">-- C flags, Release configuration with Debug info:
+</span></span><span class="line"><span class="cl">-- C flags, minimal Release configuration:
+</span></span><span class="line"><span class="cl">-- C++ flags, Debug configuration:                   -g
+</span></span><span class="line"><span class="cl">-- C++ flags, Release configuration:                 -O3 -DNDEBUG
+</span></span><span class="line"><span class="cl">-- C++ flags, Release configuration with Debug info: -O2 -g -DNDEBUG
+</span></span><span class="line"><span class="cl">-- C++ flags, minimal Release configuration:         -Os -DNDEBUG
+</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/build</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行<code>make</code>:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="o">[</span> 25%<span class="o">]</span> Building CXX object message_module/CMakeFiles/test_message.dir/src/message.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Linking CXX static library ../lib/libtest_message_release.a
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Built target test_message
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 75%<span class="o">]</span> Building CXX object CMakeFiles/hello-world.dir/hello_world.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Linking CXX executable bin/hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，我们执行<code>make</code>命令后，生成的库命名为<code>libtest_message_release.a</code>,并将其存入lib目录中。</p>
+<p>执行:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make install</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出结果如下:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Built target test_message
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world
+</span></span><span class="line"><span class="cl">Install the project...
+</span></span><span class="line"><span class="cl">-- Install configuration: <span class="s2">&#34;Release&#34;</span>
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/libtest_message_release.a
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/include
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/include/message_export_lib.h
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/include/message.h
+</span></span><span class="line"><span class="cl">-- Up-to-date: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/include
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/cmake/test_message/message_lib.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/cmake/test_message/message_lib-release.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/cmake/test_message/message_config.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/cmake/test_message/message_config_version.cmake</span></span></code></pre></td></tr></table>
+</div>
+</div><p>设置构建类型为debug:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake .. -DCMAKE_BUILD_TYPE<span class="o">=</span>Debug</span></span></code></pre></td></tr></table>
+</div>
+</div><p>则输出:</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 7.5.0
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ - skipped
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build type:                                       Debug
+</span></span><span class="line"><span class="cl">-- C flags, Debug configuration:
+</span></span><span class="line"><span class="cl">-- C flags, Release configuration:
+</span></span><span class="line"><span class="cl">-- C flags, Release configuration with Debug info:
+</span></span><span class="line"><span class="cl">-- C flags, minimal Release configuration:
+</span></span><span class="line"><span class="cl">-- C++ flags, Debug configuration:                   -g
+</span></span><span class="line"><span class="cl">-- C++ flags, Release configuration:                 -O3 -DNDEBUG
+</span></span><span class="line"><span class="cl">-- C++ flags, Release configuration with Debug info: -O2 -g -DNDEBUG
+</span></span><span class="line"><span class="cl">-- C++ flags, minimal Release configuration:         -Os -DNDEBUG
+</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/build</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行<code>make</code>:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出如下:</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="o">[</span> 25%<span class="o">]</span> Building CXX object message_module/CMakeFiles/test_message.dir/src/message.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Linking CXX static library ../lib/libtest_message_debug.a
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Built target test_message
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 75%<span class="o">]</span> Building CXX object CMakeFiles/hello-world.dir/hello_world.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Linking CXX executable bin/hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，我们执行<code>make</code>命令后，生成的库命名为<code>libtest_message_debug.a</code>,并将其存入lib目录中。</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make install</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">Consolidate compiler generated dependencies of target test_message
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Built target test_message
+</span></span><span class="line"><span class="cl">Consolidate compiler generated dependencies of target hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world
+</span></span><span class="line"><span class="cl">Install the project...
+</span></span><span class="line"><span class="cl">-- Install configuration: <span class="s2">&#34;Debug&#34;</span>
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/libtest_message_debug.a
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/include
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/include/message_export_lib.h
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/include/message.h
+</span></span><span class="line"><span class="cl">-- Up-to-date: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/include
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/cmake/test_message/message_lib.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/cmake/test_message/message_lib-debug.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/cmake/test_message/message_config.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/cmake/test_message/message_config_version.cmake</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="三补充">三、补充</h2>
+<p><code>Release</code>和<code>Debug</code>在构建项目通常很有用，如评估编译器优化级别的效果。对于单配置生成器，如Unix Makefile、MSYS Makefile或者Ninja，因为要对项目重新配置，这里需要运行CMake两次。</p>
+<p>不过，CMake也支持<strong>符合配置生成器</strong>。这些通常是集成开发环境提供的项目文件，最显著的是Visual Studio和XCode，它们可以同时处理多个配置。可以使用CMAKE_CONFIGURATION_TYPES变量对这些生成器的可用配置进行调整。</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir -p build
+</span></span><span class="line"><span class="cl"> <span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl"> cmake .. -G<span class="s2">&#34;Visual Studio 14 2019 Win64&#34;</span> -D <span class="nv">CMAKE_CONFIGURATION_TYPES</span><span class="o">=</span><span class="s2">&#34;Release;Debug&#34;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将为Release和Debug配置生成一个构建树。然后，您可以使–config标志来决定构建这两个中的哪一个:</p>
+<div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cmake --build . --config Release</span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>CMake 笔记 | [4] 条件语句、选项命令以及指定编译器</title><link>https://jianye0428.github.io/posts/cmake_note_4/</link><pubDate>Mon, 15 Jan 2024 09:07:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_4/</guid><description><![CDATA[<h2 id="一条件语句">一、条件语句</h2>
 <p>首先，我们还是拿我们上一篇根目录下的CMakeLists.txt文件进行讲解。</p>
 <p>源码地址为：https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter1/11</p>
 <div class="highlight" id="id-1"><div class="chroma">
@@ -15276,1192 +15899,4 @@ to be added: <br>
 </ul>
 <p>ref:
 <a href="https://github.com/downdemo/Cpp-Concurrency-in-Action-2ed"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/downdemo/Cpp-Concurrency-in-Action-2ed<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>C++ Concurrency in Action [3] | CH03 Sharing Data Between Threads</title><link>https://jianye0428.github.io/posts/ch03_sharing_data_between_threads/</link><pubDate>Sat, 04 Nov 2023 17:18:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ch03_sharing_data_between_threads/</guid><description><![CDATA[<h2 id="线程间共享数据存在的问题">线程间共享数据存在的问题</h2>
-<ul>
-<li>不变量（invariant）：关于一个特定数据结构总为 true 的语句，比如 <code>双向链表的两个相邻节点 A 和 B，A 的后指针一定指向 B，B 的前指针一定指向 A</code>。有时程序为了方便会暂时破坏不变量，这通常发生于更新复杂数据结构的过程中，比如删除双向链表中的一个节点 N，要先让 N 的前一个节点指向 N 的后一个节点（不变量被破坏），再让 N 的后节点指向前节点，最后删除 N（此时不变量重新恢复）</li>
-<li>线程修改共享数据时，就会发生破坏不变量的情况，此时如果有其他线程访问，就可能导致不变量被永久性破坏，这就是 race condition</li>
-<li>如果线程执行顺序的先后对结果无影响，则为不需要关心的良性竞争。需要关心的是不变量被破坏时产生的 race condition</li>
-<li>C++ 标准中定义了 data race 的概念，指代一种特定的 race condition，即并发修改单个对象。data race 会造成未定义行为</li>
-<li>race condition 要求一个线程进行时，另一线程访问同一数据块，出现问题时很难复现，因此编程时需要使用大量复杂操作来避免 race condition</li>
-</ul>
-<h2 id="互斥锁mutex">互斥锁（mutex）</h2>
-<ul>
-<li>使用 mutex 在访问共享数据前加锁，访问结束后解锁。一个线程用特定的 mutex 锁定后，其他线程必须等待该线程的 mutex 解锁才能访问共享数据</li>
-<li>C++11 提供了 <a href="https://en.cppreference.com/w/cpp/thread/mutex"target="_blank" rel="external nofollow noopener noreferrer">std::mutex<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 来创建一个 mutex，可通过 <a href="https://en.cppreference.com/w/cpp/thread/mutex/lock"target="_blank" rel="external nofollow noopener noreferrer">lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 加锁，通过 <a href="https://en.cppreference.com/w/cpp/thread/mutex/unlock"target="_blank" rel="external nofollow noopener noreferrer">unlock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 解锁。一般不手动使用这两个成员函数，而是使用 <a href="https://en.cppreference.com/w/cpp/thread/lock_guard"target="_blank" rel="external nofollow noopener noreferrer">std::lock_guard<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 来自动处理加锁与解锁，它在构造时接受一个 mutex，并会调用 mutex.lock()，析构时会调用 mutex.unlock()</li>
-</ul>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">lock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;lock&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;unlock&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">A</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">a</span><span class="p">);</span>  <span class="c1">// lock
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>                           <span class="c1">// unlock
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>C++17 提供了的 <a href="https://en.cppreference.com/w/cpp/thread/scoped_lock"target="_blank" rel="external nofollow noopener noreferrer">std::scoped_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，它可以接受任意数量的 mutex，并将这些 mutex 传给 <a href="https://en.cppreference.com/w/cpp/thread/lock"target="_blank" rel="external nofollow noopener noreferrer">std::lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 来同时上锁，它会对其中一个 mutex 调用 lock()，对其他调用 try_lock()，若 try_lock() 返回 false 则对已经上锁的 mutex 调用 unlock()，然后重新进行下一轮上锁，标准未规定下一轮的上锁顺序，可能不一致，重复此过程直到所有 mutex 上锁，从而达到同时上锁的效果。C++17 支持类模板实参推断，可以省略模板参数</li>
-</ul>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">lock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">try_lock</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="mi">3</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">B</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">lock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="mi">5</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">try_lock</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="mi">6</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">B</span> <span class="n">b</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">scoped_lock</span> <span class="n">l</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">);</span>  <span class="c1">// 16
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>  <span class="c1">// 25
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>一般 mutex 和要保护的数据一起放在类中，定义为 private 数据成员，而非全局变量，这样能让代码更清晰。但如果某个成员函数返回指向数据成员的指针或引用，则通过这个指针的访问行为不会被 mutex 限制，因此需要谨慎设置接口，确保 mutex 能锁住数据</li>
-</ul>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">f</span><span class="p">()</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">B</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span><span class="o">*</span> <span class="n">get_data</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">&amp;</span><span class="n">data_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="n">data_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">B</span> <span class="n">b</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span><span class="o">*</span> <span class="n">p</span> <span class="o">=</span> <span class="n">b</span><span class="p">.</span><span class="n">get_data</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">p</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">();</span>  <span class="c1">// 未锁定 mutex 的情况下访问数据
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>即便在很简单的接口中，也可能遇到 race condition</li>
-</ul>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">stack</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">s</span><span class="err">；</span>
-</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">s</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="n">s</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>  <span class="c1">// 此时其他线程 pop 就会获取错误的 top
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">s</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>上述代码先检查非空再获取栈顶元素，在单线程中是安全的，但在多线程中，检查非空之后，如果其他线程先 pop，就会导致当前线程 top 出错。另一个潜在的竞争是，如果两个线程都未 pop，而是分别获取了 top，虽然不会产生未定义行为，但这种对同一值处理了两次的行为更为严重，因为看起来没有任何错误，很难定位 bug</li>
-<li>既然如此，为什么不直接让 pop 返回栈顶元素？原因在于，构造返回值的过程可能抛异常，弹出后未返回会导致数据丢失。比如有一个元素为 vector 的 stack，拷贝 vector 需要在堆上分配内存，如果系统负载严重或资源有限（比如 vector 有大量元素），vector 的拷贝构造函数就会抛出 <a href="https://en.cppreference.com/w/cpp/memory/new/bad_alloc"target="_blank" rel="external nofollow noopener noreferrer">std::bad_alloc<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 异常。如果 pop 可以返回栈顶元素值，返回一定是最后执行的语句，stack 在返回前已经弹出了元素，但如果拷贝返回值时抛出异常，就会导致弹出的数据丢失（从栈上移除但拷贝失败）。因此 <a href="https://en.cppreference.com/w/cpp/container/stack"target="_blank" rel="external nofollow noopener noreferrer">std::stack<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 的设计者将这个操作分解为 top 和 pop 两部分</li>
-<li>下面思考几种把 top 和 pop 合为一步的方法。第一种容易想到的方法是传入一个引用来获取结果值，这种方式的明显缺点是，需要构造一个栈元素类型的实例，这是不现实的，为了获取结果而临时构造一个对象并不划算，元素类型可能不支持赋值（比如用户自定义某个类型），构造函数可能还需要一些参数</li>
-</ul>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">res</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">s</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="n">res</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>因为 pop 返回值时只担心该过程抛异常，第二种方案是为元素类型设置不抛异常的拷贝或移动构造函数，使用 <a href="https://en.cppreference.com/w/cpp/types/is_copy_constructible"target="_blank" rel="external nofollow noopener noreferrer">std::is_nothrow_copy_constructible<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 和 <a href="https://en.cppreference.com/w/cpp/types/is_move_constructible"target="_blank" rel="external nofollow noopener noreferrer">std::is_nothrow_move_constructible<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。但这种方式过于局限，只支持拷贝或移动不抛异常的类型</li>
-<li>第三种方案是返回指向弹出元素的指针，指针可以自由拷贝且不会抛异常，<a href="https://en.cppreference.com/w/cpp/memory/shared_ptr"target="_blank" rel="external nofollow noopener noreferrer">std::shared_ptr<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 是个不错的选择，但这个方案的开销太大，尤其是对于内置类型来说，比如 int 为 4 字节， <code>shared_ptr&lt;int&gt;</code> 为 16 字节，开销是原来的 4 倍</li>
-<li>第四种方案是结合方案一二或者一三，比如结合方案一三实现一个线程安全的 stack</li>
-</ul>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;exception&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;memory&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;stack&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;utility&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">EmptyStack</span> <span class="o">:</span> <span class="n">std</span><span class="o">::</span><span class="n">exception</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="nf">what</span><span class="p">()</span> <span class="k">const</span> <span class="k">noexcept</span> <span class="p">{</span> <span class="k">return</span> <span class="s">&#34;empty stack!&#34;</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">ConcurrentStack</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ConcurrentStack</span><span class="p">()</span> <span class="o">=</span> <span class="k">default</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">ConcurrentStack</span><span class="p">(</span><span class="k">const</span> <span class="n">ConcurrentStack</span><span class="o">&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">s_</span> <span class="o">=</span> <span class="n">rhs</span><span class="p">.</span><span class="n">s_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">ConcurrentStack</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">ConcurrentStack</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">push</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">s_</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">x</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">empty</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">s_</span><span class="p">.</span><span class="n">empty</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">pop</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">s_</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">throw</span> <span class="nf">EmptyStack</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">res</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">s_</span><span class="p">.</span><span class="n">top</span><span class="p">()));</span>
-</span></span><span class="line"><span class="cl">    <span class="n">s_</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">pop</span><span class="p">(</span><span class="n">T</span><span class="o">&amp;</span> <span class="n">res</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">s_</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">throw</span> <span class="n">EmptyStack</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">res</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">s_</span><span class="p">.</span><span class="n">top</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">    <span class="n">s_</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">mutable</span> <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">stack</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">s_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>之前锁的粒度（锁保护的数据量大小）太小，保护操作覆盖不周全，这里的粒度就较大，覆盖了大量操作。但并非粒度越大越好，如果锁粒度太大，过多线程请求竞争占用资源时，并发的性能就会较差</li>
-<li>如果给定操作需要对多个 mutex 上锁时，就会引入一个新的潜在问题，即死锁</li>
-</ul>
-<h2 id="死锁">死锁</h2>
-<ul>
-<li>死锁的四个必要条件：互斥、占有且等待、不可抢占、循环等待</li>
-<li>避免死锁通常建议让两个 mutex 以相同顺序上锁，总是先锁 A 再锁 B，但这并不适用所有情况。<a href="https://en.cppreference.com/w/cpp/thread/lock"target="_blank" rel="external nofollow noopener noreferrer">std::lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 可以同时对多个 mutex 上锁，并且没有死锁风险，它可能抛异常，此时就不会上锁，因此要么都锁住，要么都不锁</li>
-</ul>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">explicit</span> <span class="nf">A</span><span class="p">(</span><span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="o">:</span> <span class="n">n_</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">n_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">f</span><span class="p">(</span><span class="n">A</span> <span class="o">&amp;</span><span class="n">a</span><span class="p">,</span> <span class="n">A</span> <span class="o">&amp;</span><span class="n">b</span><span class="p">,</span> <span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">a</span> <span class="o">==</span> <span class="o">&amp;</span><span class="n">b</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span><span class="p">;</span>  <span class="c1">// 防止对同一对象重复加锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">lock</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">m_</span><span class="p">,</span> <span class="n">b</span><span class="p">.</span><span class="n">m_</span><span class="p">);</span>  <span class="c1">// 同时上锁防止死锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 下面按固定顺序加锁，看似不会有死锁的问题
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 但如果没有 std::lock 同时上锁，另一线程中执行 f(b, a, n)
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 两个锁的顺序就反了过来，从而可能导致死锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">lock1</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">m_</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">adopt_lock</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">lock2</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">m_</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">adopt_lock</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// 等价实现，先不上锁，后同时上锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">//   std::unique_lock&lt;std::mutex&gt; lock1(a.m_, std::defer_lock);
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">//   std::unique_lock&lt;std::mutex&gt; lock2(b.m_, std::defer_lock);
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">//   std::lock(lock1, lock2);
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">  <span class="n">a</span><span class="p">.</span><span class="n">n_</span> <span class="o">-=</span> <span class="n">n</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">b</span><span class="p">.</span><span class="n">n_</span> <span class="o">+=</span> <span class="n">n</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="n">x</span><span class="p">{</span><span class="mi">70</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="n">y</span><span class="p">{</span><span class="mi">30</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t1</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">ref</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">std</span><span class="o">::</span><span class="n">ref</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="mi">20</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t2</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">ref</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">std</span><span class="o">::</span><span class="n">ref</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">10</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li><a href="https://en.cppreference.com/w/cpp/thread/unique_lock"target="_blank" rel="external nofollow noopener noreferrer">std::unique_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 在构造时接受一个 mutex，并会调用 mutex.lock()，析构时会调用 mutex.unlock()</li>
-</ul>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">lock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;lock&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;unlock&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span> <span class="n">l</span><span class="p">(</span><span class="n">a</span><span class="p">);</span>  <span class="c1">// lock
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>                         <span class="c1">// unlock
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li><a href="https://en.cppreference.com/w/cpp/thread/lock_guard"target="_blank" rel="external nofollow noopener noreferrer">std::lock_guard<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 未提供任何接口且不支持拷贝和移动，而 <a href="https://en.cppreference.com/w/cpp/thread/unique_lock"target="_blank" rel="external nofollow noopener noreferrer">std::unique_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 多提供了一些接口，使用更灵活，占用的空间也多一点。一种要求灵活性的情况是转移锁的所有权到另一个作用域</li>
-</ul>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">get_lock</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">extern</span> <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">prepare_data</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">l</span><span class="p">;</span>  <span class="c1">// 不需要 std::move，编译器负责调用移动构造函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">f</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">get_lock</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">  <span class="n">do_something</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>对一些费时的操作上锁可能造成很多操作被阻塞，可以在面对这些操作时先解锁</li>
-</ul>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">process_file_data</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">data</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">l</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>  <span class="c1">// 费时操作没有必要持有锁，先解锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">auto</span> <span class="n">res</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="n">data</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">l</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>  <span class="c1">// 写入数据前上锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">write_result</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">res</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>C++17 最优的同时上锁方法是使用 <a href="https://en.cppreference.com/w/cpp/thread/scoped_lock"target="_blank" rel="external nofollow noopener noreferrer">std::scoped_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li>解决死锁并不简单，<a href="https://en.cppreference.com/w/cpp/thread/lock"target="_blank" rel="external nofollow noopener noreferrer">std::lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 和 <a href="https://en.cppreference.com/w/cpp/thread/scoped_lock"target="_blank" rel="external nofollow noopener noreferrer">std::scoped_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 无法获取其中的锁，此时解决死锁更依赖于开发者的能力。避免死锁有四个建议
-<ul>
-<li>第一个避免死锁的建议是，一个线程已经获取一个锁时就不要获取第二个。如果每个线程只有一个锁，锁上就不会产生死锁（但除了互斥锁，其他方面也可能造成死锁，比如即使无锁，线程间相互等待也可能造成死锁）</li>
-<li>第二个建议是，持有锁时避免调用用户提供的代码。用户提供的代码可能做任何时，包括获取锁，如果持有锁时调用用户代码获取锁，就会违反第一个建议，并造成死锁。但有时调用用户代码是无法避免的</li>
-<li>第三个建议是，按固定顺序获取锁。如果必须获取多个锁且不能用 <a href="https://en.cppreference.com/w/cpp/thread/lock"target="_blank" rel="external nofollow noopener noreferrer">std::lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 同时获取，最好在每个线程上用固定顺序获取。上面的例子虽然是按固定顺序获取锁，但如果不同时加锁就会出现死锁，对于这种情况的建议是规定固定的调用顺序</li>
-<li>第四个建议是使用层级锁，如果一个锁被低层持有，就不允许在高层再上锁</li>
-</ul>
-</li>
-<li>层级锁实现如下</li>
-</ul>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span><span class="lnt">62
-</span><span class="lnt">63
-</span><span class="lnt">64
-</span><span class="lnt">65
-</span><span class="lnt">66
-</span><span class="lnt">67
-</span><span class="lnt">68
-</span><span class="lnt">69
-</span><span class="lnt">70
-</span><span class="lnt">71
-</span><span class="lnt">72
-</span><span class="lnt">73
-</span><span class="lnt">74
-</span><span class="lnt">75
-</span><span class="lnt">76
-</span><span class="lnt">77
-</span><span class="lnt">78
-</span><span class="lnt">79
-</span><span class="lnt">80
-</span><span class="lnt">81
-</span><span class="lnt">82
-</span><span class="lnt">83
-</span><span class="lnt">84
-</span><span class="lnt">85
-</span><span class="lnt">86
-</span><span class="lnt">87
-</span><span class="lnt">88
-</span><span class="lnt">89
-</span><span class="lnt">90
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;stdexcept&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">HierarchicalMutex</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">explicit</span> <span class="n">HierarchicalMutex</span><span class="p">(</span><span class="kt">int</span> <span class="n">hierarchy_value</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="o">:</span> <span class="n">cur_hierarchy_</span><span class="p">(</span><span class="n">hierarchy_value</span><span class="p">),</span> <span class="n">prev_hierarchy_</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">lock</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">validate_hierarchy</span><span class="p">();</span>  <span class="c1">// 层级错误则抛异常
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">m_</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">update_hierarchy</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">try_lock</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">validate_hierarchy</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_</span><span class="p">.</span><span class="n">try_lock</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">update_hierarchy</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">thread_hierarchy_</span> <span class="o">!=</span> <span class="n">cur_hierarchy_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">logic_error</span><span class="p">(</span><span class="s">&#34;mutex hierarchy violated&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">thread_hierarchy_</span> <span class="o">=</span> <span class="n">prev_hierarchy_</span><span class="p">;</span>  <span class="c1">// 恢复前一线程的层级值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">m_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">validate_hierarchy</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">thread_hierarchy_</span> <span class="o">&lt;=</span> <span class="n">cur_hierarchy_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">logic_error</span><span class="p">(</span><span class="s">&#34;mutex hierarchy violated&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">update_hierarchy</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 先存储当前线程的层级值（用于解锁时恢复）
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">prev_hierarchy_</span> <span class="o">=</span> <span class="n">thread_hierarchy_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 再把其设为锁的层级值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">thread_hierarchy_</span> <span class="o">=</span> <span class="n">cur_hierarchy_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">const</span> <span class="kt">int</span> <span class="n">cur_hierarchy_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">prev_hierarchy_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">static</span> <span class="k">thread_local</span> <span class="kt">int</span> <span class="n">thread_hierarchy_</span><span class="p">;</span>  <span class="c1">// 所在线程的层级值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// static thread_local 表示存活于一个线程周期
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">thread_local</span> <span class="kt">int</span> <span class="n">HierarchicalMutex</span><span class="o">::</span><span class="n">thread_hierarchy_</span><span class="p">(</span><span class="n">INT_MAX</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">HierarchicalMutex</span> <span class="nf">high</span><span class="p">(</span><span class="mi">10000</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">HierarchicalMutex</span> <span class="nf">mid</span><span class="p">(</span><span class="mi">6000</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">HierarchicalMutex</span> <span class="nf">low</span><span class="p">(</span><span class="mi">5000</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">lf</span><span class="p">()</span> <span class="p">{</span>  <span class="c1">// 最低层函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">HierarchicalMutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">low</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 调用 low.lock()，thread_hierarchy_ 为 INT_MAX，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// cur_hierarchy_ 为 5000，thread_hierarchy_ &gt; cur_hierarchy_，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 通过检查，上锁，prev_hierarchy_ 更新为 INT_MAX，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// thread_hierarchy_ 更新为 5000
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>  <span class="c1">// 调用 low.unlock()，thread_hierarchy_ == cur_hierarchy_，
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 通过检查，thread_hierarchy_ 恢复为 prev_hierarchy_ 保存的 INT_MAX，解锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">hf</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">HierarchicalMutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">high</span><span class="p">);</span>  <span class="c1">// high.cur_hierarchy_ 为 10000
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// thread_hierarchy_ 为 10000，可以调用低层函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">lf</span><span class="p">();</span>  <span class="c1">// thread_hierarchy_ 从 10000 更新为 5000
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">//  thread_hierarchy_ 恢复为 10000
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>  <span class="c1">//  thread_hierarchy_ 恢复为 INT_MAX
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">mf</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">HierarchicalMutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">mid</span><span class="p">);</span>  <span class="c1">// thread_hierarchy_ 为 6000
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">hf</span><span class="p">();</span>  <span class="c1">// thread_hierarchy_ &lt; high.cur_hierarchy_，违反了层级结构，抛异常
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">lf</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">hf</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="k">try</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">mf</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">logic_error</span><span class="o">&amp;</span> <span class="n">ex</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">ex</span><span class="p">.</span><span class="n">what</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="读写锁reader-writer-mutex">读写锁（reader-writer mutex）</h3>
-<ul>
-<li>有时会希望对一个数据上锁时，根据情况，对某些操作相当于不上锁，可以并发访问，对某些操作保持上锁，同时最多只允许一个线程访问。比如对于需要经常访问但很少更新的缓存数据，用 <a href="https://en.cppreference.com/w/cpp/thread/mutex"target="_blank" rel="external nofollow noopener noreferrer">std::mutex<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 加锁会导致同时最多只有一个线程可以读数据，这就需要用上读写锁，读写锁允许多个线程并发读但仅一个线程写</li>
-<li>C++14 提供了 <a href="https://en.cppreference.com/w/cpp/thread/shared_timed_mutex"target="_blank" rel="external nofollow noopener noreferrer">std::shared_timed_mutex<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，C++17 提供了接口更少性能更高的 <a href="https://en.cppreference.com/w/cpp/thread/shared_mutex"target="_blank" rel="external nofollow noopener noreferrer">std::shared_mutex<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，如果多个线程调用 shared_mutex.lock_shared()，多个线程可以同时读，如果此时有一个写线程调用 shared_mutex.lock()，则读线程均会等待该写线程调用 shared_mutex.unlock()。C++11 没有提供读写锁，可使用 <a href="https://www.boost.org/doc/libs/1_82_0/doc/html/thread/synchronization.html#thread.synchronization.mutex_types.shared_mutex"target="_blank" rel="external nofollow noopener noreferrer">boost::shared_mutex<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li>C++14 提供了 <a href="https://en.cppreference.com/w/cpp/thread/shared_lock"target="_blank" rel="external nofollow noopener noreferrer">std::shared_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，它在构造时接受一个 mutex，并会调用 mutex.lock_shared()，析构时会调用 mutex.unlock_shared()</li>
-</ul>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;shared_mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">lock_shared</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;lock_shared&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">unlock_shared</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;unlock_shared&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">shared_lock</span> <span class="n">l</span><span class="p">(</span><span class="n">a</span><span class="p">);</span>  <span class="c1">// lock_shared
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>                         <span class="c1">// unlock_shared
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>对于 <a href="https://en.cppreference.com/w/cpp/thread/shared_mutex"target="_blank" rel="external nofollow noopener noreferrer">std::shared_mutex<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，通常在读线程中用 <a href="https://en.cppreference.com/w/cpp/thread/shared_lock"target="_blank" rel="external nofollow noopener noreferrer">std::shared_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 管理，在写线程中用 <a href="https://en.cppreference.com/w/cpp/thread/unique_lock"target="_blank" rel="external nofollow noopener noreferrer">std::unique_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 管理</li>
-</ul>
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">read</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">shared_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">n_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="nf">write</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">++</span><span class="n">n_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">mutable</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">n_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="递归锁">递归锁</h3>
-<ul>
-<li><a href="https://en.cppreference.com/w/cpp/thread/mutex"target="_blank" rel="external nofollow noopener noreferrer">std::mutex<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 是不可重入的，未释放前再次上锁是未定义行为</li>
-</ul>
-<div class="highlight" id="id-14"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">f</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">m_</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">m_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">g</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">m_</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">f</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">m_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span><span class="p">{}.</span><span class="n">g</span><span class="p">();</span>  <span class="c1">// Undefined Behavior
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>为此 C++ 提供了 <a href="https://en.cppreference.com/w/cpp/thread/recursive_mutex"target="_blank" rel="external nofollow noopener noreferrer">std::recursive_mutex<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，它可以在一个线程上多次获取锁，但在其他线程获取锁之前必须释放所有的锁</li>
-</ul>
-<div class="highlight" id="id-15"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">f</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">m_</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">m_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">g</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">m_</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">f</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">m_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">recursive_mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span><span class="p">{}.</span><span class="n">g</span><span class="p">();</span>  <span class="c1">// OK
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>多数情况下，如果需要递归锁，说明代码设计存在问题。比如一个类的每个成员函数都会上锁，一个成员函数调用另一个成员函数，就可能多次上锁，这种情况用递归锁就可以避免产生未定义行为。但显然这个设计本身是有问题的，更好的办法是提取其中一个函数作为 private 成员并且不上锁，其他成员先上锁再调用该函数</li>
-</ul>
-<h2 id="对并发初始化的保护">对并发初始化的保护</h2>
-<ul>
-<li>除了对并发访问共享数据的保护，另一种常见的情况是对并发初始化的保护</li>
-</ul>
-<div class="highlight" id="id-16"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;memory&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">f</span><span class="p">()</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">A</span><span class="o">&gt;</span> <span class="n">p</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">m</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">p</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">A</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="n">m</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">p</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t1</span><span class="p">{</span><span class="n">init</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t2</span><span class="p">{</span><span class="n">init</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>上锁只是为了保护初始化过程，会不必要地影响性能，一种容易想到的优化方式是双重检查锁模式，但这存在潜在的 race condition</li>
-</ul>
-<div class="highlight" id="id-17"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;memory&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">f</span><span class="p">()</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">A</span><span class="o">&gt;</span> <span class="n">p</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>  <span class="c1">// 未上锁，其他线程可能在执行 #1，则此时 p 不为空
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">p</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">A</span><span class="p">);</span>  <span class="c1">// 1
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 先分配内存，再在内存上构造 A 的实例并返回内存的指针，最后让 p 指向它
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 也可能先让 p 指向它，再在内存上构造 A 的实例
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="n">p</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">();</span>  <span class="c1">// p 可能指向一块还未构造实例的内存，从而崩溃
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t1</span><span class="p">{</span><span class="n">init</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t2</span><span class="p">{</span><span class="n">init</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>为此，C++11 提供了 <a href="https://en.cppreference.com/w/cpp/thread/once_flag"target="_blank" rel="external nofollow noopener noreferrer">std::once_flag<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 和 <a href="https://en.cppreference.com/w/cpp/thread/call_once"target="_blank" rel="external nofollow noopener noreferrer">std::call_once<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 来保证对某个操作只执行一次</li>
-</ul>
-<div class="highlight" id="id-18"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;memory&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">f</span><span class="p">()</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">A</span><span class="o">&gt;</span> <span class="n">p</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">once_flag</span> <span class="n">flag</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">call_once</span><span class="p">(</span><span class="n">flag</span><span class="p">,</span> <span class="p">[</span><span class="o">&amp;</span><span class="p">]</span> <span class="p">{</span> <span class="n">p</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">A</span><span class="p">);</span> <span class="p">});</span>
-</span></span><span class="line"><span class="cl">  <span class="n">p</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t1</span><span class="p">{</span><span class="n">init</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t2</span><span class="p">{</span><span class="n">init</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li><a href="https://en.cppreference.com/w/cpp/thread/call_once"target="_blank" rel="external nofollow noopener noreferrer">std::call_once<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 也可以用在类中</li>
-</ul>
-<div class="highlight" id="id-19"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">f</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">call_once</span><span class="p">(</span><span class="n">flag_</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">A</span><span class="o">::</span><span class="n">print</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">print</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">once_flag</span> <span class="n">flag_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="n">a</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t1</span><span class="p">{</span><span class="o">&amp;</span><span class="n">A</span><span class="o">::</span><span class="n">f</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">a</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t2</span><span class="p">{</span><span class="o">&amp;</span><span class="n">A</span><span class="o">::</span><span class="n">f</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">a</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>  <span class="c1">// 122
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>static 局部变量在声明后就完成了初始化，这存在潜在的 race condition，如果多线程的控制流同时到达 static 局部变量的声明处，即使变量已在一个线程中初始化，其他线程并不知晓，仍会对其尝试初始化。为此，C++11 规定，如果 static 局部变量正在初始化，线程到达此处时，将等待其完成，从而避免了 race condition。只有一个全局实例时，可以直接用 static 而不需要 <a href="https://en.cppreference.com/w/cpp/thread/call_once"target="_blank" rel="external nofollow noopener noreferrer">std::call_once<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ul>
-<div class="highlight" id="id-20"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Singleton</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">static</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">Instance</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">Singleton</span><span class="p">(</span><span class="k">const</span> <span class="n">Singleton</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">Singleton</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">Singleton</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">Singleton</span><span class="p">()</span> <span class="o">=</span> <span class="k">default</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="o">~</span><span class="n">Singleton</span><span class="p">()</span> <span class="o">=</span> <span class="k">default</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="n">T</span><span class="o">&amp;</span> <span class="n">Singleton</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">Instance</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">static</span> <span class="n">T</span> <span class="n">instance</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">instance</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item></channel></rss>
+]]></description></item></channel></rss>

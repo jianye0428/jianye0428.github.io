@@ -1,4 +1,627 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>CMake - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/cmake/</link><description>CMake - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 15 Jan 2024 09:07:13 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/cmake/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | 条件语句、选项命令以及指定编译器</title><link>https://jianye0428.github.io/posts/cmake_note_4/</link><pubDate>Mon, 15 Jan 2024 09:07:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_4/</guid><description><![CDATA[<h2 id="一条件语句">一、条件语句</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>CMake - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/cmake/</link><description>CMake - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Mon, 15 Jan 2024 12:54:34 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/cmake/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [5] 构建类型(Debug、Release以及其他)</title><link>https://jianye0428.github.io/posts/cmake_note_5/</link><pubDate>Mon, 15 Jan 2024 12:54:34 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_5/</guid><description><![CDATA[<h2 id="一基本概念构建类型">一、基本概念构建类型</h2>
+<p><code>CMake</code>可以识别的构建类型是：</p>
+<ul>
+<li>Debug：用于在没有优化的情况下，使用带有调试符号构建库或者可执行文件</li>
+<li>Release: 用于构建的优化的库或者可执行文件，不包含调试符号</li>
+<li>RelWithDebInfo：用于构建较少的优化库或者可执行文件，包含调试符号</li>
+<li>MinSizeRel：用于不增加目标代码大小的优化方式，来构建库或者可执行文件</li>
+</ul>
+<p>控制生成构建系统使用的配置变量是<code>CMAKE_BUILD_TYPE</code>，该变量默认为空。</p>
+<p>这里我们仍然选择<a href="https://jianye0428.github.io/posts/cmake_note_3/"target="_blank" rel="external nofollow noopener noreferrer">CMake第三篇—动态库和静态库的补充中的代码<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，但是这里我们对CMakeLists.txt稍作修改。</p>
+<h2 id="二项目结构">二、项目结构</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── cmake
+</span></span><span class="line"><span class="cl">│   └── message_config.cmake.in
+</span></span><span class="line"><span class="cl">├── message-module
+</span></span><span class="line"><span class="cl">│   ├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">│   ├── include
+</span></span><span class="line"><span class="cl">│   │   ├── message_export_lib.h
+</span></span><span class="line"><span class="cl">│   │   └── message.h
+</span></span><span class="line"><span class="cl">│   └── src
+</span></span><span class="line"><span class="cl">│       └── message.cpp
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">└── hello_world.cpp
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="m">4</span> directories, <span class="m">9</span> files</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目源码: <a href="https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_5/message_module_lib_standard"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_5/message_module_lib_standard<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h3 id="21-message-module模块下的cmakeliststxt">2.1 message-module模块下的CMakeLists.txt</h3>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">file</span><span class="p">(</span><span class="s">GLOB</span> <span class="s">SOURCE_FILE</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/src/*.cpp</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">if</span> <span class="p">(</span><span class="s">BUILD_SHARED_LIBS</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">add_library</span><span class="p">(</span><span class="s">test_message</span> <span class="s">SHARED</span> <span class="o">${</span><span class="nv">SOURCE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">target_compile_definitions</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PUBLIC</span> <span class="s">-DMESSAGE_LIB_SHARED_BUILD</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">target_compile_definitions</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PRIVATE</span> <span class="s">-DMESSAGE_LIB_EXPORTS</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">else</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">add_library</span><span class="p">(</span><span class="s">test_message</span> <span class="s">STATIC</span> <span class="o">${</span><span class="nv">SOURCE_FILE</span><span class="o">}</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># 添加别名，以便库可以在构建树中使用，例如在测试时
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">add_library</span><span class="p">(</span><span class="s">test_message::test_message</span> <span class="s">ALIAS</span> <span class="s">test_message</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_include_directories</span><span class="p">(</span><span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">    <span class="s">PUBLIC</span>
+</span></span><span class="line"><span class="cl">    <span class="o">$&lt;</span><span class="nv">BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}</span><span class="o">&gt;</span><span class="s">/include</span>
+</span></span><span class="line"><span class="cl">    <span class="o">$&lt;</span><span class="nv">INSTALL_INTERFACE:include</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set_target_properties</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="s">CXX_STANDARD</span> <span class="s">11</span>
+</span></span><span class="line"><span class="cl">    <span class="s">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="s">True</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set_target_properties</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="s">DEBUG_POSTFIX</span> <span class="s2">&#34;_debug&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">RELEASE_POSTFIX</span> <span class="s2">&#34;_release&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">TARGETS</span> <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl">        <span class="s">EXPORT</span> <span class="s">message_export_target</span>
+</span></span><span class="line"><span class="cl">        <span class="s">RUNTIME</span> <span class="s">DESTINATION</span> <span class="s2">&#34;bin&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">LIBRARY</span> <span class="s">DESTINATION</span> <span class="s2">&#34;lib&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">ARCHIVE</span> <span class="s">DESTINATION</span> <span class="s2">&#34;lib&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/</span>
+</span></span><span class="line"><span class="cl">        <span class="s">DESTINATION</span> <span class="s2">&#34;include&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">FILES_MATCHING</span> <span class="s">PATTERN</span> <span class="s2">&#34;*.h&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="o">}</span><span class="s">/include/</span>
+</span></span><span class="line"><span class="cl">        <span class="s">DESTINATION</span> <span class="s2">&#34;include&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">FILES_MATCHING</span> <span class="s">PATTERN</span> <span class="s2">&#34;*.hpp&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">EXPORT</span> <span class="s">message_export_target</span>
+</span></span><span class="line"><span class="cl">        <span class="s">FILE</span> <span class="s">message_lib.cmake</span>
+</span></span><span class="line"><span class="cl">        <span class="s">DESTINATION</span> <span class="s">lib/cmake/test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include</span><span class="p">(</span><span class="s">CMakePackageConfigHelpers</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># generate the config file that is includes the exports
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">configure_package_config_file</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/cmake/message_config.cmake.in</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;${CMAKE_SOURCE_DIR}/cmake/message_config.cmake&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">INSTALL_DESTINATION</span> <span class="s2">&#34;lib/cmake/test_message&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># generate the version file for the config file
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">write_basic_package_version_file</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;${CMAKE_SOURCE_DIR}/cmake/message_config_version.cmake&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">VERSION</span> <span class="s2">&#34;${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">COMPATIBILITY</span> <span class="s">AnyNewerVersion</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">install</span><span class="p">(</span><span class="s">FILES</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/cmake/message_config.cmake</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/cmake/message_config_version.cmake</span>
+</span></span><span class="line"><span class="cl">    <span class="s">DESTINATION</span> <span class="s">lib/cmake/test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">export</span><span class="p">(</span><span class="s">EXPORT</span> <span class="s">message_export_target</span> <span class="s">FILE</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/cmake/message_config_version.cmake</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>代码释义:
+这里，我们基本上没有做修改，只添加了以下内容：
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">set_target_properties</span><span class="p">(</span><span class="s">test_message</span> <span class="s">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="s">DEBUG_POSTFIX</span> <span class="s2">&#34;_debug&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">RELEASE_POSTFIX</span> <span class="s2">&#34;_release&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这将在 <code>debug</code> 构建模式下将库名后缀设置为 <code>_debug</code>，在 <code>release</code> 构建模式下将库名后缀设置为 <code>_release</code>。
+然后，可以使用 <code>test_message_debug</code> 或 <code>test_message_release</code> 来引用库。当然，我们其实可以使用<code>find_package</code>，然后直接使用库的别名<code>test_message</code>即可。</p></div>
+    </div>
+  </div></p>
+<h3 id="22-根目录下的cmakeliststxt">2.2 根目录下的CMakeLists.txt</h3>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_ARCHIVE_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_LIBRARY_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span> <span class="o">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="o">}</span><span class="s">/bin</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">option</span><span class="p">(</span><span class="s">BUILD_SHARED_LIBS</span> <span class="s2">&#34;Specifies the type of libraries (SHARED or STATIC) to build&#34;</span> <span class="s">OFF</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="c"># Set install direcotory
+</span></span></span><span class="line"><span class="cl"><span class="c"></span><span class="nb">if</span><span class="p">(</span><span class="s">CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>  <span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_INSTALL_PREFIX</span> <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/output/</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">if</span><span class="p">(</span><span class="s">NOT</span> <span class="s">CMAKE_BUILD_TYPE</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_BUILD_TYPE</span> <span class="s">Release</span> <span class="s">CACHE</span> <span class="s">STRING</span> <span class="s2">&#34;Build type&#34;</span> <span class="s">FORCE</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;Build type:                                       ${CMAKE_BUILD_TYPE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Debug configuration:                     ${CMAKE_C_FLAGS_DEBUG}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Release configuration:                   ${CMAKE_C_FLAGS_RELEASE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Release configuration with Debug info:   ${CMAKE_C_FLAGS_RELWITHDEBINFO}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, minimal Release configuration:           ${CMAKE_C_FLAGS_MINSIZEREL}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Debug configuration:                   ${CMAKE_CXX_FLAGS_DEBUG}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Release configuration:                 ${CMAKE_CXX_FLAGS_RELEASE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Release configuration with Debug info: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, minimal Release configuration:         ${CMAKE_CXX_FLAGS_MINSIZEREL}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_subdirectory</span><span class="p">(</span><span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">include_directories</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/message-module/include</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/hello_world.cpp</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">target_link_libraries</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
+</span></span><span class="line"><span class="cl">    <span class="s">test_message</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里，我们添加了以下内容：</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-CMake" data-lang="CMake"><span class="line"><span class="cl"><span class="nb">if</span><span class="p">(</span><span class="s">NOT</span> <span class="s">CMAKE_BUILD_TYPE</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span>    <span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_BUILD_TYPE</span> <span class="s">Release</span> <span class="s">CACHE</span> <span class="s">STRING</span> <span class="s2">&#34;Build type&#34;</span> <span class="s">FORCE</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">endif</span><span class="p">()</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;Build type:                                       ${CMAKE_BUILD_TYPE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Debug configuration:                     ${CMAKE_C_FLAGS_DEBUG}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Release configuration:                   ${CMAKE_C_FLAGS_RELEASE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, Release configuration with Debug info:   ${CMAKE_C_FLAGS_RELWITHDEBINFO}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C flags, minimal Release configuration:           ${CMAKE_C_FLAGS_MINSIZEREL}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Debug configuration:                   ${CMAKE_CXX_FLAGS_DEBUG}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Release configuration:                 ${CMAKE_CXX_FLAGS_RELEASE}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, Release configuration with Debug info: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}&#34;</span><span class="p">)</span><span class="err">
+</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">message</span><span class="p">(</span><span class="s">STATUS</span> <span class="s2">&#34;C++ flags, minimal Release configuration:         ${CMAKE_CXX_FLAGS_MINSIZEREL}&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>首先，检查是否设置了<strong>构建类型</strong>。如果没有，则将构建类型设置为 <code>Release</code>。然后，它使用 <code>message</code> 命令输出各种编译标志，包括 <code>C</code> 和 <code>C++</code> 的 <code>Debug</code> 和 <code>Release</code> 配置，以及最小 <code>Release</code> 配置和<font color=red>带有调试信息的 <code>Release</code></font>配置。这些信息对于调试和优化构建非常有用。</p></div>
+    </div>
+  </div>
+<h3 id="23-验证输出">2.3 验证输出</h3>
+<p>我们执行以下命令，这里没有指定构建类型，即默认构建类型为<code>Release</code>。</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake ..</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 7.5.0
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ - skipped
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build type:                                       Release
+</span></span><span class="line"><span class="cl">-- C flags, Debug configuration:
+</span></span><span class="line"><span class="cl">-- C flags, Release configuration:
+</span></span><span class="line"><span class="cl">-- C flags, Release configuration with Debug info:
+</span></span><span class="line"><span class="cl">-- C flags, minimal Release configuration:
+</span></span><span class="line"><span class="cl">-- C++ flags, Debug configuration:                   -g
+</span></span><span class="line"><span class="cl">-- C++ flags, Release configuration:                 -O3 -DNDEBUG
+</span></span><span class="line"><span class="cl">-- C++ flags, Release configuration with Debug info: -O2 -g -DNDEBUG
+</span></span><span class="line"><span class="cl">-- C++ flags, minimal Release configuration:         -Os -DNDEBUG
+</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/build</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行<code>make</code>:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="o">[</span> 25%<span class="o">]</span> Building CXX object message_module/CMakeFiles/test_message.dir/src/message.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Linking CXX static library ../lib/libtest_message_release.a
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Built target test_message
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 75%<span class="o">]</span> Building CXX object CMakeFiles/hello-world.dir/hello_world.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Linking CXX executable bin/hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，我们执行<code>make</code>命令后，生成的库命名为<code>libtest_message_release.a</code>,并将其存入lib目录中。</p>
+<p>执行:</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make install</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出结果如下:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Built target test_message
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world
+</span></span><span class="line"><span class="cl">Install the project...
+</span></span><span class="line"><span class="cl">-- Install configuration: <span class="s2">&#34;Release&#34;</span>
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/libtest_message_release.a
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/include
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/include/message_export_lib.h
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/include/message.h
+</span></span><span class="line"><span class="cl">-- Up-to-date: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/include
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/cmake/test_message/message_lib.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/cmake/test_message/message_lib-release.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/cmake/test_message/message_config.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/12/output/lib/cmake/test_message/message_config_version.cmake</span></span></code></pre></td></tr></table>
+</div>
+</div><p>设置构建类型为debug:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake .. -DCMAKE_BUILD_TYPE<span class="o">=</span>Debug</span></span></code></pre></td></tr></table>
+</div>
+</div><p>则输出:</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 7.5.0
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
+</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ - skipped
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
+</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build type:                                       Debug
+</span></span><span class="line"><span class="cl">-- C flags, Debug configuration:
+</span></span><span class="line"><span class="cl">-- C flags, Release configuration:
+</span></span><span class="line"><span class="cl">-- C flags, Release configuration with Debug info:
+</span></span><span class="line"><span class="cl">-- C flags, minimal Release configuration:
+</span></span><span class="line"><span class="cl">-- C++ flags, Debug configuration:                   -g
+</span></span><span class="line"><span class="cl">-- C++ flags, Release configuration:                 -O3 -DNDEBUG
+</span></span><span class="line"><span class="cl">-- C++ flags, Release configuration with Debug info: -O2 -g -DNDEBUG
+</span></span><span class="line"><span class="cl">-- C++ flags, minimal Release configuration:         -Os -DNDEBUG
+</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/build</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行<code>make</code>:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出如下:</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="o">[</span> 25%<span class="o">]</span> Building CXX object message_module/CMakeFiles/test_message.dir/src/message.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Linking CXX static library ../lib/libtest_message_debug.a
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Built target test_message
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 75%<span class="o">]</span> Building CXX object CMakeFiles/hello-world.dir/hello_world.cpp.o
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Linking CXX executable bin/hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，我们执行<code>make</code>命令后，生成的库命名为<code>libtest_message_debug.a</code>,并将其存入lib目录中。</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">make install</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">Consolidate compiler generated dependencies of target test_message
+</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Built target test_message
+</span></span><span class="line"><span class="cl">Consolidate compiler generated dependencies of target hello-world
+</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target hello-world
+</span></span><span class="line"><span class="cl">Install the project...
+</span></span><span class="line"><span class="cl">-- Install configuration: <span class="s2">&#34;Debug&#34;</span>
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/libtest_message_debug.a
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/include
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/include/message_export_lib.h
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/include/message.h
+</span></span><span class="line"><span class="cl">-- Up-to-date: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/include
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/cmake/test_message/message_lib.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/cmake/test_message/message_lib-debug.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/cmake/test_message/message_config.cmake
+</span></span><span class="line"><span class="cl">-- Installing: /home/yejian/yejian_personal/c++_playground/CMake_Learning_Notes/Note_5/message_module_lib_standard/output/lib/cmake/test_message/message_config_version.cmake</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="三补充">三、补充</h2>
+<p><code>Release</code>和<code>Debug</code>在构建项目通常很有用，如评估编译器优化级别的效果。对于单配置生成器，如Unix Makefile、MSYS Makefile或者Ninja，因为要对项目重新配置，这里需要运行CMake两次。</p>
+<p>不过，CMake也支持<strong>符合配置生成器</strong>。这些通常是集成开发环境提供的项目文件，最显著的是Visual Studio和XCode，它们可以同时处理多个配置。可以使用CMAKE_CONFIGURATION_TYPES变量对这些生成器的可用配置进行调整。</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir -p build
+</span></span><span class="line"><span class="cl"> <span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl"> cmake .. -G<span class="s2">&#34;Visual Studio 14 2019 Win64&#34;</span> -D <span class="nv">CMAKE_CONFIGURATION_TYPES</span><span class="o">=</span><span class="s2">&#34;Release;Debug&#34;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将为Release和Debug配置生成一个构建树。然后，您可以使–config标志来决定构建这两个中的哪一个:</p>
+<div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">cmake --build . --config Release</span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>CMake 笔记 | [4] 条件语句、选项命令以及指定编译器</title><link>https://jianye0428.github.io/posts/cmake_note_4/</link><pubDate>Mon, 15 Jan 2024 09:07:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_4/</guid><description><![CDATA[<h2 id="一条件语句">一、条件语句</h2>
 <p>首先，我们还是拿我们上一篇根目录下的CMakeLists.txt文件进行讲解。</p>
 <p>源码地址为：https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter1/11</p>
 <div class="highlight" id="id-1"><div class="chroma">
