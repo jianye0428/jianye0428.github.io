@@ -8,13 +8,13 @@
 make
 make install
 ```
-以上三个命令是源码安装软件的通用步骤。其主要要完成以下工作：
+以上三个命令是源码安装软件的通用步骤。其主要完成以下工作：
 
-**`./configure`**: <font color=red>配置</font>，是用来检测你的安装平台的目标特征。比如它会检测你是不是有CC或GCC，并不是需要CC或GCC，它是个shell脚本。configure 脚本负责在使用的系统上准备好软件的构建环境。确保接下来的构建和安装过程所需要的依赖准备好，并且搞清楚使用这些依赖需要的东西。
+   - **`./configure`**: <font color=red>配置</font>，是用来检测你的安装平台的目标特征。比如它会检测你是不是有CC或GCC，并不是需要CC或GCC，它是个shell脚本。configure 脚本负责在使用的系统上准备好软件的构建环境。确保接下来的构建和安装过程所需要的依赖准备好，并且搞清楚使用这些依赖需要的东西。
 
-**`make`**: <font color=red>构建</font>，用来编译，它从`Makefile`中读取指令，然后编译。下载的源码包一般没有一个最终的 `Makefile` 文件，一般是一个模版文件 http://Makefile.in 文件，然后 `configure` 根据系统的参数生成一个定制化的 `Makefile` 文件。这个过程会执行在 Makefile 文件中定义的一系列任务将软件源代码编译成可执行文件。
+   - **`make`**: <font color=red>构建</font>，用来编译，它从`Makefile`中读取指令，然后编译。下载的源码包一般没有一个最终的 `Makefile` 文件，一般是一个模版文件 http://Makefile.in 文件，然后 `configure` 根据系统的参数生成一个定制化的 `Makefile` 文件。这个过程会执行在 Makefile 文件中定义的一系列任务将软件源代码编译成可执行文件。
 
-**`make install`**:<font color=red>安装</font>，它也从Makefile中读取指令，安装到指定的位置。make install 命令就是将可执行文件、第三方依赖包和文档复制到正确的路径。
+  - **`make install`**:<font color=red>安装</font>，它也从Makefile中读取指令，安装到指定的位置。make install 命令就是将可执行文件、第三方依赖包和文档复制到正确的路径。
 
 {{<admonition quote "tips" false>}}
 这些脚本是怎么产生的?
@@ -73,15 +73,14 @@ make install
 
 Linux的用户可能知道，在Linux下安装一个应用程序时，一般先运行脚本configure，然后用make来编译源程序，在运行make install，最后运行make clean删除一些临时文件。
 
-
 configure是一个shell脚本，它可以自动设定源程序以符合各种不同平台上Unix系统的特性，并且根据系统叁数及环境产生合适的Makefile文件或是C的头文件(header file)，让源程序可以很方便地在这些不同的平台上被编译连接。
 
 利用configure所产生的Makefile文件有几个预设的目标可供使用，其中几个重要的简述如下：
-  - make all：产生我们设定的目标，即此范例中的可执行文件。只打make也可以，此时会开始编译原始码，然后连结，并且产生可执行文件。只打make 默认就是make all，只编译其中某个目标则在后面给目标名称：make ce-common。
-  - make clean：清除编译产生的可执行文件及目标文件(object file，*.o)。
-  - make distclean：除了清除可执行文件和目标文件外，把configure所产生的Makefile也清除掉。
-  - make install：将程序安装至系统中。如果原始码编译无误，且执行结果正确，便可以把程序安装至系统预设的可执行文件存放路径。
-  - make dist：将程序和相关的档案包装成一个压缩文件以供发布。执行完在目录下会产生一个以PACKAGE-VERSION.tar.gz为名称的文件。 PACKAGE和VERSION这两个变数是根据http://configure.in文件中AM_INIT_AUTOMAKE(PACKAGE，VERSION)的定义。在此范例中会产生test-1.0.tar.gz的档案。
+  - `make all`: 产生我们设定的目标，即此范例中的可执行文件。只打make也可以，此时会开始编译原始码，然后连结，并且产生可执行文件。只打make 默认就是`make all`，只编译其中某个目标则在后面给目标名称：make ce-common。
+  - `make clean`: 清除编译产生的可执行文件及目标文件(object file，*.o)。
+  - `make distclean`: 除了清除可执行文件和目标文件外，把configure所产生的Makefile也清除掉。
+  - `make install`: 将程序安装至系统中。如果原始码编译无误，且执行结果正确，便可以把程序安装至系统预设的可执行文件存放路径。
+  - `make dist`: 将程序和相关的档案包装成一个压缩文件以供发布。执行完在目录下会产生一个以PACKAGE-VERSION.tar.gz为名称的文件。 PACKAGE和VERSION这两个变数是根据http://configure.in文件中AM_INIT_AUTOMAKE(PACKAGE，VERSION)的定义。在此范例中会产生test-1.0.tar.gz的档案。
 
   - make distcheck：和make dist类似，但是加入检查包装后的压缩文件是否正常。这个目标除了把程序和相关文件包装成tar.gz文件外，还会自动把这个压缩文件解开，执行 configure，并且进行make all 的动作，确认编译无误后，会显示这个tar.gz文件可供发布了。这个检查非常有用，检查过关的包，基本上可以给任何一个具备GNU开发环境-的人去重新编译。
 
