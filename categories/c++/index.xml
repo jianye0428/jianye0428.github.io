@@ -21,6 +21,7 @@
 </span><span class="lnt">6
 </span><span class="lnt">7
 </span><span class="lnt">8
+</span><span class="lnt">9
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">git clone https://github.com/google/benchmark.git
@@ -29,7 +30,8 @@
 </span></span><span class="line"><span class="cl">mkdir build
 </span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
 </span></span><span class="line"><span class="cl">cmake .. -DCMAKE_BUILD_TYPE<span class="o">=</span>RELEASE
-</span></span><span class="line"><span class="cl">make
+</span></span><span class="line"><span class="cl">make -j4
+</span></span><span class="line"><span class="cl"><span class="c1"># 如果想全局安装就接着运行下面的命令</span>
 </span></span><span class="line"><span class="cl">sudo make install</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="2--代码编写">2.  代码编写</h2>
@@ -110,6 +112,7 @@
 <p>我们可以看到每一个benchmark测试用例都是一个类型为<code>std::function</code>的函数，其中<code>benchmark::State&amp;</code>负责测试的运行及额外参数的传递。</p>
 <p>测试用例编写完成后，我们需要使用<code>BENCHMARK()</code>将我们的测试用例注册进benchmark，这样程序运行时才会执行我们的测试。</p>
 <p>最后是用<code>BENCHMARK_MAIN();</code>替代直接编写的main函数，它会处理命令行参数并运行所有注册过的测试用例生成测试结果。</p>
+<table><tr><td bgcolor=yellow>Example 1:</td></tr></table>
 <div class="highlight" id="id-5"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -215,9 +218,7 @@
 </span></span><span class="line"><span class="cl">vector_test       6.81 ns         6.81 ns    <span class="m">102373755</span>
 </span></span><span class="line"><span class="cl">array_test        13.6 ns         13.6 ns     <span class="m">51227934</span></span></span></code></pre></td></tr></table>
 </div>
-</div><h3 id="22-传参调用测试">2.2 传参调用测试</h3>
-<p>上面的测试用例都只接受一个<code>benchmark::State&amp;</code>类型的参数，所以我们可以使用<code>BENCHMARK</code>宏生成的对象的<code>Arg</code>方法来完成参数的传递。</p>
-<p>传递进来的参数会被放入<code>state</code>对象内部存储，通过<code>range</code>方法获取，调用时的参数<code>0</code>是传入参数的需要，对应第一个参数</p>
+</div><table><tr><td bgcolor=yellow>Example 2</td></tr></table>
 <div class="highlight" id="id-7"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -257,14 +258,249 @@
 </span><span class="lnt">35
 </span><span class="lnt">36
 </span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;benchmark/benchmark.h&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;benchmark/benchmark.h&gt;</span><span class="cp">
 </span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;array&gt;</span><span class="cp">
 </span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_ring_insert_int</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">constexpr</span> <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="mi">6</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// constexpr function具有inline属性，你应该把它放在头文件中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">constexpr</span> <span class="k">auto</span> <span class="nf">my_pow</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span> <span class="n">i</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">i</span> <span class="o">*</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 使用operator[]读取元素，依次存入1-6的平方
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_operator</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">len</span><span class="o">&gt;</span> <span class="n">arr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">constexpr</span> <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span><span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">3</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">5</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_operator</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 使用at()读取元素，依次存入1-6的平方
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_at</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">len</span><span class="o">&gt;</span> <span class="n">arr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">constexpr</span> <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span><span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">3</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arr</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">5</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_at</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// std::get&lt;&gt;(array)是一个constexpr function，它会返回容器内元素的引用，并在编译期检查数组的索引是否正确
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_get</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">len</span><span class="o">&gt;</span> <span class="n">arr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">constexpr</span> <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span><span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">1</span><span class="o">&gt;</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">2</span><span class="o">&gt;</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">3</span><span class="o">&gt;</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">3</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">4</span><span class="o">&gt;</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">4</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">5</span><span class="o">&gt;</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">=</span> <span class="n">my_pow</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">5</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_get</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_MAIN</span><span class="p">();</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们可以看到每一个benchmark测试用例都是一个类型为<code>std::function&lt;void(benchmark::State&amp;)&gt;</code>的函数，其中<code>benchmark::State&amp;</code>负责测试的运行及额外参数的传递。</p>
+<p>随后我们使用<code>for (auto _: state) {}</code>来运行需要测试的内容，<code>state</code>会选择合适的次数来运行循环，时间的计算从循环内的语句开始，所以我们可以选择像例子中一样在for循环之外初始化测试环境，然后在循环体内编写需要测试的代码。</p>
+<p>测试用例编写完成后我们需要使用<code>BENCHMARK(&lt;function_name&gt;)</code>;将我们的测试用例注册进benchmark，这样程序运行时才会执行我们的测试。</p>
+<p>最后是用BENCHMARK_MAIN();替代直接编写的main函数，它会处理命令行参数并运行所有注册过的测试用例生成测试结果。</p>
+<p>示例中大量使用了<code>constexpt</code>，这是为了能在编译期计算出需要的数值避免对测试产生太多噪音。</p>
+<p>然后我们编译测试程序：</p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">g++ -Wall -std<span class="o">=</span>c++14 benchmark_example.cpp -pthread -lbenchmark</span></span></code></pre></td></tr></table>
+</div>
+</div><p>benchmark需要链接<code>libbenchmark.so</code>，所以需要指定<code>-lbenchmark</code>，此外还需要<code>thread</code>的支持，因为<code>libstdc++</code>不提供<code>thread</code>的底层实现，我们需要<code>pthread</code>。另外不建议使用-lpthread，官方表示会出现兼容问题，在我这测试也会出现链接错误。注意文件名一定要在-lbenchmark前面，否则编译会失败，具体参见：https://github.com/google/benchmark/issues/619</p>
+<p>如果你是在Windows平台使用google/benchmark，那么你需要额外链接shlwapi.lib才能使benchmark正常编译和运行。详细信息在这里。</p>
+<p>编译好程序后就可以运行测试了：</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">2024-01-20T15:56:26+08:00
+</span></span><span class="line"><span class="cl">Running ./benchmark_example_two
+</span></span><span class="line"><span class="cl">Run on <span class="o">(</span><span class="m">4</span> X <span class="m">3700</span> MHz CPU s<span class="o">)</span>
+</span></span><span class="line"><span class="cl">CPU Caches:
+</span></span><span class="line"><span class="cl">  L1 Data <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L1 Instruction <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L2 Unified <span class="m">256</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L3 Unified <span class="m">8192</span> KiB <span class="o">(</span>x1<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Load Average: 0.36, 0.64, 0.82
+</span></span><span class="line"><span class="cl">***WARNING*** CPU scaling is enabled, the benchmark real <span class="nb">time</span> measurements may be noisy and will incur extra overhead.
+</span></span><span class="line"><span class="cl">---------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Benchmark                     Time             CPU   Iterations
+</span></span><span class="line"><span class="cl">---------------------------------------------------------------
+</span></span><span class="line"><span class="cl">bench_array_operator       30.9 ns         30.6 ns     <span class="m">22700640</span>
+</span></span><span class="line"><span class="cl">bench_array_at             31.1 ns         30.9 ns     <span class="m">22376913</span>
+</span></span><span class="line"><span class="cl">bench_array_get            29.4 ns         29.4 ns     <span class="m">23760270</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>显示的警告信息表示在当前系统环境有一些噪音(例如其他在运行的程序)可能导致结果不太准确，并不影响我们的测试。</p>
+<p>在Windows上通常没有上述警告，如果你需要在Linux平台上去除相关警告的话，请参考此处。</p>
+<p>测试结果与预期基本相符，<code>std::get</code>最快，<code>at()</code>最慢。</p>
+<h3 id="22-传参调用测试">2.2 传参调用测试</h3>
+<p>上面的测试用例都只接受一个<code>benchmark::State&amp;</code>类型的参数，所以我们可以使用<code>BENCHMARK</code>宏生成的对象的<code>Arg</code>方法来完成参数的传递。</p>
+<p>传递进来的参数会被放入<code>state</code>对象内部存储，通过<code>range</code>方法获取，调用时的参数<code>0</code>是传入参数的需要，对应第一个参数。</p>
+<p>举个例子，假如我们需要实现一个队列，现在有ring buffer和linked list两种实现可选，现在我们要测试两种方案在不同情况下的性能表现：</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 必要的数据结构
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#include</span> <span class="cpf">&lt;benchmark/benchmark.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;ring.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;linked_ring.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// ring buffer的测试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_ring_insert_int_10</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">ring</span> <span class="o">=</span> <span class="n">ArrayRing</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span><span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">ring</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">.</span><span class="n">PauseTiming</span><span class="p">();</span> <span class="c1">// 暂停计时
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="n">ring</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">.</span><span class="n">ResumeTiming</span><span class="p">();</span> <span class="c1">// 恢复计时
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int_10</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// linked list的测试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_linked_queue_insert_int_10</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span> <span class="o">&amp;</span><span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">ring</span> <span class="o">=</span> <span class="n">LinkedRing</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">{};</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span><span class="p">:</span><span class="n">state</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">ring</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">.</span><span class="n">PauseTiming</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="n">ring</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">.</span><span class="n">ResumeTiming</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_linked_queue_insert_int_10</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 还有针对删除的测试，以及针对string的测试，都是高度重复的代码，这里不再罗列
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>很显然，上面的测试除了被测试类型和插入的数据量之外没有任何区别，如果可以通过传入参数进行控制的话就可以少写大量重复的代码。</p>
+<p>编写重复的代码是浪费时间，而且往往意味着你在做一件蠢事，google的工程师们当然早就注意到了这一点。虽然测试用例只能接受一个<code>benchmark::State&amp;</code>类型的参数，但我们可以将参数传递给state对象，然后在测试用例中获取：</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_ring_insert_int</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl"><span class="p">{</span>
 </span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">length</span> <span class="o">=</span> <span class="n">state</span><span class="p">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">ring</span> <span class="o">=</span> <span class="n">ArrayRing</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">length</span><span class="p">);</span>
@@ -277,10 +513,32 @@
 </span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">.</span><span class="n">ResumeTiming</span><span class="p">();</span>
 </span></span><span class="line"><span class="cl">    <span class="p">}</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 下面我们生成测试插入10次的测试用例
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_ring_insert_int</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的例子展示了如何传递和获取参数：</p>
+<ul>
+<li>传递参数使用<code>BENCHMARK</code>宏生成的对象的<code>Arg</code>方法</li>
+<li>传递进来的参数会被放入<code>state</code>对象内部存储，通过<code>range</code>方法获取，调用时的参数<code>0</code>是传入参数的需要，对应第一个参数</li>
+</ul>
+<p><code>Arg</code>方法一次只能传递一个参数，那如果一次想要传递多个参数呢？也很简单：</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_ring_insert_int</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl"><span class="p">{</span>
 </span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">ring</span> <span class="o">=</span> <span class="n">ArrayRing</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">state</span><span class="p">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
 </span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span><span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
@@ -292,14 +550,335 @@
 </span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">.</span><span class="n">ResumeTiming</span><span class="p">();</span>
 </span></span><span class="line"><span class="cl">    <span class="p">}</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">});</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// benchmark的主函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">BENCHMARK_MAIN</span><span class="p">();</span></span></span></code></pre></td></tr></table>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">});</span></span></span></code></pre></td></tr></table>
 </div>
-</div><h3 id="23-模板类的调用测试">2.3 模板类的调用测试</h3>
+</div><p>上面的例子没什么实际意义，只是为了展示如何传递多个参数，<code>Args</code>方法接受一个<code>vector</code>对象，所以我们可以使用c++11提供的大括号初始化器简化代码，获取参数依然通过<code>state.range</code>方法，<code>1</code>对应传递进来的第二个参数。</p>
+<p>有一点值得注意，参数传递只能接受整数，如果你希望使用其他类型的附加参数，就需要另外想些办法了。</p>
+<h3 id="23-简化多个类似测试用例的生成功">2.3 简化多个类似测试用例的生成功</h3>
+<p>向测试用例传递参数的最终目的是为了在不编写重复代码的情况下生成多个测试用例，在知道了如何传递参数后你可能会这么写：</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">void</span> <span class="nf">bench_array_ring_insert_int</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">length</span> <span class="o">=</span> <span class="n">state</span><span class="p">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">ring</span> <span class="o">=</span> <span class="n">ArrayRing</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">length</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span><span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">length</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">ring</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">.</span><span class="n">PauseTiming</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="n">ring</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">.</span><span class="n">ResumeTiming</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 下面我们生成测试插入10，100，1000次的测试用例
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">2024-01-20T15:56:26+08:00
+</span></span><span class="line"><span class="cl">Running ./benchmark_example_two
+</span></span><span class="line"><span class="cl">Run on <span class="o">(</span><span class="m">4</span> X <span class="m">3700</span> MHz CPU s<span class="o">)</span>
+</span></span><span class="line"><span class="cl">CPU Caches:
+</span></span><span class="line"><span class="cl">  L1 Data <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L1 Instruction <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L2 Unified <span class="m">256</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L3 Unified <span class="m">8192</span> KiB <span class="o">(</span>x1<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Load Average: 0.36, 0.64, 0.82
+</span></span><span class="line"><span class="cl">***WARNING*** CPU scaling is enabled, the benchmark real <span class="nb">time</span> measurements may be noisy and will incur extra overhead.
+</span></span><span class="line"><span class="cl">--------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Benchmark                                    Time              CPU      Iterations
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">bench_array_ring_insert_int/10              <span class="m">584</span>  ns           <span class="m">547</span> ns     <span class="m">1000000</span>
+</span></span><span class="line"><span class="cl">bench_array_ring_insert_int/100             <span class="m">1357</span> ns           <span class="m">1367</span> ns     <span class="m">560000</span>
+</span></span><span class="line"><span class="cl">bench_array_ring_insert_int/1000            <span class="m">9207</span> ns           <span class="m">9521</span> ns     <span class="m">64000</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>以上的代码虽然结果是正确的，但是仍然写了很多重复代码！</p>
+<p>幸好<code>Arg</code>和<code>Args</code>会将我们的测试用例使用的参数进行注册以便产生用例名/参数的新测试用例，并且返回一个指向<code>BENCHMARK</code>宏生成对象的指针，换句话说，如果我们想要生成仅仅是参数不同的多个测试的话，只需要链式调用Arg和Args即可：</p>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>结果和上面一样。</p>
+<p>但这还不是最优解，我们仍然重复调用了Arg方法，如果我们需要更多用例时就不得不又要做重复劳动了。</p>
+<p>对此google benchmark也有解决办法：我们可以使用<code>Range</code>方法来自动生成一定范围内的参数。</p>
+<p>先看看Range的原型：</p>
+<div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMAEK</span><span class="p">(</span><span class="n">func</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Range</span><span class="p">(</span><span class="kt">int64_t</span> <span class="n">start</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">limit</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>start表示参数范围起始的值，limit表示范围结束的值，Range所作用于的是一个_闭区间_。</p>
+<p>但是如果我们这样改写代码，是会得到一个错误的测试结果:</p>
+<div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">--------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Benchmark                                   Time            CPU      Iterations
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">bench_array_ring_insert_int/10              <span class="m">584</span>  ns         <span class="m">625</span> ns     <span class="m">1000000</span>
+</span></span><span class="line"><span class="cl">bench_array_ring_insert_int/64              <span class="m">1042</span> ns         <span class="m">1029</span> ns    <span class="m">896000</span>
+</span></span><span class="line"><span class="cl">bench_array_ring_insert_int/512             <span class="m">4948</span>  ns        <span class="m">5313</span> ns    <span class="m">100000</span>
+</span></span><span class="line"><span class="cl">bench_array_ring_insert_int/1000            <span class="m">9221</span> ns         <span class="m">8545</span> ns     <span class="m">89600</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>为什么会这样呢？那是因为Range默认除了start和limit，中间的其余参数都会是某一个基底（base）的幂，基地默认为8，所以我们会看到64和512，它们分别是8的平方和立方。</p>
+<p>想要改变这一行为也很简单，只要重新设置基底即可，通过使用RangeMultiplier方法：</p>
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">RangeMultiplier</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在结果恢复如初了。</p>
+<p>使用Ranges可以处理多个参数的情况：</p>
+<div class="highlight" id="id-20"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">func</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">RangeMultiplier</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Ranges</span><span class="p">({{</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1000</span><span class="p">},</span> <span class="p">{</span><span class="mi">128</span><span class="err">，</span> <span class="mi">256</span><span class="p">}});</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>第一个范围指定了测试用例的第一个传入参数的范围，而第二个范围指定了第二个传入参数可能的值（注意这里不是范围了）。</p>
+<p>与下面的代码等价：</p>
+<div class="highlight" id="id-21"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">func</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="mi">10</span><span class="p">,</span> <span class="mi">128</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">               <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="mi">100</span><span class="p">,</span> <span class="mi">128</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">               <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">128</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">               <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="mi">10</span><span class="p">,</span> <span class="mi">256</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">               <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="mi">100</span><span class="p">,</span> <span class="mi">256</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">               <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">256</span><span class="p">})</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>实际上就是用生成的第一个参数的范围于后面指定内容的参数做了一个笛卡尔积。</p>
+<h3 id="24-使用参数生成器">2.4 使用参数生成器</h3>
+<p>如果我想定制没有规律的更复杂的参数呢？这时就需要实现自定义的参数生成器了。</p>
+<p>一个参数生成器的签名如下：</p>
+<div class="highlight" id="id-22"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">CustomArguments</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">Benchmark</span><span class="o">*</span> <span class="n">b</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们在生成器中计算处参数，然后调用<code>benchmark::internal::Benchmark</code>对象的<code>Arg</code>或<code>Args</code>方法像上两节那样传入参数即可。</p>
+<p>随后我们使用<code>Apply</code>方法把生成器应用到测试用例上：</p>
+<div class="highlight" id="id-23"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">func</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Apply</span><span class="p">(</span><span class="n">CustomArguments</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>其实这一过程的原理并不复杂，我做个简单的解释：</p>
+<ol>
+<li><code>BENCHMARK</code>宏产生的就是一个<code>benchmark::internal::Benchmark</code>对象然后返回了它的指针</li>
+<li>向<code>benchmark::internal::Benchmark</code>对象传递参数需要使用<code>Arg</code>和<code>Args</code>等方法</li>
+<li><code>Apply</code>方法会将参数中的函数应用在自身</li>
+<li>我们在生成器里使用<code>benchmark::internal::Benchmark</code>对象的指针<code>b</code>的<code>Args</code>等方法传递参数，这时的<code>b</code>其实指向我们的测试用例</li>
+</ol>
+<p>到此为止生成器是如何工作的已经一目了然了，当然从上面得出的结论，我们还可以让Apply做更多的事情。</p>
+<p>下面看下Apply的具体使用：</p>
+<div class="highlight" id="id-24"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// 这次我们生成100，200，...，1000的测试用例，用range是无法生成这些参数的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">static</span> <span class="kt">void</span> <span class="nf">custom_args</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">Benchmark</span><span class="o">*</span> <span class="n">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">1000</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="mi">100</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">b</span><span class="o">-&gt;</span><span class="n">Arg</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">bench_array_ring_insert_int</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">RangeMultiplier</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Apply</span><span class="p">(</span><span class="n">custom_args</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="25-模板类的调用测试">2.5 模板类的调用测试</h3>
 <p>如果针对每一种情况写测试函数，显然违反了<code>DRY原则</code>，因为除了vector的类型参数不同，其他代码几乎是完全一样的。</p>
-<div class="highlight" id="id-8"><div class="chroma">
+<div class="highlight" id="id-25"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;benchmark/benchmark.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;array&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">length</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">is_reserve</span> <span class="o">=</span> <span class="nb">true</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">bench_vector_reserve</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span> <span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">container</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nf">constexpr</span> <span class="p">(</span><span class="n">is_reserve</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">container</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">length</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">length</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">container</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">T</span><span class="p">{});</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// BENCHMARK_TEMPLATE(bench_vector_reserve, std::string, 100);
+</span></span></span><span class="line"><span class="cl"><span class="c1">// // benchmark的主函数
+</span></span></span><span class="line"><span class="cl"><span class="c1">// BENCHMARK_MAIN();
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>非常的简单，我们通过<code>length</code>控制插入的元素个数；<code>is_reserve</code>则负责控制是否预分配内存，通过<code>if constexpr</code>可以生成reserve和不进行任何操作的两种代码（如果不熟悉c++17的if constexpr，推荐花两分钟看看<a href="https://www.cnblogs.com/apocelipes/p/14536236.html#%E4%BD%BF%E7%94%A8%E7%BC%96%E8%AF%91%E6%9C%9F%E6%9D%A1%E4%BB%B6%E5%88%86%E6%94%AF"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>）。</p>
+<p>然后我们像往常一样定义一个测试用例：</p>
+<div class="highlight" id="id-26"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">BENCHMARK<span class="o">(</span>bench_vector_reserve&lt;std::string,100&gt;<span class="o">)</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>可是等我们编译的时候却报错了！</p>
+<div class="highlight" id="id-27"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ g++ test.cpp -lpthread -lbenchmark -lbenchmark_main
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">test.cpp:19:48: 错误：宏“BENCHMARK”传递了 <span class="m">2</span> 个参数，但只需要 <span class="m">1</span> 个
+</span></span><span class="line"><span class="cl">   <span class="m">19</span> <span class="p">|</span> BENCHMARK<span class="o">(</span>bench_vector_reserve&lt;std::string,100&gt;<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>                                                ^
+</span></span><span class="line"><span class="cl">In file included from a.cpp:1:
+</span></span><span class="line"><span class="cl">/usr/local/include/benchmark/benchmark.h:1146: 附注：macro <span class="s2">&#34;BENCHMARK&#34;</span> defined here
+</span></span><span class="line"><span class="cl"> <span class="m">1146</span> <span class="p">|</span> <span class="c1">#define BENCHMARK(n)                                     \</span>
+</span></span><span class="line"><span class="cl">      <span class="p">|</span>
+</span></span><span class="line"><span class="cl">test.cpp:19:1: 错误：‘BENCHMARK’不是一个类型名
+</span></span><span class="line"><span class="cl">   <span class="m">19</span> <span class="p">|</span> BENCHMARK<span class="o">(</span>bench_vector_reserve&lt;std::string,100&gt;<span class="o">)</span><span class="p">;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>原因是这样的，在编译器处理宏的时候实际上不会考虑c++语法，所以分割模板参数的逗号被识别成了分割宏参数的逗号，因此在宏处理器的眼里我们像是传了两个参数。这也说明了<code>BENCHMARK</code>是处理不了模板的。</p>
+<p>不过别担心，Google早就想到这种情况了，所以提供了<code>BENCHMARK_TEMPLATE</code>宏，我们只需要把模板名字和需要的类型参数依次传给宏即可：</p>
+<div class="highlight" id="id-28"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">100</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">10000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">100000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">10000</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">100000</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出:</p>
+<div class="highlight" id="id-29"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -324,31 +903,407 @@
 </span><span class="lnt">21
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;benchmark/benchmark.h&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;array&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">length</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">is_reserve</span> <span class="o">=</span> <span class="nb">true</span><span class="o">&gt;</span>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">2024-01-20T19:12:57+08:00
+</span></span><span class="line"><span class="cl">Running ./benchmark_template
+</span></span><span class="line"><span class="cl">Run on <span class="o">(</span><span class="m">4</span> X <span class="m">3700</span> MHz CPU s<span class="o">)</span>
+</span></span><span class="line"><span class="cl">CPU Caches:
+</span></span><span class="line"><span class="cl">  L1 Data <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L1 Instruction <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L2 Unified <span class="m">256</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L3 Unified <span class="m">8192</span> KiB <span class="o">(</span>x1<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Load Average: 1.67, 1.82, 1.39
+</span></span><span class="line"><span class="cl">***WARNING*** CPU scaling is enabled, the benchmark real <span class="nb">time</span> measurements may be noisy and will incur extra overhead.
+</span></span><span class="line"><span class="cl">-------------------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Benchmark                                                 Time             CPU   Iterations
+</span></span><span class="line"><span class="cl">-------------------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, 100&gt;                 <span class="m">2912</span> ns         <span class="m">2910</span> ns       <span class="m">239967</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, 1000&gt;               <span class="m">27585</span> ns        <span class="m">27571</span> ns        <span class="m">25299</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, 10000&gt;             <span class="m">275549</span> ns       <span class="m">275527</span> ns         <span class="m">2534</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, 100000&gt;           <span class="m">3158585</span> ns      <span class="m">2818440</span> ns          <span class="m">253</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, 100, false&gt;          <span class="m">7743</span> ns         <span class="m">7635</span> ns        <span class="m">89883</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, 1000, false&gt;        <span class="m">54695</span> ns        <span class="m">54663</span> ns        <span class="m">12540</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, 10000, false&gt;      <span class="m">671379</span> ns       <span class="m">671340</span> ns         <span class="m">1050</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, 100000, false&gt;    <span class="m">8904492</span> ns      <span class="m">8903935</span> ns           <span class="m">79</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="26-定制测试参数">2.6 定制测试参数</h3>
+<p>在上面的代码中，length参数其实是不必要的，所以代码可以这样改：</p>
+<div class="highlight" id="id-30"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">is_reserve</span> <span class="o">=</span> <span class="nb">true</span><span class="o">&gt;</span>
 </span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">bench_vector_reserve</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span> <span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">container</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nf">constexpr</span> <span class="p">(</span><span class="n">is_reserve</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="n">container</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">length</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">length</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="n">container</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">T</span><span class="p">{});</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">_</span> <span class="p">:</span> <span class="n">state</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">container</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nf">constexpr</span> <span class="p">(</span><span class="n">is_reserve</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="c1">// 通过range方法获取传入的参数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="n">container</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">state</span><span class="p">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">state</span><span class="p">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="n">container</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">T</span><span class="p">{});</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="mi">100</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// benchmark的主函数
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">BENCHMARK_MAIN</span><span class="p">();</span></span></span></code></pre></td></tr></table>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">RangeMultiplier</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span> <span class="o">*</span> <span class="mi">10</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="nb">false</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">RangeMultiplier</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span> <span class="o">*</span> <span class="mi">10</span><span class="p">);</span></span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="3-使用benchmark接口">3. 使用Benchmark接口</h2>
+</div><p>现在我们测试的元素数量是[10, 100, 1000, 10^4, 10^5]。</p>
+<p>除此之外还有另一种叫“密集参数”的Ranges。google benchmark提供了DenseRange方法。</p>
+<p>这个方法的原型如下：</p>
+<div class="highlight" id="id-31"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">DenseRange</span><span class="p">(</span><span class="kt">int64_t</span> <span class="n">start</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">end</span><span class="p">,</span> <span class="kt">int64_t</span> <span class="n">step</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>Ranges</code>是累乘，而<code>DenseRange</code>是累加，因为累乘会导致几何级数的增长，在数轴上的分布越来越稀疏，累加则看上去像是均匀分布的，因此累加的参数生成器被叫做<code>密集参数生成器</code>。</p>
+<p>如果我们把测试用例这么改：</p>
+<div class="highlight" id="id-32"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">DenseRange</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在我们的length就是这样一个序列：<code>[1000，2000，3000， ...，9000，10000]</code>。</p>
+<p>关于自定义参数最后一个知识点是<code>ArgsProduct</code>。看名字就知道这是一个参数工厂。</p>
+<div class="highlight" id="id-33"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">ArgsProduct</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int64_t</span><span class="o">&gt;</span> <span class="o">&gt;&amp;</span> <span class="n">arglists</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>std::vector&lt;int64_t&gt;</code>实际上就是一组参数，<code>arglists</code>就是多组参数的合集，他们之间会被求笛卡尔积，举个例子：</p>
+<div class="highlight" id="id-34"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">BM_test</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span> <span class="p">{</span><span class="s">&#34;a&#34;</span><span class="p">,</span> <span class="s">&#34;b&#34;</span><span class="p">,</span> <span class="s">&#34;c&#34;</span><span class="p">,</span> <span class="s">&#34;d&#34;</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">}</span> <span class="p">});</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 等价于下面的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">BENCHMARK</span><span class="p">(</span><span class="n">BM_test</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;a&#34;</span><span class="p">,</span> <span class="mi">1</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;a&#34;</span><span class="p">,</span> <span class="mi">2</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;a&#34;</span><span class="p">,</span> <span class="mi">3</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;a&#34;</span><span class="p">,</span> <span class="mi">4</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;b&#34;</span><span class="p">,</span> <span class="mi">1</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;b&#34;</span><span class="p">,</span> <span class="mi">2</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;b&#34;</span><span class="p">,</span> <span class="mi">3</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="p">...</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;d&#34;</span><span class="p">,</span> <span class="mi">3</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">-&gt;</span><span class="n">Args</span><span class="p">({</span><span class="s">&#34;d&#34;</span><span class="p">,</span> <span class="mi">4</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                  <span class="err">```</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们可以看到参数工厂其实得自己手写所有参数，那如果我想配合工厂使用Ranges呢？</p>
+<p>没问题，benchmark的开发者们早就想到了，所以提供了下面这些帮助函数：</p>
+<div class="highlight" id="id-35"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="cm">/*multi=*/</span><span class="mi">2</span><span class="p">)</span>   <span class="c1">// 生成：[8, 16, 32, 64, 128]
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">benchmark</span><span class="o">::</span><span class="n">CreateDenseRange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="cm">/*step=*/</span><span class="mi">1</span><span class="p">)</span> <span class="c1">// 生成：[1, 2, 3, 4, 5, 6]
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果换成我们的例子，就可以这样写：</p>
+<div class="highlight" id="id-36"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="nb">false</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>借助仅仅两行代码我们就能生成数量可观的测试用例：</p>
+<div class="highlight" id="id-37"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">2024-01-20T19:26:55+08:00
+</span></span><span class="line"><span class="cl">Running ./bm_template_2
+</span></span><span class="line"><span class="cl">Run on <span class="o">(</span><span class="m">4</span> X <span class="m">3700</span> MHz CPU s<span class="o">)</span>
+</span></span><span class="line"><span class="cl">CPU Caches:
+</span></span><span class="line"><span class="cl">  L1 Data <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L1 Instruction <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L2 Unified <span class="m">256</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L3 Unified <span class="m">8192</span> KiB <span class="o">(</span>x1<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Load Average: 1.91, 2.05, 1.65
+</span></span><span class="line"><span class="cl">***WARNING*** CPU scaling is enabled, the benchmark real <span class="nb">time</span> measurements may be noisy and will incur extra overhead.
+</span></span><span class="line"><span class="cl">------------------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Benchmark                                                Time             CPU   Iterations
+</span></span><span class="line"><span class="cl">------------------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/10                   <span class="m">466</span> ns          <span class="m">466</span> ns      <span class="m">1505218</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/100                 <span class="m">3549</span> ns         <span class="m">3548</span> ns       <span class="m">200461</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/1000               <span class="m">34067</span> ns        <span class="m">34049</span> ns        <span class="m">20858</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/10000             <span class="m">324499</span> ns       <span class="m">324370</span> ns         <span class="m">2125</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/100000           <span class="m">3229254</span> ns      <span class="m">3227361</span> ns          <span class="m">219</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/10           <span class="m">1604</span> ns         <span class="m">1603</span> ns       <span class="m">436414</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/100          <span class="m">7707</span> ns         <span class="m">7705</span> ns        <span class="m">89743</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/1000        <span class="m">57709</span> ns        <span class="m">57694</span> ns        <span class="m">12026</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/10000      <span class="m">688582</span> ns       <span class="m">688283</span> ns         <span class="m">1008</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/100000    <span class="m">9208480</span> ns      <span class="m">9205775</span> ns           <span class="m">75</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当然，这只是一个类型参数，实际上我们还有另外两个类型需要测试。另外这是1.5.5新增的功能，如果你想尝鲜得先升级google benchmark。</p>
+<p>通常做到上面那一步就足够了，然而在这里我们还有优化空间，因为如果我们把其他两个测试用的类型加上，代码是这样的，MyClass的定义后面会给出：</p>
+<div class="highlight" id="id-38"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="nb">false</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">size_t</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">size_t</span><span class="p">,</span> <span class="nb">false</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">MyClass</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="n">BENCHMARK_TEMPLATE</span><span class="p">(</span><span class="n">bench_vector_reserve</span><span class="p">,</span> <span class="n">MyClass</span><span class="p">,</span> <span class="nb">false</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">ArgsProduct</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="n">benchmark</span><span class="o">::</span><span class="n">CreateRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10000</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>你看见了什么？没错，重复重复重复！我们又违背了DRY原则。</p>
+<p>重复说不上什么十恶不赦，但能避免还是要避免的，所以我准备用宏来简化这些代码：</p>
+<div class="highlight" id="id-39"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#define generate_test(type) \
+</span></span></span><span class="line"><span class="cl"><span class="cp">	BENCHMARK_TEMPLATE(bench_vector_reserve, type)-&gt;ArgsProduct({benchmark::CreateRange(10, 100000, 10)}); \
+</span></span></span><span class="line"><span class="cl"><span class="cp">	BENCHMARK_TEMPLATE(bench_vector_reserve, type, false)-&gt;ArgsProduct({benchmark::CreateRange(10, 100000, 10)});
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="n">generate_test</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">generate_test</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">generate_test</span><span class="p">(</span><span class="n">MyClass</span><span class="p">);</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这下舒服多了。</p>
+<p>接着来看我们的MyClass，我们的MyClass包含几个虚函数，禁止移动赋值，同时被刻意设计成了非平凡复制，这样的类型可以说是绕过了标准库容器设计的大部分优化措施，算是个妥妥的反面教材，希望你的项目里尽量不要出现这种东西：</p>
+<div class="highlight" id="id-40"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MyClass</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">public</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">	<span class="kt">long</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">2L</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">MyClass</span><span class="p">()</span> <span class="p">{</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">2L</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="o">~</span><span class="n">MyClass</span><span class="p">()</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">virtual</span> <span class="kt">long</span> <span class="nf">get</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">i</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="n">MyClass</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="n">MyClass</span><span class="o">&amp;&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="n">MyClass</span><span class="p">(</span><span class="k">const</span> <span class="n">MyClass</span><span class="o">&amp;</span> <span class="n">obj</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="n">i</span> <span class="o">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="n">MyClass</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">MyClass</span><span class="o">&amp;</span> <span class="n">obj</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="n">i</span> <span class="o">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个类其实就是针对内存分配器实现的，vector在重新进行内存分配后很可能靠移动语义或者memmove来移动数据，这两者将导致重新分配内存导致的性能损失变小，不利于我们观察vector的行为，所以我定制了这个类。</p>
+<div class="highlight" id="id-41"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">2024-01-20T19:39:19+08:00
+</span></span><span class="line"><span class="cl">Running ./bm_template_3
+</span></span><span class="line"><span class="cl">Run on <span class="o">(</span><span class="m">4</span> X <span class="m">3700</span> MHz CPU s<span class="o">)</span>
+</span></span><span class="line"><span class="cl">CPU Caches:
+</span></span><span class="line"><span class="cl">  L1 Data <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L1 Instruction <span class="m">32</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L2 Unified <span class="m">256</span> KiB <span class="o">(</span>x4<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  L3 Unified <span class="m">8192</span> KiB <span class="o">(</span>x1<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Load Average: 1.94, 1.42, 1.32
+</span></span><span class="line"><span class="cl">***WARNING*** CPU scaling is enabled, the benchmark real <span class="nb">time</span> measurements may be noisy and will incur extra overhead.
+</span></span><span class="line"><span class="cl">------------------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Benchmark                                                Time             CPU   Iterations
+</span></span><span class="line"><span class="cl">------------------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/10                   <span class="m">480</span> ns          <span class="m">480</span> ns      <span class="m">1399285</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/100                 <span class="m">3446</span> ns         <span class="m">3445</span> ns       <span class="m">200045</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/1000               <span class="m">34552</span> ns        <span class="m">33697</span> ns        <span class="m">20974</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/10000             <span class="m">329746</span> ns       <span class="m">329407</span> ns         <span class="m">2123</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string&gt;/100000           <span class="m">3263084</span> ns      <span class="m">3262478</span> ns          <span class="m">215</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/10           <span class="m">1603</span> ns         <span class="m">1602</span> ns       <span class="m">435234</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/100          <span class="m">7871</span> ns         <span class="m">7870</span> ns        <span class="m">88586</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/1000        <span class="m">58803</span> ns        <span class="m">58793</span> ns        <span class="m">11582</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/10000      <span class="m">713880</span> ns       <span class="m">711949</span> ns          <span class="m">973</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::string, false&gt;/100000    <span class="m">9387908</span> ns      <span class="m">9385776</span> ns           <span class="m">74</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t&gt;/10                   <span class="m">388</span> ns          <span class="m">387</span> ns      <span class="m">1800299</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t&gt;/100                 <span class="m">2421</span> ns         <span class="m">2421</span> ns       <span class="m">289565</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t&gt;/1000               <span class="m">23424</span> ns        <span class="m">23413</span> ns        <span class="m">29931</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t&gt;/10000             <span class="m">229590</span> ns       <span class="m">229543</span> ns         <span class="m">3081</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t&gt;/100000           <span class="m">2258210</span> ns      <span class="m">2257467</span> ns          <span class="m">309</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t, false&gt;/10           <span class="m">1331</span> ns         <span class="m">1329</span> ns       <span class="m">526682</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t, false&gt;/100          <span class="m">4098</span> ns         <span class="m">4094</span> ns       <span class="m">169896</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t, false&gt;/1000        <span class="m">26619</span> ns        <span class="m">26614</span> ns        <span class="m">26307</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t, false&gt;/10000      <span class="m">248256</span> ns       <span class="m">248125</span> ns         <span class="m">2864</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;std::size_t, false&gt;/100000    <span class="m">2411262</span> ns      <span class="m">2410631</span> ns          <span class="m">286</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass&gt;/10                       <span class="m">547</span> ns          <span class="m">547</span> ns      <span class="m">1264878</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass&gt;/100                     <span class="m">4268</span> ns         <span class="m">4268</span> ns       <span class="m">163187</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass&gt;/1000                   <span class="m">41305</span> ns        <span class="m">41292</span> ns        <span class="m">16957</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass&gt;/10000                 <span class="m">408955</span> ns       <span class="m">408888</span> ns         <span class="m">1713</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass&gt;/100000               <span class="m">4095353</span> ns      <span class="m">4093747</span> ns          <span class="m">170</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass, false&gt;/10               <span class="m">1428</span> ns         <span class="m">1428</span> ns       <span class="m">487914</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass, false&gt;/100              <span class="m">8052</span> ns         <span class="m">8050</span> ns        <span class="m">86405</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass, false&gt;/1000            <span class="m">65784</span> ns        <span class="m">65772</span> ns        <span class="m">10679</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass, false&gt;/10000          <span class="m">741154</span> ns       <span class="m">741025</span> ns          <span class="m">940</span>
+</span></span><span class="line"><span class="cl">bench_vector_reserve&lt;MyClass, false&gt;/100000        <span class="m">6842572</span> ns      <span class="m">6839261</span> ns          <span class="m">102</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="27-使用benchmark接口">2.7. 使用Benchmark接口</h3>
 <p>这里将待测试的函数注册为一个基准测试用例，并指定测试用例的名称和参数。该代码中使用了三种不同的注册方式：<code>函数指针</code>、<code>Lambda 函数</code>和<code>带参数的函数指针</code>。最后，使用 <code>benchmark::RunSpecifiedBenchmarks</code> 函数运行所有注册的基准测试用例，并使用 <code>benchmark::Shutdown</code> 函数释放资源。</p>
-<div class="highlight" id="id-9"><div class="chroma">
+<div class="highlight" id="id-42"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -427,9 +1382,10 @@
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">benchmark</span><span class="o">::</span><span class="n">Shutdown</span><span class="p">();</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="ref">ref:</h2>
-<p>[1]. <a href="https://mp.weixin.qq.com/s/hrKwlKj6i2twd_qNqaHyYg"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/hrKwlKj6i2twd_qNqaHyYg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2]. <a href="https://github.com/google/benchmark/blob/main/docs/user_guide.md"target="_blank" rel="external nofollow noopener noreferrer">Google Benchmark 用户手册<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</div><h2 id="3-ref">3. Ref:</h2>
+<p>[1]. <a href="https://mp.weixin.qq.com/s/hrKwlKj6i2twd_qNqaHyYg"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/hrKwlKj6i2twd_qNqaHyYg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2]. <a href="https://github.com/google/benchmark/blob/main/docs/user_guide.md"target="_blank" rel="external nofollow noopener noreferrer">Google Benchmark 用户手册<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3]. <a href="https://www.cnblogs.com/apocelipes/p/10348925.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/apocelipes/p/10348925.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
 ]]></description></item><item><title>CMake 笔记 | [7] 设置语言标准（一）</title><link>https://jianye0428.github.io/posts/cmake_note_7/</link><pubDate>Wed, 17 Jan 2024 09:04:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_7/</guid><description><![CDATA[<h2 id="一c--标准历史">一、C ++ 标准历史</h2>
 <ul>
 <li>1998 年，C++ 标准委员会发布了第一版 C++ 标准，并将其命名为 C++ 98 标准</li>
