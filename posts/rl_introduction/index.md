@@ -46,8 +46,6 @@ $$\tau = (S_0, A_0, R_0, S_1, A_1, R_1, ... )$$
 
 因此，可以用$ (S，A，P，R，\gamma) $来描述强化学习过程。
 
-$$y = x + 1$$
-
 ### 1.3 强化学习的数学建模
 
 (1) 马尔可夫过程 (Markov Process，MP) 是一个具备马尔可夫性质的离散随机过程。
@@ -155,6 +153,8 @@ PGM方法通过梯度上升的方法直接在神经网络的参数上优化Agent
 根据相关理论，期望回报 $J(\pi_{\theta})$ 关于参数 $\theta$ 的梯度可以表示为：
 
 $$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t=0}^{T}R_{t}\nabla_{\theta}\sum_{t'=0}^{T} \log \pi_{\theta}(A_{t'} | S_{t'})] = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t'=0}^{T}\nabla_{\theta}\log \pi_{\theta}(A_{t'} | S_{t'})\sum_{t=0}^{T} R_t]$$
+
+$$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
 
 
 当$T \rightarrow \infin$ 时，上式可以表示为：
