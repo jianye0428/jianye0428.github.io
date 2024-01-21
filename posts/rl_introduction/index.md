@@ -25,7 +25,7 @@ Agent interacts with its surroundings known as the environment. Agent will get a
 ### 1.2 强化学习的相关概念
 
 
-(1) 状态 State ($S$): agent’s observation of its environment;</br>
+(1) 状态 State ( $S$ ): agent’s observation of its environment;</br>
 
 (2) 动作 Action ($A$): the approaches that agent interacts with the environment;</br>
 
@@ -33,7 +33,7 @@ Agent interacts with its surroundings known as the environment. Agent will get a
 
 (4) 转移概率 Transistion Probability ($P$): the transition possibility that environment evolves from one state to another. 环境从一个状态转移到另一个状态，可以是确定性转移过程，例如，$S_{t+1} = f(S_t, A_t)$, 也可以是随机性转移过程，例如 $S_{t+1} \sim p\left( S_{t+1}|S_t, A_t \right)$</br>
 
-(5) 折扣因子 Discount factor ($\gamma$): to measure the importance of future reward to agent at the current state.</br>
+(5) 折扣因子 Discount factor ( $\gamma$ ): to measure the importance of future reward to agent at the current state.</br>
 
 (6) 轨迹(Trajectory)是一系列的状态、动作、和奖励，可以表述为：
 
