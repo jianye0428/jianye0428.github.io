@@ -140,34 +140,82 @@ DQN网路将Q-Learning和深度学习结合起来，并引入了两种新颖的�
 其中, 技术1 能够提高样本使用效率，降低样本间相关性，平滑学习过程；技术2 能够是目标值不受最新参数的影响，大大较少发散和震荡。
 
 DQN算法具体描述如下：
+<br>
+<center>
+  <img src="images/dqn.png" width="640" height="320" align=left style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">DQN 伪代码</div>
+</center>
+<br>
 
-<pre class="pseudocode" lineNumber="true">
-\begin{algorithm}
-\caption{在 KD-Tree 上添加新数据}
-\begin{algorithmic}
-\STATE \textbf{输入}：新数据 $x$，树根 $root$，叶子阈值 $T$
-\STATE \textbf{输出}：树根 $root$
-\PROCEDURE{AddData}{$x,root,T$}
-	\IF{$root.isleaf = 1$}
-		\STATE // 判断是否需要分裂
-		\IF{$|root.data| \ge T$}
-			\STATE $root :=$ \CALL{KDTree}{$root.data \cup \{x\}$}
-		\ELSE
-			\STATE $root.data := root.data \cup \{x\}$
-		\ENDIF
-		\RETURN $root$
-	\ENDIF
-	\STATE // 递归进入左右子树
-	\IF{$x[root.pivot] \le root.med$}
-		\STATE \CALL{AddData}{$x,root.left,T$}
-	\ELSE
-		\STATE \CALL{AddData}{$x,root.right,T$}
-	\ENDIF
-	\RETURN $root$
-\ENDPROCEDURE
-\end{algorithmic}
-\end{algorithm}
-</pre>
+注意：这里随机动作选择概率$\epsilon$一般是随着迭代Episode和Time Step的增加，而逐渐降低，目的是降低随机策略的影响，逐步提高Q网络对Agent动作选择的影响。
+
+该算法中，Line 14 具体更新方式如下：
+
+$$\theta^Q\leftarrow\theta^Q+\beta\sum\_{i\in\mathcal{N}}\frac{\partial Q(s,a|\theta^Q)}{\partial\theta^Q}\left[y\_i-Q(s,a|\theta^Q)\right]$$
+
+其中，集合$N$中为`minibatch`的$N$个$(S\_t,A\_t,R\_t,S\_{t+1})$经验样本集合，$\beta$表示一次梯度迭代中的迭代步长。
+
+{{<admonition quote "参考文献" false>}}
+[1] V. Mnih et al., “Human-level control through deep reinforcement learning,” Nature, vol. 518, no. 7540, pp. 529–533, Feb. 2015.
+{{</admonition>}}
+
+### 3.2 Deep Deterministic Policy Gradient（DDPG）
+
+DDPG算法可以看作Deterministic Policy Gradient（DPG）算法和深度神经网络的结合，是对上述深度Q网络（DQN）在连续动作空间的扩展。
+
+DDPG同时建立Q值函数（Critic）和策略函数（Actor）。这里，Critic与DQN相同，采用TD方法进行更新；而Actor利用Critic的估计，通过策略梯度方法进行更新。
+
+DDPG算法具体描述如下：
+
+<br>
+<center>
+  <img src="images/ddpg.png" width="640" height="320" align=left style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">DDPG 伪代码</div>
+</center>
+<br>
+
+原论文中采用Ornstein-Uhlenbeck过程（O-U过程）作为添加噪声项N \mathcal{N}N，也可以采用时间不相关的零均值高斯噪声（相关实践表明，其效果也很好）。
+
+{{<admonition quote "参考文献" false>}}
+[1] Lillicrap, Timothy P., et al. “Continuous control with deep reinforcement learning”，arXiv preprint, 2015, online: https://arxiv.org/pdf/1509.02971.pdf
+{{</admonition>}}
+
+### 3.3 Proximal Policy Optimization（PPO）
+
+PPO算法是对信赖域策略优化算法(Trust Region Policy Optimization, TRPO) 的一个改进，用一个更简单有效的方法来强制策略$\pi\_\theta$与$\pi\_{\theta}^{\prime}$相似。
+
+具体来说，TRPO中的优化问题如下：
+
+$$\begin{gathered}\max\_{\pi\_{\theta}^{\prime}}\mathcal{L}\_{\pi\_{\theta}}(\pi\_{\theta}^{\prime})\\\\s.t.\mathbb{E}\_{s\sim\rho\_{\pi\_\theta}}[D\_{KL}\left(\pi\_\theta\left|\left|\pi\_\theta^{\prime}\right.\right)\right]\leq\delta \end{gathered}$$
+
+而PPO算法直接优化上述问题的正则版本，即：
+
+$$\max\_{\pi\_{\theta}^{\prime}}\mathcal{L}\_{\pi\_{\theta}}\left(\pi\_{\theta}^{\prime}\right)-\lambda\mathbb{E}\_{s\sim\rho\_{\pi\_{\theta}}}\quad[D\_{KL}\left(\pi\_{\theta}||\pi\_{\theta}^{\prime}\right)]$$
+
+这里，入为正则化系数，对应TRPO优化问题中的每一个$\delta$,都存在一个相应的$\lambda$,使得上述两个优化问题有相同的解。然而，入的值依赖于$\pi\_\theta$,因此，在PPO中，需要使用一个可动态调整的$\lambda$。具体来说有两种方法：
+  (1) 通过检验KL散度值来决定$\lambda$是增大还是减小，该版本的PPO算法称为PPO-Penalty;
+  (2) 直接截断用于策略梯度的目标函数，从而得到更保守的更新，该方法称为PPO-Clip。
+
+PPO-Clip算法具体描述如下：
+
+<br>
+<center>
+  <img src="images/ppo.png" width="640" height="320" align=left style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">PPO 伪代码</div>
+</center>
+<br>
+
+$$f(\theta')=\min\left(\ell\_t\left(\theta'\right)A^{\pi\_{\theta\_{dd}}}(S\_t,A\_t),clip(\ell\_t\left(\theta'\right),1-\epsilon,1+\epsilon)A^{\pi\_{\theta\_{dd}}}(S\_t,A\_t)\right)$$
+
+这里，$clip(x,1-\epsilon,1+\epsilon)$表示将$x$截断在$[1-\epsilon,1+\epsilon]$中。
+
+{{<admonition quote "参考文献" false>}}
+[1] Schulman, J. , et al. “Proximal Policy Optimization Algorithms”，arXiv preprint, 2017, online: https://arxiv.org/pdf/1707.06347.pdf
+[2] Schulman J, Levine S, Abbeel P, et al. “Trust region policy optimization”, International conference on machine learning. PMLR, 2015: 1889-1897, online: http://proceedings.mlr.press/v37/schulman15.pdf
+{{</admonition>}}
 
 ## 4. 深度强化学习算法分类
 
