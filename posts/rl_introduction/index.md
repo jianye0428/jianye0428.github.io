@@ -96,11 +96,6 @@ $$\pi ^ * = \argmax\_{\pi} J(\pi)$$
 
 $$V^{\pi}(s) = \mathbb{E}\_{\tau \sim \pi} [R(\tau) | S\_0 = s] = \mathbb{E}\_{A\_t \sim \pi(\cdot | S\_t)} [\sum\_{t=0}^{\infin}\gamma^t R(S\_t, A\_t) | S\_0 = s]$$
 
-new
-
-$$V^{\pi}(s)=\mathbb{E}\_{\tau\sim\pi}\left[R(\tau)|S\_0=s\right]=\mathbb{E}\_{A\_t}\sim\pi(\cdot|S\_t)\left[\sum\_{t=0}^{\infty}\gamma^tR(S\_t,A\_t)|S\_0=s\right]$$
-
-
 在MDP中，给定一个动作，就有动作价值函数(Action-Value Function)，是基于状态和动作的期望回报。其定义如下：
 
 $$Q^{\pi}(s, a) = \mathbb{E}\_{\tau \sim \pi}[R(\tau) | S\_0 = s, A\_0 = a] = \mathbb{E}\_{A\_t \sim \pi(\cdot | S\_t)}[\sum\_{t=0}^{\infin}\gamma^t R(S\_t, A\_t)|S\_0 = s, A\_0 = a]$$
@@ -180,7 +175,6 @@ $$\nabla\_{\theta}J(\pi\_{\theta}) = \mathbb{E}\_{\tau \sim \pi\_{\theta}}[\sum\
 Actor-Critic方法结合了上述 <font color=red>基于价值</font> 的方法和 <font color=red>基于策略</font> 的方法，利用基于价值的方法学习Q值函数或状态价值函数V来提高采样效率(Critic)，并利用基于策略的方法学习策略函数(Actor)，从而适用于连续或高维动作空间。其缺点也继承了二者的缺点，例如，Critic存在过估计问题，而Actor存在探索不足的问题等。
 
 常见算法有 DDPG, A3C，TD3，SAC等，适用于 continuous and high-Dimension action space
-
 
 ### 4.3 参数更新的方式不同
 Parameters updating methods
