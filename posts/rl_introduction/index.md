@@ -4,7 +4,15 @@
 ## 1. 强化学习
 
 Reinforcement Learning (RL): 强化学习</br>
-强化学习属于机器学习的一种，不同于`监督学习`和`无监督学习`，通过智能体与环境的不断交互(即采取动作)，进而获得奖励，从而不断优化自身动作策略，以期待最大化其长期收益(奖励之和)。强化学习特别适合序贯决策问题(涉及一系列有序的决策问题)。
+强化学习是人工智能（AI）和机器学习（ML）领域的一个重要子领域，不同于`监督学习`和`无监督学习`，强化学习通过智能体与环境的不断交互(即采取动作)，进而获得奖励，从而不断优化自身动作策略，以期待最大化其长期收益(奖励之和)。强化学习特别适合序贯决策问题(涉及一系列有序的决策问题)。
+
+<br>
+<center>
+  <img src="images/1_01.png" width="640" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">ML Categories</div>
+</center>
+<br>
 
 在实际应用中，针对某些任务，我们往往无法给每个数据或者状态贴上准确的标签，但是能够知道或评估当前情况或数据是好还是坏，可以采用强化学习来处理。例如，下围棋(Go)，星际争霸II(Starcraft II)等游戏。
 
@@ -24,23 +32,23 @@ Agent interacts with its surroundings known as the environment. Agent will get a
 ### 1.2 强化学习的相关概念
 
 
-(1) 状态 State ( $S$ ): agent’s observation of its environment;</br>
+(1) <font color=red>状态 State ($S$)</font>: agent’s observation of its environment;</br>
 
-(2) 动作 Action ($A$): the approaches that agent interacts with the environment;</br>
+(2) <font color=red>动作 Action ($A$)</font>: the approaches that agent interacts with the environment;</br>
 
-(3) 奖励 Reward ($R\_t$): the bonus that agent get once it takes an action in the environment at the given time step t.回报(Return)为Agent所获得的奖励之和。</br>
+(3) <font color=red>奖励 Reward ($R\_t$)</font>: the bonus that agent get once it takes an action in the environment at the given time step t.回报(Return)为Agent所获得的奖励之和。</br>
 
-(4) 转移概率 Transistion Probability ($P$): the transition possibility that environment evolves from one state to another. 环境从一个状态转移到另一个状态，可以是确定性转移过程，例如，$S\_{t+1} = f(S\_t, A\_t)$, 也可以是随机性转移过程，例如 $S\_{t+1} \sim p\left( S\_{t+1}|S\_t, A\_t \right)$</br>
+(4) <font color=red>转移概率 Transistion Probability ($P$)</font>: the transition possibility that environment evolves from one state to another. 环境从一个状态转移到另一个状态，可以是确定性转移过程，例如，$S\_{t+1} = f(S\_t, A\_t)$, 也可以是随机性转移过程，例如 $S\_{t+1} \sim p\left( S\_{t+1}|S\_t, A\_t \right)$</br>
 
-(5) 折扣因子 Discount factor ( $\gamma$ ): to measure the importance of future reward to agent at the current state.</br>
+(5) <font color=red>折扣因子 Discount factor ( $\gamma$ )</font>: to measure the importance of future reward to agent at the current state.</br>
 
-(6) 轨迹(Trajectory)是一系列的状态、动作、和奖励，可以表述为：
+(6) <font color=red>轨迹(Trajectory)</font>:是一系列的状态、动作、和奖励，可以表述为：
 
 $$\tau = (S\_0, A\_0, R\_0, S\_1, A\_1, R\_1, ... )$$
 
 用轨迹$\tau$来记录Agent如何和环境交互。轨迹的初始状态是从起始状态分布中随机采样得到的。一条轨迹有时候也称为片段(Episode)或者回合，是一个从初始状态(Initial State，例如游戏的开局)到最终状态(Terminal State，如游戏中死亡或者胜利)的序列。</br>
 
-(7) 探索-利用的折中(Exploration-Exploitation Tradeoff)
+(7) <font color=red>探索-利用的折中(Exploration-Exploitation Tradeoff)</font>:
 这里，探索是指Agent通过与环境的交互来获取更多的信息，而利用是指使用当前已知信息来使得Agent的表现达到最佳，例如，贪心(greedy)策略。同一时间，只能二者选一。因此，如何平衡探索和利用二者，以实现长期回报(Long-term Return)最大，是强化学习中非常重要的问题。</br>
 
 因此，可以用$ (S，A，P，R，\gamma) $来描述强化学习过程。
@@ -112,12 +120,20 @@ $$V^{\pi}(s) = \mathbb{E}\_{a \sim \pi}[Q^{\pi}(s,a)]$$
 ## 2. 深度强化学习
 
 Deep Learning + Reinforcement Learning = Deep Reinforcement Learning (DRL)
-深度学习DL有很强的抽象和表示能力，特别适合建模RL中的值函数，例如：动作价值函数 $Q^\pi \left(s, a \right)$。
+深度学习DL有很强的抽象和表示能力，特别适合建模RL中的值函数，例如: 动作价值函数 $Q^\pi \left(s, a \right)$。
 二者结合，极大地拓展了RL的应用范围。
 
 ## 3. 常见深度强化学习算法
 
 深度强化学习的算法比较多，常见的有：DQN，DDPG，PPO，TRPO，A3C，SAC 等等。
+
+<br>
+<center>
+  <img src="images/3_01.png" width="640" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">常见深度强化学习算法</div>
+</center>
+<br>
 
 ## 4. 深度强化学习算法分类
 
@@ -190,7 +206,9 @@ Parameters updating methods
 常见算法有：DDPG，Q-learning，DQN等。
 
 
+## 参考
 [1]. https://blog.csdn.net/b_b1949/article/details/128997146
+[2]. https://blog.csdn.net/magicyangjay111/article/details/132645347
 
 
 
