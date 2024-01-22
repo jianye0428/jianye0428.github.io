@@ -154,15 +154,16 @@ Agent在训练时(产生数据)所使用的策略与其测试(方法评估与提
 常见算法有 Q-learning，DQN，Double DQN，等，适用于 Discrete action space。其中，DQN算法是基于state-action function $Q(s,a)$ 来进行选择最优action的。
 
 #### 4.2.2 Policy-based algorithms(基于策略的算法)
+
 基于策略的方法直接对策略进行优化，通过对策略迭代更新，实现累计奖励(回报)最大化。其具有策略参数化简单、收敛速度快的优点，而且适用于连续或者高维动作空间。
 
-策略梯度方法(Policy Gradient Method，PGM)是一类直接针对期望回报通过梯度下降(Gradient Descent，针对最小化问题)进行策略优化的强化学习方法。其不需要在动作空间中求解价值最大化的优化问题，从而比较适用于 continuous and high-Dimension action space，也可以自然地对随机策略进行建模。
+**策略梯度方法(Policy Gradient Method，PGM)**是一类直接针对期望回报通过梯度下降(Gradient Descent，针对最小化问题)进行策略优化的强化学习方法。其不需要在动作空间中求解价值最大化的优化问题，从而比较适用于 continuous and high-Dimension action space，也可以自然地对随机策略进行建模。
 
 PGM方法通过梯度上升的方法直接在神经网络的参数上优化Agent的策略。
 
 根据相关理论，期望回报 $J(\pi_{\theta})$ 关于参数 $\theta$ 的梯度可以表示为：
 
-$$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum_{t=0}^{T}R_{t}\nabla_{\theta}\sum_{t'=0}^{T} \log \pi\_{\theta}(A_{t'} | S_{t'})] = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum_{t'=0}^{T}\nabla_{\theta}\log \pi_{\theta}(A_{t'} | S_{t'})\sum_{t=0}^{T} R_t]$$
+$$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum_{t=0}^{T}R_{t}\nabla_{\theta}\sum_{t'=0}^{T} \log \pi\_{\theta}(A_{t'} | S_{t'})] = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum_{t'=0}^{T}\nabla_{\theta}\log \pi\_{\theta}(A_{t'} | S_{t'})\sum_{t=0}^{T} R_t]$$
 
 $$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
 
