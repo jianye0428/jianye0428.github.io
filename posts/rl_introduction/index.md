@@ -131,7 +131,6 @@ Deep Learning + Reinforcement Learning = Deep Reinforcement Learning (DRL)
 </center>
 <br>
 
-
 ### 3.1 Deep Q-Networks （DQN）
 
 DQN网路将Q-Learning和深度学习结合起来，并引入了两种新颖的技术来解决以往采用神经网络等非线性函数逼近器表示动作价值函数 `Q(s,a)` 所产生的不稳定性问题：
