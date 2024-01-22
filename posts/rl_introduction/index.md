@@ -28,15 +28,15 @@ Agent interacts with its surroundings known as the environment. Agent will get a
 
 (2) 动作 Action ($A$): the approaches that agent interacts with the environment;</br>
 
-(3) 奖励 Reward ($R_t$): the bonus that agent get once it takes an action in the environment at the given time step t.回报(Return)为Agent所获得的奖励之和。</br>
+(3) 奖励 Reward ($R\_t$): the bonus that agent get once it takes an action in the environment at the given time step t.回报(Return)为Agent所获得的奖励之和。</br>
 
-(4) 转移概率 Transistion Probability ($P$): the transition possibility that environment evolves from one state to another. 环境从一个状态转移到另一个状态，可以是确定性转移过程，例如，$S_{t+1} = f(S_t, A_t)$, 也可以是随机性转移过程，例如 $S_{t+1} \sim p\left( S_{t+1}|S_t, A_t \right)$</br>
+(4) 转移概率 Transistion Probability ($P$): the transition possibility that environment evolves from one state to another. 环境从一个状态转移到另一个状态，可以是确定性转移过程，例如，$S\_{t+1} = f(S\_t, A\_t)$, 也可以是随机性转移过程，例如 $S\_{t+1} \sim p\left( S\_{t+1}|S\_t, A\_t \right)$</br>
 
 (5) 折扣因子 Discount factor ( $\gamma$ ): to measure the importance of future reward to agent at the current state.</br>
 
 (6) 轨迹(Trajectory)是一系列的状态、动作、和奖励，可以表述为：
 
-$$\tau = (S_0, A_0, R_0, S_1, A_1, R_1, ... )$$
+$$\tau = (S\_0, A\_0, R\_0, S\_1, A\_1, R\_1, ... )$$
 
 用轨迹$\tau$来记录Agent如何和环境交互。轨迹的初始状态是从起始状态分布中随机采样得到的。一条轨迹有时候也称为片段(Episode)或者回合，是一个从初始状态(Initial State，例如游戏的开局)到最终状态(Terminal State，如游戏中死亡或者胜利)的序列。</br>
 
@@ -49,23 +49,23 @@ $$\tau = (S_0, A_0, R_0, S_1, A_1, R_1, ... )$$
 
 (1) 马尔可夫过程 (Markov Process，MP) 是一个具备马尔可夫性质的离散随机过程。
 
-马尔可夫性质是指下一状态 $ S_{t+1} $ 只取决于当前状态 $S_t$.
+马尔可夫性质是指下一状态 $ S\_{t+1} $ 只取决于当前状态 $S\_t$.
 
-$$p(S_{t+1}|S_{t}) = p(S_{t+1} | S_0, S_1, S_2, ..., S_t)$$
+$$p(S\_{t+1}|S\_{t}) = p(S\_{t+1} | S\_0, S\_1, S\_2, ..., S\_t)$$
 
 可以用有限状态集合 $\mathcal{S}$ 和状态转移矩阵 $\mathbf{P}$ 表示MP过程为 $<\mathcal{S}, \mathbf{P}>$。
 
 为了能够刻画环境对Agent的反馈奖励，马尔可夫奖励过程将上述MP从 $<\mathcal{S}, \mathbf{P}>$ 扩展到了$ <\mathcal{S}, \mathbf{P}, R, \gamma>$。这里，$R$表示奖励函数，而 $\gamma$ 表示奖励折扣因子。
 
-$$R_t = R(S_t)$$
+$$R\_t = R(S\_t)$$
 
 回报(Return)是Agent在一个轨迹上的累计奖励。折扣化回报定义如下：
 
-$$G_{t=0:T} = R(\tau) = \sum_{t=0}^{T}\gamma^{t}R_t$$
+$$G\_{t=0:T} = R(\tau) = \sum\_{t=0}^{T}\gamma^{t}R\_t$$
 
 价值函数(Value Function) $V(s)$是Agent在状态$s$的期望回报(Expected Return)。
 
-$$V^{\pi} (s) = \mathbb{E}[R(\tau) | S_0 = s]$$
+$$V^{\pi} (s) = \mathbb{E}[R(\tau) | S\_0 = s]$$
 
 
 (3) 马尔可夫决策过程 (Markov Decision Process，MDP)</br>
@@ -74,44 +74,44 @@ MDP被广泛应用于经济、控制论、排队论、机器人、网络分析�
 马尔可夫决策过程的立即奖励(Reward，$R$)与状态和动作有关。MDP可以用$<\mathcal{S},\mathcal{A}, \mathbf{P}, R, \gamma>$来刻画。
 $\mathcal{A}$表示有限的动作集合，此时，立即奖励变为
 
-$$R_t = R(S_t, A_t)$$
+$$R\_t = R(S\_t, A\_t)$$
 
 策略(Policy)用来刻画Agent根据环境观测采取动作的方式。Policy是从一个状态 $s \in \mathcal{S}$ 到动作 $a \in \mathcal{A}$的概率分布$\pi(a|s)$ 的映射，$\pi(a|s)$ 表示在状态$s$下，采取动作 $a$ 的概率。
 
-$$\pi (a|s) = p (A_t = a | S_t = s), \exist{t} $$
+$$\pi (a|s) = p (A\_t = a | S\_t = s), \exist{t} $$
 
 期望回报(Expected Return)是指在一个给定策略下所有可能轨迹的回报的期望值，可以表示为：
 
-$$J(\pi) = \int_{\tau} p(\tau | \pi) R(\tau) = \mathbb{E}_{\tau \sim \pi}[R(\tau)]$$
+$$J(\pi) = \int\_{\tau} p(\tau | \pi) R(\tau) = \mathbb{E}\_{\tau \sim \pi}[R(\tau)]$$
 
-这里, $p(\tau|\pi)$表示给定初始状态分布 $\rho_0$ 和策略 $\pi$，马尔可夫决策过程中一个 $T$ 步长的轨迹 $\tau$ 的发生概率，如下：
+这里, $p(\tau|\pi)$表示给定初始状态分布 $\rho\_0$ 和策略 $\pi$，马尔可夫决策过程中一个 $T$ 步长的轨迹 $\tau$ 的发生概率，如下：
 
-$$p(\tau | \pi) = \rho_0(s_0)\prod \limits_{t=0}^{T-1} p(S_{t+1} | S_t, A_t) \pi (A_t | S_t)$$
+$$p(\tau | \pi) = \rho\_0(s\_0)\prod \limits\_{t=0}^{T-1} p(S\_{t+1} | S\_t, A\_t) \pi (A\_t | S\_t)$$
 
 强化学习优化问题通过优化方法来提升策略，以最大化期望回报。最优策略$\pi^*$ 可以表示为:
 
-$$\pi ^ * = \argmax_{\pi} J(\pi)$$
+$$\pi ^ * = \argmax\_{\pi} J(\pi)$$
 
 给定一个策略 $\pi$，价值函数$V(s)$，即给定状态下的期望回报，可以表示为:
 
-$$V^{\pi}(s) = \mathbb{E}_{\tau \sim \pi} [R(\tau) | S_0 = s] = \mathbb{E}_{A_t \sim \pi(\cdot | S_t)} [\sum_{t=0}^{\infin}\gamma^t R(S_t, A_t) | S_0 = s]$$
+$$V^{\pi}(s) = \mathbb{E}\_{\tau \sim \pi} [R(\tau) | S\_0 = s] = \mathbb{E}\_{A\_t \sim \pi(\cdot | S\_t)} [\sum\_{t=0}^{\infin}\gamma^t R(S\_t, A\_t) | S\_0 = s]$$
 
 new
 
-$$V^{\pi}(s)=\mathbb{E}_{\tau\sim\pi}\left[R(\tau)|S_0=s\right]=\mathbb{E}_{A_t}\sim\pi(\cdot|S_t)\left[\sum_{t=0}^{\infty}\gamma^tR(S_t,A_t)|S_0=s\right]$$
+$$V^{\pi}(s)=\mathbb{E}\_{\tau\sim\pi}\left[R(\tau)|S\_0=s\right]=\mathbb{E}\_{A\_t}\sim\pi(\cdot|S\_t)\left[\sum\_{t=0}^{\infty}\gamma^tR(S\_t,A\_t)|S\_0=s\right]$$
 
 
 在MDP中，给定一个动作，就有动作价值函数(Action-Value Function)，是基于状态和动作的期望回报。其定义如下：
 
-$$Q^{\pi}(s, a) = \mathbb{E}_{\tau \sim \pi}[R(\tau) | S_0 = s, A_0 = a] = \mathbb{E}_{A_t \sim \pi(\cdot | S_t)}[\sum_{t=0}^{\infin}\gamma^t R(S_t, A_t)|S_0 = s, A_0 = a]$$
+$$Q^{\pi}(s, a) = \mathbb{E}\_{\tau \sim \pi}[R(\tau) | S\_0 = s, A\_0 = a] = \mathbb{E}\_{A\_t \sim \pi(\cdot | S\_t)}[\sum\_{t=0}^{\infin}\gamma^t R(S\_t, A\_t)|S\_0 = s, A\_0 = a]$$
 
 new
 
-$$Q^{\pi}(s,a)=\mathbb{E}_{\tau\sim\pi}[R(\tau)|S_0=s,A_0=a]=\mathbb{E}_{A_t\sim\pi(\cdot|S_t)}\left[\sum_{t=0}^{\infty}\gamma^tR(S_t,A_t)|S_0=s,A_0=a\right]$$
+$$Q^{\pi}(s,a)=\mathbb{E}\_{\tau\sim\pi}[R(\tau)|S\_0=s,A\_0=a]=\mathbb{E}\_{A\_t\sim\pi(\cdot|S\_t)}\left[\sum\_{t=0}^{\infty}\gamma^tR(S\_t,A\_t)|S\_0=s,A\_0=a\right]$$
 
 根据上述定义，可以得到：
 
-$$V^{\pi}(s) = \mathbb{E}_{a \sim \pi}[Q^{\pi}(s,a)]$$
+$$V^{\pi}(s) = \mathbb{E}\_{a \sim \pi}[Q^{\pi}(s,a)]$$
 
 
 ## 2. 深度强化学习
@@ -129,9 +129,9 @@ Deep Learning + Reinforcement Learning = Deep Reinforcement Learning (DRL)
 ### 4.1 根据Agent训练与测试所采用的策略是否一致
 
 #### 4.1.1 off-policy (离轨策略、离线策略)
-Agent在训练(产生数据)时所使用的策略 $\pi_1$与 agent测试(方法评估与实际使用--目标策略)时所用的策略 $\pi_2$ 不一致。
+Agent在训练(产生数据)时所使用的策略 $\pi\_1$与 agent测试(方法评估与实际使用--目标策略)时所用的策略 $\pi\_2$ 不一致。
 
-例如，在DQN算法中，训练时，通常采用 $\epsilon-greedy$ 策略；而在测试性能或者实际使用时，采用 $ a^* = arg \max\limits_{a} Q^{\pi}\left( s, a \right) $ 策略。
+例如，在DQN算法中，训练时，通常采用 $\epsilon-greedy$ 策略；而在测试性能或者实际使用时，采用 $ a^* = arg \max\limits\_{a} Q^{\pi}\left( s, a \right) $ 策略。
 
 常见算法有：DDPG，TD3，Q-learning，DQN等。
 
@@ -145,7 +145,7 @@ Agent在训练时(产生数据)所使用的策略与其测试(方法评估与提
 
 #### 4.2.1 Value-based algorithms(基于价值的算法)
 
-基于价值的方法通常意味着对动作价值函数 $Q^{\pi}(s,a)$的优化，最优策略通过选取该函数 $Q^{\pi}(s,a)$ 最大值所对应的动作，即 $\pi^* \approx \arg \max\limits_{\pi}Q^{\pi}(s,a)$，这里，$\approx$ 由函数近似误差导致。
+基于价值的方法通常意味着对动作价值函数 $Q^{\pi}(s,a)$的优化，最优策略通过选取该函数 $Q^{\pi}(s,a)$ 最大值所对应的动作，即 $\pi^* \approx \arg \max\limits\_{\pi}Q^{\pi}(s,a)$，这里，$\approx$ 由函数近似误差导致。
 
 基于价值的算法具有采样效率相对较高，值函数估计方差小，不易陷入局部最优等优点，缺点是通常不能处理连续动作空间问题，最终策略通常为确定性策略。
 
@@ -159,40 +159,20 @@ Agent在训练时(产生数据)所使用的策略与其测试(方法评估与提
 
 PGM方法通过梯度上升的方法直接在神经网络的参数上优化Agent的策略。
 
-根据相关理论，期望回报 $J(\pi_{\theta})$ 关于参数 $\theta$ 的梯度可以表示为：
-
-$$\nabla_{\theta}J(\pi\_{\theta}) = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum\_{t=0}^{T}R\_{t}\nabla_{\theta}\sum\_{t'=0}^{T} \log \pi\_{\theta}(A_{t'} | S_{t'})] = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum\_{t'=0}^{T}\nabla_{\theta}\log \pi\_{\theta}(A_{t'} | S_{t'})\sum\_{t=0}^{T} R_t]$$
-
-$$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
-
-<font color=red>testn:</font>
-
-$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{a \sim {\pi}\_{\theta}}[\sum\_{t=0}^{T}]$$
-$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{a \sim {\pi}\_{\theta}}[\sum\_{t=0}^{T} R_{t} \nabla_{\theta}]$$
-
-
-$$V^{\pi}(s) = \mathbb{E}_{a \sim \pi}[Q^{\pi}(s,a)]$$
-
-
-
-**befor conversion:**
-
-$$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
-
-**after conversion:**
+根据相关理论，期望回报 $J(\pi\_{\theta})$ 关于参数 $\theta$ 的梯度可以表示为：
 
 $$\nabla\_\theta J(\pi\_\theta)=\mathbb{E}\_{\tau\sim\pi\_\theta}\left[\sum\_{t=0}^TR\_t\nabla\_\theta\sum\_{t^{\prime}=0}^T\log\pi\_\theta(A\_{t^{\prime}}|S\_{t^{\prime}})\right]=\mathbb{E}\_{\tau\sim\pi\_\theta}\left[\sum\_{t^{\prime}=0}^T\nabla\_\theta\log\pi\_\theta\left(A\_{t^{\prime}}|S\_{t^{\prime}}\right)\sum\_{t=0}^TR\_t\right]$$
 
 当$T \rightarrow \infin$ 时，上式可以表示为：
 
-$$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t'=0}^{\infin}\nabla_{\theta} \log \pi_{\theta}(A_{t'} | S_{t'}) \gamma^{t'}\sum_{t=t'}^{\infin} \gamma^{t-t'}R_t]$$
+$$\nabla\_{\theta}J(\pi\_{\theta}) = \mathbb{E}\_{\tau \sim \pi\_{\theta}}[\sum\_{t'=0}^{\infin}\nabla\_{\theta} \log \pi\_{\theta}(A\_{t'} | S\_{t'}) \gamma^{t'}\sum\_{t=t'}^{\infin} \gamma^{t-t'}R\_t]$$
 
 
 在实际中，经常去掉 $ \gamma^{t^{\prime}} $，从而避免过分强调轨迹早期状态的问题。
 
-上述方法往往对梯度的估计有较大的方法(奖励 $R_t$ 的随机性可能对轨迹长度L呈指数级增长)。为此，常用的方法是引进一个基准函数 $b(S_i)$，仅是状态 $S_i$ 的函数。可将上述梯度修改为：
+上述方法往往对梯度的估计有较大的方法(奖励 $R\_t$ 的随机性可能对轨迹长度L呈指数级增长)。为此，常用的方法是引进一个基准函数 $b(S\_i)$，仅是状态 $S\_i$ 的函数。可将上述梯度修改为：
 
-$$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t'=0}^{\infin}\nabla_{\theta} \log \pi_{\theta}(A_{t'} | S_{t'}) (\sum_{t=t'}^{\infin} \gamma^{t-t'}R_t - b(S_{t'}))]$$
+$$\nabla\_{\theta}J(\pi\_{\theta}) = \mathbb{E}\_{\tau \sim \pi\_{\theta}}[\sum\_{t'=0}^{\infin}\nabla\_{\theta} \log \pi\_{\theta}(A\_{t'} | S\_{t'}) (\sum\_{t=t'}^{\infin} \gamma^{t-t'}R\_t - b(S\_{t'}))]$$
 
 常见的PGM算法有REINFORCE，PG，PPO，TRPO 等。
 
@@ -206,7 +186,7 @@ Actor-Critic方法结合了上述 <font color=red>基于价值</font> 的方法�
 Parameters updating methods
 
 #### 4.3.1 Monte Carlo method(蒙特卡罗方法)
-蒙特卡罗方法：必须等待一条轨迹 $\tau_k$ 生成(真实值)后才能更新。
+蒙特卡罗方法：必须等待一条轨迹 $\tau\_k$ 生成(真实值)后才能更新。
 
 常见算法有：Policy Gradient，TRPO，PPO等。
 
