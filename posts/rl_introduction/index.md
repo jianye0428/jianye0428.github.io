@@ -168,7 +168,7 @@ $$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR
 
 <font color=red>test:</font>
 
-$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{a \sim \pi_{\theta}}[Q^{\pi}(s,a)]$$
+$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{a \sim {\pi}_{\theta}}[Q^{\pi}(s,a)]$$
 
 
 $$V^{\pi}(s) = \mathbb{E}_{a \sim \pi}[Q^{\pi}(s,a)]$$
