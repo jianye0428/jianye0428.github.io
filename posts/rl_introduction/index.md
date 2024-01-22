@@ -165,7 +165,7 @@ $$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t=0
 
 $$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
 
-$$\nabla_{\theta} J(\pi_{\theta})$$
+$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}$$
 
 当$T \rightarrow \infin$ 时，上式可以表示为：
 
