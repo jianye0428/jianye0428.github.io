@@ -1,6 +1,7 @@
 # RL | 强化学习 -- 简介
 
 
+\usepackage{amssymb}
 
 ## 1. 强化学习
 
