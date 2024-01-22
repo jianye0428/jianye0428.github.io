@@ -167,9 +167,10 @@ $$\nabla_{\theta}J(\pi\_{\theta}) = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum\_{
 
 $$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
 
-<font color=red>testn:</font>s
+<font color=red>testn:</font>
 
-$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{a \sim {\pi}\_{\theta}}[\sum\_{t=0}^{T} R\_{t}\nabla_{\theta}\sum\_{t'=0}^{T} \log \pi\_{\theta}(A_{t'} | S_{t'})]$$
+$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{a \sim {\pi}\_{\theta}}[\sum\_{t=0}^{T}]$$
+$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{a \sim {\pi}\_{\theta}}[\sum\_{t=0}^{T} R_{t} \nabla_{\theta}]$$
 
 
 $$V^{\pi}(s) = \mathbb{E}_{a \sim \pi}[Q^{\pi}(s,a)]$$
