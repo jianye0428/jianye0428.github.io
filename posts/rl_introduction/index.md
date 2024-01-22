@@ -1,8 +1,6 @@
 # RL | 强化学习 -- 简介
 
 
-\usepackage{amssymb}
-
 ## 1. 强化学习
 
 Reinforcement Learning (RL): 强化学习</br>
@@ -174,6 +172,16 @@ $$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{a \sim {\pi}\_{\theta}}[\sum\_{t
 
 
 $$V^{\pi}(s) = \mathbb{E}_{a \sim \pi}[Q^{\pi}(s,a)]$$
+
+
+
+**befor conversion:**
+
+$$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
+
+**after conversion:**
+
+$$\nabla\_\theta J(\pi\_\theta)=\mathbb{E}\_{\tau\sim\pi\_\theta}\left[\sum\_{t=0}^TR\_t\nabla\_\theta\sum\_{t^{\prime}=0}^T\log\pi\_\theta(A\_{t^{\prime}}|S\_{t^{\prime}})\right]=\mathbb{E}\_{\tau\sim\pi\_\theta}\left[\sum\_{t^{\prime}=0}^T\nabla\_\theta\log\pi\_\theta\left(A\_{t^{\prime}}|S\_{t^{\prime}}\right)\sum\_{t=0}^TR\_t\right]$$
 
 当$T \rightarrow \infin$ 时，上式可以表示为：
 
