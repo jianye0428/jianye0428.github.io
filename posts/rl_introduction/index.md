@@ -97,6 +97,11 @@ $$\pi ^ * = \argmax_{\pi} J(\pi)$$
 
 $$V^{\pi}(s) = \mathbb{E}_{\tau \sim \pi} [R(\tau) | S_0 = s] = \mathbb{E}_{A_t \sim \pi(\cdot | S_t)} [\sum_{t=0}^{\infin}\gamma^t R(S_t, A_t) | S_0 = s]$$
 
+new
+
+$$V^{\pi}(s)=\mathbb{E}_{\tau\sim\pi}\left[R(\tau)|S_0=s\right]=\mathbb{E}_{A_t}\sim\pi(\cdot|S_t)\left[\sum_{t=0}^{\infty}\gamma^tR(S_t,A_t)|S_0=s\right]$$
+
+
 在MDP中，给定一个动作，就有动作价值函数(Action-Value Function)，是基于状态和动作的期望回报。其定义如下：
 
 $$Q^{\pi}(s, a) = \mathbb{E}_{\tau \sim \pi}[R(\tau) | S_0 = s, A_0 = a] = \mathbb{E}_{A_t \sim \pi(\cdot | S_t)}[\sum_{t=0}^{\infin}\gamma^t R(S_t, A_t)|S_0 = s, A_0 = a]$$
