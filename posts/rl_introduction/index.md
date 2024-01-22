@@ -108,10 +108,6 @@ $$V^{\pi}(s) = \mathbb{E}\_{\tau \sim \pi} [R(\tau) | S\_0 = s] = \mathbb{E}\_{A
 
 $$Q^{\pi}(s, a) = \mathbb{E}\_{\tau \sim \pi}[R(\tau) | S\_0 = s, A\_0 = a] = \mathbb{E}\_{A\_t \sim \pi(\cdot | S\_t)}[\sum\_{t=0}^{\infin}\gamma^t R(S\_t, A\_t)|S\_0 = s, A\_0 = a]$$
 
-new
-
-$$Q^{\pi}(s,a)=\mathbb{E}\_{\tau\sim\pi}[R(\tau)|S\_0=s,A\_0=a]=\mathbb{E}\_{A\_t\sim\pi(\cdot|S\_t)}\left[\sum\_{t=0}^{\infty}\gamma^tR(S\_t,A\_t)|S\_0=s,A\_0=a\right]$$
-
 根据上述定义，可以得到：
 
 $$V^{\pi}(s) = \mathbb{E}\_{a \sim \pi}[Q^{\pi}(s,a)]$$
@@ -134,6 +130,45 @@ Deep Learning + Reinforcement Learning = Deep Reinforcement Learning (DRL)
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">常见深度强化学习算法</div>
 </center>
 <br>
+
+
+### 3.1 Deep Q-Networks （DQN）
+
+DQN网路将Q-Learning和深度学习结合起来，并引入了两种新颖的技术来解决以往采用神经网络等非线性函数逼近器表示动作价值函数 `Q(s,a)` 所产生的不稳定性问题：
+  - 技术1: 经验回放缓存（Replay Buffer）：将Agent获得的经验存入缓存中，然后从该缓存中均匀采用（也可考虑基于优先级采样）小批量样本用于Q-Learning的更新；
+  - 技术2: 目标网络（Target Network）：引入独立的网络，用来代替所需的Q网络来生成Q-Learning的目标，进一步提高神经网络稳定性。
+
+其中, 技术1 能够提高样本使用效率，降低样本间相关性，平滑学习过程；技术2 能够是目标值不受最新参数的影响，大大较少发散和震荡。
+
+DQN算法具体描述如下：
+
+<pre class="pseudocode" lineNumber="true">
+\begin{algorithm}
+\caption{在 KD-Tree 上添加新数据}
+\begin{algorithmic}
+\STATE \textbf{输入}：新数据 $x$，树根 $root$，叶子阈值 $T$
+\STATE \textbf{输出}：树根 $root$
+\PROCEDURE{AddData}{$x,root,T$}
+	\IF{$root.isleaf = 1$}
+		\STATE // 判断是否需要分裂
+		\IF{$|root.data| \ge T$}
+			\STATE $root :=$ \CALL{KDTree}{$root.data \cup \{x\}$}
+		\ELSE
+			\STATE $root.data := root.data \cup \{x\}$
+		\ENDIF
+		\RETURN $root$
+	\ENDIF
+	\STATE // 递归进入左右子树
+	\IF{$x[root.pivot] \le root.med$}
+		\STATE \CALL{AddData}{$x,root.left,T$}
+	\ELSE
+		\STATE \CALL{AddData}{$x,root.right,T$}
+	\ENDIF
+	\RETURN $root$
+\ENDPROCEDURE
+\end{algorithmic}
+\end{algorithm}
+</pre>
 
 ## 4. 深度强化学习算法分类
 
