@@ -166,7 +166,10 @@ $$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t=0
 
 $$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
 
+<font color=red>test:</font>
+
 $$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{ji}$$
+$$\nabla_{\theta} J(\pi_{\theta}) = \mathbb{E}_{\tau\sim\pi_\theta}$$
 
 $$V^{\pi}(s) = \mathbb{E}_{a \sim \pi}[Q^{\pi}(s,a)]$$
 
@@ -186,7 +189,7 @@ $$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t'=
 #### 4.2.3 Actor-Critic algorithms (演员-评论家方法)
 Actor-Critic方法结合了上述 <font color=red>基于价值</font> 的方法和 <font color=red>基于策略</font> 的方法，利用基于价值的方法学习Q值函数或状态价值函数V来提高采样效率(Critic)，并利用基于策略的方法学习策略函数(Actor)，从而适用于连续或高维动作空间。其缺点也继承了二者的缺点，例如，Critic存在过估计问题，而Actor存在探索不足的问题等。
 
-常见算法有 DDPG, A3C，TD3，SAC，等，适用于 continuous and high-Dimension action space
+常见算法有 DDPG, A3C，TD3，SAC等，适用于 continuous and high-Dimension action space
 
 
 ### 4.3 参数更新的方式不同
