@@ -106,6 +106,10 @@ $$V^{\pi}(s)=\mathbb{E}_{\tau\sim\pi}\left[R(\tau)|S_0=s\right]=\mathbb{E}_{A_t}
 
 $$Q^{\pi}(s, a) = \mathbb{E}_{\tau \sim \pi}[R(\tau) | S_0 = s, A_0 = a] = \mathbb{E}_{A_t \sim \pi(\cdot | S_t)}[\sum_{t=0}^{\infin}\gamma^t R(S_t, A_t)|S_0 = s, A_0 = a]$$
 
+new
+
+$$Q^{\pi}(s,a)=\mathbb{E}_{\tau\sim\pi}[R(\tau)|S_0=s,A_0=a]=\mathbb{E}_{A_t\sim\pi(\cdot|S_t)}\left[\sum_{t=0}^{\infty}\gamma^tR(S_t,A_t)|S_0=s,A_0=a\right]$$
+
 根据上述定义，可以得到：
 
 $$V^{\pi}(s) = \mathbb{E}_{a \sim \pi}[Q^{\pi}(s,a)]$$
