@@ -163,7 +163,7 @@ PGM方法通过梯度上升的方法直接在神经网络的参数上优化Agent
 
 根据相关理论，期望回报 $J(\pi_{\theta})$ 关于参数 $\theta$ 的梯度可以表示为：
 
-$$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum_{t=0}^{T}R_{t}\nabla_{\theta}\sum_{t'=0}^{T} \log \pi\_{\theta}(A_{t'} | S_{t'})] = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum_{t'=0}^{T}\nabla_{\theta}\log \pi\_{\theta}(A_{t'} | S_{t'})\sum_{t=0}^{T} R_t]$$
+$$\nabla_{\theta}J(\pi\_{\theta}) = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum_{t=0}^{T}R_{t}\nabla_{\theta}\sum_{t'=0}^{T} \log \pi\_{\theta}(A_{t'} | S_{t'})] = \mathbb{E}_{\tau \sim \pi\_{\theta}}[\sum_{t'=0}^{T}\nabla_{\theta}\log \pi\_{\theta}(A_{t'} | S_{t'})\sum_{t=0}^{T} R_t]$$
 
 $$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$
 
