@@ -142,7 +142,7 @@ DQN网路将Q-Learning和深度学习结合起来，并引入了两种新颖的�
 DQN算法具体描述如下：
 <br>
 <center>
-  <img src="images/dqn.png" width="640" height="320" align=left style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <img src="images/dqn.png" width="640" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
   <br>
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">DQN 伪代码</div>
 </center>
@@ -170,7 +170,7 @@ DDPG算法具体描述如下：
 
 <br>
 <center>
-  <img src="images/ddpg.png" width="640" height="320" align=left style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <img src="images/ddpg.png" width="640" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
   <br>
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">DDPG 伪代码</div>
 </center>
@@ -202,7 +202,7 @@ PPO-Clip算法具体描述如下：
 
 <br>
 <center>
-  <img src="images/ppo.png" width="640" height="320" align=left style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <img src="images/ppo.png" width="640" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
   <br>
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">PPO 伪代码</div>
 </center>
