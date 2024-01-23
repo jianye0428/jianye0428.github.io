@@ -147,7 +147,7 @@ DQN算法具体描述如下：
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">DQN 伪代码</div>
 </center>
 <br>
-
+</br>
 注意：这里随机动作选择概率$\epsilon$一般是随着迭代Episode和Time Step的增加，而逐渐降低，目的是降低随机策略的影响，逐步提高Q网络对Agent动作选择的影响。
 
 该算法中，Line 14 具体更新方式如下：
