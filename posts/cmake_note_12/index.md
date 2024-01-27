@@ -1,9 +1,9 @@
-# CMake 笔记 | [11] 检测环境
+# CMake 笔记 | [12] 检测环境
 
 
 ## 一、CMake:为Eigen库使能向量化
 
-{{<admonition quote "" false>}}
+{{<admonition quote "导言" false>}}
 
 **本篇开始将涉及检测外部库相关的内容，期间会穿插着一些其他的内容。为了能够使得系统在系统中运行Eigen库，我们首先需要在系统中配置好Eigen库。然后介绍与Eigen库相关的CMake配置。**
 {{</admonition>}}
@@ -119,7 +119,7 @@
 > https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter2/05
 
 
-**CMakeLists.txt**
+**CMakeLists.txt文件**
 
 ```c++
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
@@ -160,8 +160,8 @@ target_compile_options(linear-algebra
 target_link_libraries(linear-algebra
   PRIVATE Eigen3::Eigen
 )
-find_package(Eigen3 3.4 REQUIRED CONFIG)
 ```
+<table><tr><td bgcolor=yellow>```find_package(Eigen3 3.4 REQUIRED CONFIG)```</td></tr></table>
 
 - `find_package` 是`CMake`中的一个命令，<u>用于查找和加载特定的第三方库</u>（例如`Eigen3`）的`CMake`配置文件。
 
@@ -172,12 +172,8 @@ find_package(Eigen3 3.4 REQUIRED CONFIG)
 - 一旦找到`Eigen3`库的`CMake`配置文件，`CMake`会加载该配置文件并设置相关的变量，例如 `EIGEN3_INCLUDE_DIR`，其中包含了`Eigen3`库的头文件路径。在接下来的`CMake`构建中，你可以使用这些设置的变量来链接和包含`Eigen3`库。
 
 
-{{<admonition quote "" false>}}
+<table><tr><td bgcolor=yellow>```include(CheckCXXCompilerFlag)```</td></tr></table>
 
-{{</admonition>}}
-```
-include(CheckCXXCompilerFlag)
-```
 
 在`CMake`中，`include(CheckCXXCompilerFlag)` 是一个用于检查`C++`编译器标志是否可用的`CMake`命令。
 

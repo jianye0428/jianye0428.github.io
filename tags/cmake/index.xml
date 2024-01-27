@@ -1,7 +1,763 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>CMake - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/cmake/</link><description>CMake - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 26 Jan 2024 09:10:48 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/cmake/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [11] 检测环境</title><link>https://jianye0428.github.io/posts/cmake_note_12/</link><pubDate>Fri, 26 Jan 2024 09:10:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_12/</guid><description><![CDATA[<h2 id="一cmake为eigen库使能向量化">一、CMake:为Eigen库使能向量化</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>CMake - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/cmake/</link><description>CMake - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 27 Jan 2024 15:38:55 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/cmake/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [14] 检测Python模块和包</title><link>https://jianye0428.github.io/posts/cmake_note_14/</link><pubDate>Sat, 27 Jan 2024 15:38:55 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_14/</guid><description><![CDATA[<h2 id="一检测python模块和包">一、检测Python模块和包</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><strong>上一篇，我们基本了解了如何检测python的解释器和python库。通常，代码是依赖于特定的python模块的，无论是python工具、嵌入python的程序，还是扩展python的库。例如，numpy包。依赖于python模块或包的项目中，确定满足对这些python模块的依赖非常重要。</strong></div>
+    </div>
+  </div>
+<h2 id="二项目结构">二、项目结构</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── py3_pure_embedding.cpp
+</span></span><span class="line"><span class="cl">└── use_numpy.py</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/03"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/03<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<p><strong>CMakeLists.txt</strong></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.5</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">python_module</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonInterp</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonLibs</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_VERSION_MAJOR</span><span class="p">}.</span><span class="err">$</span><span class="p">{</span><span class="n">PYTHON_VERSION_MINOR</span><span class="p">}</span> <span class="n">EXACT</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">execute_process</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="s">&#34;-c&#34;</span> <span class="s">&#34;import re, numpy; print(re.compile(&#39;/__init__.py.*&#39;).sub(&#39;&#39;,numpy.__file__))&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">RESULT_VARIABLE</span> <span class="n">numpy_status</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_VARIABLE</span> <span class="n">numpy_location</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ERROR_QUIET</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_STRIP_TRAILING_WHITESPACE</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">numpy_status</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">NumPy</span> <span class="err">$</span><span class="p">{</span><span class="n">numpy_location</span><span class="p">}</span> <span class="n">CACHE</span> <span class="n">STRING</span> <span class="s">&#34;Location of NumPy&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">execute_process</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="s">&#34;-c&#34;</span> <span class="s">&#34;import numpy; print(numpy.__version__)&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_VARIABLE</span> <span class="n">numpy_version</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ERROR_QUIET</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_STRIP_TRAILING_WHITESPACE</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FindPackageHandleStandardArgs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_package_handle_standard_args</span><span class="p">(</span><span class="n">NumPy</span>
+</span></span><span class="line"><span class="cl">    <span class="n">FOUND_VAR</span> <span class="n">NumPy_FOUND</span>
+</span></span><span class="line"><span class="cl">    <span class="n">REQUIRED_VARS</span> <span class="n">NumPy</span>
+</span></span><span class="line"><span class="cl">    <span class="n">VERSION_VAR</span> <span class="n">numpy_version</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">pure</span><span class="o">-</span><span class="n">embedding</span> <span class="n">py3_pure_embedding</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">pure</span><span class="o">-</span><span class="n">embedding</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_INCLUDE_DIRS</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">pure</span><span class="o">-</span><span class="n">embedding</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_LIBRARIES</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_custom_command</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">OUTPUT</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_COMMAND</span><span class="p">}</span> <span class="o">-</span><span class="n">E</span> <span class="n">copy_if_different</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl">  <span class="n">DEPENDS</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># make sure building pure-embedding triggers the above custom command
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">target_sources</span><span class="p">(</span><span class="n">pure</span><span class="o">-</span><span class="n">embedding</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">execute_process</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="s">&#34;-c&#34;</span> <span class="s">&#34;import re, numpy; print(re.compile(&#39;/__init__.py.*&#39;).sub(&#39;&#39;,numpy.__file__))&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">RESULT_VARIABLE</span> <span class="n">numpy_status</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_VARIABLE</span> <span class="n">numpy_location</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ERROR_QUIET</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_STRIP_TRAILING_WHITESPACE</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用了<code>CMake</code>的<code>execute_process</code>函数来运行一个<code>python</code>脚本。该脚本导入了<code>re</code>和<code>numpy</code>模块，然后使用<code>re.compile</code>函数来替换<code>numpy</code>模块路径中的一个模式。<code>RESULT_VARIABLE</code>用于捕获<code>python</code>脚本执行的状态，而<code>OUTPUT_VARIABLE</code>用于捕获修改后的<code>numpy</code>模块文件的位置。通过使用<code>ERROR_QUIET</code>来抑制进程生成的任何错误，并且使用<code>OUTPUT_STRIP_TRAILING_WHITESPACE</code>来移除输出中的尾随空格。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">numpy_status</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">NumPy</span> <span class="err">$</span><span class="p">{</span><span class="n">numpy_location</span><span class="p">}</span> <span class="n">CACHE</span> <span class="n">STRING</span> <span class="s">&#34;Location of NumPy&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果<code>numpy_status</code>不为空，那么设置了一个名为<code>NumPy</code>的CMake缓存变量，其值为<code>numpy_location</code>，这个变量用于存储<code>NumPy</code>库的位置信息。这个操作允许在<code>CMake</code>配置过程中指定<code>NumPy</code>的位置，以便后续的构建过程可以使用它。如果<code>numpy_status</code>为空，则不进行任何操作。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">execute_process</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="s">&#34;-c&#34;</span> <span class="s">&#34;import numpy; print(numpy.__version__)&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_VARIABLE</span> <span class="n">numpy_version</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ERROR_QUIET</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_STRIP_TRAILING_WHITESPACE</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段代码使用<code>execute_process</code>命令来执行一个<code>python</code>脚本。</p>
+<ul>
+<li><code>${PYTHON_EXECUTABLE}</code> 是一个<code>CMake</code>变量，用于指定<code>python</code>可执行文件的路径。</li>
+<li><code>-c</code> 选项告诉<code>python</code>解释器后面紧跟着的字符串是要执行的<code>python</code>代码。</li>
+<li>在这个<code>python</code>代码中，首先导入了<code>numpy</code>库，然后使用<code>print</code>函数输出了<code>numpy</code>库的版本号。</li>
+<li><code>OUTPUT_VARIABLE</code> 选项用于捕获<code>python</code>代码的输出，即<code>numpy</code>库的版本号。</li>
+<li><code>ERROR_QUIET</code> 选项用于忽略可能的错误信息。</li>
+<li><code>OUTPUT_STRIP_TRAILING_WHITESPACE</code> 选项用于移除输出字符串末尾的空格。</li>
+</ul>
+<p>通过这个操作，可以在<code>CMake</code>配置过程中获取并保存<code>numpy</code>库的版本号，以便后续的构建过程可以使用。</p>
+</div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_custom_command</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">OUTPUT</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_COMMAND</span><span class="p">}</span> <span class="o">-</span><span class="n">E</span> <span class="n">copy_if_different</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl">  <span class="n">DEPENDS</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用 <code>CMake</code> 中的 <code>add_custom_command</code> 命令，用于定义自定义的构建步骤，以及生成相应的输出文件。</p>
+<ul>
+<li><code>OUTPUT</code> 指定了生成的输出文件，这里是 <code>${CMAKE_CURRENT_BINARY_DIR}/use_numpy.py</code>。</li>
+<li><code>COMMAND</code> 指定了生成输出文件所需要执行的命令，这里是将 <code>${CMAKE_CURRENT_SOURCE_DIR}/use_numpy.py</code> 复制到 <code>${CMAKE_CURRENT_BINARY_DIR}/use_numpy.py</code>。</li>
+<li><code>DEPENDS</code> 列出了生成输出文件所依赖的文件，这里是 <code>${CMAKE_CURRENT_SOURCE_DIR}/use_numpy.py</code>。</li>
+</ul>
+<p>这段代码的作用是在构建过程中，如果 <code>${CMAKE_CURRENT_SOURCE_DIR}/use_numpy.py</code> 发生变化，就执行指定的命令来将该文件复制到构建目录 <code>${CMAKE_CURRENT_BINARY_DIR}</code> 下的相同路径。这可以确保在构建过程中，始终使用最新的 <code>use_numpy.py</code> 文件。</p>
+</div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tip<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">pure</span><span class="o">-</span><span class="n">embedding</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">use_numpy</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 <code>CMake</code> 的构建过程中为名为 <code>pure-embedding</code> 的目标（通常是一个可执行文件或库）指定了源文件。在这里，并没有直接添加 <code>C++</code> 源代码，而是添加了一个 <code>python</code> 脚本文件 <code>${CMAKE_CURRENT_BINARY_DIR}/use_numpy.py</code>。</p>
+<p>这意味着在构建 <code>pure-embedding</code> 目标时，<code>CMake</code> 会将 <code>${CMAKE_CURRENT_BINARY_DIR}/use_numpy.py</code> 视为目标的源文件之一，并确保在构建过程中该文件已经生成。</p>
+</div>
+    </div>
+  </div>
+<p><strong>相关源码</strong></p>
+<p><strong>py3_pure_embedding.cpp</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;Python.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PyObject</span> <span class="o">*</span><span class="n">py_name</span><span class="p">,</span> <span class="o">*</span><span class="n">py_module</span><span class="p">,</span> <span class="o">*</span><span class="n">py_dict</span><span class="p">,</span> <span class="o">*</span><span class="n">py_func</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PyObject</span> <span class="o">*</span><span class="n">py_args</span><span class="p">,</span> <span class="o">*</span><span class="n">py_value</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&#34;Usage: pure-embedding python_file funcname [args]</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Py_Initialize</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PyRun_SimpleString</span><span class="p">(</span><span class="s">&#34;import sys&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PyRun_SimpleString</span><span class="p">(</span><span class="s">&#34;sys.path.append(</span><span class="se">\&#34;</span><span class="s">.</span><span class="se">\&#34;</span><span class="s">)&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">py_name</span> <span class="o">=</span> <span class="n">PyUnicode_DecodeFSDefault</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">  <span class="cm">/* Error checking of py_name left out */</span>
+</span></span><span class="line"><span class="cl">  <span class="n">py_module</span> <span class="o">=</span> <span class="n">PyImport_Import</span><span class="p">(</span><span class="n">py_name</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Py_DECREF</span><span class="p">(</span><span class="n">py_name</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">py_module</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">py_func</span> <span class="o">=</span> <span class="n">PyObject_GetAttrString</span><span class="p">(</span><span class="n">py_module</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">    <span class="cm">/* py_func is a new reference */</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">py_func</span> <span class="o">&amp;&amp;</span> <span class="n">PyCallable_Check</span><span class="p">(</span><span class="n">py_func</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">py_args</span> <span class="o">=</span> <span class="n">PyTuple_New</span><span class="p">(</span><span class="n">argc</span> <span class="o">-</span> <span class="mi">3</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span> <span class="o">-</span> <span class="mi">3</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">py_value</span> <span class="o">=</span> <span class="n">PyLong_FromLong</span><span class="p">(</span><span class="n">atoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">3</span><span class="p">]));</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">py_value</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">          <span class="n">Py_DECREF</span><span class="p">(</span><span class="n">py_args</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">          <span class="n">Py_DECREF</span><span class="p">(</span><span class="n">py_module</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">          <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&#34;Cannot convert argument</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">          <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="cm">/* py_value reference stolen here: */</span>
+</span></span><span class="line"><span class="cl">        <span class="n">PyTuple_SetItem</span><span class="p">(</span><span class="n">py_args</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">py_value</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="n">py_value</span> <span class="o">=</span> <span class="n">PyObject_CallObject</span><span class="p">(</span><span class="n">py_func</span><span class="p">,</span> <span class="n">py_args</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">      <span class="n">Py_DECREF</span><span class="p">(</span><span class="n">py_args</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">py_value</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">printf</span><span class="p">(</span><span class="s">&#34;Result of call: %ld</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">PyLong_AsLong</span><span class="p">(</span><span class="n">py_value</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">        <span class="n">Py_DECREF</span><span class="p">(</span><span class="n">py_value</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">Py_DECREF</span><span class="p">(</span><span class="n">py_func</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">Py_DECREF</span><span class="p">(</span><span class="n">py_module</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">PyErr_Print</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&#34;Call failed</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">PyErr_Occurred</span><span class="p">())</span> <span class="n">PyErr_Print</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&#34;Cannot find function </span><span class="se">\&#34;</span><span class="s">%s</span><span class="se">\&#34;\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Py_XDECREF</span><span class="p">(</span><span class="n">py_func</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Py_DECREF</span><span class="p">(</span><span class="n">py_module</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">PyErr_Print</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&#34;Failed to load </span><span class="se">\&#34;</span><span class="s">%s</span><span class="se">\&#34;\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Py_Finalize</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>use_numpy.py</strong></p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">print_ones</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">print</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># we return the number of elements to verify</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># that the C++ code is able to receive return values</span>
+</span></span><span class="line"><span class="cl">  <span class="n">num_elements</span> <span class="o">=</span> <span class="n">rows</span><span class="o">*</span><span class="n">cols</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">num_elements</span></span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>CMake 笔记 | [13] 检测python解释器和python库</title><link>https://jianye0428.github.io/posts/cmake_note_13/</link><pubDate>Sat, 27 Jan 2024 15:38:52 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_13/</guid><description><![CDATA[<h2 id="一检测python解释器和python库">一、检测python解释器和python库</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p><strong>python是一种非常流行的语言。许多项目用python编写的工具，从而将主程序和库打包在一起，或者在配置或构建过程中使用python脚本。这种情况下，确保运行时python解释器的依赖也需要得到满足。本篇将展示如何检测和使用python解释器。</strong></p>
+<p><strong>除此之外，还有其他方法可以将解释语言(如python)与编译语言(如C或C++)组合在一起使用。一种是扩展python，通过编译成共享库的C或C++模块在这些类型上提供新类型和新功能。另一种是将python解释器嵌入到C或C++程序中。两种方法都需要下列条件:</strong></p>
+<ul>
+<li><strong>python解释器的工作版本</strong></li>
+<li><strong>python头文件python.h的可用性</strong></li>
+<li><strong>python运行时库libpython</strong></li>
+</ul>
+</div>
+    </div>
+  </div>
+<h2 id="二检测python解释器">二、检测python解释器</h2>
+<p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/01"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/01<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<p><strong>CMakeLists.txt文件</strong></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">python_interperter</span> <span class="n">LANGUAGES</span> <span class="n">NONE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonInterp</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">execute_process</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="s">&#34;-c&#34;</span> <span class="s">&#34;print(&#39;Hello, python interpreter!&#39;)&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">RESULT_VARIABLE</span> <span class="n">RESULT_STATUS</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_VARIABLE</span> <span class="n">RESULT_OUTPUT</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ERROR_QUIET</span>
+</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_STRIP_TRAILING_WHITESPACE</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># message(STATUS &#34;RESULT_VARIABLE is: ${RESULT_STATUS}&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="cp"># message(STATUS &#34;OUTPUT_VARIABLE is: ${RESULT_OUTPUT}&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">CMakePrintHelpers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">cmake_print_variables</span><span class="p">(</span><span class="n">RESULT_STATUS</span> <span class="n">RESULT_OUTPUT</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonInterp</span> <span class="n">REQUIRED</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用<code>find_package</code>命令找到<code>python</code>解释器。</p>
+<p><code>find_package</code>是用于发现和设置包的<code>CMake</code>模块的命令。这些模块包含<code>CMake</code>命令，用于标识系统标准位置中的包。<code>CMake</code>模块文件称为<code>Find&lt;name&gt;.cmake</code>，当调用<code>find_package(&lt;name&gt;)</code>时，模块中的命令将会运行。</p>
+<p>除了在系统上实际查找包模块之外，查找模块还会设置了一些有用的变量，反映实际找到了什么，也可以在自己的<code>CMakeLists.txt</code>中使用这些变量。对于<code>python</code>解释器，相关模块为<code>FindPythonInterp.cmake</code>附带的设置了一些<code>CMake</code>变量:</p>
+<ul>
+<li><code>PYTHONINTERP_FOUND</code>：是否找到解释器</li>
+<li><code>PYTHON_EXECUTABLE</code>：<code>python</code>解释器到可执行文件的路径</li>
+<li><code>PYTHON_VERSION_STRING</code>：<code>python</code>解释器的完整版本信息</li>
+<li><code>PYTHON_VERSION_MAJOR</code>：<code>python</code>解释器的主要版本号</li>
+<li><code>PYTHON_VERSION_MINOR</code> ：<code>python</code>解释器的次要版本号</li>
+<li><code>PYTHON_VERSION_PATCH</code>：<code>python</code>解释器的补丁版本号</li>
+</ul>
+<p>可以强制<code>CMake</code>，查找特定版本的包。例如，要求<code>python</code>解释器的版本大于或等于<code>2.7</code>：<code>find_package(PythonInterp 2.7)</code>。</p>
+<p><code>CMake</code>有很多查找软件包的模块。建议在<code>CMake</code>在线文档中查询<code>Find&lt;package&gt;.cmake</code>模块，并在使用它们之前详细阅读它们的文档。<code>find_package</code>命令的文档可以参考 :</p>
+<blockquote>
+<p><a href="https://cmake.org/cmake/help/v3.5/command/find_ackage.html"target="_blank" rel="external nofollow noopener noreferrer">https://cmake.org/cmake/help/v3.5/command/find_ackage.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+</div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">execute_process</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="s">&#34;-c&#34;</span> <span class="s">&#34;print(&#39;Hello, world!&#39;)&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">RESULT_VARIABLE</span> <span class="n">_status</span>
+</span></span><span class="line"><span class="cl">  <span class="n">OUTPUT_VARIABLE</span> <span class="n">_hello_world</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ERROR_QUIET</span>
+</span></span><span class="line"><span class="cl">  <span class="n">OUTPUT_STRIP_TRAILING_WHITESPACE</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行<code>python</code>命令并捕获它的输出和返回值。</p></div>
+    </div>
+  </div>
+<p><strong>输出</strong></p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- Found PythonInterp: /usr/bin/python3.8 <span class="o">(</span>found version <span class="s2">&#34;3.8.10&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl">-- RESULT_VARIABLE is: <span class="m">0</span>
+</span></span><span class="line"><span class="cl">-- OUTPUT_VARIABLE is: Hello, python interpreter!
+</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
+</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/jiangli/repo/tutorials/cmake-tutorial/chapter3/01/build</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>附录</strong></p>
+<p>软件包没有安装在标准位置时，<code>CMake</code>无法正确定位它们。用户可以使用<code>-D</code>参数传递相应的选项，告诉<code>CMake</code>查看特定的位置。<code>python</code>解释器可以使用以下配置:</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ cmake -D <span class="nv">PYTHON_EXECUTABLE</span><span class="o">=</span>/custom/location/python ..</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这将指定非标准<code>/custom/location/python</code>安装目录中的<code>python</code>可执行文件。</p>
+<p>注意:每个包都是不同的，<code>Find&lt;package&gt;.cmake</code>模块试图提供统一的检测接口。当<code>CMake</code>无法找到模块包时，可以阅读相应检测模块的文档，以了解如何正确地使用<code>CMake</code>模块。可以在终端中直接浏览文档，可使用<code>cmake --help-module FindPythonInterp</code>查看。</p>
+<p>除了检测包之外，我们还想提到一个便于打印变量的<code>helper</code>模块:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;RESULT_VARIABLE is: ${_status}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;OUTPUT_VARIABLE is: ${_hello_world}&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用以下工具进行调试:</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">CMakePrintHelpers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">cmake_print_variables</span><span class="p">(</span><span class="n">_status</span> <span class="n">_hello_world</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将产生以下输出:</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="o">--</span> <span class="n">_status</span><span class="o">=</span><span class="s">&#34;0&#34;</span> <span class="p">;</span> <span class="n">_hello_world</span><span class="o">=</span><span class="s">&#34;Hello, world!&#34;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="三检测python库">三、检测python库</h1>
+<p><strong>项目结构</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">└── hello_embedded_python.c</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/02"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/02<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<p><strong>CMakeLists.txt文件</strong></p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">link_python</span> <span class="n">LANGUAGES</span> <span class="n">C</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_STANDARD</span> <span class="mi">99</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_C_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonInterp</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonLibs</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_VERSION_MAJOR</span><span class="p">}.</span><span class="err">$</span><span class="p">{</span><span class="n">PYTHON_VERSION_MINOR</span><span class="p">}</span> <span class="n">EXACT</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hello_embedded_python</span> <span class="n">hello_embedded_python</span><span class="p">.</span><span class="n">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">hello_embedded_python</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_INCLUDE_DIRS</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hello_embedded_python</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_LIBRARIES</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>为了确保可执行文件、头文件和库都有一个匹配的版本。这对于不同版本，可能在运行时导致崩溃。通过<code>FindPythonInterp.cmake</code>中定义的<code>PYTHON_VERSION_MAJOR</code>和<code>PYTHON_VERSION_MINOR</code>来实现:</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonInterp</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonLibs</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_VERSION_MAJOR</span><span class="p">}.</span><span class="err">$</span><span class="p">{</span><span class="n">PYTHON_VERSION_MINOR</span><span class="p">}</span> <span class="n">EXACT</span> <span class="n">REQUIRED</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>可执行文件包含<code>python.h</code>头文件。因此，这个目标的<code>include</code>目录必须包含<code>python</code>的<code>include</code>目录，可以通过<code>PYTHON_INCLUDE_DIRS</code>变量进行指定:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">hello_embedded_python</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_INCLUDE_DIRS</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>将可执行文件链接到<code>python</code>库，通过<code>PYTHON_LIBRARIES</code>变量访问:</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">target_link_libraries(hello_embedded_python
+</span></span><span class="line"><span class="cl">  PRIVATE ${PYTHON_LIBRARIES}
+</span></span><span class="line"><span class="cl">)</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>相关源码</strong></p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;Python.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="cm">/* optional but recommended */</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Py_SetProgramName</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Py_Initialize</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PyRun_SimpleString</span><span class="p">(</span><span class="s">&#34;print(&#39;Today is Tuesday!&#39;)</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Py_Finalize</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>附录</strong></p>
+<p>当<code>python</code>不在标准安装目录中，如何确定<code>python</code>头文件和库的位置是正确的？</p>
+<p>对于<code>python</code>解释器，可以通过<code>-D</code>选项传递<code>PYTHON_LIBRARY</code>和<code>PYTHON_INCLUDE_DIR</code>选项来强制<code>CMake</code>查找特定的目录。这些选项指定了以下内容:</p>
+<ul>
+<li><code>PYTHON_LIBRARY</code>：指向<code>python</code>库的路径</li>
+<li><code>PYTHON_INCLUDE_DIR</code>：<code>python.h</code>所在的路径</li>
+</ul>
+<p>这样，就能获得所需的<code>python</code>版本。</p>
+<p>注意：有时需要将<code>-D PYTHON_EXECUTABLE</code>、<code>-D PYTHON_LIBRARY</code>和<code>-D PYTHON_INCLUDE_DIR</code>传递给<code>CMake CLI</code>，以便找到及定位相应的版本的组件。</p>
+<p>要将<code>python</code>解释器及其开发组件匹配为完全相同的版本可能非常困难，对于那些将它们安装在非标准位置或系统上安装了多个版本的情况尤其如此。<code>CMake 3.12</code>版本中增加了新的<code>python</code>检测模块，来解决这个问题。<code>CMakeLists.txt</code>的检测部分也将简化为:</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">Python</span> <span class="n">COMPONENTS</span> <span class="n">Interpreter</span> <span class="n">Development</span> <span class="n">REQUIRED</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>CMake 笔记 | [12] 检测环境</title><link>https://jianye0428.github.io/posts/cmake_note_12/</link><pubDate>Fri, 26 Jan 2024 09:10:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_12/</guid><description><![CDATA[<h2 id="一cmake为eigen库使能向量化">一、CMake:为Eigen库使能向量化</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
     </div>
     <div class="details-content">
       <div class="admonition-content"><strong>本篇开始将涉及检测外部库相关的内容，期间会穿插着一些其他的内容。为了能够使得系统在系统中运行Eigen库，我们首先需要在系统中配置好Eigen库。然后介绍与Eigen库相关的CMake配置。</strong></div>
@@ -155,7 +911,7 @@
 <blockquote>
 <p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter2/05"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter2/05<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 </blockquote>
-<p><strong>CMakeLists.txt</strong></p>
+<p><strong>CMakeLists.txt文件</strong></p>
 <div class="highlight" id="id-4"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -196,7 +952,6 @@
 </span><span class="lnt">36
 </span><span class="lnt">37
 </span><span class="lnt">38
-</span><span class="lnt">39
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
@@ -236,10 +991,10 @@
 </span></span><span class="line"><span class="cl"><span class="p">)</span>
 </span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">linear</span><span class="o">-</span><span class="n">algebra</span>
 </span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="n">Eigen3</span><span class="o">::</span><span class="n">Eigen</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">Eigen3</span> <span class="mf">3.4</span> <span class="n">REQUIRED</span> <span class="n">CONFIG</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
 </div>
-</div><ul>
+</div><table><tr><td bgcolor=yellow>```find_package(Eigen3 3.4 REQUIRED CONFIG)```</td></tr></table>
+<ul>
 <li>
 <p><code>find_package</code> 是<code>CMake</code>中的一个命令，<u>用于查找和加载特定的第三方库</u>（例如<code>Eigen3</code>）的<code>CMake</code>配置文件。</p>
 </li>
@@ -253,25 +1008,11 @@
 <p>一旦找到<code>Eigen3</code>库的<code>CMake</code>配置文件，<code>CMake</code>会加载该配置文件并设置相关的变量，例如 <code>EIGEN3_INCLUDE_DIR</code>，其中包含了<code>Eigen3</code>库的头文件路径。在接下来的<code>CMake</code>构建中，你可以使用这些设置的变量来链接和包含<code>Eigen3</code>库。</p>
 </li>
 </ul>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"></div>
-    </div>
-  </div>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">include(CheckCXXCompilerFlag)</span></span></code></pre></td></tr></table>
-</div>
-</div><p>在<code>CMake</code>中，<code>include(CheckCXXCompilerFlag)</code> 是一个用于检查<code>C++</code>编译器标志是否可用的<code>CMake</code>命令。</p>
+<table><tr><td bgcolor=yellow>```include(CheckCXXCompilerFlag)```</td></tr></table>
+<p>在<code>CMake</code>中，<code>include(CheckCXXCompilerFlag)</code> 是一个用于检查<code>C++</code>编译器标志是否可用的<code>CMake</code>命令。</p>
 <p>这个命令的作用是为了检查特定的<code>C++</code>编译器标志是否受支持。在某些情况下，需要根据编译器的不同来启用或禁用一些特性或优化选项。</p>
 <p>使用这个命令的一般形式是：</p>
-<div class="highlight" id="id-6"><div class="chroma">
+<div class="highlight" id="id-5"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
@@ -282,7 +1023,7 @@
 <p>此命令将尝试将指定的编译器标志添加到<code>C++</code>源代码，并编译一个简单的测试程序来检查编译器是否支持该标志。如果支持，那么<code>CMake</code>将定义一个<code>CMake</code>变量，例如 <code>CMAKE_REQUIRED_FLAGS</code> 或 <code>CMAKE_REQUIRED_LIBRARIES</code>，来表示该标志是可用的。</p>
 <p>通过这种方式，可以在<code>CMake</code>脚本中根据编译器支持情况进行条件编译或设置不同的选项。</p>
 <p>例如，假设我们要检查编译器是否支持<code>C++11</code>标准：</p>
-<div class="highlight" id="id-7"><div class="chroma">
+<div class="highlight" id="id-6"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -341,7 +1082,7 @@
 <p>请注意，与 <code>-march=native</code> 一样，使用 <code>-xHost</code> 也可能会导致生成的可执行文件在其他不同架构的计算机上运行不正确或不稳定，因此在分发或共享可执行文件时需谨慎使用。</p>
 <p><strong><font color=red>相关源码</font></strong></p>
 <p><strong>linear_algebra.cpp</strong></p>
-<div class="highlight" id="id-8"><div class="chroma">
+<div class="highlight" id="id-7"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -405,7 +1146,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p><strong>输出结果</strong></p>
-<div class="highlight" id="id-9"><div class="chroma">
+<div class="highlight" id="id-8"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
