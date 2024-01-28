@@ -15,7 +15,6 @@
 {{</admonition>}}
 
 
-
 ## 二、检测python解释器
 
 项目地址：
