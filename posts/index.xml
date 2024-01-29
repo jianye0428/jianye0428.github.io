@@ -1,4 +1,1012 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 28 Jan 2024 13:30:39 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>长短期记忆网络 -- LSTM</title><link>https://jianye0428.github.io/posts/lstm/</link><pubDate>Thu, 28 Dec 2023 21:50:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/lstm/</guid><description><![CDATA[<h2 id="一传统的bp网络和cnn网络">一、传统的BP网络和CNN网络</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 28 Jan 2024 13:30:39 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [17] 检测外部库 -- 自定义find模块</title><link>https://jianye0428.github.io/posts/cmake_note_17/</link><pubDate>Sun, 28 Jan 2024 13:30:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_17/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><strong>目前上一篇，我们了解了CMake其中一种自定义检测外部库的方式，本篇将展示通过编写一个find模块来定位系统上的<code>ZeroMQ</code>库，以能够在非操作系统上检测该库。</strong></div>
+    </div>
+  </div>
+<h2 id="二项目结构">二、项目结构</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── FindZeroMQ.cmake
+</span></span><span class="line"><span class="cl">├── zmq_client.cpp
+</span></span><span class="line"><span class="cl">└── zmq_server.cpp</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/06"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/06<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<p>注：相关cpp源码与上一篇相同。</p>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_zmq</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_PREFIX_PATH</span> <span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">zmq</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">list</span><span class="p">(</span><span class="n">APPEND</span> <span class="n">CMAKE_MODULE_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">ZeroMQ</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_server</span> <span class="n">zmq_server</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">hw_server</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_server</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_LIBRARIES</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_client</span> <span class="n">zmq_client</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">hw_client</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_client</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_LIBRARIES</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="p">(</span><span class="n">APPEND</span> <span class="n">CMAKE_MODULE_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">})</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这行代码是用于在<code>CMake</code>中向<code>CMAKE_MODULE_PATH</code>变量中添加一个目录的路径。通常，<code>CMAKE_MODULE_PATH</code>用于存放自定义的<code>CMake</code>模块文件，这些模块文件可以在项目的<code>CMakeLists.txt</code>文件中通过<code>include</code>等命令来使用。</p>
+<p>具体而言，这行代码的作用是将<code>${CMAKE_CURRENT_SOURCE_DIR}</code>添加到CMAKE_MODULE_PATH中。<code>${CMAKE_CURRENT_SOURCE_DIR}</code>表示当前<code>CMakeLists.txt</code>所在的目录，即源代码目录。这样做的目的是为了告诉<code>CMake</code>在这个目录中查找自定义的CMake模块。</p>
+<p>这样<code>CMake</code>就可以找到，我们自定义的<code>FindZeroMQ.cmake</code>模块。</p>
+<p>此示例的主<code>CMakeLists.txt</code>在使用<code>FindZeroMQ.cmake</code>时，与上一篇中使用的<code>CMakeLists.txt</code>不同。这个模块使用<code>find_path</code>和<code>find_library</code> <code>CMake</code>内置命令，搜索<code>ZeroMQ</code>头文件和库，并使用<code>find_package_handle_standard_args</code>设置相关变量。</p>
+</div>
+    </div>
+  </div>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">FindZeroMQ.cmake</font></td></tr></body></table>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_ROOT</span> <span class="s">&#34;$ENV{ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">find_path</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="n">NAMES</span> <span class="n">include</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="s">&#34;${ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_path</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span> <span class="n">NAMES</span> <span class="n">zmq</span><span class="p">.</span><span class="n">h</span> <span class="n">HINTS</span> <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">include</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_H</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">function</span><span class="p">(</span><span class="n">_zmqver_EXTRACT</span> <span class="n">_ZeroMQ_VER_COMPONENT</span> <span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_MATCH_1</span> <span class="s">&#34;0&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_expr</span> <span class="s">&#34;^[ </span><span class="se">\\</span><span class="s">t]*#define[ </span><span class="se">\\</span><span class="s">t]+${_ZeroMQ_VER_COMPONENT}[ </span><span class="se">\\</span><span class="s">t]+([0-9]+)$&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">file</span><span class="p">(</span><span class="n">STRINGS</span> <span class="s">&#34;${_ZeroMQ_H}&#34;</span> <span class="n">_ZeroMQ_ver</span> <span class="n">REGEX</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">string</span><span class="p">(</span><span class="n">REGEX</span> <span class="n">MATCH</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span> <span class="n">ZeroMQ_ver</span> <span class="s">&#34;${_ZeroMQ_ver}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">}</span> <span class="s">&#34;${CMAKE_MATCH_1}&#34;</span> <span class="n">PARENT_SCOPE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endfunction</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MAJOR&#34;</span> <span class="n">ZeroMQ_VERSION_MAJOR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MINOR&#34;</span> <span class="n">ZeroMQ_VERSION_MINOR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_PATCH&#34;</span> <span class="n">ZeroMQ_VERSION_PATCH</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">// We should provide version to find_package_handle_standard_args in the same format as it was requested,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// otherwise it can&#39;t check whether version matches exactly.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_FIND_VERSION_COUNT</span> <span class="n">GREATER</span> <span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}.${ZeroMQ_VERSION_PATCH}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// User has requested ZeroMQ version without patch part =&gt; user is not interested in specific patch =&gt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// any patch should be an exact match.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_C_PLATFORM_ID</span><span class="p">}</span> <span class="n">STREQUAL</span> <span class="s">&#34;Windows&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">        <span class="n">NAMES</span> <span class="n">zmq</span> <span class="n">HINTS</span>
+</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
+</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">x86_64</span><span class="o">-</span><span class="n">linux</span><span class="o">-</span><span class="n">gnu</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">        <span class="n">NAMES</span> <span class="n">libzmq</span>
+</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">libzmq_d</span>
+</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">HINTS</span>
+</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FindPackageHandleStandardArgs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package_handle_standard_args</span><span class="p">(</span><span class="n">ZeroMQ</span>
+</span></span><span class="line"><span class="cl">  <span class="n">FOUND_VAR</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_FOUND</span>
+</span></span><span class="line"><span class="cl">  <span class="n">REQUIRED_VARS</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_INCLUDE_DIRS</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">  <span class="n">VERSION_VAR</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_VERSION</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_ROOT</span> <span class="s">&#34;$ENV{ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果<code>ZeroMQ_ROOT</code>变量没有被设置，就尝试从环境变量中获取该路径并设置到<code>ZeroMQ_ROOT</code>变量中。这样的设计可以让我们在不修改<code>CMakeLists.txt</code>文件的情况下，通过设置环境变量来指定ZeroMQ库的路径。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">find_path</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="n">NAMES</span> <span class="n">include</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="s">&#34;${ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_path</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span> <span class="n">NAMES</span> <span class="n">zmq</span><span class="p">.</span><span class="n">h</span> <span class="n">HINTS</span> <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">include</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>用于查找<code>ZeroMQ</code>库的头文件路径，并将路径存储在变量<code>ZeroMQ_INCLUDE_DIRS</code>中。首先检查是否定义了<code>ZeroMQ_ROOT</code>变量，如果未定义，则尝试在系统路径中查找<code>zmq.h</code>头文件；如果已定义，则直接使用<code>ZeroMQ_ROOT</code>变量的值。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_H</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">function</span><span class="p">(</span><span class="n">_zmqver_EXTRACT</span> <span class="n">_ZeroMQ_VER_COMPONENT</span> <span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_MATCH_1</span> <span class="s">&#34;0&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_expr</span> <span class="s">&#34;^[ </span><span class="se">\\</span><span class="s">t]*#define[ </span><span class="se">\\</span><span class="s">t]+${_ZeroMQ_VER_COMPONENT}[ </span><span class="se">\\</span><span class="s">t]+([0-9]+)$&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">file</span><span class="p">(</span><span class="n">STRINGS</span> <span class="s">&#34;${_ZeroMQ_H}&#34;</span> <span class="n">_ZeroMQ_ver</span> <span class="n">REGEX</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span><span class="p">(</span><span class="n">REGEX</span> <span class="n">MATCH</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span> <span class="n">ZeroMQ_ver</span> <span class="s">&#34;${_ZeroMQ_ver}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">}</span> <span class="s">&#34;${CMAKE_MATCH_1}&#34;</span> <span class="n">PARENT_SCOPE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endfunction</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MAJOR&#34;</span> <span class="n">ZeroMQ_VERSION_MAJOR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MINOR&#34;</span> <span class="n">ZeroMQ_VERSION_MINOR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_PATCH&#34;</span> <span class="n">ZeroMQ_VERSION_PATCH</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果成功找到头文件，则将<code>ZeroMQ_INCLUDE_DIRS</code>设置为其位置。我们继续通过使用字符串操作和正则表达式，寻找相应版本的<code>ZeroMQ</code>库。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_FIND_VERSION_COUNT</span> <span class="n">GREATER</span> <span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}.${ZeroMQ_VERSION_PATCH}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>为<code>find_package_handle_standard_args</code>准备<code>ZeroMQ_VERSION</code>变量。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_C_PLATFORM_ID</span><span class="p">}</span> <span class="n">STREQUAL</span> <span class="s">&#34;Windows&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NAMES</span>
+</span></span><span class="line"><span class="cl">        <span class="n">zmq</span>
+</span></span><span class="line"><span class="cl">    <span class="n">HINTS</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">x86_64</span><span class="o">-</span><span class="n">linux</span><span class="o">-</span><span class="n">gnu</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NAMES</span>
+</span></span><span class="line"><span class="cl">        <span class="n">libzmq</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">      <span class="n">libzmq_d</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">HINTS</span>
+</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用<code>find_library</code>命令搜索<code>ZeroMQ</code>库。因为库的命名有所不同，这里我们需要区分<code>Unix</code>的平台和<code>Windows</code>平台。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FindPackageHandleStandardArgs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_package_handle_standard_args</span><span class="p">(</span><span class="n">ZeroMQ</span>
+</span></span><span class="line"><span class="cl">  <span class="n">FOUND_VAR</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ZeroMQ_FOUND</span>
+</span></span><span class="line"><span class="cl">  <span class="n">REQUIRED_VARS</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_INCLUDE_DIRS</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">  <span class="n">VERSION_VAR</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_VERSION</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后，包含了标准<code>FindPackageHandleStandardArgs.cmake</code>，并调用相应的<code>CMake</code>命令。如果找到所有需要的变量，并且版本匹配，则将<code>ZeroMQ_FOUND</code>变量设置为<code>TRUE</code>。</p></div>
+    </div>
+  </div>
+<h2 id="三附录">三、附录</h2>
+<p><code>find-module</code>通常遵循特定的模式:</p>
+<ul>
+<li>检查用户是否为所需的包提供了自定义位置。</li>
+<li>使用<code>find_</code>家族中的命令搜索所需包的必需组件，即头文件、库、可执行程序等等。我们使用<code>find_path</code>查找头文件的完整路径，并使用<code>find_library</code>查找库。<code>CMake</code>还提供<code>find_file</code>、<code>find_program</code>和<code>find_package</code>。这些命令的参数示意如下:</li>
+</ul>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">find_path(&lt;VAR&gt; NAMES name PATHS paths)</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果搜索成功，<code>&lt;VAR&gt;</code>将保存搜索结果；如果搜索失败，则会设置为<code>&lt;VAR&gt;-NOTFOUND</code>。<code>NAMES</code>和<code>PATHS</code>分别是<code>CMake</code>应该查找的文件的名称和搜索应该指向的路径。</p>
+<p>初步搜索的结果中，可以提取版本号。本例中，<code>ZeroMQ</code>头文件包含库版本，可以使用字符串操作和正则表达式提取库版本信息。</p>
+<p>最后，调用<code>find_package_handle_standard_args</code>命令。处理<code>find_package</code>命令的<code>REQUIRED</code>、<code>QUIET</code>和版本参数，并设置<code>ZeroMQ_FOUND</code>变量。</p>
+<p>总结：有四种方式可用于找到依赖包。</p>
+<ul>
+<li>使用由包供应商提供<code>CMake</code>文件<code>&lt;package&gt;Config.cmake </code>，<code>&lt;package&gt;ConfigVersion.cmake</code>和<code>&lt;package&gt;Targets.cmake</code>，通常会在包的标准安装位置查找。</li>
+<li>无论是由<code>CMake</code>还是第三方提供的模块，为所需包使用<code>find-module</code>。</li>
+<li>使用<code>pkg-config</code>，如本篇的示例所示。</li>
+<li>如果这些都不可行，那么编写自己的<code>find</code>模块。</li>
+</ul>
+<p>这四种可选方案按相关性进行了排序，每种方法也都有其挑战。</p>
+<p>目前，并不是所有的包供应商都提供<code>CMake</code>的<code>Find</code>文件，不过正变得越来越普遍。因为导出<code>CMake</code>目标，使得第三方代码很容易使用它所依赖的库和/或程序附加的依赖。</p>
+<p>从一开始，<code>Find-module</code>就一直是<code>CMake</code>中定位依赖的主流手段。但是，它们中的大多数仍然依赖于设置依赖项使用的变量，比如<code>Boost_INCLUDE_DIRS</code>、<code>PYTHON_INTERPRETER</code>等等。这种方式很难在第三方发布自己的包时，确保依赖关系被满足。</p>
+<p>使用<code>pkg-config</code>的方法可以很好地进行适配，因为它已经成为<code>Unix</code>系统的标准。然而，也由于这个原因，它不是一个完全跨平台的方法。此外，如<code>CMake</code>文档所述，在某些情况下，用户可能会意外地覆盖检测包，并导致<code>pkg-config</code>提供不正确的信息。</p>
+<p>最后的方法是编写自己的查找模块脚本，就像本示例中那样。这是可行的，并且依赖于<code>FindPackageHandleStandardArgs.cmake</code>。然而，编写一个全面的查找模块脚本绝非易事，需要考虑很多可能性。</p>
+<p>最后祝大家变得更强！</p>
+<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
+<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
+<p>cmake44</p>
+<p>cmake · 目录</p>
+<p>上一篇CMake:检测外部库&mdash;使用pkg-config下一篇CMake:利用CTest进行单元测试</p>
+<p>People who liked this content also liked</p>
+<p>CMake:超级构建模式</p>
+<p>Hope Hut</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p>IDEA 2023.3 爆了！</p>
+<p>架构汪</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p>CMake: 构建时记录Git Hash值</p>
+<p>Hope Hut</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p></p>
+<p>Scan to Follow</p>
+<p>people underline</p>
+]]></description></item><item><title>CMake 笔记 | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><em><strong>*<code>CTest</code>*<em>是*</em><code>CMake</code>*<em>的测试工具，本篇通过编写和测试能够对整数求和的代码，以窥探*</em><code>CTest</code>*<em>其中的功能一二。为了说明*</em><code>CMake</code>*<em>没有对实际测试的语言进行任何限制，我们不仅使用*</em><code>C++</code>*<em>可执行文件测试代码，还使用*</em><code>Python</code>*<em>脚本和*</em><code>shell</code>*<em>脚本作为测试代码。为了简单起见，我们将不使用任何测试库来实现，但是我们将在后面的笔记中熟悉*</em><code>C++</code>*<em>测试框架*</em>。*</strong></em></div>
+    </div>
+  </div>
+<h2 id="二项目结构">二、项目结构</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── main.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.h
+</span></span><span class="line"><span class="cl">├── test.cpp
+</span></span><span class="line"><span class="cl">├── test.py
+</span></span><span class="line"><span class="cl">└── test.sh</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/01"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/01<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_ctest</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonInterp</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_program</span><span class="p">(</span><span class="n">BASH_EXECUTABLE</span> <span class="n">NAMES</span> <span class="n">bash</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># example library
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_library</span><span class="p">(</span><span class="n">sum_integers</span> <span class="n">sum_integers</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># main code
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_executable</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">main</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">sum_integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># testing binary
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_executable</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">test</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">sum_integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">enable_testing</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">bash_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">BASH_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">sh</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">cpp_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_short</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="kt">short</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">find_program</span><span class="p">(</span><span class="n">BASH_EXECUTABLE</span> <span class="n">NAMES</span> <span class="n">bash</span> <span class="n">REQUIRED</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>用于查找系统中的<code>bash</code>可执行文件，并将可执行文件的路径存储在变量<code>BASH_EXECUTABLE</code>中。这可以用于在<code>CMake</code>构建过程中执行<code>bash</code>脚本或命令。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">enable_testing</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>测试这个目录和所有子文件夹(因为我们把它放在主<code>CMakeLists.txt</code>)。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">cpp_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>定义了一个新的测试，并设置测试名称和运行命令。</p>
+<p>上述代码中，使用了生成器表达式:<code>$&lt;TARGET_FILE:cpp_test&gt;</code>。生成器表达式，是在生成<strong>构建系统生成时</strong>的表达式。我们将在后续的学习内容中介绍和学习生成器表达式。然后，可以声明<code>$&lt;TARGET_FILE:cpp_test&gt;</code>变量，将使用<code>cpp_test</code>可执行目标的完整路径进行替换。</p>
+<p><mark>NOTE:</mark></p>
+<p>生成器表达式在测试时非常方便，因为不必显式地将可执行程序的位置和名称，可以硬编码到测试中。以一种可移植的方式实现这一点非常麻烦，因为可执行文件和可执行后缀(例如，<code>Windows</code>上是<code>.exe</code>后缀)的位置在不同的操作系统、构建类型和生成器之间可能有所不同。使用生成器表达式，我们不必显式地了解位置和名称。</p>
+<p>也可以将参数传递给要运行的<code>test</code>命令：</p>
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_short</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="kt">short</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><mark>NOTE</mark></p>
+<p><code>CTest</code>可以以任何编程语言运行测试集。<code>CTest</code>关心的是，通过命令的返回码测试用例是否通过。<code>CTest</code>遵循的标准约定是：返回零意味着成功，非零返回意味着失败。可以返回零或非零的脚本，都可以做测试用例。</p>
+</div>
+    </div>
+  </div>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<p><strong>sum_integers.h</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#ifndef SUM_INTEGERS_H
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SUM_INTEGERS_H
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="kt">int</span> <span class="nf">sum_integers</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&amp;</span><span class="n">integers</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="cp">#endif </span><span class="c1">// ! SUM_INTEGERS_H
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>sum_integers.cpp</strong></p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">sum_integers</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">integers</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">i</span> <span class="p">:</span> <span class="n">integers</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">sum</span> <span class="o">+=</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">sum</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>main.cpp</strong></p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">integers</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">integers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">stoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]));</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">sum</span> <span class="o">=</span> <span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">sum</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>test.cpp</strong></p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">integers</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">15</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>test.py</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">subprocess</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">argparse</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># test script expects the executable as argument</span>
+</span></span><span class="line"><span class="cl"><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--executable&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;full path to executable&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--short&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">					<span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="n">help</span><span class="o">=</span><span class="s1">&#39;run a shorter test&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">execute_cpp_code</span><span class="p">(</span><span class="n">integers</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="n">args</span><span class="o">.</span><span class="n">executable</span><span class="p">]</span> <span class="o">+</span> <span class="n">integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">short</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># we collect [1, 2, ..., 100] as a list of strings</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_cpp_code</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">101</span><span class="p">)])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="mi">5050</span><span class="p">,</span> <span class="s1">&#39;summing up to 100 failed&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># we collect [1, 2, ..., 1000] as a list of strings</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_cpp_code</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1001</span><span class="p">)])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="mi">500500</span><span class="p">,</span> <span class="s1">&#39;summing up to 1000 failed&#39;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>test.sh</strong></p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="cp">#!/usr/bin/env bash
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="nv">EXECUTABLE</span><span class="o">=</span><span class="nv">$1</span>
+</span></span><span class="line"><span class="cl"><span class="nv">OUTPUT</span><span class="o">=</span><span class="k">$(</span><span class="nv">$EXECUTABLE</span> <span class="m">1</span> <span class="m">2</span> <span class="m">3</span> 4<span class="k">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="o">[</span> <span class="s2">&#34;</span><span class="nv">$OUTPUT</span><span class="s2">&#34;</span> <span class="o">=</span> <span class="s2">&#34;10&#34;</span> <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="k">then</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">exit</span> <span class="m">0</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">exit</span> <span class="m">1</span>
+</span></span><span class="line"><span class="cl"><span class="k">fi</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="三附录">三、附录</h2>
+<p><strong>1. 考虑以下定义:</strong></p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>前面的定义可以通过显式指定脚本运行的<code>WORKING_DIRECTORY</code>重新表达，如下:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">WORKING_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>测试名称可以包含<code>/</code>字符，按名称组织相关测试也很有用，例如：</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python</span><span class="o">/</span><span class="kt">long</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">WORKING_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>有时候，我们需要为测试脚本设置环境变量。这可以通过<code>set_tests_properties</code>实现:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set_tests_properties</span><span class="p">(</span><span class="n">python_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ENVIRONMENT</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_MODULE_PATH</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_HEADER_FILE</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">account</span><span class="p">.</span><span class="n">h</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_LIBRARY_FILE</span><span class="o">=</span><span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">account</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这种方法在不同的平台上并不总可行，<code>CMake</code>提供了解决这个问题的方法。下面的代码片段与上面给出的代码片段相同，在执行实际的<code>Python</code>测试脚本之前，通过<code>CMAKE_COMMAND</code>调用<code>CMake</code>来预先设置环境变量：</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span>
+</span></span><span class="line"><span class="cl">      <span class="n">python_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span>
+</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_COMMAND</span><span class="p">}</span> <span class="o">-</span><span class="n">E</span> <span class="n">env</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_MODULE_PATH</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_HEADER_FILE</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">account</span><span class="p">.</span><span class="n">h</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_LIBRARY_FILE</span><span class="o">=</span><span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">account</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>同样，要注意使用生成器表达式<code>$&lt;TARGET_FILE:account&gt;</code>来传递库文件的位置。</p>
+<p><strong>2. 不同平台测试命令</strong>
+我们已经使用<code>ctest</code>命令执行测试，<code>CMake</code>还将为生成器创建目标(<code>Unix Makefile</code>生成器为<code>make test</code>，<code>Ninja</code>工具为<code>ninja test</code>，或者<code>Visual Studio</code>为<code>RUN_TESTS</code>)。这意味着，还有另一种(几乎)可移植的方法来运行测试：</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cmake --build . --target test</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当使用<code>Visual Studio</code>生成器时，我们需要使用<code>RUN_TESTS</code>来代替:</p>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cmake --build . --target RUN_TESTS</span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>长短期记忆网络 -- LSTM</title><link>https://jianye0428.github.io/posts/lstm/</link><pubDate>Thu, 28 Dec 2023 21:50:25 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/lstm/</guid><description><![CDATA[<h2 id="一传统的bp网络和cnn网络">一、传统的BP网络和CNN网络</h2>
 <p>BP网络和CNN网络没有时间维，和传统的机器学习算法理解起来相差无几，CNN在处理彩色图像的3通道时，也可以理解为叠加多层，图形的三维矩阵当做空间的切片即可理解，写代码的时候照着图形一层层叠加即可。如下图是一个普通的BP网络和CNN网络。
 <br></p>
 <center>
@@ -815,1015 +1823,7 @@ to be added: <br>
   <br>
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">输出结果</div>
 </center>
-<br>]]></description></item><item><title>CMake | [17] 检测外部库 -- 自定义find模块</title><link>https://jianye0428.github.io/posts/cmake_note_17/</link><pubDate>Sun, 28 Jan 2024 13:30:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_17/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><strong>目前上一篇，我们了解了CMake其中一种自定义检测外部库的方式，本篇将展示通过编写一个find模块来定位系统上的<code>ZeroMQ</code>库，以能够在非操作系统上检测该库。</strong></div>
-    </div>
-  </div>
-<h2 id="二项目结构">二、项目结构</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">.
-</span></span><span class="line"><span class="cl">├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">├── FindZeroMQ.cmake
-</span></span><span class="line"><span class="cl">├── zmq_client.cpp
-</span></span><span class="line"><span class="cl">└── zmq_server.cpp</span></span></code></pre></td></tr></table>
-</div>
-</div><p>项目地址：</p>
-<blockquote>
-<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/06"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/06<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<p>注：相关cpp源码与上一篇相同。</p>
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_zmq</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_PREFIX_PATH</span> <span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">zmq</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">list</span><span class="p">(</span><span class="n">APPEND</span> <span class="n">CMAKE_MODULE_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">ZeroMQ</span> <span class="n">REQUIRED</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_server</span> <span class="n">zmq_server</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">hw_server</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_server</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_LIBRARIES</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_client</span> <span class="n">zmq_client</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">hw_client</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_client</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_LIBRARIES</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="p">(</span><span class="n">APPEND</span> <span class="n">CMAKE_MODULE_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">})</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这行代码是用于在<code>CMake</code>中向<code>CMAKE_MODULE_PATH</code>变量中添加一个目录的路径。通常，<code>CMAKE_MODULE_PATH</code>用于存放自定义的<code>CMake</code>模块文件，这些模块文件可以在项目的<code>CMakeLists.txt</code>文件中通过<code>include</code>等命令来使用。</p>
-<p>具体而言，这行代码的作用是将<code>${CMAKE_CURRENT_SOURCE_DIR}</code>添加到CMAKE_MODULE_PATH中。<code>${CMAKE_CURRENT_SOURCE_DIR}</code>表示当前<code>CMakeLists.txt</code>所在的目录，即源代码目录。这样做的目的是为了告诉<code>CMake</code>在这个目录中查找自定义的CMake模块。</p>
-<p>这样<code>CMake</code>就可以找到，我们自定义的<code>FindZeroMQ.cmake</code>模块。</p>
-<p>此示例的主<code>CMakeLists.txt</code>在使用<code>FindZeroMQ.cmake</code>时，与上一篇中使用的<code>CMakeLists.txt</code>不同。这个模块使用<code>find_path</code>和<code>find_library</code> <code>CMake</code>内置命令，搜索<code>ZeroMQ</code>头文件和库，并使用<code>find_package_handle_standard_args</code>设置相关变量。</p>
-</div>
-    </div>
-  </div>
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">FindZeroMQ.cmake</font></td></tr></body></table>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span><span class="lnt">62
-</span><span class="lnt">63
-</span><span class="lnt">64
-</span><span class="lnt">65
-</span><span class="lnt">66
-</span><span class="lnt">67
-</span><span class="lnt">68
-</span><span class="lnt">69
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_ROOT</span> <span class="s">&#34;$ENV{ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">find_path</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="n">NAMES</span> <span class="n">include</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="s">&#34;${ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">find_path</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span> <span class="n">NAMES</span> <span class="n">zmq</span><span class="p">.</span><span class="n">h</span> <span class="n">HINTS</span> <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">include</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_H</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">function</span><span class="p">(</span><span class="n">_zmqver_EXTRACT</span> <span class="n">_ZeroMQ_VER_COMPONENT</span> <span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_MATCH_1</span> <span class="s">&#34;0&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_expr</span> <span class="s">&#34;^[ </span><span class="se">\\</span><span class="s">t]*#define[ </span><span class="se">\\</span><span class="s">t]+${_ZeroMQ_VER_COMPONENT}[ </span><span class="se">\\</span><span class="s">t]+([0-9]+)$&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">file</span><span class="p">(</span><span class="n">STRINGS</span> <span class="s">&#34;${_ZeroMQ_H}&#34;</span> <span class="n">_ZeroMQ_ver</span> <span class="n">REGEX</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">string</span><span class="p">(</span><span class="n">REGEX</span> <span class="n">MATCH</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span> <span class="n">ZeroMQ_ver</span> <span class="s">&#34;${_ZeroMQ_ver}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">}</span> <span class="s">&#34;${CMAKE_MATCH_1}&#34;</span> <span class="n">PARENT_SCOPE</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endfunction</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MAJOR&#34;</span> <span class="n">ZeroMQ_VERSION_MAJOR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MINOR&#34;</span> <span class="n">ZeroMQ_VERSION_MINOR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_PATCH&#34;</span> <span class="n">ZeroMQ_VERSION_PATCH</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// We should provide version to find_package_handle_standard_args in the same format as it was requested,
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// otherwise it can&#39;t check whether version matches exactly.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_FIND_VERSION_COUNT</span> <span class="n">GREATER</span> <span class="mi">2</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}.${ZeroMQ_VERSION_PATCH}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">else</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// User has requested ZeroMQ version without patch part =&gt; user is not interested in specific patch =&gt;
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// any patch should be an exact match.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_C_PLATFORM_ID</span><span class="p">}</span> <span class="n">STREQUAL</span> <span class="s">&#34;Windows&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
-</span></span><span class="line"><span class="cl">        <span class="n">NAMES</span> <span class="n">zmq</span> <span class="n">HINTS</span>
-</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
-</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">x86_64</span><span class="o">-</span><span class="n">linux</span><span class="o">-</span><span class="n">gnu</span>
-</span></span><span class="line"><span class="cl">    <span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">else</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
-</span></span><span class="line"><span class="cl">        <span class="n">NAMES</span> <span class="n">libzmq</span>
-</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
-</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
-</span></span><span class="line"><span class="cl">        <span class="n">libzmq_d</span>
-</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
-</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
-</span></span><span class="line"><span class="cl">        <span class="n">HINTS</span>
-</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
-</span></span><span class="line"><span class="cl">    <span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FindPackageHandleStandardArgs</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">find_package_handle_standard_args</span><span class="p">(</span><span class="n">ZeroMQ</span>
-</span></span><span class="line"><span class="cl">  <span class="n">FOUND_VAR</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_FOUND</span>
-</span></span><span class="line"><span class="cl">  <span class="n">REQUIRED_VARS</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_INCLUDE_DIRS</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_LIBRARIES</span>
-</span></span><span class="line"><span class="cl">  <span class="n">VERSION_VAR</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_VERSION</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_ROOT</span> <span class="s">&#34;$ENV{ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果<code>ZeroMQ_ROOT</code>变量没有被设置，就尝试从环境变量中获取该路径并设置到<code>ZeroMQ_ROOT</code>变量中。这样的设计可以让我们在不修改<code>CMakeLists.txt</code>文件的情况下，通过设置环境变量来指定ZeroMQ库的路径。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">find_path</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="n">NAMES</span> <span class="n">include</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="s">&#34;${ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="n">find_path</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span> <span class="n">NAMES</span> <span class="n">zmq</span><span class="p">.</span><span class="n">h</span> <span class="n">HINTS</span> <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">include</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>用于查找<code>ZeroMQ</code>库的头文件路径，并将路径存储在变量<code>ZeroMQ_INCLUDE_DIRS</code>中。首先检查是否定义了<code>ZeroMQ_ROOT</code>变量，如果未定义，则尝试在系统路径中查找<code>zmq.h</code>头文件；如果已定义，则直接使用<code>ZeroMQ_ROOT</code>变量的值。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_H</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">function</span><span class="p">(</span><span class="n">_zmqver_EXTRACT</span> <span class="n">_ZeroMQ_VER_COMPONENT</span> <span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_MATCH_1</span> <span class="s">&#34;0&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_expr</span> <span class="s">&#34;^[ </span><span class="se">\\</span><span class="s">t]*#define[ </span><span class="se">\\</span><span class="s">t]+${_ZeroMQ_VER_COMPONENT}[ </span><span class="se">\\</span><span class="s">t]+([0-9]+)$&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">file</span><span class="p">(</span><span class="n">STRINGS</span> <span class="s">&#34;${_ZeroMQ_H}&#34;</span> <span class="n">_ZeroMQ_ver</span> <span class="n">REGEX</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">string</span><span class="p">(</span><span class="n">REGEX</span> <span class="n">MATCH</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span> <span class="n">ZeroMQ_ver</span> <span class="s">&#34;${_ZeroMQ_ver}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">}</span> <span class="s">&#34;${CMAKE_MATCH_1}&#34;</span> <span class="n">PARENT_SCOPE</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endfunction</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MAJOR&#34;</span> <span class="n">ZeroMQ_VERSION_MAJOR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MINOR&#34;</span> <span class="n">ZeroMQ_VERSION_MINOR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_PATCH&#34;</span> <span class="n">ZeroMQ_VERSION_PATCH</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果成功找到头文件，则将<code>ZeroMQ_INCLUDE_DIRS</code>设置为其位置。我们继续通过使用字符串操作和正则表达式，寻找相应版本的<code>ZeroMQ</code>库。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_FIND_VERSION_COUNT</span> <span class="n">GREATER</span> <span class="mi">2</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}.${ZeroMQ_VERSION_PATCH}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>为<code>find_package_handle_standard_args</code>准备<code>ZeroMQ_VERSION</code>变量。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_C_PLATFORM_ID</span><span class="p">}</span> <span class="n">STREQUAL</span> <span class="s">&#34;Windows&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
-</span></span><span class="line"><span class="cl">    <span class="n">NAMES</span>
-</span></span><span class="line"><span class="cl">        <span class="n">zmq</span>
-</span></span><span class="line"><span class="cl">    <span class="n">HINTS</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">x86_64</span><span class="o">-</span><span class="n">linux</span><span class="o">-</span><span class="n">gnu</span>
-</span></span><span class="line"><span class="cl">    <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">  <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
-</span></span><span class="line"><span class="cl">    <span class="n">NAMES</span>
-</span></span><span class="line"><span class="cl">        <span class="n">libzmq</span>
-</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
-</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
-</span></span><span class="line"><span class="cl">      <span class="n">libzmq_d</span>
-</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
-</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">HINTS</span>
-</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
-</span></span><span class="line"><span class="cl">    <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>使用<code>find_library</code>命令搜索<code>ZeroMQ</code>库。因为库的命名有所不同，这里我们需要区分<code>Unix</code>的平台和<code>Windows</code>平台。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FindPackageHandleStandardArgs</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">find_package_handle_standard_args</span><span class="p">(</span><span class="n">ZeroMQ</span>
-</span></span><span class="line"><span class="cl">  <span class="n">FOUND_VAR</span>
-</span></span><span class="line"><span class="cl">      <span class="n">ZeroMQ_FOUND</span>
-</span></span><span class="line"><span class="cl">  <span class="n">REQUIRED_VARS</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_INCLUDE_DIRS</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_LIBRARIES</span>
-</span></span><span class="line"><span class="cl">  <span class="n">VERSION_VAR</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_VERSION</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>最后，包含了标准<code>FindPackageHandleStandardArgs.cmake</code>，并调用相应的<code>CMake</code>命令。如果找到所有需要的变量，并且版本匹配，则将<code>ZeroMQ_FOUND</code>变量设置为<code>TRUE</code>。</p></div>
-    </div>
-  </div>
-<h2 id="三附录">三、附录</h2>
-<p><code>find-module</code>通常遵循特定的模式:</p>
-<ul>
-<li>检查用户是否为所需的包提供了自定义位置。</li>
-<li>使用<code>find_</code>家族中的命令搜索所需包的必需组件，即头文件、库、可执行程序等等。我们使用<code>find_path</code>查找头文件的完整路径，并使用<code>find_library</code>查找库。<code>CMake</code>还提供<code>find_file</code>、<code>find_program</code>和<code>find_package</code>。这些命令的参数示意如下:</li>
-</ul>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">find_path(&lt;VAR&gt; NAMES name PATHS paths)</span></span></code></pre></td></tr></table>
-</div>
-</div><p>如果搜索成功，<code>&lt;VAR&gt;</code>将保存搜索结果；如果搜索失败，则会设置为<code>&lt;VAR&gt;-NOTFOUND</code>。<code>NAMES</code>和<code>PATHS</code>分别是<code>CMake</code>应该查找的文件的名称和搜索应该指向的路径。</p>
-<p>初步搜索的结果中，可以提取版本号。本例中，<code>ZeroMQ</code>头文件包含库版本，可以使用字符串操作和正则表达式提取库版本信息。</p>
-<p>最后，调用<code>find_package_handle_standard_args</code>命令。处理<code>find_package</code>命令的<code>REQUIRED</code>、<code>QUIET</code>和版本参数，并设置<code>ZeroMQ_FOUND</code>变量。</p>
-<p>总结：有四种方式可用于找到依赖包。</p>
-<ul>
-<li>使用由包供应商提供<code>CMake</code>文件<code>&lt;package&gt;Config.cmake </code>，<code>&lt;package&gt;ConfigVersion.cmake</code>和<code>&lt;package&gt;Targets.cmake</code>，通常会在包的标准安装位置查找。</li>
-<li>无论是由<code>CMake</code>还是第三方提供的模块，为所需包使用<code>find-module</code>。</li>
-<li>使用<code>pkg-config</code>，如本篇的示例所示。</li>
-<li>如果这些都不可行，那么编写自己的<code>find</code>模块。</li>
-</ul>
-<p>这四种可选方案按相关性进行了排序，每种方法也都有其挑战。</p>
-<p>目前，并不是所有的包供应商都提供<code>CMake</code>的<code>Find</code>文件，不过正变得越来越普遍。因为导出<code>CMake</code>目标，使得第三方代码很容易使用它所依赖的库和/或程序附加的依赖。</p>
-<p>从一开始，<code>Find-module</code>就一直是<code>CMake</code>中定位依赖的主流手段。但是，它们中的大多数仍然依赖于设置依赖项使用的变量，比如<code>Boost_INCLUDE_DIRS</code>、<code>PYTHON_INTERPRETER</code>等等。这种方式很难在第三方发布自己的包时，确保依赖关系被满足。</p>
-<p>使用<code>pkg-config</code>的方法可以很好地进行适配，因为它已经成为<code>Unix</code>系统的标准。然而，也由于这个原因，它不是一个完全跨平台的方法。此外，如<code>CMake</code>文档所述，在某些情况下，用户可能会意外地覆盖检测包，并导致<code>pkg-config</code>提供不正确的信息。</p>
-<p>最后的方法是编写自己的查找模块脚本，就像本示例中那样。这是可行的，并且依赖于<code>FindPackageHandleStandardArgs.cmake</code>。然而，编写一个全面的查找模块脚本绝非易事，需要考虑很多可能性。</p>
-<p>最后祝大家变得更强！</p>
-<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
-<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
-<p>cmake44</p>
-<p>cmake · 目录</p>
-<p>上一篇CMake:检测外部库&mdash;使用pkg-config下一篇CMake:利用CTest进行单元测试</p>
-<p>People who liked this content also liked</p>
-<p>CMake:超级构建模式</p>
-<p>Hope Hut</p>
-<p>不喜欢</p>
-<p>不看的原因</p>
-<p>OK</p>
-<ul>
-<li>内容质量低</li>
-<li>不看此公众号</li>
-</ul>
-<p></p>
-<p>IDEA 2023.3 爆了！</p>
-<p>架构汪</p>
-<p>不喜欢</p>
-<p>不看的原因</p>
-<p>OK</p>
-<ul>
-<li>内容质量低</li>
-<li>不看此公众号</li>
-</ul>
-<p></p>
-<p>CMake: 构建时记录Git Hash值</p>
-<p>Hope Hut</p>
-<p>不喜欢</p>
-<p>不看的原因</p>
-<p>OK</p>
-<ul>
-<li>内容质量低</li>
-<li>不看此公众号</li>
-</ul>
-<p></p>
-<p></p>
-<p>Scan to Follow</p>
-<p>people underline</p>
-]]></description></item><item><title>CMake | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><em><strong>*<code>CTest</code>*<em>是*</em><code>CMake</code>*<em>的测试工具，本篇通过编写和测试能够对整数求和的代码，以窥探*</em><code>CTest</code>*<em>其中的功能一二。为了说明*</em><code>CMake</code>*<em>没有对实际测试的语言进行任何限制，我们不仅使用*</em><code>C++</code>*<em>可执行文件测试代码，还使用*</em><code>Python</code>*<em>脚本和*</em><code>shell</code>*<em>脚本作为测试代码。为了简单起见，我们将不使用任何测试库来实现，但是我们将在后面的笔记中熟悉*</em><code>C++</code>*<em>测试框架*</em>。*</strong></em></div>
-    </div>
-  </div>
-<h2 id="二项目结构">二、项目结构</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
-</span></span><span class="line"><span class="cl">├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">├── main.cpp
-</span></span><span class="line"><span class="cl">├── sum_integers.cpp
-</span></span><span class="line"><span class="cl">├── sum_integers.h
-</span></span><span class="line"><span class="cl">├── test.cpp
-</span></span><span class="line"><span class="cl">├── test.py
-</span></span><span class="line"><span class="cl">└── test.sh</span></span></code></pre></td></tr></table>
-</div>
-</div><p>项目地址：</p>
-<blockquote>
-<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/01"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/01<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_ctest</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonInterp</span> <span class="n">REQUIRED</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">find_program</span><span class="p">(</span><span class="n">BASH_EXECUTABLE</span> <span class="n">NAMES</span> <span class="n">bash</span> <span class="n">REQUIRED</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="cp"># example library
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_library</span><span class="p">(</span><span class="n">sum_integers</span> <span class="n">sum_integers</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="cp"># main code
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_executable</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">main</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">sum_integers</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="cp"># testing binary
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_executable</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">test</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">sum_integers</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">enable_testing</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">bash_test</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">BASH_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">sh</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">cpp_test</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_short</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="kt">short</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-16"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">find_program</span><span class="p">(</span><span class="n">BASH_EXECUTABLE</span> <span class="n">NAMES</span> <span class="n">bash</span> <span class="n">REQUIRED</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>用于查找系统中的<code>bash</code>可执行文件，并将可执行文件的路径存储在变量<code>BASH_EXECUTABLE</code>中。这可以用于在<code>CMake</code>构建过程中执行<code>bash</code>脚本或命令。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-17"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">enable_testing</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>测试这个目录和所有子文件夹(因为我们把它放在主<code>CMakeLists.txt</code>)。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-18"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">cpp_test</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>定义了一个新的测试，并设置测试名称和运行命令。</p>
-<p>上述代码中，使用了生成器表达式:<code>$&lt;TARGET_FILE:cpp_test&gt;</code>。生成器表达式，是在生成<strong>构建系统生成时</strong>的表达式。我们将在后续的学习内容中介绍和学习生成器表达式。然后，可以声明<code>$&lt;TARGET_FILE:cpp_test&gt;</code>变量，将使用<code>cpp_test</code>可执行目标的完整路径进行替换。</p>
-<p><mark>NOTE:</mark></p>
-<p>生成器表达式在测试时非常方便，因为不必显式地将可执行程序的位置和名称，可以硬编码到测试中。以一种可移植的方式实现这一点非常麻烦，因为可执行文件和可执行后缀(例如，<code>Windows</code>上是<code>.exe</code>后缀)的位置在不同的操作系统、构建类型和生成器之间可能有所不同。使用生成器表达式，我们不必显式地了解位置和名称。</p>
-<p>也可以将参数传递给要运行的<code>test</code>命令：</p>
-<div class="highlight" id="id-19"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_short</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="kt">short</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><mark>NOTE</mark></p>
-<p><code>CTest</code>可以以任何编程语言运行测试集。<code>CTest</code>关心的是，通过命令的返回码测试用例是否通过。<code>CTest</code>遵循的标准约定是：返回零意味着成功，非零返回意味着失败。可以返回零或非零的脚本，都可以做测试用例。</p>
-</div>
-    </div>
-  </div>
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
-<p><strong>sum_integers.h</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#ifndef SUM_INTEGERS_H
-</span></span></span><span class="line"><span class="cl"><span class="cp">#define SUM_INTEGERS_H
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="kt">int</span> <span class="nf">sum_integers</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&amp;</span><span class="n">integers</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="cp">#endif </span><span class="c1">// ! SUM_INTEGERS_H
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>sum_integers.cpp</strong></p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">sum_integers</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">integers</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">i</span> <span class="p">:</span> <span class="n">integers</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">sum</span> <span class="o">+=</span> <span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">sum</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>main.cpp</strong></p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">integers</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">integers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">stoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]));</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">sum</span> <span class="o">=</span> <span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">sum</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>test.cpp</strong></p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">integers</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">15</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>test.py</strong></p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">subprocess</span>
-</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">argparse</span>
-</span></span><span class="line"><span class="cl"><span class="c1"># test script expects the executable as argument</span>
-</span></span><span class="line"><span class="cl"><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--executable&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;full path to executable&#39;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--short&#39;</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">					<span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">                    <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">                    <span class="n">help</span><span class="o">=</span><span class="s1">&#39;run a shorter test&#39;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">execute_cpp_code</span><span class="p">(</span><span class="n">integers</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="n">args</span><span class="o">.</span><span class="n">executable</span><span class="p">]</span> <span class="o">+</span> <span class="n">integers</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">short</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">    <span class="c1"># we collect [1, 2, ..., 100] as a list of strings</span>
-</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_cpp_code</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">101</span><span class="p">)])</span>
-</span></span><span class="line"><span class="cl">    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="mi">5050</span><span class="p">,</span> <span class="s1">&#39;summing up to 100 failed&#39;</span>
-</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">    <span class="c1"># we collect [1, 2, ..., 1000] as a list of strings</span>
-</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_cpp_code</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1001</span><span class="p">)])</span>
-</span></span><span class="line"><span class="cl">    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="mi">500500</span><span class="p">,</span> <span class="s1">&#39;summing up to 1000 failed&#39;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>test.sh</strong></p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="cp">#!/usr/bin/env bash
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="nv">EXECUTABLE</span><span class="o">=</span><span class="nv">$1</span>
-</span></span><span class="line"><span class="cl"><span class="nv">OUTPUT</span><span class="o">=</span><span class="k">$(</span><span class="nv">$EXECUTABLE</span> <span class="m">1</span> <span class="m">2</span> <span class="m">3</span> 4<span class="k">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="o">[</span> <span class="s2">&#34;</span><span class="nv">$OUTPUT</span><span class="s2">&#34;</span> <span class="o">=</span> <span class="s2">&#34;10&#34;</span> <span class="o">]</span>
-</span></span><span class="line"><span class="cl"><span class="k">then</span>
-</span></span><span class="line"><span class="cl">    <span class="nb">exit</span> <span class="m">0</span>
-</span></span><span class="line"><span class="cl"><span class="k">else</span>
-</span></span><span class="line"><span class="cl">    <span class="nb">exit</span> <span class="m">1</span>
-</span></span><span class="line"><span class="cl"><span class="k">fi</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="三附录">三、附录</h2>
-<p><strong>1. 考虑以下定义:</strong></p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>前面的定义可以通过显式指定脚本运行的<code>WORKING_DIRECTORY</code>重新表达，如下:</p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">WORKING_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>测试名称可以包含<code>/</code>字符，按名称组织相关测试也很有用，例如：</p>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python</span><span class="o">/</span><span class="kt">long</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">WORKING_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>有时候，我们需要为测试脚本设置环境变量。这可以通过<code>set_tests_properties</code>实现:</p>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set_tests_properties</span><span class="p">(</span><span class="n">python_test</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PROPERTIES</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ENVIRONMENT</span>
-</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_MODULE_PATH</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_HEADER_FILE</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">account</span><span class="p">.</span><span class="n">h</span>
-</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_LIBRARY_FILE</span><span class="o">=</span><span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">account</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这种方法在不同的平台上并不总可行，<code>CMake</code>提供了解决这个问题的方法。下面的代码片段与上面给出的代码片段相同，在执行实际的<code>Python</code>测试脚本之前，通过<code>CMAKE_COMMAND</code>调用<code>CMake</code>来预先设置环境变量：</p>
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span>
-</span></span><span class="line"><span class="cl">      <span class="n">python_test</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_COMMAND</span><span class="p">}</span> <span class="o">-</span><span class="n">E</span> <span class="n">env</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_MODULE_PATH</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_HEADER_FILE</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">account</span><span class="p">.</span><span class="n">h</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_LIBRARY_FILE</span><span class="o">=</span><span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">account</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>同样，要注意使用生成器表达式<code>$&lt;TARGET_FILE:account&gt;</code>来传递库文件的位置。</p>
-<p><strong>2. 不同平台测试命令</strong>
-我们已经使用<code>ctest</code>命令执行测试，<code>CMake</code>还将为生成器创建目标(<code>Unix Makefile</code>生成器为<code>make test</code>，<code>Ninja</code>工具为<code>ninja test</code>，或者<code>Visual Studio</code>为<code>RUN_TESTS</code>)。这意味着，还有另一种(几乎)可移植的方法来运行测试：</p>
-<div class="highlight" id="id-14"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cmake --build . --target test</span></span></code></pre></td></tr></table>
-</div>
-</div><p>当使用<code>Visual Studio</code>生成器时，我们需要使用<code>RUN_TESTS</code>来代替:</p>
-<div class="highlight" id="id-15"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cmake --build . --target RUN_TESTS</span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item><item><title>CMake 笔记 | [13] 检测python解释器和python库</title><link>https://jianye0428.github.io/posts/cmake_note_13/</link><pubDate>Sat, 27 Jan 2024 15:38:52 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_13/</guid><description><![CDATA[<h2 id="一检测python解释器和python库">一、检测python解释器和python库</h2>
+<br>]]></description></item><item><title>CMake 笔记 | [13] 检测python解释器和python库</title><link>https://jianye0428.github.io/posts/cmake_note_13/</link><pubDate>Sat, 27 Jan 2024 15:38:52 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_13/</guid><description><![CDATA[<h2 id="一检测python解释器和python库">一、检测python解释器和python库</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -26380,7 +26380,7 @@ Each scenario’s local map includes all entities found within a 100 m dilation 
 <h2 id="reference">Reference</h2>
 <p>[1]. <a href="https://blog.csdn.net/Yong_Qi2015/article/details/128731798"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/Yong_Qi2015/article/details/128731798<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a><br>
 [2]. <a href="https://blog.csdn.net/m0_56423263/article/details/134593815"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/m0_56423263/article/details/134593815<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a><br></p>
-]]></description></item><item><title>CMake | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+]]></description></item><item><title>CMake 笔记 | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -26867,7 +26867,7 @@ Each scenario’s local map includes all entities found within a 100 m dilation 
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cmake --build . --target RUN_TESTS</span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item><item><title>CMake | [17] 检测外部库 -- 自定义find模块</title><link>https://jianye0428.github.io/posts/cmake_note_17/</link><pubDate>Sun, 28 Jan 2024 13:30:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_17/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+</div>]]></description></item><item><title>CMake 笔记 | [17] 检测外部库 -- 自定义find模块</title><link>https://jianye0428.github.io/posts/cmake_note_17/</link><pubDate>Sun, 28 Jan 2024 13:30:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_17/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
