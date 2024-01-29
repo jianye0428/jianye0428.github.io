@@ -1,4 +1,1012 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 28 Jan 2024 13:30:12 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [16] 检测外部库---使用pkg-config</title><link>https://jianye0428.github.io/posts/cmake_note_16/</link><pubDate>Sun, 28 Jan 2024 13:30:12 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_16/</guid><description><![CDATA[<h1 id="一检测外部库---使用pkg-config">一、检测外部库&mdash;使用pkg-config</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 28 Jan 2024 13:30:39 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>CMake | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><em><strong>*<code>CTest</code>*<em>是*</em><code>CMake</code>*<em>的测试工具，本篇通过编写和测试能够对整数求和的代码，以窥探*</em><code>CTest</code>*<em>其中的功能一二。为了说明*</em><code>CMake</code>*<em>没有对实际测试的语言进行任何限制，我们不仅使用*</em><code>C++</code>*<em>可执行文件测试代码，还使用*</em><code>Python</code>*<em>脚本和*</em><code>shell</code>*<em>脚本作为测试代码。为了简单起见，我们将不使用任何测试库来实现，但是我们将在后面的笔记中熟悉*</em><code>C++</code>*<em>测试框架*</em>。*</strong></em></div>
+    </div>
+  </div>
+<h2 id="二项目结构">二、项目结构</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── main.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.h
+</span></span><span class="line"><span class="cl">├── test.cpp
+</span></span><span class="line"><span class="cl">├── test.py
+</span></span><span class="line"><span class="cl">└── test.sh</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/01"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/01<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_ctest</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PythonInterp</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_program</span><span class="p">(</span><span class="n">BASH_EXECUTABLE</span> <span class="n">NAMES</span> <span class="n">bash</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># example library
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_library</span><span class="p">(</span><span class="n">sum_integers</span> <span class="n">sum_integers</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># main code
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_executable</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">main</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">sum_integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># testing binary
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_executable</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">test</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">sum_integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">enable_testing</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">bash_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">BASH_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">sh</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">cpp_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_short</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="kt">short</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-16"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">find_program</span><span class="p">(</span><span class="n">BASH_EXECUTABLE</span> <span class="n">NAMES</span> <span class="n">bash</span> <span class="n">REQUIRED</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>用于查找系统中的<code>bash</code>可执行文件，并将可执行文件的路径存储在变量<code>BASH_EXECUTABLE</code>中。这可以用于在<code>CMake</code>构建过程中执行<code>bash</code>脚本或命令。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-17"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">enable_testing</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>测试这个目录和所有子文件夹(因为我们把它放在主<code>CMakeLists.txt</code>)。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>Tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-18"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">cpp_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>定义了一个新的测试，并设置测试名称和运行命令。</p>
+<p>上述代码中，使用了生成器表达式:<code>$&lt;TARGET_FILE:cpp_test&gt;</code>。生成器表达式，是在生成<strong>构建系统生成时</strong>的表达式。我们将在后续的学习内容中介绍和学习生成器表达式。然后，可以声明<code>$&lt;TARGET_FILE:cpp_test&gt;</code>变量，将使用<code>cpp_test</code>可执行目标的完整路径进行替换。</p>
+<p><mark>NOTE:</mark></p>
+<p>生成器表达式在测试时非常方便，因为不必显式地将可执行程序的位置和名称，可以硬编码到测试中。以一种可移植的方式实现这一点非常麻烦，因为可执行文件和可执行后缀(例如，<code>Windows</code>上是<code>.exe</code>后缀)的位置在不同的操作系统、构建类型和生成器之间可能有所不同。使用生成器表达式，我们不必显式地了解位置和名称。</p>
+<p>也可以将参数传递给要运行的<code>test</code>命令：</p>
+<div class="highlight" id="id-19"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_short</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="kt">short</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><mark>NOTE</mark></p>
+<p><code>CTest</code>可以以任何编程语言运行测试集。<code>CTest</code>关心的是，通过命令的返回码测试用例是否通过。<code>CTest</code>遵循的标准约定是：返回零意味着成功，非零返回意味着失败。可以返回零或非零的脚本，都可以做测试用例。</p>
+</div>
+    </div>
+  </div>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<p><strong>sum_integers.h</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#ifndef SUM_INTEGERS_H
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SUM_INTEGERS_H
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="kt">int</span> <span class="nf">sum_integers</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="o">&amp;</span><span class="n">integers</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="cp">#endif </span><span class="c1">// ! SUM_INTEGERS_H
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>sum_integers.cpp</strong></p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">sum_integers</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">integers</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="nl">i</span> <span class="p">:</span> <span class="n">integers</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">sum</span> <span class="o">+=</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">sum</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>main.cpp</strong></p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">integers</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">integers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">stoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]));</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">sum</span> <span class="o">=</span> <span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">sum</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>test.cpp</strong></p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">integers</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">15</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>test.py</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">subprocess</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">argparse</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># test script expects the executable as argument</span>
+</span></span><span class="line"><span class="cl"><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--executable&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;full path to executable&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--short&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">					<span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="n">help</span><span class="o">=</span><span class="s1">&#39;run a shorter test&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">execute_cpp_code</span><span class="p">(</span><span class="n">integers</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="n">args</span><span class="o">.</span><span class="n">executable</span><span class="p">]</span> <span class="o">+</span> <span class="n">integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">short</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># we collect [1, 2, ..., 100] as a list of strings</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_cpp_code</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">101</span><span class="p">)])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="mi">5050</span><span class="p">,</span> <span class="s1">&#39;summing up to 100 failed&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># we collect [1, 2, ..., 1000] as a list of strings</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_cpp_code</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1001</span><span class="p">)])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="mi">500500</span><span class="p">,</span> <span class="s1">&#39;summing up to 1000 failed&#39;</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>test.sh</strong></p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl"><span class="cp">#!/usr/bin/env bash
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="nv">EXECUTABLE</span><span class="o">=</span><span class="nv">$1</span>
+</span></span><span class="line"><span class="cl"><span class="nv">OUTPUT</span><span class="o">=</span><span class="k">$(</span><span class="nv">$EXECUTABLE</span> <span class="m">1</span> <span class="m">2</span> <span class="m">3</span> 4<span class="k">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="o">[</span> <span class="s2">&#34;</span><span class="nv">$OUTPUT</span><span class="s2">&#34;</span> <span class="o">=</span> <span class="s2">&#34;10&#34;</span> <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="k">then</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">exit</span> <span class="m">0</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">exit</span> <span class="m">1</span>
+</span></span><span class="line"><span class="cl"><span class="k">fi</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="三附录">三、附录</h2>
+<p><strong>1. 考虑以下定义:</strong></p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>前面的定义可以通过显式指定脚本运行的<code>WORKING_DIRECTORY</code>重新表达，如下:</p>
+<div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python_test_long</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">WORKING_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>测试名称可以包含<code>/</code>字符，按名称组织相关测试也很有用，例如：</p>
+<div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">python</span><span class="o">/</span><span class="kt">long</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span> <span class="n">test</span><span class="p">.</span><span class="n">py</span> <span class="o">--</span><span class="n">executable</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">sum_up</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">WORKING_DIRECTORY</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>有时候，我们需要为测试脚本设置环境变量。这可以通过<code>set_tests_properties</code>实现:</p>
+<div class="highlight" id="id-12"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set_tests_properties</span><span class="p">(</span><span class="n">python_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PROPERTIES</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ENVIRONMENT</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_MODULE_PATH</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_HEADER_FILE</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">account</span><span class="p">.</span><span class="n">h</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ACCOUNT_LIBRARY_FILE</span><span class="o">=</span><span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">account</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这种方法在不同的平台上并不总可行，<code>CMake</code>提供了解决这个问题的方法。下面的代码片段与上面给出的代码片段相同，在执行实际的<code>Python</code>测试脚本之前，通过<code>CMAKE_COMMAND</code>调用<code>CMake</code>来预先设置环境变量：</p>
+<div class="highlight" id="id-13"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span>
+</span></span><span class="line"><span class="cl">      <span class="n">python_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span>
+</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_COMMAND</span><span class="p">}</span> <span class="o">-</span><span class="n">E</span> <span class="n">env</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_MODULE_PATH</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_HEADER_FILE</span><span class="o">=</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">account</span><span class="p">.</span><span class="n">h</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ACCOUNT_LIBRARY_FILE</span><span class="o">=</span><span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">account</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">PYTHON_EXECUTABLE</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">account</span><span class="o">/</span><span class="n">test</span><span class="p">.</span><span class="n">py</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>同样，要注意使用生成器表达式<code>$&lt;TARGET_FILE:account&gt;</code>来传递库文件的位置。</p>
+<p><strong>2. 不同平台测试命令</strong>
+我们已经使用<code>ctest</code>命令执行测试，<code>CMake</code>还将为生成器创建目标(<code>Unix Makefile</code>生成器为<code>make test</code>，<code>Ninja</code>工具为<code>ninja test</code>，或者<code>Visual Studio</code>为<code>RUN_TESTS</code>)。这意味着，还有另一种(几乎)可移植的方法来运行测试：</p>
+<div class="highlight" id="id-14"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cmake --build . --target test</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当使用<code>Visual Studio</code>生成器时，我们需要使用<code>RUN_TESTS</code>来代替:</p>
+<div class="highlight" id="id-15"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cmake --build . --target RUN_TESTS</span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>CMake | [17] 检测外部库 -- 自定义find模块</title><link>https://jianye0428.github.io/posts/cmake_note_17/</link><pubDate>Sun, 28 Jan 2024 13:30:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_17/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><strong>目前上一篇，我们了解了CMake其中一种自定义检测外部库的方式，本篇将展示通过编写一个find模块来定位系统上的<code>ZeroMQ</code>库，以能够在非操作系统上检测该库。</strong></div>
+    </div>
+  </div>
+<h2 id="二项目结构">二、项目结构</h2>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── FindZeroMQ.cmake
+</span></span><span class="line"><span class="cl">├── zmq_client.cpp
+</span></span><span class="line"><span class="cl">└── zmq_server.cpp</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/06"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/06<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<p>注：相关cpp源码与上一篇相同。</p>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_zmq</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_PREFIX_PATH</span> <span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">zmq</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">list</span><span class="p">(</span><span class="n">APPEND</span> <span class="n">CMAKE_MODULE_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">ZeroMQ</span> <span class="n">REQUIRED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_server</span> <span class="n">zmq_server</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">hw_server</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_server</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_LIBRARIES</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_client</span> <span class="n">zmq_client</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">hw_client</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_client</span>
+</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_LIBRARIES</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">list</span><span class="p">(</span><span class="n">APPEND</span> <span class="n">CMAKE_MODULE_PATH</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">})</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这行代码是用于在<code>CMake</code>中向<code>CMAKE_MODULE_PATH</code>变量中添加一个目录的路径。通常，<code>CMAKE_MODULE_PATH</code>用于存放自定义的<code>CMake</code>模块文件，这些模块文件可以在项目的<code>CMakeLists.txt</code>文件中通过<code>include</code>等命令来使用。</p>
+<p>具体而言，这行代码的作用是将<code>${CMAKE_CURRENT_SOURCE_DIR}</code>添加到CMAKE_MODULE_PATH中。<code>${CMAKE_CURRENT_SOURCE_DIR}</code>表示当前<code>CMakeLists.txt</code>所在的目录，即源代码目录。这样做的目的是为了告诉<code>CMake</code>在这个目录中查找自定义的CMake模块。</p>
+<p>这样<code>CMake</code>就可以找到，我们自定义的<code>FindZeroMQ.cmake</code>模块。</p>
+<p>此示例的主<code>CMakeLists.txt</code>在使用<code>FindZeroMQ.cmake</code>时，与上一篇中使用的<code>CMakeLists.txt</code>不同。这个模块使用<code>find_path</code>和<code>find_library</code> <code>CMake</code>内置命令，搜索<code>ZeroMQ</code>头文件和库，并使用<code>find_package_handle_standard_args</code>设置相关变量。</p>
+</div>
+    </div>
+  </div>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">FindZeroMQ.cmake</font></td></tr></body></table>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_ROOT</span> <span class="s">&#34;$ENV{ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">find_path</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="n">NAMES</span> <span class="n">include</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="s">&#34;${ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_path</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span> <span class="n">NAMES</span> <span class="n">zmq</span><span class="p">.</span><span class="n">h</span> <span class="n">HINTS</span> <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">include</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_H</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">function</span><span class="p">(</span><span class="n">_zmqver_EXTRACT</span> <span class="n">_ZeroMQ_VER_COMPONENT</span> <span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">CMAKE_MATCH_1</span> <span class="s">&#34;0&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_expr</span> <span class="s">&#34;^[ </span><span class="se">\\</span><span class="s">t]*#define[ </span><span class="se">\\</span><span class="s">t]+${_ZeroMQ_VER_COMPONENT}[ </span><span class="se">\\</span><span class="s">t]+([0-9]+)$&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">file</span><span class="p">(</span><span class="n">STRINGS</span> <span class="s">&#34;${_ZeroMQ_H}&#34;</span> <span class="n">_ZeroMQ_ver</span> <span class="n">REGEX</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">string</span><span class="p">(</span><span class="n">REGEX</span> <span class="n">MATCH</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span> <span class="n">ZeroMQ_ver</span> <span class="s">&#34;${_ZeroMQ_ver}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">}</span> <span class="s">&#34;${CMAKE_MATCH_1}&#34;</span> <span class="n">PARENT_SCOPE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endfunction</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MAJOR&#34;</span> <span class="n">ZeroMQ_VERSION_MAJOR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MINOR&#34;</span> <span class="n">ZeroMQ_VERSION_MINOR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_PATCH&#34;</span> <span class="n">ZeroMQ_VERSION_PATCH</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">// We should provide version to find_package_handle_standard_args in the same format as it was requested,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// otherwise it can&#39;t check whether version matches exactly.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_FIND_VERSION_COUNT</span> <span class="n">GREATER</span> <span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}.${ZeroMQ_VERSION_PATCH}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// User has requested ZeroMQ version without patch part =&gt; user is not interested in specific patch =&gt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// any patch should be an exact match.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_C_PLATFORM_ID</span><span class="p">}</span> <span class="n">STREQUAL</span> <span class="s">&#34;Windows&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">        <span class="n">NAMES</span> <span class="n">zmq</span> <span class="n">HINTS</span>
+</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
+</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">x86_64</span><span class="o">-</span><span class="n">linux</span><span class="o">-</span><span class="n">gnu</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">        <span class="n">NAMES</span> <span class="n">libzmq</span>
+</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">libzmq_d</span>
+</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">HINTS</span>
+</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FindPackageHandleStandardArgs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package_handle_standard_args</span><span class="p">(</span><span class="n">ZeroMQ</span>
+</span></span><span class="line"><span class="cl">  <span class="n">FOUND_VAR</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_FOUND</span>
+</span></span><span class="line"><span class="cl">  <span class="n">REQUIRED_VARS</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_INCLUDE_DIRS</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">  <span class="n">VERSION_VAR</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ZeroMQ_VERSION</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_ROOT</span> <span class="s">&#34;$ENV{ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果<code>ZeroMQ_ROOT</code>变量没有被设置，就尝试从环境变量中获取该路径并设置到<code>ZeroMQ_ROOT</code>变量中。这样的设计可以让我们在不修改<code>CMakeLists.txt</code>文件的情况下，通过设置环境变量来指定ZeroMQ库的路径。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">ZeroMQ_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">find_path</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="n">NAMES</span> <span class="n">include</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_ROOT</span> <span class="s">&#34;${ZeroMQ_ROOT}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_path</span><span class="p">(</span><span class="n">ZeroMQ_INCLUDE_DIRS</span> <span class="n">NAMES</span> <span class="n">zmq</span><span class="p">.</span><span class="n">h</span> <span class="n">HINTS</span> <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">include</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>用于查找<code>ZeroMQ</code>库的头文件路径，并将路径存储在变量<code>ZeroMQ_INCLUDE_DIRS</code>中。首先检查是否定义了<code>ZeroMQ_ROOT</code>变量，如果未定义，则尝试在系统路径中查找<code>zmq.h</code>头文件；如果已定义，则直接使用<code>ZeroMQ_ROOT</code>变量的值。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_H</span> <span class="err">$</span><span class="p">{</span><span class="n">ZeroMQ_INCLUDE_DIRS</span><span class="p">}</span><span class="o">/</span><span class="n">zmq</span><span class="p">.</span><span class="n">h</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">function</span><span class="p">(</span><span class="n">_zmqver_EXTRACT</span> <span class="n">_ZeroMQ_VER_COMPONENT</span> <span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_MATCH_1</span> <span class="s">&#34;0&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">_ZeroMQ_expr</span> <span class="s">&#34;^[ </span><span class="se">\\</span><span class="s">t]*#define[ </span><span class="se">\\</span><span class="s">t]+${_ZeroMQ_VER_COMPONENT}[ </span><span class="se">\\</span><span class="s">t]+([0-9]+)$&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">file</span><span class="p">(</span><span class="n">STRINGS</span> <span class="s">&#34;${_ZeroMQ_H}&#34;</span> <span class="n">_ZeroMQ_ver</span> <span class="n">REGEX</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">string</span><span class="p">(</span><span class="n">REGEX</span> <span class="n">MATCH</span> <span class="s">&#34;${_ZeroMQ_expr}&#34;</span> <span class="n">ZeroMQ_ver</span> <span class="s">&#34;${_ZeroMQ_ver}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_VER_OUTPUT</span><span class="p">}</span> <span class="s">&#34;${CMAKE_MATCH_1}&#34;</span> <span class="n">PARENT_SCOPE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endfunction</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MAJOR&#34;</span> <span class="n">ZeroMQ_VERSION_MAJOR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_MINOR&#34;</span> <span class="n">ZeroMQ_VERSION_MINOR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">_zmqver_EXTRACT</span><span class="p">(</span><span class="s">&#34;ZMQ_VERSION_PATCH&#34;</span> <span class="n">ZeroMQ_VERSION_PATCH</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果成功找到头文件，则将<code>ZeroMQ_INCLUDE_DIRS</code>设置为其位置。我们继续通过使用字符串操作和正则表达式，寻找相应版本的<code>ZeroMQ</code>库。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ZeroMQ_FIND_VERSION_COUNT</span> <span class="n">GREATER</span> <span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}.${ZeroMQ_VERSION_PATCH}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">ZeroMQ_VERSION</span> <span class="s">&#34;${ZeroMQ_VERSION_MAJOR}.${ZeroMQ_VERSION_MINOR}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>为<code>find_package_handle_standard_args</code>准备<code>ZeroMQ_VERSION</code>变量。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-10"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_C_PLATFORM_ID</span><span class="p">}</span> <span class="n">STREQUAL</span> <span class="s">&#34;Windows&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NAMES</span>
+</span></span><span class="line"><span class="cl">        <span class="n">zmq</span>
+</span></span><span class="line"><span class="cl">    <span class="n">HINTS</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">x86_64</span><span class="o">-</span><span class="n">linux</span><span class="o">-</span><span class="n">gnu</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">find_library</span><span class="p">(</span><span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NAMES</span>
+</span></span><span class="line"><span class="cl">        <span class="n">libzmq</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">      <span class="n">libzmq_d</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;libzmq-${CMAKE_VS_PLATFORM_TOOLSET}-mt-gd-${ZeroMQ_VERSION_MAJOR}_${ZeroMQ_VERSION_MINOR}_${ZeroMQ_VERSION_PATCH}&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">HINTS</span>
+</span></span><span class="line"><span class="cl">        <span class="err">$</span><span class="p">{</span><span class="n">_ZeroMQ_ROOT</span><span class="p">}</span><span class="o">/</span><span class="n">lib</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用<code>find_library</code>命令搜索<code>ZeroMQ</code>库。因为库的命名有所不同，这里我们需要区分<code>Unix</code>的平台和<code>Windows</code>平台。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-11"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FindPackageHandleStandardArgs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">find_package_handle_standard_args</span><span class="p">(</span><span class="n">ZeroMQ</span>
+</span></span><span class="line"><span class="cl">  <span class="n">FOUND_VAR</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ZeroMQ_FOUND</span>
+</span></span><span class="line"><span class="cl">  <span class="n">REQUIRED_VARS</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_INCLUDE_DIRS</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_LIBRARIES</span>
+</span></span><span class="line"><span class="cl">  <span class="n">VERSION_VAR</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ_VERSION</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后，包含了标准<code>FindPackageHandleStandardArgs.cmake</code>，并调用相应的<code>CMake</code>命令。如果找到所有需要的变量，并且版本匹配，则将<code>ZeroMQ_FOUND</code>变量设置为<code>TRUE</code>。</p></div>
+    </div>
+  </div>
+<h2 id="三附录">三、附录</h2>
+<p><code>find-module</code>通常遵循特定的模式:</p>
+<ul>
+<li>检查用户是否为所需的包提供了自定义位置。</li>
+<li>使用<code>find_</code>家族中的命令搜索所需包的必需组件，即头文件、库、可执行程序等等。我们使用<code>find_path</code>查找头文件的完整路径，并使用<code>find_library</code>查找库。<code>CMake</code>还提供<code>find_file</code>、<code>find_program</code>和<code>find_package</code>。这些命令的参数示意如下:</li>
+</ul>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">find_path(&lt;VAR&gt; NAMES name PATHS paths)</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果搜索成功，<code>&lt;VAR&gt;</code>将保存搜索结果；如果搜索失败，则会设置为<code>&lt;VAR&gt;-NOTFOUND</code>。<code>NAMES</code>和<code>PATHS</code>分别是<code>CMake</code>应该查找的文件的名称和搜索应该指向的路径。</p>
+<p>初步搜索的结果中，可以提取版本号。本例中，<code>ZeroMQ</code>头文件包含库版本，可以使用字符串操作和正则表达式提取库版本信息。</p>
+<p>最后，调用<code>find_package_handle_standard_args</code>命令。处理<code>find_package</code>命令的<code>REQUIRED</code>、<code>QUIET</code>和版本参数，并设置<code>ZeroMQ_FOUND</code>变量。</p>
+<p>总结：有四种方式可用于找到依赖包。</p>
+<ul>
+<li>使用由包供应商提供<code>CMake</code>文件<code>&lt;package&gt;Config.cmake </code>，<code>&lt;package&gt;ConfigVersion.cmake</code>和<code>&lt;package&gt;Targets.cmake</code>，通常会在包的标准安装位置查找。</li>
+<li>无论是由<code>CMake</code>还是第三方提供的模块，为所需包使用<code>find-module</code>。</li>
+<li>使用<code>pkg-config</code>，如本篇的示例所示。</li>
+<li>如果这些都不可行，那么编写自己的<code>find</code>模块。</li>
+</ul>
+<p>这四种可选方案按相关性进行了排序，每种方法也都有其挑战。</p>
+<p>目前，并不是所有的包供应商都提供<code>CMake</code>的<code>Find</code>文件，不过正变得越来越普遍。因为导出<code>CMake</code>目标，使得第三方代码很容易使用它所依赖的库和/或程序附加的依赖。</p>
+<p>从一开始，<code>Find-module</code>就一直是<code>CMake</code>中定位依赖的主流手段。但是，它们中的大多数仍然依赖于设置依赖项使用的变量，比如<code>Boost_INCLUDE_DIRS</code>、<code>PYTHON_INTERPRETER</code>等等。这种方式很难在第三方发布自己的包时，确保依赖关系被满足。</p>
+<p>使用<code>pkg-config</code>的方法可以很好地进行适配，因为它已经成为<code>Unix</code>系统的标准。然而，也由于这个原因，它不是一个完全跨平台的方法。此外，如<code>CMake</code>文档所述，在某些情况下，用户可能会意外地覆盖检测包，并导致<code>pkg-config</code>提供不正确的信息。</p>
+<p>最后的方法是编写自己的查找模块脚本，就像本示例中那样。这是可行的，并且依赖于<code>FindPackageHandleStandardArgs.cmake</code>。然而，编写一个全面的查找模块脚本绝非易事，需要考虑很多可能性。</p>
+<p>最后祝大家变得更强！</p>
+<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
+<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
+<p>cmake44</p>
+<p>cmake · 目录</p>
+<p>上一篇CMake:检测外部库&mdash;使用pkg-config下一篇CMake:利用CTest进行单元测试</p>
+<p>People who liked this content also liked</p>
+<p>CMake:超级构建模式</p>
+<p>Hope Hut</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p>IDEA 2023.3 爆了！</p>
+<p>架构汪</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p>CMake: 构建时记录Git Hash值</p>
+<p>Hope Hut</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p></p>
+<p>Scan to Follow</p>
+<p>people underline</p>
+]]></description></item><item><title>CMake 笔记 | [16] 检测外部库---使用pkg-config</title><link>https://jianye0428.github.io/posts/cmake_note_16/</link><pubDate>Sun, 28 Jan 2024 13:30:12 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_16/</guid><description><![CDATA[<h1 id="一检测外部库---使用pkg-config">一、检测外部库&mdash;使用pkg-config</h1>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -74,7 +1082,7 @@
 <blockquote>
 <p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/05"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/05<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 </blockquote>
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
 <div class="highlight" id="id-5"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -156,7 +1164,7 @@
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">导入目标</div>
 </center>
 <br>
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
 <p><strong>zmq_client.cpp</strong></p>
 <div class="highlight" id="id-7"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -308,47 +1316,7 @@
   <br>
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">输出结果</div>
 </center>
-<br>
-<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
-<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
-<p>cmake44</p>
-<p>cmake · 目录</p>
-<p>上一篇CMake: 检测并使用OpenMP的并行环境下一篇CMake:检测外部库&mdash;自定义find模块</p>
-<p>People who liked this content also liked</p>
-<p>CMake:超级构建模式</p>
-<p>Hope Hut</p>
-<p>不喜欢</p>
-<p>不看的原因</p>
-<p>OK</p>
-<ul>
-<li>内容质量低</li>
-<li>不看此公众号</li>
-</ul>
-<p></p>
-<p>CMake:使用函数和宏重用代码</p>
-<p>Hope Hut</p>
-<p>不喜欢</p>
-<p>不看的原因</p>
-<p>OK</p>
-<ul>
-<li>内容质量低</li>
-<li>不看此公众号</li>
-</ul>
-<p></p>
-<p>用C#开发Excel插件的强大开源工具</p>
-<p>编程乐趣</p>
-<p>不喜欢</p>
-<p>不看的原因</p>
-<p>OK</p>
-<ul>
-<li>内容质量低</li>
-<li>不看此公众号</li>
-</ul>
-<p></p>
-<p></p>
-<p>Scan to Follow</p>
-<p>people underline</p>
-]]></description></item><item><title>CMake 笔记 | [15] 检测并使用OpenMP的并行环境</title><link>https://jianye0428.github.io/posts/cmake_note_15/</link><pubDate>Sat, 27 Jan 2024 15:38:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_15/</guid><description><![CDATA[<h2 id="一检测并使用openmp的并行环境">一、检测并使用OpenMP的并行环境</h2>
+<br>]]></description></item><item><title>CMake 笔记 | [15] 检测并使用OpenMP的并行环境</title><link>https://jianye0428.github.io/posts/cmake_note_15/</link><pubDate>Sat, 27 Jan 2024 15:38:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_15/</guid><description><![CDATA[<h2 id="一检测并使用openmp的并行环境">一、检测并使用OpenMP的并行环境</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -13546,604 +14514,5 @@ function() 函数模板并没有实现完美转发。</p>
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span> <span class="mi">4</span> <span class="mi">5</span> <span class="mi">6</span> <span class="mi">7</span> <span class="mi">8</span> <span class="mi">8</span>
 </span></span><span class="line"><span class="cl"><span class="c1">// 再让距离为 8 的元素相加
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span> <span class="mi">4</span> <span class="mi">5</span> <span class="mi">6</span> <span class="mi">7</span> <span class="mi">8</span> <span class="mi">9</span></span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item><item><title>C++ Concurrency in Action [11] | CH11 Testing and Debugging Multithreaded Applications</title><link>https://jianye0428.github.io/posts/ch11_testing_and_debugging_multithreaded_application/</link><pubDate>Tue, 28 Nov 2023 18:58:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ch11_testing_and_debugging_multithreaded_application/</guid><description><![CDATA[<h2 id="并发相关的-bug-类型">并发相关的 bug 类型</h2>
-<ul>
-<li>与并发直接相关的 bug 一般可以分为两大类，一是非预期阻塞，二是 race condition</li>
-<li>非预期阻塞包含以下几种情况
-<ul>
-<li>死锁（deadlock）：两个线程互相等待，导致均无法完成工作。最明显的情况是，如果负责用户界面的线程死锁，界面将失去响应。也有一些情况是，界面可以保持响应，但一些任务无法完成，比如搜索不返回结果，或者文档不被打印</li>
-<li>活锁（livelock）：类似于死锁，不同的是线程不是阻塞等待，而是在忙碌于一个检查循环中，比如自旋锁。严重时，其表现的症状就和死锁一样，比如程序不进行，此外由于线程仍在运行，CPU 会处于高使用率状态。在不太严重的情况下，活锁最终会被操作系统的随机调度解决，但仍然会造成任务的长时间延迟，并且延迟期间 CPU 使用率很高</li>
-<li>I/O 阻塞或其他外部输入：如果线程阻塞等待外部输入，就无法继续处理工作。因此如果一个线程执行的任务会被其他线程等待，就不要让这个线程等待外部输入</li>
-</ul>
-</li>
-<li>许多死锁和活锁都是由于 race condition 造成的，不过很大一部分 race condition 是良性的，比如要处理任务队列的下一个任务，决定用哪个工作线程去处理是无关紧要的。造成问题的 race condtion 包含以下几种情况
-<ul>
-<li>数据竞争（data race）：数据竞争是一种特定类型的 race condtion，由于对共享内存位置的不同步的并发访问，它将导致未定义行为。数据竞争通常发生于不正确地使用原子操作来同步线程，或者不加锁访问共享数据</li>
-<li>被破坏的不变量（broken invariant）：它可以表现为空悬指针（其他线程可以删除被访问的数据）、随机内存损坏（由于局部更新导致线程读取的值不一致）、双重释放（比如两个线程弹出队列的同一个数据）等。不变量的破坏是暂时的，因为它是基于值的。如果不同线程上的操作要求以一个特定顺序执行，不正确的同步就会导致 race condition，有时就会违反这个执行顺序</li>
-<li>生命周期问题（lifetime issue）：这个问题可以归入 broken invariant，但这里单独提出来。这个问题表现为，线程比其访问的数据活得更长。一般这个问题发生于线程引用了超出范围的局部变量，但也不仅限于此，比如调用 <a href="https://en.cppreference.com/w/cpp/thread/thread/join"target="_blank" rel="external nofollow noopener noreferrer">join<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，要考虑异常抛出时，调用不被跳过</li>
-</ul>
-</li>
-<li>通常可以通过调试器来确认死锁和活锁的线程以及它们争用的同步对象。对于数据竞争、不变量的破坏、生命周期问题，可见症状（如随机崩溃或不正确的输出）可以显示在代码的任何位置，代码可能重写系统其他部分使用的内存，并且很久以后才被触及，这个错误可能在程序执行的后期出现在与 bug 代码完全无关的位置。这就是共享内存的真正祸端，无论如何限制线程对数据的访问和确保正确的同步，任何线程都可以重写其他线程中的数据</li>
-</ul>
-<h2 id="定位-bug-的方法">定位 bug 的方法</h2>
-<h3 id="code-review">code review</h3>
-<ul>
-<li>让其他人或自己过段时间来 code review，因为对代码不熟悉，需要思考代码的工作方式，看待的角度也不一样，更有可能发现潜在的问题。多线程代码一般有以下问题
-<ul>
-<li>哪些数据需要被保护，以避免并发访问</li>
-<li>如何确保数据得到保护</li>
-<li>其他线程此时可能运行到代码的哪个位置</li>
-<li>这个线程持有哪些锁</li>
-<li>其他线程持有哪些锁</li>
-<li>在这个线程中完成的操作和另一个线程中完成的操作之间是否有任何排序要求，如何执行这些要求</li>
-<li>这个线程读的数据是否仍然有效，是否可能被其他线程修改过</li>
-<li>假设另一个线程在修改数据，这意味着什么，如何确保这种情况永远不会发生</li>
-</ul>
-</li>
-</ul>
-<h3 id="测试">测试</h3>
-<ul>
-<li>测试多线程程序的困难在于，具体的线程调度顺序是不确定的，对于相同的输入，得到的结果却不一定相同，结果可能有时是正确的，有时是错误的。因此存在潜在的 race condition 也不意味着总会得到失败的结果，有时可能也会成功</li>
-<li>由于重现并发相关的 bug 很困难，所以值得仔细设计测试。最好让每个测试运行最小数量的代码，这样在测试失败时可以最好地隔离出错误代码。比如测试一个并发队列，分别测试并发的 push 和 pop 的工作，就直接比测试整个队列的功能要好</li>
-<li>为了验证问题是否与并发相关，应该从测试中消除并发性。多线程中的 bug 并不意味着一定是并发相关的，如果一个问题在单线程中也总是出现，这就是一个普通的 bug，而不是并发相关的 bug。如果一个问题在单核系统中消失，而在多核或多处理器系统中总会出现，一般这就可能是一个 race condition，或同步、内存序相关的问题</li>
-<li>测试用例
-<ul>
-<li>单线程调用 push() 或 pop()，以验证 queue 的基本功能</li>
-<li>空 queue，一个线程 push()，另一个线程 pop()</li>
-<li>空 queue，多线程 push()</li>
-<li>满 queue，多线程 push()</li>
-<li>空 queue，多线程 pop()</li>
-<li>满 queue，多线程 pop()</li>
-<li>有部分数据但不够所有线程用的 queue，多线程 pop()</li>
-<li>空 queue，一个线程 pop()，多线程 push()</li>
-<li>满 queue，一个线程 pop()，多线程 push()</li>
-<li>空 queue，多线程 pop()，多线程 push()</li>
-<li>满 queue，多线程 pop()，多线程 push()</li>
-</ul>
-</li>
-<li>测试环境
-<ul>
-<li>多线程在每种 case 中具体指多少线程 (3, 4, 1,024?)</li>
-<li>是否有足够的处理器，让每个线程运行在自己的核上</li>
-<li>在哪些处理器架构上进行测试</li>
-<li>如何合理对测试中的 while 部分 suitable scheduling</li>
-</ul>
-</li>
-<li>一般满足以下条件的代码就是易于测试的，这些条件单线程和多线程中同样适用
-<ul>
-<li>每个函数和类的责任是清晰的</li>
-<li>函数简明扼要（short and to the point）</li>
-<li>测试可以完全控制被测代码所在环境</li>
-<li>执行特定操作的被测代码在系统中是紧密而非分散的</li>
-<li>代码在写下之前已被考虑过如何测试</li>
-</ul>
-</li>
-<li>为了测试设计并发代码的一个最好方法是消除并发，如果可以把代码分解成负责线程间通信路径的部分，以及在单线程中操作通信数据的部分，就可以极大地简化问题。对于操作通信数据的部分就可以用常规的单线程技术测试，对于负责线程间通信的部分，代码小了很多，测试也更容易</li>
-</ul>
-<h3 id="多线程测试技术">多线程测试技术</h3>
-<ul>
-<li>第一种测试技术是压力测试，随着代码运行次数的增加，bug 出现的几率也更高，如果代码运行十亿次都通过，代码就很可能是没有问题的。如果测试是细粒度的（fine-grained），比如前面对并发队列的测试，压力测试就更可靠。如果粒度非常大，可能的组合也非常多，即使十亿次的测试的结果也不算可靠</li>
-<li>压力测试的缺点是，如果测试本来就保证了问题不会发生，那么无论测试多少次都不会出现失败的情况，这就会造成误导。比如在单核系统上测试多线程程序，race condition 和乒乓缓存的问题根本不会出现，但这不表示这个程序在多核系统上是没问题的。又比如，不同处理器架构提供了不同的同步和内存序工具，在 x86 和 x86-64 架构上，无论使用 <a href="https://en.cppreference.com/w/cpp/atomic/memory_order"target="_blank" rel="external nofollow noopener noreferrer">memory_order_relaxed<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 还是 <a href="https://en.cppreference.com/w/cpp/atomic/memory_order"target="_blank" rel="external nofollow noopener noreferrer">memory_order_seq_cst<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 内存序，原子 load 操作总是一样的，这意味着在 x86 架构上使用 relaxed 语义总是可行的，但如果换成细粒度内存序指令的系统（比如 SPARC）就会失败</li>
-<li>第二种测试技术是组合仿真测试（combination simulation testing），即使用一个特殊的软件来仿真真实的运行时环境。仿真软件将记录数据访问、锁定、原子操作的序列，然后使用 C++ 内存模型的规则来重复运行所有可能的操作组合，以确定 race condition 和死锁</li>
-<li>虽然这种详尽的组合测试可以保证找到设计所要检测的所有问题，但会花费大量时间，因为组合的数量随线程 数和每个线程执行的操作数呈指数增长，它最好用于单个代码片段的细粒度测试，而非用于整个程序。这种技术的另一个明显缺点是，它要求访真软件能处理代码中的操作</li>
-<li>第三种测试技术是使用专门的库。比如共享数据通常会用 mutex 保护，如果在访问数据时能检查哪些 mutex 被锁定了，就能验证线程在访问数据时是否锁定了相应的 mutex，如果没有锁定就报告失败。库实现也能记录上锁的顺序，如果另一个线程对同一个 mutex 以不同顺序上锁，这就会被记录为潜在的死锁</li>
-<li>另一种类型的库是，同步原语的实现允许测试编写者在多线程等待时，可以控制哪个线程来获得锁，或者哪个线程被 <a href="https://en.cppreference.com/w/cpp/thread/condition_variable/notify_one"target="_blank" rel="external nofollow noopener noreferrer">notify_one<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 通知。这就允许设置特定方案，来验证代码是否在这些方案中按预期运行</li>
-<li>一些测试工具已经作为标准库实现的一部分提供了，其他的则可以基于标准库的部分手动实现</li>
-</ul>
-<h3 id="构建多线程测试代码">构建多线程测试代码</h3>
-<ul>
-<li>多线程测试代码可以分为以下几部分
-<ul>
-<li>必须先执行的总体设置</li>
-<li>必须运行在每个线程上的线程特定的设置</li>
-<li>要并发运行在每个线程上的代码</li>
-<li>并发执行结束后的状态断言</li>
-</ul>
-</li>
-<li>如下是对一个队列的测试代码</li>
-</ul>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">test_concurrent_push_and_pop_on_empty_queue</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ConcurrentQueue</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">q</span><span class="p">;</span>  <span class="c1">// 总体设置：先创建一个队列
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">promise</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">go</span><span class="p">,</span> <span class="n">push_ready</span><span class="p">,</span> <span class="n">pop_ready</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">shared_future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">ready</span><span class="p">(</span><span class="n">go</span><span class="p">.</span><span class="n">get_future</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">push_done</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">pop_done</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">try</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">push_done</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">async</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">launch</span><span class="o">::</span><span class="n">async</span><span class="p">,</span>  <span class="c1">// 指定异步策略保证每个任务运行在自己的线程上
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="p">[</span><span class="o">&amp;</span><span class="n">q</span><span class="p">,</span> <span class="n">ready</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">push_ready</span><span class="p">]()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">          <span class="n">push_ready</span><span class="p">.</span><span class="n">set_value</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">          <span class="n">ready</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">          <span class="n">q</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="mi">42</span><span class="p">);</span>  <span class="c1">// 线程特定的设置：存入一个 int
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="p">});</span>
-</span></span><span class="line"><span class="cl">    <span class="n">pop_done</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">launch</span><span class="o">::</span><span class="n">async</span><span class="p">,</span> <span class="p">[</span><span class="o">&amp;</span><span class="n">q</span><span class="p">,</span> <span class="n">ready</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pop_ready</span><span class="p">]()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">pop_ready</span><span class="p">.</span><span class="n">set_value</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="n">ready</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">q</span><span class="p">.</span><span class="n">try_pop</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">});</span>
-</span></span><span class="line"><span class="cl">    <span class="n">push_ready</span><span class="p">.</span><span class="n">get_future</span><span class="p">().</span><span class="n">wait</span><span class="p">();</span>  <span class="c1">// 等待开始测试的通知
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">pop_ready</span><span class="p">.</span><span class="n">get_future</span><span class="p">().</span><span class="n">wait</span><span class="p">();</span>   <span class="c1">// 同上
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">go</span><span class="p">.</span><span class="n">set_value</span><span class="p">();</span>                  <span class="c1">// 通知开始真正的测试
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">push_done</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>                 <span class="c1">// 获取结果
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">assert</span><span class="p">(</span><span class="n">pop_done</span><span class="p">.</span><span class="n">get</span><span class="p">()</span> <span class="o">==</span> <span class="mi">42</span><span class="p">);</span>    <span class="c1">// 获取结果
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">assert</span><span class="p">(</span><span class="n">q</span><span class="p">.</span><span class="n">empty</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span> <span class="k">catch</span> <span class="p">(...)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">go</span><span class="p">.</span><span class="n">set_value</span><span class="p">();</span>  <span class="c1">// 避免空悬指针
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">throw</span><span class="p">;</span>           <span class="c1">// 再抛出异常
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="测试多线程代码的性能">测试多线程代码的性能</h3>
-<ul>
-<li>使用并发的一个主要目的就是利用多核处理器来提高程序性能，因此测试代码来确保性能确实提升了是很重要的。性能相关的一个主要方面就是可扩展性，性能应该随着核数一起提升。在测试多线程代码性能时，最好在尽可能多的不同配置上进行测试</li>
-</ul>
-]]></description></item><item><title>C++ Concurrency in Action [10] | CH10 Parallel Algorithm</title><link>https://jianye0428.github.io/posts/ch10_parallel_algorithm/</link><pubDate>Tue, 28 Nov 2023 18:58:34 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ch10_parallel_algorithm/</guid><description><![CDATA[<h2 id="执行策略execution-policyhttpsencppreferencecomwcppalgorithmexecution_policy_tag_t"><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">执行策略（execution policy）<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></h2>
-<ul>
-<li>C++17 对标准库算法重载了并行版本，区别是多了一个指定执行策略的参数</li>
-</ul>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">sort</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">());</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag"target="_blank" rel="external nofollow noopener noreferrer">std::execution::par<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 表示允许多线程并行执行此算法，注意这是一个权限（permission）而非强制要求（requirement），此算法依然可以被单线程执行</li>
-<li>另外，如果指定了执行策略，算法复杂度的要求也更宽松，因为并行算法为了利用好系统的并行性通常要做更多工作。比如把工作划分给 100 个处理器，即使总工作是原来的两倍，也仍然能获得原来的五十倍的性能</li>
-<li><a href="https://en.cppreference.com/w/cpp/header/execution"target="_blank" rel="external nofollow noopener noreferrer">&lt;execution&gt;<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中指定了如下执行策略类</li>
-</ul>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">sequenced_policy</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">parallel_policy</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">parallel_unsequenced_policy</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">unsequenced_policy</span>  <span class="c1">// C++20
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>并指定了对应的全局对象</li>
-</ul>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">seq</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par_unseq</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">unseq</span>  <span class="c1">// C++20
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>如果使用执行策略，算法的行为就会受执行策略影响，影响方面包括：算法复杂度、抛异常时的行为、算法步骤的执行位置（where）、方式（how）、时刻（when）</li>
-<li>除了管理并行执行的调度开销，许多并行算法会执行更多的核心操作（交换、比较、使用函数对象等），这样可以减少总的实际消耗时间，从而全面提升性能。这就是算法复杂度受影响的原因，其具体改变因算法不同而异</li>
-<li>在不指定执行策略时，如下对算法的调用，抛出的异常会被传播</li>
-</ul>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="p">[](</span><span class="k">auto</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> <span class="k">throw</span> <span class="nf">my_exception</span><span class="p">();</span> <span class="p">});</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>而指定执行策略时，如果算法执行期间抛出异常，则行为结果由执行策略决定。如果有任何未捕获的异常，执行策略将调用 <a href="https://en.cppreference.com/w/cpp/error/terminate"target="_blank" rel="external nofollow noopener noreferrer">std::terminate<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 终止程序，唯一可能抛出异常的情况是，内部操作不能获取足够的内存资源时抛出 <a href="https://en.cppreference.com/w/cpp/memory/new/bad_alloc"target="_blank" rel="external nofollow noopener noreferrer">std::bad_alloc<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。如下操作将调用 <a href="https://en.cppreference.com/w/cpp/error/terminate"target="_blank" rel="external nofollow noopener noreferrer">std::terminate<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 终止程序</li>
-</ul>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">seq</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
-</span></span><span class="line"><span class="cl">              <span class="p">[](</span><span class="k">auto</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> <span class="k">throw</span> <span class="nf">my_exception</span><span class="p">();</span> <span class="p">});</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>不同的执行策略的执行方式也不相同。执行策略会指定执行算法步骤的代理，可以是常规线程、矢量流、GPU 线程或其他任何东西。执行策略也会指定算法步骤运行的顺序限制，比如是否要以特定顺序运行、不同算法步骤的一部分是否可以互相交错或并行运行等。下面对不同的执行策略进行详细解释</li>
-</ul>
-<h3 id="stdexecutionsequenced_policyhttpsencppreferencecomwcppalgorithmexecution_policy_tag_t"><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::sequenced_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></h3>
-<ul>
-<li><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::sequenced_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略要求可以不（may not）并行执行，所有操作将执行在一个线程上。但它也是执行策略，因此与其他执行策略一样会影响算法复杂度和异常行为</li>
-<li>所有执行在一个线程上的操作必须以某个确定顺序执行，因此这些操作是不能互相交错的。但不规定具体顺序，因此对于不同的函数调用可能产生不同的顺序</li>
-</ul>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 把 1-1000 存入容器，存入顺序可能是顺序也可能是乱序
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">seq</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
-</span></span><span class="line"><span class="cl">              <span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="kt">int</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> <span class="n">x</span> <span class="o">=</span> <span class="o">++</span><span class="n">n</span><span class="p">;</span> <span class="p">});</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>因此 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::sequenced_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略很少要求算法使用迭代器、值、可调用对象，它们可以自由地使用同步机制，可以依赖于同一线程上调用的操作，尽管不能依赖于这些操作的顺序</li>
-</ul>
-<h3 id="stdexecutionparallel_policyhttpsencppreferencecomwcppalgorithmexecution_policy_tag_t"><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></h3>
-<ul>
-<li><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略提供了基本的跨多个线程的并行执行，操作可以执行在调用算法的线程上，或执行在由库创建的线程上，在一个给定线程上的操作必须以确定顺序执行，并且不能相互交错。同样这个顺序是未指定的，对于不同的调用可能会有不同的顺序。一个给定的操作将在一个固定的线程上运行完整个周期</li>
-<li>因此 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略对于迭代器、值、可调用对象的使用就有一定要求，它们在并行调用时不能造成数据竞争，并且不能依赖于统一线程上的其他操作，或者说只能依赖于不运行在同一线程上的其他操作</li>
-<li>大多数情况都可以使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略</li>
-</ul>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="p">[](</span><span class="k">auto</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> <span class="o">++</span><span class="n">x</span><span class="p">;</span> <span class="p">});</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>只有在元素之间有特定顺序或对共享数据的访问不同步时，它才有问题</li>
-</ul>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">v</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="kt">int</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">x</span> <span class="o">=</span> <span class="o">++</span><span class="n">n</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">});</span>  <span class="c1">// 如果多个线程执行 lambda 就会对 n 产生数据竞争
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>因此使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略时，应该事先考虑可能出现的未定义行为。可以用 mutex 或原子变量来解决竞争问题，但这就影响了并发性。不过这个例子只是为了阐述此情况，一般使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略时都是允许同步访问共享数据的</li>
-</ul>
-<h3 id="stdexecutionparallel_unsequenced_policyhttpsencppreferencecomwcppalgorithmexecution_policy_tag_t"><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_unsequenced_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></h3>
-<ul>
-<li><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_unsequenced_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略提供了最大可能的并行化，代价是对算法使用的迭代器、值和可调用对象有最严格的的要求</li>
-<li>使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_unsequenced_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略的算法允许以无序的方式在任意未指定的线程中执行，并且在每个线程中彼此不排序。也就是说，操作可以在单个线程上互相交错，同一线程上的第二个操作可以开始于第一个操作结束前，并且可以在线程间迁移，一个给定的操作可以开始于一个线程，运行于另一线程，而完成于第三个线程</li>
-<li>使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t"target="_blank" rel="external nofollow noopener noreferrer">std::execution::parallel_unsequenced_policy<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 策略时，提供给算法的迭代器、值、可调用对象上的操作不能使用任何形式的同步，也不能调用与其他代码同步的任何函数。这意味着操作只能作用于相关元素，或任何基于这些元素的可访问数据，并且不能修改任何线程间或元素间的共享数据</li>
-</ul>
-<h2 id="标准库并行算法">标准库并行算法</h2>
-<ul>
-<li><a href="https://en.cppreference.com/w/cpp/algorithm"target="_blank" rel="external nofollow noopener noreferrer">&lt;algorithm&gt;<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 和 <a href="https://en.cppreference.com/w/cpp/header/numeric"target="_blank" rel="external nofollow noopener noreferrer">&lt;numberic&gt;<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中的大部分算法都重载了并行版本。<a href="https://en.cppreference.com/w/cpp/algorithm/accumulate"target="_blank" rel="external nofollow noopener noreferrer">std::accumlate<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 没有并行版本，但 C++17 提供了 <a href="https://en.cppreference.com/w/cpp/algorithm/reduce"target="_blank" rel="external nofollow noopener noreferrer">std::reduce<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-</ul>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">accumulate</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="mi">0</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">reduce</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">());</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>如果常规算法有并行版的重载，则并行版对常规算法原有的所有重载都有一个对应重载版本</li>
-</ul>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">class</span> <span class="nc">RandomIt</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">sort</span><span class="p">(</span><span class="n">RandomIt</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomIt</span> <span class="n">last</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">class</span> <span class="nc">RandomIt</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Compare</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">sort</span><span class="p">(</span><span class="n">RandomIt</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomIt</span> <span class="n">last</span><span class="p">,</span> <span class="n">Compare</span> <span class="n">comp</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 并行版对应有两个重载
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">class</span> <span class="nc">ExecutionPolicy</span><span class="p">,</span> <span class="k">class</span> <span class="nc">RandomIt</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">sort</span><span class="p">(</span><span class="n">ExecutionPolicy</span><span class="o">&amp;&amp;</span> <span class="n">policy</span><span class="p">,</span> <span class="n">RandomIt</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomIt</span> <span class="n">last</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">class</span> <span class="nc">ExecutionPolicy</span><span class="p">,</span> <span class="k">class</span> <span class="nc">RandomIt</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Compare</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">sort</span><span class="p">(</span><span class="n">ExecutionPolicy</span><span class="o">&amp;&amp;</span> <span class="n">policy</span><span class="p">,</span> <span class="n">RandomIt</span> <span class="n">first</span><span class="p">,</span> <span class="n">RandomIt</span> <span class="n">last</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">          <span class="n">Compare</span> <span class="n">comp</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>但并行版的重载对部分算法有一些区别，如果常规版本使用的是输入迭代器（input iterator）或输出迭代器（output iterator），则并行版的重载将使用前向迭代器（forward iterator）</li>
-</ul>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">class</span> <span class="nc">InputIt</span><span class="p">,</span> <span class="k">class</span> <span class="nc">OutputIt</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="n">OutputIt</span> <span class="n">copy</span><span class="p">(</span><span class="n">InputIt</span> <span class="n">first</span><span class="p">,</span> <span class="n">InputIt</span> <span class="n">last</span><span class="p">,</span> <span class="n">OutputIt</span> <span class="n">d_first</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">class</span> <span class="nc">ExecutionPolicy</span><span class="p">,</span> <span class="k">class</span> <span class="nc">ForwardIt1</span><span class="p">,</span> <span class="k">class</span> <span class="nc">ForwardIt2</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="n">ForwardIt2</span> <span class="n">copy</span><span class="p">(</span><span class="n">ExecutionPolicy</span><span class="o">&amp;&amp;</span> <span class="n">policy</span><span class="p">,</span> <span class="n">ForwardIt1</span> <span class="n">first</span><span class="p">,</span> <span class="n">ForwardIt1</span> <span class="n">last</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">                <span class="n">ForwardIt2</span> <span class="n">d_first</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>输入迭代器只能用来读取指向的值，迭代器自增后就再也无法访问之前指向的值，它一般用于从控制台或网络输入，或生成序列，比如 <a href="https://en.cppreference.com/w/cpp/iterator/istream_iterator"target="_blank" rel="external nofollow noopener noreferrer">std::istream_iterator<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。同理，输出迭代器一般用来输出到文件，或添加值到容器，也是单向的，比如 <a href="https://en.cppreference.com/w/cpp/iterator/ostream_iterator"target="_blank" rel="external nofollow noopener noreferrer">std::ostream_iterator<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
-<li>前向迭代器返回元素的引用，因此可以用于读写，它同样只能单向传递，<a href="https://en.cppreference.com/w/cpp/container/forward_list"target="_blank" rel="external nofollow noopener noreferrer">std::forward_list<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 的迭代器就是前向迭代器，虽然它不可以回到之前指向的值，但可以存储一个指向之前元素的拷贝（比如 <a href="https://en.cppreference.com/w/cpp/container/forward_list/begin"target="_blank" rel="external nofollow noopener noreferrer">std::forward_list::begin<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>）来重复利用。对于并行性来说，可以重复利用迭代器很重要。此外，前向迭代器的自增不会使其他的迭代器拷贝失效，这样就不用担心其他线程中的迭代器受影响。如果使用输入迭代器，所有线程只能共用一个迭代器，显然无法并行</li>
-<li><a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag"target="_blank" rel="external nofollow noopener noreferrer">std::execution::par<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 是最常用的策略，除非实现提供了更符合需求的非标准策略。一些情况下也可以使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag"target="_blank" rel="external nofollow noopener noreferrer">std::execution::par_unseq<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，虽然这不保证更好的并发性，但它给了库通过重排和交错任务来提升性能的可能性，不过代价就是不能使用同步机制，要确保线程安全只能让算法本身不会让多个线程访问同一元素，并在调用该算法的外部使用同步机制来避免其他线程对数据的访问</li>
-<li>内部带同步机制只能使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag"target="_blank" rel="external nofollow noopener noreferrer">std::execution::par<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，如果使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag"target="_blank" rel="external nofollow noopener noreferrer">std::execution::par_unseq<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 会出现未定义行为</li>
-</ul>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;algorithm&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">get</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">n_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">inc</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="o">++</span><span class="n">n_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">mutable</span> <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">n_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">f</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">A</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="p">[](</span><span class="n">A</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> <span class="n">x</span><span class="p">.</span><span class="n">inc</span><span class="p">();</span> <span class="p">});</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>如果使用 <a href="https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag"target="_blank" rel="external nofollow noopener noreferrer">std::execution::par_unseq<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 则应该在外部使用同步机制</li>
-</ul>
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;algorithm&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">A</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">get</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">n_</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">inc</span><span class="p">()</span> <span class="p">{</span> <span class="o">++</span><span class="n">n_</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">n_</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">B</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">lock</span><span class="p">()</span> <span class="p">{</span> <span class="n">m_</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span> <span class="n">m_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">A</span><span class="o">&gt;&amp;</span> <span class="n">get</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">v_</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">A</span><span class="o">&gt;</span> <span class="n">v_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">f</span><span class="p">(</span><span class="n">B</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="k">auto</span><span class="o">&amp;</span> <span class="n">v</span> <span class="o">=</span> <span class="n">x</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par_unseq</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
-</span></span><span class="line"><span class="cl">                <span class="p">[](</span><span class="n">A</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> <span class="n">x</span><span class="p">.</span><span class="n">inc</span><span class="p">();</span> <span class="p">});</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>下面是一个更实际的例子。假如有一个网站，访问日志有上百万条，为了方便查看数据需要对日志进行处理。对日志每行的处理是独立的工作，很适合使用并行算法</li>
-</ul>
-<div class="highlight" id="id-14"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">Log</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">page</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">time_t</span> <span class="n">visit_time</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// any other fields
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">extern</span> <span class="n">Log</span> <span class="nf">parse</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">line</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">using</span> <span class="n">Map</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span><span class="o">&gt;</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">Map</span> <span class="nf">f</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">struct</span> <span class="nc">Combine</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// log、Map 两个参数有四种组合，所以需要四个重载
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Map</span> <span class="k">operator</span><span class="p">()(</span><span class="n">Map</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">Map</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">lhs</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">rhs</span><span class="p">.</span><span class="n">size</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">swap</span><span class="p">(</span><span class="n">lhs</span><span class="p">,</span> <span class="n">rhs</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">rhs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">lhs</span><span class="p">[</span><span class="n">x</span><span class="p">.</span><span class="n">first</span><span class="p">]</span> <span class="o">+=</span> <span class="n">x</span><span class="p">.</span><span class="n">second</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">lhs</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">Map</span> <span class="k">operator</span><span class="p">()(</span><span class="n">Log</span> <span class="n">l</span><span class="p">,</span> <span class="n">Map</span> <span class="n">m</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="o">++</span><span class="n">m</span><span class="p">[</span><span class="n">l</span><span class="p">.</span><span class="n">page</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">Map</span> <span class="k">operator</span><span class="p">()(</span><span class="n">Map</span> <span class="n">m</span><span class="p">,</span> <span class="n">Log</span> <span class="n">l</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="o">++</span><span class="n">m</span><span class="p">[</span><span class="n">l</span><span class="p">.</span><span class="n">page</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">Map</span> <span class="k">operator</span><span class="p">()(</span><span class="n">Log</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">Log</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">Map</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="o">++</span><span class="n">m</span><span class="p">[</span><span class="n">lhs</span><span class="p">.</span><span class="n">page</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">      <span class="o">++</span><span class="n">m</span><span class="p">[</span><span class="n">rhs</span><span class="p">.</span><span class="n">page</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="n">m</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">transform_reduce</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">execution</span><span class="o">::</span><span class="n">par</span><span class="p">,</span> <span class="n">v</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
-</span></span><span class="line"><span class="cl">                               <span class="n">Map</span><span class="p">{},</span>      <span class="c1">// 初始值，一个空的 map
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                               <span class="n">Combine</span><span class="p">{},</span>  <span class="c1">// 结合两个元素的二元操作
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                               <span class="n">parse</span><span class="p">);</span>  <span class="c1">// 对每个元素执行的一元操作
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
 </div>]]></description></item></channel></rss>

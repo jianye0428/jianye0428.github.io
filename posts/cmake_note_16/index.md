@@ -63,7 +63,7 @@ sudo make install
 > https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/05
 
 
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
 
 
 ```c++
@@ -115,7 +115,7 @@ pkg_search_module(
 </center>
 <br>
 
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
 
 **zmq_client.cpp**
 
@@ -204,87 +204,6 @@ $ cmake --build .
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">输出结果</div>
 </center>
 <br>
-
-
-
-
-
-![Image](data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='1px' height='1px' viewBox='0 0 1 1' version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg stroke='none' stroke-width='1' fill='none' fill-rule='evenodd' fill-opacity='0'%3E%3Cg transform='translate(-249.000000, -126.000000)' fill='%23FFFFFF'%3E%3Crect x='249' y='126' width='1' height='1'%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)
-
-
-
-
-
-![Image](data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='1px' height='1px' viewBox='0 0 1 1' version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg stroke='none' stroke-width='1' fill='none' fill-rule='evenodd' fill-opacity='0'%3E%3Cg transform='translate(-249.000000, -126.000000)' fill='%23FFFFFF'%3E%3Crect x='249' y='126' width='1' height='1'%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)
-
-
-
-cmake44
-
-cmake · 目录
-
-上一篇CMake: 检测并使用OpenMP的并行环境下一篇CMake:检测外部库---自定义find模块
-
-
-
-People who liked this content also liked
-
-CMake:超级构建模式
-
-
-
-Hope Hut
-
-不喜欢
-
-不看的原因
-
-OK
-
-- 内容质量低
-- 不看此公众号
-
-![img](https://mmbiz.qpic.cn/sz_mmbiz_jpg/sd9Xic2LWs1UWYaO93spsRvKt3OOuS6wEZYsTAEFh3wErfaBLzIL3Rga9mUibLiaZ8NYc21AFPQ37qEckj64DNWkQ/0?wx_fmt=jpeg)
-
-CMake:使用函数和宏重用代码
-
-
-
-Hope Hut
-
-不喜欢
-
-不看的原因
-
-OK
-
-- 内容质量低
-- 不看此公众号
-
-![img](https://mmbiz.qpic.cn/sz_mmbiz_jpg/sd9Xic2LWs1XSITicZy4hiaRDWMNVf5Sw28aX23cbibXMTEiaS0JjEt8hqR1ur7uVk5ZtSGUicic1Sd5N9hOQvXiboqiaqw/0?wx_fmt=jpeg)
-
-用C#开发Excel插件的强大开源工具
-
-
-
-编程乐趣
-
-不喜欢
-
-不看的原因
-
-OK
-
-- 内容质量低
-- 不看此公众号
-
-![img](https://mmbiz.qpic.cn/sz_mmbiz_jpg/tJJDa2wmJiapHxfyKgs7YEEU3f2jfnuu1c4libY0JMW3UnjjIXibRh4cAkP2Hf6KOia0lEgOHic1xSNM9R4PSIicFwWg/0?wx_fmt=jpeg)
-
-![img](https://mp.weixin.qq.com/mp/qrcode?scene=10000004&size=102&__biz=MzkxMzI5Mjk4Mg==&mid=2247485034&idx=1&sn=4b36ee71ca89a5d2071375cbf0dadfb8&send_time=)
-
-Scan to Follow
-
-people underline
 
 ---
 
