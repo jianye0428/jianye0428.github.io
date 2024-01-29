@@ -1,4 +1,354 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>CMake - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/cmake/</link><description>CMake - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 27 Jan 2024 15:38:58 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/cmake/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [15] 检测并使用OpenMP的并行环境</title><link>https://jianye0428.github.io/posts/cmake_note_15/</link><pubDate>Sat, 27 Jan 2024 15:38:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_15/</guid><description><![CDATA[<h2 id="一检测并使用openmp的并行环境">一、检测并使用OpenMP的并行环境</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>CMake - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/cmake/</link><description>CMake - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 28 Jan 2024 13:30:12 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/cmake/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [16] 检测外部库---使用pkg-config</title><link>https://jianye0428.github.io/posts/cmake_note_16/</link><pubDate>Sun, 28 Jan 2024 13:30:12 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_16/</guid><description><![CDATA[<h1 id="一检测外部库---使用pkg-config">一、检测外部库&mdash;使用pkg-config</h1>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p><strong>前面几篇内容的学习，我们基本上了解了如何链接一个三方库的方法。本篇以及下一篇将补充两个检测外部库的方法。</strong></p>
+<p><strong>目前为止，我们已经学习了两种检测外部依赖关系的方法：</strong></p>
+<ul>
+<li><strong>使用<code>CMake</code>自带的<code>find-module</code>，但并不是所有的包在<code>CMake</code>的<code>find</code>模块都找得到。</strong></li>
+<li>使用<code>&lt;package&gt;Config.cmake</code> ,<code>&lt;package&gt;ConfigVersion.cmake</code>和<code>&lt;package&gt;Targets.cmake</code>，这些文件由软件包供应商提供，并与软件包一起安装在标准位置的<code>cmake</code>文件夹下。</li>
+</ul>
+<p><strong>如果某个依赖项既不提供查找模块，也不提供供应商的CMake文件，在这种情况下：</strong></p>
+<ul>
+<li><strong>依赖<code>pkg-config</code>程序，来找到系统上的包。这依赖于包供应商在<code>.pc</code>配置文件中，其中有关于发行包的元数据。</strong></li>
+<li><strong>为依赖项编写自己的<code>find-package</code>模块。</strong></li>
+</ul>
+<p><strong>接下来，我们通过ZMQ的使用，来演示第一种方法的使用。</strong></p>
+</div>
+    </div>
+  </div>
+<h2 id="二zmq的安装">二、ZMQ的安装</h2>
+<p>ZMQ下载：</p>
+<blockquote>
+<p><a href="https://github.com/zeromq"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/zeromq<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<p>下载好后解压, 并进入目录：：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">tar -xzvf  libzmq-4.3.4.tar.gz .
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">cd libzmq-4.3.4</span></span></code></pre></td></tr></table>
+</div>
+</div><p>开始安装</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">./autogen.sh</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用<code>prefix</code>来指定安装目录</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">./configure --prefix=/opt/zmq/ --without-libsodium
+</span></span><span class="line"><span class="cl">make
+</span></span><span class="line"><span class="cl">sudo make install</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="三项目结构">三、项目结构</h2>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── zmq_client.cpp
+</span></span><span class="line"><span class="cl">└── zmq_server.cpp</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/05"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/05<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_zmq</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_PREFIX_PATH</span> <span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">zmq</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PkgConfig</span> <span class="n">REQUIRED</span> <span class="n">QUIET</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">pkg_search_module</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ</span>
+</span></span><span class="line"><span class="cl">  <span class="n">REQUIRED</span> <span class="n">libzeromq</span> <span class="n">libzmq</span> <span class="n">lib0mq</span>
+</span></span><span class="line"><span class="cl">  <span class="n">IMPORTED_TARGET</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">TARGET</span> <span class="n">PkgConfig</span><span class="o">::</span><span class="n">ZeroMQ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;Found ZeroMQ&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_server</span> <span class="n">zmq_server</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_server</span> <span class="n">PkgConfig</span><span class="o">::</span><span class="n">ZeroMQ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_client</span> <span class="n">zmq_client</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_client</span> <span class="n">PkgConfig</span><span class="o">::</span><span class="n">ZeroMQ</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用<code>pkg_search_module</code>通搜索任何附带包配置<code>.pc</code>文件的库或程序来查找和导入<code>ZeroMQ</code>库。这个命令会在<code>CMake</code>中通过<code>PkgConfig</code>工具查找和配置<code>ZeroMQ</code>库。</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pkg_search_module(
+</span></span><span class="line"><span class="cl">  ZeroMQ
+</span></span><span class="line"><span class="cl">  REQUIRED libzeromq libzmq lib0mq
+</span></span><span class="line"><span class="cl">  IMPORTED_TARGET
+</span></span><span class="line"><span class="cl">)</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>ZeroMQ</code>的信息将会被存储在一个导入目标中，其名称是<code>PkgConfig::ZeroMQ</code>，可以将这个目标链接到可执行文件或库。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">导入目标</div>
+</center>
+<br>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<p><strong>zmq_client.cpp</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;zmq.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="o">*</span><span class="n">context</span> <span class="o">=</span> <span class="n">zmq_ctx_new</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="o">*</span><span class="n">requester</span> <span class="o">=</span> <span class="n">zmq_socket</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">ZMQ_REQ</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">rc</span> <span class="o">=</span> <span class="n">zmq_connect</span><span class="p">(</span><span class="n">requester</span><span class="p">,</span> <span class="s">&#34;tcp://localhost:5555&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">rc</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">perror</span><span class="p">(</span><span class="s">&#34;Failed to connect to server&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">buffer</span><span class="p">[]</span> <span class="o">=</span> <span class="s">&#34;Hello&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">zmq_send</span><span class="p">(</span><span class="n">requester</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buffer</span><span class="p">),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">reply</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="n">zmq_recv</span><span class="p">(</span><span class="n">requester</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">reply</span><span class="p">),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">printf</span><span class="p">(</span><span class="s">&#34;Received: %s</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">reply</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">zmq_close</span><span class="p">(</span><span class="n">requester</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">zmq_ctx_destroy</span><span class="p">(</span><span class="n">context</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>zmq_server.cpp</strong></p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span> <span class="o">&lt;</span><span class="n">stdio</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;zmq.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="o">*</span><span class="n">context</span> <span class="o">=</span> <span class="n">zmq_ctx_new</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="o">*</span><span class="n">responder</span> <span class="o">=</span> <span class="n">zmq_socket</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">ZMQ_REP</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">rc</span> <span class="o">=</span> <span class="n">zmq_bind</span><span class="p">(</span><span class="n">responder</span><span class="p">,</span> <span class="s">&#34;tcp://*:5555&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">rc</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">perror</span><span class="p">(</span><span class="s">&#34;Failed to bind socket&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">buffer</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="n">zmq_recv</span><span class="p">(</span><span class="n">responder</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buffer</span><span class="p">),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">printf</span><span class="p">(</span><span class="s">&#34;Received: %s</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">buffer</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">zmq_send</span><span class="p">(</span><span class="n">responder</span><span class="p">,</span> <span class="s">&#34;World&#34;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">zmq_close</span><span class="p">(</span><span class="n">responder</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">zmq_ctx_destroy</span><span class="p">(</span><span class="n">context</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建项目，并执行</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ mkdir -p build
+</span></span><span class="line"><span class="cl">$ cd build
+</span></span><span class="line"><span class="cl">$ cmake ..
+</span></span><span class="line"><span class="cl">$ cmake --build .</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行生成的两个进程结果：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">输出结果</div>
+</center>
+<br>
+<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
+<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
+<p>cmake44</p>
+<p>cmake · 目录</p>
+<p>上一篇CMake: 检测并使用OpenMP的并行环境下一篇CMake:检测外部库&mdash;自定义find模块</p>
+<p>People who liked this content also liked</p>
+<p>CMake:超级构建模式</p>
+<p>Hope Hut</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p>CMake:使用函数和宏重用代码</p>
+<p>Hope Hut</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p>用C#开发Excel插件的强大开源工具</p>
+<p>编程乐趣</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p></p>
+<p>Scan to Follow</p>
+<p>people underline</p>
+]]></description></item><item><title>CMake 笔记 | [15] 检测并使用OpenMP的并行环境</title><link>https://jianye0428.github.io/posts/cmake_note_15/</link><pubDate>Sat, 27 Jan 2024 15:38:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_15/</guid><description><![CDATA[<h2 id="一检测并使用openmp的并行环境">一、检测并使用OpenMP的并行环境</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>

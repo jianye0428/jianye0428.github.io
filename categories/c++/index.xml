@@ -1,4 +1,354 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 27 Jan 2024 15:38:58 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [15] 检测并使用OpenMP的并行环境</title><link>https://jianye0428.github.io/posts/cmake_note_15/</link><pubDate>Sat, 27 Jan 2024 15:38:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_15/</guid><description><![CDATA[<h2 id="一检测并使用openmp的并行环境">一、检测并使用OpenMP的并行环境</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>C++ - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/c++/</link><description>C++ - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 28 Jan 2024 13:30:12 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/c++/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [16] 检测外部库---使用pkg-config</title><link>https://jianye0428.github.io/posts/cmake_note_16/</link><pubDate>Sun, 28 Jan 2024 13:30:12 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_16/</guid><description><![CDATA[<h1 id="一检测外部库---使用pkg-config">一、检测外部库&mdash;使用pkg-config</h1>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p><strong>前面几篇内容的学习，我们基本上了解了如何链接一个三方库的方法。本篇以及下一篇将补充两个检测外部库的方法。</strong></p>
+<p><strong>目前为止，我们已经学习了两种检测外部依赖关系的方法：</strong></p>
+<ul>
+<li><strong>使用<code>CMake</code>自带的<code>find-module</code>，但并不是所有的包在<code>CMake</code>的<code>find</code>模块都找得到。</strong></li>
+<li>使用<code>&lt;package&gt;Config.cmake</code> ,<code>&lt;package&gt;ConfigVersion.cmake</code>和<code>&lt;package&gt;Targets.cmake</code>，这些文件由软件包供应商提供，并与软件包一起安装在标准位置的<code>cmake</code>文件夹下。</li>
+</ul>
+<p><strong>如果某个依赖项既不提供查找模块，也不提供供应商的CMake文件，在这种情况下：</strong></p>
+<ul>
+<li><strong>依赖<code>pkg-config</code>程序，来找到系统上的包。这依赖于包供应商在<code>.pc</code>配置文件中，其中有关于发行包的元数据。</strong></li>
+<li><strong>为依赖项编写自己的<code>find-package</code>模块。</strong></li>
+</ul>
+<p><strong>接下来，我们通过ZMQ的使用，来演示第一种方法的使用。</strong></p>
+</div>
+    </div>
+  </div>
+<h2 id="二zmq的安装">二、ZMQ的安装</h2>
+<p>ZMQ下载：</p>
+<blockquote>
+<p><a href="https://github.com/zeromq"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/zeromq<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<p>下载好后解压, 并进入目录：：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">tar -xzvf  libzmq-4.3.4.tar.gz .
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">cd libzmq-4.3.4</span></span></code></pre></td></tr></table>
+</div>
+</div><p>开始安装</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">./autogen.sh</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用<code>prefix</code>来指定安装目录</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">./configure --prefix=/opt/zmq/ --without-libsodium
+</span></span><span class="line"><span class="cl">make
+</span></span><span class="line"><span class="cl">sudo make install</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="三项目结构">三、项目结构</h2>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── zmq_client.cpp
+</span></span><span class="line"><span class="cl">└── zmq_server.cpp</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/05"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter3/05<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_zmq</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_PREFIX_PATH</span> <span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">zmq</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">PkgConfig</span> <span class="n">REQUIRED</span> <span class="n">QUIET</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">pkg_search_module</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZeroMQ</span>
+</span></span><span class="line"><span class="cl">  <span class="n">REQUIRED</span> <span class="n">libzeromq</span> <span class="n">libzmq</span> <span class="n">lib0mq</span>
+</span></span><span class="line"><span class="cl">  <span class="n">IMPORTED_TARGET</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">TARGET</span> <span class="n">PkgConfig</span><span class="o">::</span><span class="n">ZeroMQ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;Found ZeroMQ&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_server</span> <span class="n">zmq_server</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_server</span> <span class="n">PkgConfig</span><span class="o">::</span><span class="n">ZeroMQ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">hw_client</span> <span class="n">zmq_client</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">hw_client</span> <span class="n">PkgConfig</span><span class="o">::</span><span class="n">ZeroMQ</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用<code>pkg_search_module</code>通搜索任何附带包配置<code>.pc</code>文件的库或程序来查找和导入<code>ZeroMQ</code>库。这个命令会在<code>CMake</code>中通过<code>PkgConfig</code>工具查找和配置<code>ZeroMQ</code>库。</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pkg_search_module(
+</span></span><span class="line"><span class="cl">  ZeroMQ
+</span></span><span class="line"><span class="cl">  REQUIRED libzeromq libzmq lib0mq
+</span></span><span class="line"><span class="cl">  IMPORTED_TARGET
+</span></span><span class="line"><span class="cl">)</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>ZeroMQ</code>的信息将会被存储在一个导入目标中，其名称是<code>PkgConfig::ZeroMQ</code>，可以将这个目标链接到可执行文件或库。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">导入目标</div>
+</center>
+<br>
+<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<p><strong>zmq_client.cpp</strong></p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;zmq.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="o">*</span><span class="n">context</span> <span class="o">=</span> <span class="n">zmq_ctx_new</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="o">*</span><span class="n">requester</span> <span class="o">=</span> <span class="n">zmq_socket</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">ZMQ_REQ</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">rc</span> <span class="o">=</span> <span class="n">zmq_connect</span><span class="p">(</span><span class="n">requester</span><span class="p">,</span> <span class="s">&#34;tcp://localhost:5555&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">rc</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">perror</span><span class="p">(</span><span class="s">&#34;Failed to connect to server&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">buffer</span><span class="p">[]</span> <span class="o">=</span> <span class="s">&#34;Hello&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">zmq_send</span><span class="p">(</span><span class="n">requester</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buffer</span><span class="p">),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">reply</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="n">zmq_recv</span><span class="p">(</span><span class="n">requester</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">reply</span><span class="p">),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">printf</span><span class="p">(</span><span class="s">&#34;Received: %s</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">reply</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">zmq_close</span><span class="p">(</span><span class="n">requester</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">zmq_ctx_destroy</span><span class="p">(</span><span class="n">context</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>zmq_server.cpp</strong></p>
+<div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span> <span class="o">&lt;</span><span class="n">stdio</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;zmq.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="o">*</span><span class="n">context</span> <span class="o">=</span> <span class="n">zmq_ctx_new</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="o">*</span><span class="n">responder</span> <span class="o">=</span> <span class="n">zmq_socket</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">ZMQ_REP</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">int</span> <span class="n">rc</span> <span class="o">=</span> <span class="n">zmq_bind</span><span class="p">(</span><span class="n">responder</span><span class="p">,</span> <span class="s">&#34;tcp://*:5555&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">rc</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">perror</span><span class="p">(</span><span class="s">&#34;Failed to bind socket&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">buffer</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="n">zmq_recv</span><span class="p">(</span><span class="n">responder</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buffer</span><span class="p">),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">printf</span><span class="p">(</span><span class="s">&#34;Received: %s</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> <span class="n">buffer</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">zmq_send</span><span class="p">(</span><span class="n">responder</span><span class="p">,</span> <span class="s">&#34;World&#34;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">zmq_close</span><span class="p">(</span><span class="n">responder</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">zmq_ctx_destroy</span><span class="p">(</span><span class="n">context</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建项目，并执行</p>
+<div class="highlight" id="id-9"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ mkdir -p build
+</span></span><span class="line"><span class="cl">$ cd build
+</span></span><span class="line"><span class="cl">$ cmake ..
+</span></span><span class="line"><span class="cl">$ cmake --build .</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行生成的两个进程结果：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">输出结果</div>
+</center>
+<br>
+<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
+<p>![Image](data:image/svg+xml,%3C%3Fxml version=&lsquo;1.0&rsquo; encoding=&lsquo;UTF-8&rsquo;%3F%3E%3Csvg width=&lsquo;1px&rsquo; height=&lsquo;1px&rsquo; viewBox=&lsquo;0 0 1 1&rsquo; version=&lsquo;1.1&rsquo; xmlns=&lsquo;<a href="http://www.w3.org/2000/svg%27"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/2000/svg'<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> xmlns:xlink=&lsquo;<a href="http://www.w3.org/1999/xlink%27%3E%3Ctitle%3E%3C/title%3E%3Cg"target="_blank" rel="external nofollow noopener noreferrer">http://www.w3.org/1999/xlink'%3E%3Ctitle%3E%3C/title%3E%3Cg<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> stroke=&lsquo;none&rsquo; stroke-width=&lsquo;1&rsquo; fill=&lsquo;none&rsquo; fill-rule=&lsquo;evenodd&rsquo; fill-opacity=&lsquo;0&rsquo;%3E%3Cg transform=&lsquo;translate(-249.000000, -126.000000)&rsquo; fill=&rsquo;%23FFFFFF&rsquo;%3E%3Crect x=&lsquo;249&rsquo; y=&lsquo;126&rsquo; width=&lsquo;1&rsquo; height=&lsquo;1&rsquo;%3E%3C/rect%3E%3C/g%3E%3C/g%3E%3C/svg%3E)</p>
+<p>cmake44</p>
+<p>cmake · 目录</p>
+<p>上一篇CMake: 检测并使用OpenMP的并行环境下一篇CMake:检测外部库&mdash;自定义find模块</p>
+<p>People who liked this content also liked</p>
+<p>CMake:超级构建模式</p>
+<p>Hope Hut</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p>CMake:使用函数和宏重用代码</p>
+<p>Hope Hut</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p>用C#开发Excel插件的强大开源工具</p>
+<p>编程乐趣</p>
+<p>不喜欢</p>
+<p>不看的原因</p>
+<p>OK</p>
+<ul>
+<li>内容质量低</li>
+<li>不看此公众号</li>
+</ul>
+<p></p>
+<p></p>
+<p>Scan to Follow</p>
+<p>people underline</p>
+]]></description></item><item><title>CMake 笔记 | [15] 检测并使用OpenMP的并行环境</title><link>https://jianye0428.github.io/posts/cmake_note_15/</link><pubDate>Sat, 27 Jan 2024 15:38:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_15/</guid><description><![CDATA[<h2 id="一检测并使用openmp的并行环境">一、检测并使用OpenMP的并行环境</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -13794,1451 +14144,6 @@ function() 函数模板并没有实现完美转发。</p>
 </span></span><span class="line"><span class="cl">                               <span class="n">Map</span><span class="p">{},</span>      <span class="c1">// 初始值，一个空的 map
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>                               <span class="n">Combine</span><span class="p">{},</span>  <span class="c1">// 结合两个元素的二元操作
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>                               <span class="n">parse</span><span class="p">);</span>  <span class="c1">// 对每个元素执行的一元操作
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item><item><title>C++ Concurrency in Action [9] | CH09 Advanced Thread Management</title><link>https://jianye0428.github.io/posts/ch09_advanced_thread_management/</link><pubDate>Tue, 28 Nov 2023 18:58:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ch09_advanced_thread_management/</guid><description><![CDATA[<h2 id="线程池">线程池</h2>
-<ul>
-<li>线程池一般会用一个表示线程数的参数来初始化，内部需要一个队列来存储任务。下面是一个最简单的线程池实现</li>
-</ul>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;condition_variable&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;functional&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;queue&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;utility&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">ThreadPool</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">explicit</span> <span class="n">ThreadPool</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="p">{[</span><span class="k">this</span><span class="p">]</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">        <span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">          <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">q_</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="k">auto</span> <span class="n">task</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">q_</span><span class="p">.</span><span class="n">front</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">            <span class="n">q_</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">            <span class="n">l</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">            <span class="n">task</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">            <span class="n">l</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">          <span class="p">}</span> <span class="k">else</span> <span class="nf">if</span> <span class="p">(</span><span class="n">done_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="k">break</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">          <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="n">cv_</span><span class="p">.</span><span class="n">wait</span><span class="p">(</span><span class="n">l</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">          <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}}.</span><span class="n">detach</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="o">~</span><span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">      <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>  <span class="c1">// cv_.wait 使用了 done_ 判断所以要加锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">cv_</span><span class="p">.</span><span class="n">notify_all</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">submit</span><span class="p">(</span><span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">f</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">      <span class="n">q_</span><span class="p">.</span><span class="n">emplace</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">forward</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;</span><span class="p">(</span><span class="n">f</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">cv_</span><span class="p">.</span><span class="n">notify_one</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">condition_variable</span> <span class="n">cv_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="n">done_</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">queue</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">()</span><span class="o">&gt;&gt;</span> <span class="n">q_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>如果想让提交的任务带参数会麻烦很多</li>
-</ul>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">class</span> <span class="nc">F</span><span class="p">,</span> <span class="k">class</span><span class="err">... </span><span class="nc">Args</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="k">auto</span> <span class="n">ThreadPool</span><span class="o">::</span><span class="n">submit</span><span class="p">(</span><span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">f</span><span class="p">,</span> <span class="n">Args</span><span class="o">&amp;&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">using</span> <span class="n">RT</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="p">,</span> <span class="n">Args</span><span class="p">...</span><span class="o">&gt;</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// std::packaged_task 不允许拷贝构造，不能直接传入 lambda，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 因此要借助 std::shared_ptr
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">auto</span> <span class="n">task</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">packaged_task</span><span class="o">&lt;</span><span class="n">RT</span><span class="p">()</span><span class="o">&gt;&gt;</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">bind</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">forward</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;</span><span class="p">(</span><span class="n">f</span><span class="p">),</span> <span class="n">std</span><span class="o">::</span><span class="n">forward</span><span class="o">&lt;</span><span class="n">Args</span><span class="o">&gt;</span><span class="p">(</span><span class="n">args</span><span class="p">)...));</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 但 std::bind 会按值拷贝实参，因此这个实现不允许任务的实参是 move-only 类型
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">q_</span><span class="p">.</span><span class="n">emplace</span><span class="p">([</span><span class="n">task</span><span class="p">]()</span> <span class="p">{</span> <span class="p">(</span><span class="o">*</span><span class="n">task</span><span class="p">)();</span> <span class="p">});</span>  <span class="c1">// 捕获指针以传入 std::packaged_task
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="n">cv_</span><span class="p">.</span><span class="n">notify_one</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">task</span><span class="o">-&gt;</span><span class="n">get_future</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>书上实现的线程池都在死循环中使用了 <a href="https://en.cppreference.com/w/cpp/thread/yield"target="_blank" rel="external nofollow noopener noreferrer">std::this_thread::yield<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 来转让时间片</li>
-</ul>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;atomic&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;functional&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;concurrent_queue.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">ThreadPool</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">n</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="n">hardware_concurrency</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">try</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">threads_</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ThreadPool</span><span class="o">::</span><span class="n">worker_thread</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">catch</span> <span class="p">(...)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">threads_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">          <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="k">throw</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="o">~</span><span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">threads_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">submit</span><span class="p">(</span><span class="n">F</span> <span class="n">f</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">q_</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">()</span><span class="o">&gt;</span><span class="p">(</span><span class="n">f</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">worker_thread</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">done_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">()</span><span class="o">&gt;</span> <span class="n">task</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">q_</span><span class="p">.</span><span class="n">try_pop</span><span class="p">(</span><span class="n">task</span><span class="p">))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">task</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">yield</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">done_</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ConcurrentQueue</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">()</span><span class="o">&gt;&gt;</span> <span class="n">q_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">&gt;</span> <span class="n">threads_</span><span class="p">;</span>  <span class="c1">// 要在 done_ 和 q_ 之后声明
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>这样做的问题是，如果线程池处于空闲状态，就会无限转让时间片，导致 CPU 使用率达 100%，下面是对书中的线程池的 CPU 使用率测试结果</li>
-</ul>
-<p></p>
-<ul>
-<li>对相同任务用之前实现的线程池的测试结果</li>
-</ul>
-<p></p>
-<ul>
-<li>这里还是把书上的内容列出来，下文均为书中内容</li>
-<li>这个线程池只能执行无参数无返回值的函数，并且可能出现死锁，下面希望能执行无参数但有返回值的函数。为了得到返回值，就应该把函数传递给 <a href="https://en.cppreference.com/w/cpp/thread/packaged_task"target="_blank" rel="external nofollow noopener noreferrer">std::packaged_task<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 再加入队列，并返回 <a href="https://en.cppreference.com/w/cpp/thread/packaged_task"target="_blank" rel="external nofollow noopener noreferrer">std::packaged_task<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中的 <a href="https://en.cppreference.com/w/cpp/thread/future"target="_blank" rel="external nofollow noopener noreferrer">std::future<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。由于 <a href="https://en.cppreference.com/w/cpp/thread/packaged_task"target="_blank" rel="external nofollow noopener noreferrer">std::packaged_task<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 是 move-only 类型，而 <a href="https://en.cppreference.com/w/cpp/utility/functional/function"target="_blank" rel="external nofollow noopener noreferrer">std::function<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 要求存储的函数实例可以拷贝构造，因此这里需要实现一个支持 move-only 类型的函数包裹类，即一个带 call 操作的类型擦除（type-erasure）类</li>
-</ul>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;memory&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;utility&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">FunctionWrapper</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">FunctionWrapper</span><span class="p">()</span> <span class="o">=</span> <span class="k">default</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">FunctionWrapper</span><span class="p">(</span><span class="k">const</span> <span class="n">FunctionWrapper</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">FunctionWrapper</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">FunctionWrapper</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">FunctionWrapper</span><span class="p">(</span><span class="n">FunctionWrapper</span><span class="o">&amp;&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">noexcept</span>
-</span></span><span class="line"><span class="cl">      <span class="o">:</span> <span class="n">impl_</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">impl_</span><span class="p">))</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">FunctionWrapper</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="n">FunctionWrapper</span><span class="o">&amp;&amp;</span> <span class="n">rhs</span><span class="p">)</span> <span class="k">noexcept</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">impl_</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">rhs</span><span class="p">.</span><span class="n">impl_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">*</span><span class="k">this</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">FunctionWrapper</span><span class="p">(</span><span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">f</span><span class="p">)</span> <span class="o">:</span> <span class="n">impl_</span><span class="p">(</span><span class="k">new</span> <span class="n">ImplType</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">f</span><span class="p">)))</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">operator</span><span class="p">()()</span> <span class="k">const</span> <span class="p">{</span> <span class="n">impl_</span><span class="o">-&gt;</span><span class="n">call</span><span class="p">();</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">struct</span> <span class="nc">ImplBase</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="kt">void</span> <span class="nf">call</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">virtual</span> <span class="o">~</span><span class="n">ImplBase</span><span class="p">()</span> <span class="o">=</span> <span class="k">default</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">struct</span> <span class="nc">ImplType</span> <span class="o">:</span> <span class="n">ImplBase</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ImplType</span><span class="p">(</span><span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">f</span><span class="p">)</span> <span class="k">noexcept</span> <span class="o">:</span> <span class="n">f_</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">f</span><span class="p">))</span> <span class="p">{}</span>
-</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="nf">call</span><span class="p">()</span> <span class="k">override</span> <span class="p">{</span> <span class="n">f_</span><span class="p">();</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">F</span> <span class="n">f_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">ImplBase</span><span class="o">&gt;</span> <span class="n">impl_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>用这个包裹类替代 <code>std::function&lt;void()&gt;</code></li>
-</ul>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span><span class="lnt">62
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;atomic&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;future&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;type_traits&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;concurrent_queue.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;function_wrapper.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">ThreadPool</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">n</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="n">hardware_concurrency</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">try</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">threads_</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ThreadPool</span><span class="o">::</span><span class="n">worker_thread</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">catch</span> <span class="p">(...)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">threads_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">          <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="k">throw</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="o">~</span><span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">threads_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;&gt;</span> <span class="n">submit</span><span class="p">(</span><span class="n">F</span> <span class="n">f</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">packaged_task</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;</span><span class="p">()</span><span class="o">&gt;</span> <span class="n">task</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">f</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;&gt;</span> <span class="n">res</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">get_future</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">    <span class="n">q_</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">task</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">worker_thread</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">done_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">FunctionWrapper</span> <span class="n">task</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">q_</span><span class="p">.</span><span class="n">try_pop</span><span class="p">(</span><span class="n">task</span><span class="p">))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">task</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">yield</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">done_</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ConcurrentQueue</span><span class="o">&lt;</span><span class="n">FunctionWrapper</span><span class="o">&gt;</span> <span class="n">q_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">&gt;</span> <span class="n">threads_</span><span class="p">;</span>  <span class="c1">// 要在 done_ 和 q_ 之后声明
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>往线程池添加任务会增加任务队列的竞争，lock-free 队列可以避免这点但存在乒乓缓存的问题。为此需要把任务队列拆分为线程独立的本地队列和全局队列，当线程队列无任务时就去全局队列取任务</li>
-</ul>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span><span class="lnt">62
-</span><span class="lnt">63
-</span><span class="lnt">64
-</span><span class="lnt">65
-</span><span class="lnt">66
-</span><span class="lnt">67
-</span><span class="lnt">68
-</span><span class="lnt">69
-</span><span class="lnt">70
-</span><span class="lnt">71
-</span><span class="lnt">72
-</span><span class="lnt">73
-</span><span class="lnt">74
-</span><span class="lnt">75
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;atomic&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;future&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;memory&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;queue&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;type_traits&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;concurrent_queue.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;function_wrapper.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">ThreadPool</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">n</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="n">hardware_concurrency</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">try</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">threads_</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ThreadPool</span><span class="o">::</span><span class="n">worker_thread</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">catch</span> <span class="p">(...)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">threads_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">          <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="k">throw</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="o">~</span><span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">threads_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;&gt;</span> <span class="n">submit</span><span class="p">(</span><span class="n">F</span> <span class="n">f</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">packaged_task</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;</span><span class="p">()</span><span class="o">&gt;</span> <span class="n">task</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">f</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;&gt;</span> <span class="n">res</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">get_future</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">local_queue_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">local_queue_</span><span class="o">-&gt;</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">task</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">pool_queue_</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">task</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">worker_thread</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">local_queue_</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">std</span><span class="o">::</span><span class="n">queue</span><span class="o">&lt;</span><span class="n">FunctionWrapper</span><span class="o">&gt;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">done_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">FunctionWrapper</span> <span class="n">task</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">local_queue_</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">local_queue_</span><span class="o">-&gt;</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">task</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">local_queue_</span><span class="o">-&gt;</span><span class="n">front</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">        <span class="n">local_queue_</span><span class="o">-&gt;</span><span class="n">pop</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">        <span class="n">task</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="nf">if</span> <span class="p">(</span><span class="n">pool_queue_</span><span class="p">.</span><span class="n">try_pop</span><span class="p">(</span><span class="n">task</span><span class="p">))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">task</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">yield</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">done_</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ConcurrentQueue</span><span class="o">&lt;</span><span class="n">FunctionWrapper</span><span class="o">&gt;</span> <span class="n">pool_queue_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kr">inline</span> <span class="k">static</span> <span class="k">thread_local</span> <span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">queue</span><span class="o">&lt;</span><span class="n">FunctionWrapper</span><span class="o">&gt;&gt;</span>
-</span></span><span class="line"><span class="cl">      <span class="n">local_queue_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">&gt;</span> <span class="n">threads_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>这可以避免数据竞争，但如果任务分配不均，就会导致某个线程的本地队列中有很多任务，而其他线程无事可做，为此应该让没有工作的线程可以从其他线程获取任务</li>
-</ul>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">  1
-</span><span class="lnt">  2
-</span><span class="lnt">  3
-</span><span class="lnt">  4
-</span><span class="lnt">  5
-</span><span class="lnt">  6
-</span><span class="lnt">  7
-</span><span class="lnt">  8
-</span><span class="lnt">  9
-</span><span class="lnt"> 10
-</span><span class="lnt"> 11
-</span><span class="lnt"> 12
-</span><span class="lnt"> 13
-</span><span class="lnt"> 14
-</span><span class="lnt"> 15
-</span><span class="lnt"> 16
-</span><span class="lnt"> 17
-</span><span class="lnt"> 18
-</span><span class="lnt"> 19
-</span><span class="lnt"> 20
-</span><span class="lnt"> 21
-</span><span class="lnt"> 22
-</span><span class="lnt"> 23
-</span><span class="lnt"> 24
-</span><span class="lnt"> 25
-</span><span class="lnt"> 26
-</span><span class="lnt"> 27
-</span><span class="lnt"> 28
-</span><span class="lnt"> 29
-</span><span class="lnt"> 30
-</span><span class="lnt"> 31
-</span><span class="lnt"> 32
-</span><span class="lnt"> 33
-</span><span class="lnt"> 34
-</span><span class="lnt"> 35
-</span><span class="lnt"> 36
-</span><span class="lnt"> 37
-</span><span class="lnt"> 38
-</span><span class="lnt"> 39
-</span><span class="lnt"> 40
-</span><span class="lnt"> 41
-</span><span class="lnt"> 42
-</span><span class="lnt"> 43
-</span><span class="lnt"> 44
-</span><span class="lnt"> 45
-</span><span class="lnt"> 46
-</span><span class="lnt"> 47
-</span><span class="lnt"> 48
-</span><span class="lnt"> 49
-</span><span class="lnt"> 50
-</span><span class="lnt"> 51
-</span><span class="lnt"> 52
-</span><span class="lnt"> 53
-</span><span class="lnt"> 54
-</span><span class="lnt"> 55
-</span><span class="lnt"> 56
-</span><span class="lnt"> 57
-</span><span class="lnt"> 58
-</span><span class="lnt"> 59
-</span><span class="lnt"> 60
-</span><span class="lnt"> 61
-</span><span class="lnt"> 62
-</span><span class="lnt"> 63
-</span><span class="lnt"> 64
-</span><span class="lnt"> 65
-</span><span class="lnt"> 66
-</span><span class="lnt"> 67
-</span><span class="lnt"> 68
-</span><span class="lnt"> 69
-</span><span class="lnt"> 70
-</span><span class="lnt"> 71
-</span><span class="lnt"> 72
-</span><span class="lnt"> 73
-</span><span class="lnt"> 74
-</span><span class="lnt"> 75
-</span><span class="lnt"> 76
-</span><span class="lnt"> 77
-</span><span class="lnt"> 78
-</span><span class="lnt"> 79
-</span><span class="lnt"> 80
-</span><span class="lnt"> 81
-</span><span class="lnt"> 82
-</span><span class="lnt"> 83
-</span><span class="lnt"> 84
-</span><span class="lnt"> 85
-</span><span class="lnt"> 86
-</span><span class="lnt"> 87
-</span><span class="lnt"> 88
-</span><span class="lnt"> 89
-</span><span class="lnt"> 90
-</span><span class="lnt"> 91
-</span><span class="lnt"> 92
-</span><span class="lnt"> 93
-</span><span class="lnt"> 94
-</span><span class="lnt"> 95
-</span><span class="lnt"> 96
-</span><span class="lnt"> 97
-</span><span class="lnt"> 98
-</span><span class="lnt"> 99
-</span><span class="lnt">100
-</span><span class="lnt">101
-</span><span class="lnt">102
-</span><span class="lnt">103
-</span><span class="lnt">104
-</span><span class="lnt">105
-</span><span class="lnt">106
-</span><span class="lnt">107
-</span><span class="lnt">108
-</span><span class="lnt">109
-</span><span class="lnt">110
-</span><span class="lnt">111
-</span><span class="lnt">112
-</span><span class="lnt">113
-</span><span class="lnt">114
-</span><span class="lnt">115
-</span><span class="lnt">116
-</span><span class="lnt">117
-</span><span class="lnt">118
-</span><span class="lnt">119
-</span><span class="lnt">120
-</span><span class="lnt">121
-</span><span class="lnt">122
-</span><span class="lnt">123
-</span><span class="lnt">124
-</span><span class="lnt">125
-</span><span class="lnt">126
-</span><span class="lnt">127
-</span><span class="lnt">128
-</span><span class="lnt">129
-</span><span class="lnt">130
-</span><span class="lnt">131
-</span><span class="lnt">132
-</span><span class="lnt">133
-</span><span class="lnt">134
-</span><span class="lnt">135
-</span><span class="lnt">136
-</span><span class="lnt">137
-</span><span class="lnt">138
-</span><span class="lnt">139
-</span><span class="lnt">140
-</span><span class="lnt">141
-</span><span class="lnt">142
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;atomic&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;deque&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;future&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;memory&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;thread&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;type_traits&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;concurrent_queue.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;function_wrapper.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">WorkStealingQueue</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">WorkStealingQueue</span><span class="p">()</span> <span class="o">=</span> <span class="k">default</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">WorkStealingQueue</span><span class="p">(</span><span class="k">const</span> <span class="n">WorkStealingQueue</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">WorkStealingQueue</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">WorkStealingQueue</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">push</span><span class="p">(</span><span class="n">FunctionWrapper</span> <span class="n">f</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">q_</span><span class="p">.</span><span class="n">push_front</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">f</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">empty</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">q_</span><span class="p">.</span><span class="n">empty</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">try_pop</span><span class="p">(</span><span class="n">FunctionWrapper</span><span class="o">&amp;</span> <span class="n">res</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">q_</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">res</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">q_</span><span class="p">.</span><span class="n">front</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">    <span class="n">q_</span><span class="p">.</span><span class="n">pop_front</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">try_steal</span><span class="p">(</span><span class="n">FunctionWrapper</span><span class="o">&amp;</span> <span class="n">res</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">q_</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="n">res</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">q_</span><span class="p">.</span><span class="n">back</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">    <span class="n">q_</span><span class="p">.</span><span class="n">pop_back</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">deque</span><span class="o">&lt;</span><span class="n">FunctionWrapper</span><span class="o">&gt;</span> <span class="n">q_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">mutable</span> <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">ThreadPool</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">n</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="n">hardware_concurrency</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">try</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">work_stealing_queue_</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">            <span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">WorkStealingQueue</span><span class="o">&gt;</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">        <span class="n">threads_</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ThreadPool</span><span class="o">::</span><span class="n">worker_thread</span><span class="p">,</span> <span class="k">this</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">catch</span> <span class="p">(...)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">threads_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">          <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="k">throw</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="o">~</span><span class="n">ThreadPool</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">done_</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">threads_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;&gt;</span> <span class="n">submit</span><span class="p">(</span><span class="n">F</span> <span class="n">f</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">packaged_task</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;</span><span class="p">()</span><span class="o">&gt;</span> <span class="n">task</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">f</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">invoke_result_t</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;&gt;</span> <span class="n">res</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">get_future</span><span class="p">());</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">local_queue_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">local_queue_</span><span class="o">-&gt;</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">task</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">pool_queue_</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">task</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="n">pop_task_from_local_queue</span><span class="p">(</span><span class="n">FunctionWrapper</span><span class="o">&amp;</span> <span class="n">task</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">local_queue_</span> <span class="o">&amp;&amp;</span> <span class="n">local_queue_</span><span class="o">-&gt;</span><span class="n">try_pop</span><span class="p">(</span><span class="n">task</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">pop_task_from_pool_queue</span><span class="p">(</span><span class="n">FunctionWrapper</span><span class="o">&amp;</span> <span class="n">task</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">pool_queue_</span><span class="p">.</span><span class="n">try_pop</span><span class="p">(</span><span class="n">task</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">pop_task_from_other_thread_queue</span><span class="p">(</span><span class="n">FunctionWrapper</span><span class="o">&amp;</span> <span class="n">task</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">work_stealing_queue_</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">work_stealing_queue_</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">work_stealing_queue_</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">try_steal</span><span class="p">(</span><span class="n">task</span><span class="p">))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">worker_thread</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">index</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">index_</span> <span class="o">=</span> <span class="n">index</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">local_queue_</span> <span class="o">=</span> <span class="n">work_stealing_queue_</span><span class="p">[</span><span class="n">index_</span><span class="p">].</span><span class="n">get</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">done_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">FunctionWrapper</span> <span class="n">task</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="n">pop_task_from_local_queue</span><span class="p">(</span><span class="n">task</span><span class="p">)</span> <span class="o">||</span> <span class="n">pop_task_from_pool_queue</span><span class="p">(</span><span class="n">task</span><span class="p">)</span> <span class="o">||</span>
-</span></span><span class="line"><span class="cl">          <span class="n">pop_task_from_other_thread_queue</span><span class="p">(</span><span class="n">task</span><span class="p">))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">task</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">yield</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">done_</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">ConcurrentQueue</span><span class="o">&lt;</span><span class="n">FunctionWrapper</span><span class="o">&gt;</span> <span class="n">pool_queue_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">WorkStealingQueue</span><span class="o">&gt;&gt;</span> <span class="n">work_stealing_queue_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">&gt;</span> <span class="n">threads_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">static</span> <span class="k">thread_local</span> <span class="n">WorkStealingQueue</span><span class="o">*</span> <span class="n">local_queue_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">static</span> <span class="k">thread_local</span> <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">index_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">thread_local</span> <span class="n">WorkStealingQueue</span><span class="o">*</span> <span class="n">ThreadPool</span><span class="o">::</span><span class="n">local_queue_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="k">thread_local</span> <span class="n">std</span><span class="o">::</span><span class="n">size_t</span> <span class="n">ThreadPool</span><span class="o">::</span><span class="n">index_</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="中断">中断</h2>
-<ul>
-<li>可中断线程的简单实现</li>
-</ul>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">InterruptFlag</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">set</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">is_set</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">thread_local</span> <span class="n">InterruptFlag</span> <span class="n">this_thread_interrupt_flag</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">InterruptibleThread</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">InterruptibleThread</span><span class="p">(</span><span class="n">F</span> <span class="n">f</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">promise</span><span class="o">&lt;</span><span class="n">InterruptFlag</span><span class="o">*&gt;</span> <span class="n">p</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="n">t</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="p">([</span><span class="n">f</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">p</span><span class="p">]</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">p</span><span class="p">.</span><span class="n">set_value</span><span class="p">(</span><span class="o">&amp;</span><span class="n">this_thread_interrupt_flag</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">      <span class="n">f</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">});</span>
-</span></span><span class="line"><span class="cl">    <span class="n">flag</span> <span class="o">=</span> <span class="n">p</span><span class="p">.</span><span class="n">get_future</span><span class="p">().</span><span class="n">get</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">interrupt</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">flag</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">flag</span><span class="o">-&gt;</span><span class="n">set</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="kr">thread</span> <span class="n">t</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">InterruptFlag</span><span class="o">*</span> <span class="n">flag</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">interruption_point</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">this_thread_interrupt_flag</span><span class="p">.</span><span class="n">is_set</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">throw</span> <span class="n">thread_interrupted</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>在函数中使用</li>
-</ul>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">f</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">done</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">process_next_item</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>更好的方式是用 <a href="https://en.cppreference.com/w/cpp/thread/condition_variable"target="_blank" rel="external nofollow noopener noreferrer">std::condition_variable<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 来唤醒，而非在循环中持续运行</li>
-</ul>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">InterruptFlag</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">set</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">b_</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">memory_order_relaxed</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">cv_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">cv_</span><span class="o">-&gt;</span><span class="n">notify_all</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">bool</span> <span class="nf">is_set</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">b_</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">memory_order_relaxed</span><span class="p">);</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">set_condition_variable</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">condition_variable</span><span class="o">&amp;</span> <span class="n">cv</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">cv_</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">cv</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="nf">clear_condition_variable</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">cv_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">struct</span> <span class="nc">ClearConditionVariableOnDestruct</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="o">~</span><span class="n">ClearConditionVariableOnDestruct</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">this_thread_interrupt_flag</span><span class="p">.</span><span class="n">clear_condition_variable</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">b_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">condition_variable</span><span class="o">*</span> <span class="n">cv_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">interruptible_wait</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">condition_variable</span><span class="o">&amp;</span> <span class="n">cv</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">                        <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;&amp;</span> <span class="n">l</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">this_thread_interrupt_flag</span><span class="p">.</span><span class="n">set_condition_variable</span><span class="p">(</span><span class="n">cv</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 之后的 wait_for 可能抛异常，所以需要 RAII 清除标志
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">InterruptFlag</span><span class="o">::</span><span class="n">ClearConditionVariableOnDestruct</span> <span class="n">guard</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 设置线程看到中断前的等待时间上限
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">cv</span><span class="p">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">  <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Predicate</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">interruptible_wait</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">condition_variable</span><span class="o">&amp;</span> <span class="n">cv</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">                        <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;&amp;</span> <span class="n">l</span><span class="p">,</span> <span class="n">Predicate</span> <span class="n">pred</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">this_thread_interrupt_flag</span><span class="p">.</span><span class="n">set_condition_variable</span><span class="p">(</span><span class="n">cv</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">InterruptFlag</span><span class="o">::</span><span class="n">ClearConditionVariableOnDestruct</span> <span class="n">guard</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">this_thread_interrupt_flag</span><span class="p">.</span><span class="n">is_set</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">pred</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">cv</span><span class="p">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>和 <a href="https://en.cppreference.com/w/cpp/thread/condition_variable"target="_blank" rel="external nofollow noopener noreferrer">std::condition_variable<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 不同的是，<a href="https://en.cppreference.com/w/cpp/thread/condition_variable_any"target="_blank" rel="external nofollow noopener noreferrer">std::condition_variable_any<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 可以使用不限于 <a href="https://en.cppreference.com/w/cpp/thread/unique_lock"target="_blank" rel="external nofollow noopener noreferrer">std::unique_lock<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 的任何类型的锁，这意味着可以使用自定义的锁类型</li>
-</ul>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;atomic&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;condition_variable&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;mutex&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">InterruptFlag</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"> <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">set</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">b_</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">memory_order_relaxed</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">m_</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">cv_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">cv_</span><span class="o">-&gt;</span><span class="n">notify_all</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="nf">if</span> <span class="p">(</span><span class="n">cv_any_</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">cv_any_</span><span class="o">-&gt;</span><span class="n">notify_all</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Lockable</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">void</span> <span class="n">wait</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">condition_variable_any</span><span class="o">&amp;</span> <span class="n">cv</span><span class="p">,</span> <span class="n">Lockable</span><span class="o">&amp;</span> <span class="n">l</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">class</span> <span class="nc">Mutex</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">     <span class="k">public</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">      <span class="n">Mutex</span><span class="p">(</span><span class="n">InterruptFlag</span><span class="o">*</span> <span class="n">self</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">condition_variable_any</span><span class="o">&amp;</span> <span class="n">cv</span><span class="p">,</span> <span class="n">Lockable</span><span class="o">&amp;</span> <span class="n">l</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">          <span class="o">:</span> <span class="n">self_</span><span class="p">(</span><span class="n">self</span><span class="p">),</span> <span class="n">lock_</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">self_</span><span class="o">-&gt;</span><span class="n">m_</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">        <span class="n">self_</span><span class="o">-&gt;</span><span class="n">cv_any_</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">cv</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="o">~</span><span class="n">Mutex</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">self_</span><span class="o">-&gt;</span><span class="n">cv_any_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">        <span class="n">self_</span><span class="o">-&gt;</span><span class="n">m_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="kt">void</span> <span class="nf">lock</span><span class="p">()</span> <span class="p">{</span> <span class="n">std</span><span class="o">::</span><span class="n">lock</span><span class="p">(</span><span class="n">self_</span><span class="o">-&gt;</span><span class="n">m_</span><span class="p">,</span> <span class="n">lock_</span><span class="p">);</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="kt">void</span> <span class="nf">unlock</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="n">lock_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">        <span class="n">self_</span><span class="o">-&gt;</span><span class="n">m_</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">     <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">      <span class="n">InterruptFlag</span><span class="o">*</span> <span class="n">self_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="n">Lockable</span><span class="o">&amp;</span> <span class="n">lock_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">Mutex</span> <span class="nf">m</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="n">cv</span><span class="p">,</span> <span class="n">l</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">cv</span><span class="p">.</span><span class="n">wait</span><span class="p">(</span><span class="n">m</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// rest as before
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl"> <span class="k">private</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">b_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">condition_variable</span><span class="o">*</span> <span class="n">cv_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">condition_variable_any</span><span class="o">*</span> <span class="n">cv_any_</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">m_</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">};</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Lockable</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">interruptible_wait</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">condition_variable_any</span><span class="o">&amp;</span> <span class="n">cv</span><span class="p">,</span> <span class="n">Lockable</span><span class="o">&amp;</span> <span class="n">l</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">this_thread_interrupt_flag</span><span class="p">.</span><span class="n">wait</span><span class="p">(</span><span class="n">cv</span><span class="p">,</span> <span class="n">l</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>对于其他阻塞调用（比如 mutex、future）的中断，一般也可以像对 <a href="https://en.cppreference.com/w/cpp/thread/condition_variable"target="_blank" rel="external nofollow noopener noreferrer">std::condition_variable<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 一样设置超时时间，因为不访问内部 mutex 或 future 无法在未满足等待的条件时中断等待</li>
-</ul>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">interruptible_wait</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">ft</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">this_thread_interrupt_flag</span><span class="p">.</span><span class="n">is_set</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">ft</span><span class="p">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="o">==</span>
-</span></span><span class="line"><span class="cl">        <span class="n">std</span><span class="o">::</span><span class="n">future_status</span><span class="o">::</span><span class="n">ready</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">break</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>从被中断的线程角度来看，中断就是一个 <code>thread_interrupted</code> 异常。因此检查出中断后，可以像异常一样对其进行处理</li>
-</ul>
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">internal_thread</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="p">{[</span><span class="n">f</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">p</span><span class="p">]</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">p</span><span class="p">.</span><span class="n">set_value</span><span class="p">(</span><span class="o">&amp;</span><span class="n">this_thread_interrupt_flag</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="k">try</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">f</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="k">const</span> <span class="n">thread_interrupted</span><span class="o">&amp;</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 异常传入 std::thread 的析构函数时将调用 std::terminate
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 为了防止程序终止就要捕获异常
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}};</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>假如有一个桌面搜索程序，除了与用户交互，程序还需要监控文件系统的状态，以识别任何更改并更新其索引。为了避免影响 GUI 的响应性，这个处理通常会交给一个后台线程，后台线程需要运行于程序的整个生命周期。这样的程序通常只在机器关闭时退出，而在其他情况下关闭程序，就需要井然有序地关闭后台线程，一个关闭方式就是中断</li>
-</ul>
-<div class="highlight" id="id-14"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">mutex</span> <span class="n">config_mutex</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">InterruptibleThread</span><span class="o">&gt;</span> <span class="n">background_threads</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">background_thread</span><span class="p">(</span><span class="kt">int</span> <span class="n">disk_id</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">interruption_point</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="n">fs_change</span> <span class="n">fsc</span> <span class="o">=</span> <span class="n">get_fs_changes</span><span class="p">(</span><span class="n">disk_id</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">fsc</span><span class="p">.</span><span class="n">has_changes</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">update_index</span><span class="p">(</span><span class="n">fsc</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">start_background_processing</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">background_threads</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="n">background_thread</span><span class="p">,</span> <span class="n">disk_1</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="n">background_threads</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="n">background_thread</span><span class="p">,</span> <span class="n">disk_2</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">start_background_processing</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">process_gui_until_exit</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span> <span class="n">l</span><span class="p">(</span><span class="n">config_mutex</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">background_threads</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">x</span><span class="p">.</span><span class="n">interrupt</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 中断所有线程后再join
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">x</span> <span class="p">:</span> <span class="n">background_threads</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">joinable</span><span class="p">())</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="n">x</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// 不直接在一个循环里中断并 join 的目的是为了并发，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 因为中断不会立即完成，它们必须进入下一个中断点，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 再在退出前必要地调用析构和异常处理的代码，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 如果对每个线程都中断后立即 join，就会造成中断线程的等待，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="c1">// 即使它还可以做一些有用的工作，比如中断其他线程
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
 </div>]]></description></item></channel></rss>
