@@ -120,7 +120,7 @@ add_test(
 `CTest`可以以任何编程语言运行测试集。`CTest`关心的是，通过命令的返回码测试用例是否通过。`CTest`遵循的标准约定是：返回零意味着成功，非零返回意味着失败。可以返回零或非零的脚本，都可以做测试用例。
 {{</admonition>}}
 
-<table><body text=red><tr><td style="text-align:right;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
 
 
 **sum_integers.h**
