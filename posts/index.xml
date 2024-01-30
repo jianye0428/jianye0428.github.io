@@ -1,4 +1,445 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 28 Jan 2024 13:30:39 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 28 Jan 2024 13:30:47 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>CMake 笔记 | [20] 利用Google Test库进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_20/</link><pubDate>Sun, 28 Jan 2024 13:30:47 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_20/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p><strong>本篇，我们将学习如何在CMake的帮助下使用Google Test框架实现单元测试。与前一个配置（Catch2）相比，Google Test框架不仅仅是一个头文件，也是一个库，包含两个需要构建和链接的文件。可以将它们与我们的代码项目放在一起，但是为了使项目更加轻量级，我们将选择在配置时，下载一个定义良好的Google Test，然后构建框架并链接它。我们将使用较新的FetchContent模块（从CMake版本3.11开始可用）。关于相关使用将在后续的笔记中学习。</strong></p>
+<p><strong>此外我们将在相关测试内同学习完成后挑选一个测试框架（目前Google Test更加流行）*<em>写一个小的项目实践，尽可能多的将该框架下的功能加以熟悉。*</em></strong></p>
+</div>
+    </div>
+  </div>
+<h2 id="二项目结构">二、项目结构</h2>
+<p><mark>NOTE:</mark></p>
+<p><code>main.cpp</code>、<code>sum_integers.cpp</code>和<code>sum_integers.hpp</code>与上一篇内容相同，我们对test.cpp将做相关的修改。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── main.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.h
+</span></span><span class="line"><span class="cl">└── test.cpp</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/03"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/03<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<h2 id="三项目代码">三、项目代码</h2>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.11</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_gtest</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">sum_integers</span> <span class="n">sum_integers</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">main</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">sum_integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">option</span><span class="p">(</span><span class="n">ENABLE_UNIT_TESTS</span> <span class="s">&#34;Enable unit tests&#34;</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;Enable testing: ${ENABLE_UNIT_TESTS}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ENABLE_UNIT_TESTS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">include</span><span class="p">(</span><span class="n">FetchContent</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">FetchContent_Declare</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">googletest</span>
+</span></span><span class="line"><span class="cl">    <span class="n">GIT_REPOSITORY</span> <span class="nl">https</span><span class="p">:</span><span class="c1">//gitcode.net/mirrors/google/googletest.git
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">GIT_TAG</span>        <span class="n">release</span><span class="o">-</span><span class="mf">1.8.0</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">FetchContent_GetProperties</span><span class="p">(</span><span class="n">googletest</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">googletest_POPULATED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">FetchContent_Populate</span><span class="p">(</span><span class="n">googletest</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># Prevent GoogleTest from overriding our compiler/linker options
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="cp"># when building with Visual Studio
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">set</span><span class="p">(</span><span class="n">gtest_force_shared_crt</span> <span class="n">ON</span> <span class="n">CACHE</span> <span class="n">BOOL</span> <span class="s">&#34;&#34;</span> <span class="n">FORCE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="cp"># Prevent GoogleTest from using PThreads
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">set</span><span class="p">(</span><span class="n">gtest_disable_pthreads</span> <span class="n">ON</span> <span class="n">CACHE</span> <span class="n">BOOL</span> <span class="s">&#34;&#34;</span> <span class="n">FORCE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># adds the targers: gtest, gtest_main, gmock, gmock_main
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">add_subdirectory</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">googletest_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">googletest_BINARY_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># Silence std::tr1 warning on MSVC
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="k">if</span><span class="p">(</span><span class="n">MSVC</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">foreach</span><span class="p">(</span><span class="n">_tgt</span> <span class="n">gtest</span> <span class="n">gtest_main</span> <span class="n">gmock</span> <span class="n">gmock_main</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">target_compile_definitions</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_tgt</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">          <span class="n">PRIVATE</span>
+</span></span><span class="line"><span class="cl">            <span class="s">&#34;_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">endforeach</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">add_executable</span><span class="p">(</span><span class="n">cpp_test</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">target_sources</span><span class="p">(</span><span class="n">cpp_test</span>
+</span></span><span class="line"><span class="cl">    <span class="n">PRIVATE</span>
+</span></span><span class="line"><span class="cl">      <span class="n">test</span><span class="p">.</span><span class="n">cpp</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">target_link_libraries</span><span class="p">(</span><span class="n">cpp_test</span>
+</span></span><span class="line"><span class="cl">    <span class="n">PRIVATE</span>
+</span></span><span class="line"><span class="cl">      <span class="n">sum_integers</span>
+</span></span><span class="line"><span class="cl">      <span class="n">gtest_main</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">enable_testing</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NAME</span> <span class="n">google_test</span>
+</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>**<font color=red>注意:</font>**CMake 3.11版本以后才可以使用<code>FetchContent</code>模块。</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS</span> <span class="n">ON</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>告诉<code>CMake</code>在 <code>Windows</code> 平台上自动从共享库（<code>DLL</code>）中导出所有符号（函数、变量、类等）。</p>
+<p>当将此选项设置为 <code>ON</code> 时，<code>CMake</code>会自动在库的代码中插入导出指令，确保它们可以被外部链接。这在 <code>Windows</code> 上特别重要，因为需要明确的导出声明才能让符号从 <code>DLL</code> 外部访问。</p>
+<p>然而，启用此选项可能会导致生成较大的二进制文件，并可能意外地暴露符号。如果链接了多个库，还可能导致符号冲突。因此，虽然它简化了符号的导出，但需要仔细考虑其影响，以及是否适用于自己的项目。</p>
+</div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">option</span><span class="p">(</span><span class="n">ENABLE_UNIT_TESTS</span> <span class="s">&#34;Enable unit tests&#34;</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;Enable testing: ${ENABLE_UNIT_TESTS}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ENABLE_UNIT_TESTS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="cp"># all the remaining CMake code will be placed here
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>检查<code>ENABLE_UNIT_TESTS</code>。默认情况下，它为<code>ON</code>，但有时需要设置为<code>OFF</code>，以免在没有网络连接时，也能使用<code>Google Test</code>。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FetchContent</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">FetchContent_Declare</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">googletest</span>
+</span></span><span class="line"><span class="cl">  <span class="n">GIT_REPOSITORY</span> <span class="nl">https</span><span class="p">:</span><span class="c1">//gitcode.net/mirrors/google/googletest.git
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">GIT_TAG</span>        <span class="n">release</span><span class="o">-</span><span class="mf">1.8.0</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用了<code>FetchContent</code>模块来下载和集成<code>Google Test</code>库（<code>googletest</code>）。</p>
+<ul>
+<li><code>include(FetchContent)</code>：用于包含<code>FetchContent</code>模块，该模块允许在项目中获取外部依赖项。</li>
+<li><code>FetchContent_Declare(googletest ...)</code>：使用<code>FetchContent_Declare</code>宏来声明要获取的外部依赖项。在这种情况下，它声明了一个名为<code>googletest</code>的外部依赖项。</li>
+<li><code>GIT_REPOSITORY</code>：这是指定用于获取库的<code>Git</code>存储库的<code>URL</code>。</li>
+<li><code>GIT_TAG</code>：这是<code>Git</code>存储库中的特定标签或分支，指定希望获取的库的版本。在这里，它指定了<code>Google Test</code>库的版本为<code>release-1.8.0</code>。</li>
+</ul>
+<p>使用这段代码后，当构建项目时，<code>CMake</code>将尝试下载并集成<code>Google Test</code>库，以便可以在项目中进行单元测试。请注意，实际项目中可能还需要在测试目标中链接<code>Google Test</code>库，并设置测试用例等。</p>
+</div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">googletest_POPULATED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">FetchContent_Populate</span><span class="p">(</span><span class="n">googletest</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># Prevent GoogleTest from overriding our compiler/linker options
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="cp"># when building with Visual Studio
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">set</span><span class="p">(</span><span class="n">gtest_force_shared_crt</span> <span class="n">ON</span> <span class="n">CACHE</span> <span class="n">BOOL</span> <span class="s">&#34;&#34;</span> <span class="n">FORCE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="cp"># Prevent GoogleTest from using PThreads
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">set</span><span class="p">(</span><span class="n">gtest_disable_pthreads</span> <span class="n">ON</span> <span class="n">CACHE</span> <span class="n">BOOL</span> <span class="s">&#34;&#34;</span> <span class="n">FORCE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># adds the targers: gtest, gtest_main, gmock, gmock_main
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">add_subdirectory</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">googletest_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">googletest_BINARY_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># Silence std::tr1 warning on MSVC
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="k">if</span><span class="p">(</span><span class="n">MSVC</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">foreach</span><span class="p">(</span><span class="n">_tgt</span> <span class="n">gtest</span> <span class="n">gtest_main</span> <span class="n">gmock</span> <span class="n">gmock_main</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">target_compile_definitions</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_tgt</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">          <span class="n">PRIVATE</span>
+</span></span><span class="line"><span class="cl">            <span class="s">&#34;_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">endforeach</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li><code>if(NOT googletest_POPULATED)</code>：检查是否已经获取并集成了<code>Google Test</code>库。如果<code>googletest_POPULATED</code>未定义，则会执行其中的代码块。</li>
+<li><code>FetchContent_Populate(googletest)</code>：将下载的<code>Google Test</code>库内容填充到指定的目录，以便后续构建和集成。</li>
+<li><code>set(gtest_force_shared_crt ON CACHE BOOL &quot;&quot; FORCE)</code>：在使用<code>Visual Studio</code>构建时，将强制<code>Google Test</code>使用共享运行时（<code>C Runtime</code>）库。可以避免构建时的链接错误。</li>
+<li><code>set(gtest_disable_pthreads ON CACHE BOOL &quot;&quot; FORCE)</code>：禁用<code>Google Test</code>对<code>pthreads</code>的使用。这可能在某些环境中是必需的，例如在没有<code>pthreads</code>支持的平台上。</li>
+<li><code>add_subdirectory(...)</code>：将<code>Google Test</code>库添加到项目中。它会在指定的源码目录和二进制目录中进行构建。</li>
+<li>对于<code>Microsoft Visual Studio（MSVC）</code>，在构建<code>Google Test</code>库时，通过<code>target_compile_definitions</code>为<code>gtest</code>、<code>gtest_main</code>、<code>gmock</code>和<code>gmock_main</code>目标添加了宏定义以消除<code>MSVC</code>下的警告。</li>
+</ul>
+</div>
+    </div>
+  </div>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<p><strong>test.cpp</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;gtest/gtest.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="o">::</span><span class="n">testing</span><span class="o">::</span><span class="n">InitGoogleTest</span><span class="p">(</span><span class="o">&amp;</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">RUN_ALL_TESTS</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">TEST</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="n">sum_zero</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">integers</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">result</span> <span class="o">=</span> <span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ASSERT_EQ</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">TEST</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="n">sum_five</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">integers</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">result</span> <span class="o">=</span> <span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ASSERT_EQ</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="mi">15</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">输出:</font></td></tr></body></table>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake ..
+</span></span><span class="line"><span class="cl">ctest
+</span></span><span class="line"><span class="cl">Test project /home/jiangli/repo/tutorials/cmake-tutorial/chapter4/03/build
+</span></span><span class="line"><span class="cl">    Start 1: google_test
+</span></span><span class="line"><span class="cl">1/1 Test <span class="c1">#1: google_test ......................   Passed    0.00 sec</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">100% tests passed, <span class="m">0</span> tests failed out of <span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Total Test <span class="nb">time</span> <span class="o">(</span>real<span class="o">)</span> <span class="o">=</span>   0.01 sec
+</span></span><span class="line"><span class="cl">./cpp_test
+</span></span><span class="line"><span class="cl"><span class="o">[==========]</span> Running <span class="m">2</span> tests from <span class="m">1</span> <span class="nb">test</span> <span class="k">case</span>.
+</span></span><span class="line"><span class="cl"><span class="o">[</span>----------<span class="o">]</span> Global <span class="nb">test</span> environment set-up.
+</span></span><span class="line"><span class="cl"><span class="o">[</span>----------<span class="o">]</span> <span class="m">2</span> tests from example
+</span></span><span class="line"><span class="cl"><span class="o">[</span> RUN      <span class="o">]</span> example.sum_zero
+</span></span><span class="line"><span class="cl"><span class="o">[</span>       OK <span class="o">]</span> example.sum_zero <span class="o">(</span><span class="m">0</span> ms<span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span> RUN      <span class="o">]</span> example.sum_five
+</span></span><span class="line"><span class="cl"><span class="o">[</span>       OK <span class="o">]</span> example.sum_five <span class="o">(</span><span class="m">0</span> ms<span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>----------<span class="o">]</span> <span class="m">2</span> tests from example <span class="o">(</span><span class="m">0</span> ms total<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">[</span>----------<span class="o">]</span> Global <span class="nb">test</span> environment tear-down
+</span></span><span class="line"><span class="cl"><span class="o">[==========]</span> <span class="m">2</span> tests from <span class="m">1</span> <span class="nb">test</span> <span class="k">case</span> ran. <span class="o">(</span><span class="m">0</span> ms total<span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>  PASSED  <span class="o">]</span> <span class="m">2</span> tests.</span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>CMake 笔记 | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -26380,7 +26821,448 @@ Each scenario’s local map includes all entities found within a 100 m dilation 
 <h2 id="reference">Reference</h2>
 <p>[1]. <a href="https://blog.csdn.net/Yong_Qi2015/article/details/128731798"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/Yong_Qi2015/article/details/128731798<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a><br>
 [2]. <a href="https://blog.csdn.net/m0_56423263/article/details/134593815"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/m0_56423263/article/details/134593815<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a><br></p>
-]]></description></item><item><title>CMake 笔记 | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+]]></description></item><item><title>CMake 笔记 | [20] 利用Google Test库进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_20/</link><pubDate>Sun, 28 Jan 2024 13:30:47 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_20/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><p><strong>本篇，我们将学习如何在CMake的帮助下使用Google Test框架实现单元测试。与前一个配置（Catch2）相比，Google Test框架不仅仅是一个头文件，也是一个库，包含两个需要构建和链接的文件。可以将它们与我们的代码项目放在一起，但是为了使项目更加轻量级，我们将选择在配置时，下载一个定义良好的Google Test，然后构建框架并链接它。我们将使用较新的FetchContent模块（从CMake版本3.11开始可用）。关于相关使用将在后续的笔记中学习。</strong></p>
+<p><strong>此外我们将在相关测试内同学习完成后挑选一个测试框架（目前Google Test更加流行）*<em>写一个小的项目实践，尽可能多的将该框架下的功能加以熟悉。*</em></strong></p>
+</div>
+    </div>
+  </div>
+<h2 id="二项目结构">二、项目结构</h2>
+<p><mark>NOTE:</mark></p>
+<p><code>main.cpp</code>、<code>sum_integers.cpp</code>和<code>sum_integers.hpp</code>与上一篇内容相同，我们对test.cpp将做相关的修改。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── main.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.h
+</span></span><span class="line"><span class="cl">└── test.cpp</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/03"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/03<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<h2 id="三项目代码">三、项目代码</h2>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.11</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">test_gtest</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">sum_integers</span> <span class="n">sum_integers</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">main</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">sum_integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">option</span><span class="p">(</span><span class="n">ENABLE_UNIT_TESTS</span> <span class="s">&#34;Enable unit tests&#34;</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;Enable testing: ${ENABLE_UNIT_TESTS}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ENABLE_UNIT_TESTS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">include</span><span class="p">(</span><span class="n">FetchContent</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">FetchContent_Declare</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">googletest</span>
+</span></span><span class="line"><span class="cl">    <span class="n">GIT_REPOSITORY</span> <span class="nl">https</span><span class="p">:</span><span class="c1">//gitcode.net/mirrors/google/googletest.git
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">GIT_TAG</span>        <span class="n">release</span><span class="o">-</span><span class="mf">1.8.0</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">FetchContent_GetProperties</span><span class="p">(</span><span class="n">googletest</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">googletest_POPULATED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">FetchContent_Populate</span><span class="p">(</span><span class="n">googletest</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># Prevent GoogleTest from overriding our compiler/linker options
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="cp"># when building with Visual Studio
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">set</span><span class="p">(</span><span class="n">gtest_force_shared_crt</span> <span class="n">ON</span> <span class="n">CACHE</span> <span class="n">BOOL</span> <span class="s">&#34;&#34;</span> <span class="n">FORCE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="cp"># Prevent GoogleTest from using PThreads
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">set</span><span class="p">(</span><span class="n">gtest_disable_pthreads</span> <span class="n">ON</span> <span class="n">CACHE</span> <span class="n">BOOL</span> <span class="s">&#34;&#34;</span> <span class="n">FORCE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># adds the targers: gtest, gtest_main, gmock, gmock_main
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">add_subdirectory</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">googletest_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">googletest_BINARY_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># Silence std::tr1 warning on MSVC
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="k">if</span><span class="p">(</span><span class="n">MSVC</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">foreach</span><span class="p">(</span><span class="n">_tgt</span> <span class="n">gtest</span> <span class="n">gtest_main</span> <span class="n">gmock</span> <span class="n">gmock_main</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">target_compile_definitions</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_tgt</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">          <span class="n">PRIVATE</span>
+</span></span><span class="line"><span class="cl">            <span class="s">&#34;_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">endforeach</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">add_executable</span><span class="p">(</span><span class="n">cpp_test</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">target_sources</span><span class="p">(</span><span class="n">cpp_test</span>
+</span></span><span class="line"><span class="cl">    <span class="n">PRIVATE</span>
+</span></span><span class="line"><span class="cl">      <span class="n">test</span><span class="p">.</span><span class="n">cpp</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">target_link_libraries</span><span class="p">(</span><span class="n">cpp_test</span>
+</span></span><span class="line"><span class="cl">    <span class="n">PRIVATE</span>
+</span></span><span class="line"><span class="cl">      <span class="n">sum_integers</span>
+</span></span><span class="line"><span class="cl">      <span class="n">gtest_main</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">enable_testing</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">NAME</span> <span class="n">google_test</span>
+</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>**<font color=red>注意:</font>**CMake 3.11版本以后才可以使用<code>FetchContent</code>模块。</p>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS</span> <span class="n">ON</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>告诉<code>CMake</code>在 <code>Windows</code> 平台上自动从共享库（<code>DLL</code>）中导出所有符号（函数、变量、类等）。</p>
+<p>当将此选项设置为 <code>ON</code> 时，<code>CMake</code>会自动在库的代码中插入导出指令，确保它们可以被外部链接。这在 <code>Windows</code> 上特别重要，因为需要明确的导出声明才能让符号从 <code>DLL</code> 外部访问。</p>
+<p>然而，启用此选项可能会导致生成较大的二进制文件，并可能意外地暴露符号。如果链接了多个库，还可能导致符号冲突。因此，虽然它简化了符号的导出，但需要仔细考虑其影响，以及是否适用于自己的项目。</p>
+</div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">option</span><span class="p">(</span><span class="n">ENABLE_UNIT_TESTS</span> <span class="s">&#34;Enable unit tests&#34;</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;Enable testing: ${ENABLE_UNIT_TESTS}&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">ENABLE_UNIT_TESTS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="cp"># all the remaining CMake code will be placed here
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>检查<code>ENABLE_UNIT_TESTS</code>。默认情况下，它为<code>ON</code>，但有时需要设置为<code>OFF</code>，以免在没有网络连接时，也能使用<code>Google Test</code>。</p></div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">FetchContent</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">FetchContent_Declare</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">googletest</span>
+</span></span><span class="line"><span class="cl">  <span class="n">GIT_REPOSITORY</span> <span class="nl">https</span><span class="p">:</span><span class="c1">//gitcode.net/mirrors/google/googletest.git
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">GIT_TAG</span>        <span class="n">release</span><span class="o">-</span><span class="mf">1.8.0</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用了<code>FetchContent</code>模块来下载和集成<code>Google Test</code>库（<code>googletest</code>）。</p>
+<ul>
+<li><code>include(FetchContent)</code>：用于包含<code>FetchContent</code>模块，该模块允许在项目中获取外部依赖项。</li>
+<li><code>FetchContent_Declare(googletest ...)</code>：使用<code>FetchContent_Declare</code>宏来声明要获取的外部依赖项。在这种情况下，它声明了一个名为<code>googletest</code>的外部依赖项。</li>
+<li><code>GIT_REPOSITORY</code>：这是指定用于获取库的<code>Git</code>存储库的<code>URL</code>。</li>
+<li><code>GIT_TAG</code>：这是<code>Git</code>存储库中的特定标签或分支，指定希望获取的库的版本。在这里，它指定了<code>Google Test</code>库的版本为<code>release-1.8.0</code>。</li>
+</ul>
+<p>使用这段代码后，当构建项目时，<code>CMake</code>将尝试下载并集成<code>Google Test</code>库，以便可以在项目中进行单元测试。请注意，实际项目中可能还需要在测试目标中链接<code>Google Test</code>库，并设置测试用例等。</p>
+</div>
+    </div>
+  </div>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">googletest_POPULATED</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">FetchContent_Populate</span><span class="p">(</span><span class="n">googletest</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># Prevent GoogleTest from overriding our compiler/linker options
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="cp"># when building with Visual Studio
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">set</span><span class="p">(</span><span class="n">gtest_force_shared_crt</span> <span class="n">ON</span> <span class="n">CACHE</span> <span class="n">BOOL</span> <span class="s">&#34;&#34;</span> <span class="n">FORCE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="cp"># Prevent GoogleTest from using PThreads
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">set</span><span class="p">(</span><span class="n">gtest_disable_pthreads</span> <span class="n">ON</span> <span class="n">CACHE</span> <span class="n">BOOL</span> <span class="s">&#34;&#34;</span> <span class="n">FORCE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># adds the targers: gtest, gtest_main, gmock, gmock_main
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="n">add_subdirectory</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">googletest_SOURCE_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">googletest_BINARY_DIR</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="cp"># Silence std::tr1 warning on MSVC
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>    <span class="k">if</span><span class="p">(</span><span class="n">MSVC</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">foreach</span><span class="p">(</span><span class="n">_tgt</span> <span class="n">gtest</span> <span class="n">gtest_main</span> <span class="n">gmock</span> <span class="n">gmock_main</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">target_compile_definitions</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">_tgt</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">          <span class="n">PRIVATE</span>
+</span></span><span class="line"><span class="cl">            <span class="s">&#34;_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="n">endforeach</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">endif</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li><code>if(NOT googletest_POPULATED)</code>：检查是否已经获取并集成了<code>Google Test</code>库。如果<code>googletest_POPULATED</code>未定义，则会执行其中的代码块。</li>
+<li><code>FetchContent_Populate(googletest)</code>：将下载的<code>Google Test</code>库内容填充到指定的目录，以便后续构建和集成。</li>
+<li><code>set(gtest_force_shared_crt ON CACHE BOOL &quot;&quot; FORCE)</code>：在使用<code>Visual Studio</code>构建时，将强制<code>Google Test</code>使用共享运行时（<code>C Runtime</code>）库。可以避免构建时的链接错误。</li>
+<li><code>set(gtest_disable_pthreads ON CACHE BOOL &quot;&quot; FORCE)</code>：禁用<code>Google Test</code>对<code>pthreads</code>的使用。这可能在某些环境中是必需的，例如在没有<code>pthreads</code>支持的平台上。</li>
+<li><code>add_subdirectory(...)</code>：将<code>Google Test</code>库添加到项目中。它会在指定的源码目录和二进制目录中进行构建。</li>
+<li>对于<code>Microsoft Visual Studio（MSVC）</code>，在构建<code>Google Test</code>库时，通过<code>target_compile_definitions</code>为<code>gtest</code>、<code>gtest_main</code>、<code>gmock</code>和<code>gmock_main</code>目标添加了宏定义以消除<code>MSVC</code>下的警告。</li>
+</ul>
+</div>
+    </div>
+  </div>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<p><strong>test.cpp</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;gtest/gtest.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="o">::</span><span class="n">testing</span><span class="o">::</span><span class="n">InitGoogleTest</span><span class="p">(</span><span class="o">&amp;</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">RUN_ALL_TESTS</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">TEST</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="n">sum_zero</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">integers</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">result</span> <span class="o">=</span> <span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ASSERT_EQ</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">TEST</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="n">sum_five</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">integers</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">result</span> <span class="o">=</span> <span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ASSERT_EQ</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="mi">15</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">输出:</font></td></tr></body></table>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake ..
+</span></span><span class="line"><span class="cl">ctest
+</span></span><span class="line"><span class="cl">Test project /home/jiangli/repo/tutorials/cmake-tutorial/chapter4/03/build
+</span></span><span class="line"><span class="cl">    Start 1: google_test
+</span></span><span class="line"><span class="cl">1/1 Test <span class="c1">#1: google_test ......................   Passed    0.00 sec</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">100% tests passed, <span class="m">0</span> tests failed out of <span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Total Test <span class="nb">time</span> <span class="o">(</span>real<span class="o">)</span> <span class="o">=</span>   0.01 sec
+</span></span><span class="line"><span class="cl">./cpp_test
+</span></span><span class="line"><span class="cl"><span class="o">[==========]</span> Running <span class="m">2</span> tests from <span class="m">1</span> <span class="nb">test</span> <span class="k">case</span>.
+</span></span><span class="line"><span class="cl"><span class="o">[</span>----------<span class="o">]</span> Global <span class="nb">test</span> environment set-up.
+</span></span><span class="line"><span class="cl"><span class="o">[</span>----------<span class="o">]</span> <span class="m">2</span> tests from example
+</span></span><span class="line"><span class="cl"><span class="o">[</span> RUN      <span class="o">]</span> example.sum_zero
+</span></span><span class="line"><span class="cl"><span class="o">[</span>       OK <span class="o">]</span> example.sum_zero <span class="o">(</span><span class="m">0</span> ms<span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span> RUN      <span class="o">]</span> example.sum_five
+</span></span><span class="line"><span class="cl"><span class="o">[</span>       OK <span class="o">]</span> example.sum_five <span class="o">(</span><span class="m">0</span> ms<span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>----------<span class="o">]</span> <span class="m">2</span> tests from example <span class="o">(</span><span class="m">0</span> ms total<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">[</span>----------<span class="o">]</span> Global <span class="nb">test</span> environment tear-down
+</span></span><span class="line"><span class="cl"><span class="o">[==========]</span> <span class="m">2</span> tests from <span class="m">1</span> <span class="nb">test</span> <span class="k">case</span> ran. <span class="o">(</span><span class="m">0</span> ms total<span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>  PASSED  <span class="o">]</span> <span class="m">2</span> tests.</span></span></code></pre></td></tr></table>
+</div>
+</div>]]></description></item><item><title>CMake 笔记 | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -39139,153 +40021,4 @@ function() 函数模板并没有实现完美转发。</p>
 <p><strong>构建所有</strong>: 在vs中的解决方案资源管理器中右键ALL_BUILD，然后点击生成</p>
 <p>编译生成hello-world进程，右键hello-world,然后点击生成。如果我们使用CMake在一个项目中生成了多个进程，我们在测试某一个进程时，在对应的进程上右键设为启动项目即可。</p>
 <p><strong>执行install安装命令</strong>: 在INSTALL上右键，然后点击生成即可。注意：只有当我们的CMake中有install命令时，VS中才会出现INTALL选项。</p>
-]]></description></item><item><title>CMake 笔记 | [1] 单个源文件编译为可执行文件</title><link>https://jianye0428.github.io/posts/cmake_note_1/</link><pubDate>Fri, 12 Jan 2024 14:19:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_1/</guid><description><![CDATA[<h3 id="一项目结构">一、项目结构</h3>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">..
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">└── hello_world.cpp
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">0 directories, 2 files</span></span></code></pre></td></tr></table>
-</div>
-</div><p>本项目只包含了一个源文件hello_world.cpp和一个CMake文件。</p>
-<blockquote>
-<p>源码地址: <a href="https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_1/hello-world"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_1/hello-world<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<div class="details admonition quote open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>注意<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">注意: CMake文件的名字只能是CMakeLists.txt，当然如果使用include命令（后续会讲到），可以以任何名字进行命名，只要以.cmake结尾即可。</div>
-    </div>
-  </div>
-<h3 id="二cpp源文件">二、CPP源文件</h3>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;cstdlib&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">SayHello</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">SayHello</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">SayHello</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="s">&#34;Hello, CMake World!&#34;</span><span class="p">);</span> <span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="三cmake文件">三、CMake文件</h3>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cmake" data-lang="cmake"><span class="line"><span class="cl"><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
-</span></span><span class="line"><span class="cl">    <span class="s">hello_world.cpp</span>
-</span></span><span class="line"><span class="cl"><span class="s">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>
-<p><strong><code>cmake_minimum_required(VERSION 3.10 FATAL_ERROR)</code></strong></p>
-<p>设置CMake所需的最低版本的最低版本，如果使用的CMake版本低于该版本，则会发出致命错误。
-今后，笔记中CMake的版本要求都为3.10。vscode中CMake Tool插件使用debug功能要求CMake版本不低于3.10。如果使用的系统ubuntu 16.04的话，需要升级CMake版本，windows请自行安装高于3.10版本的CMake。</p>
-</li>
-<li>
-<p><strong><code>project(hello-world LANGUAGES CXX)</code></strong></p>
-<p>声明了项目的名称和支持的编程语言，且该命令必须生命在cmake_minimum_required之后。一旦声明了项目的名称后，可以使用宏定义${PROJECT_NAME}进行调用。
-在CMake中，C++是默认的编程语言。不过在实际编写代码过程中，仍建议使用LANGUAGES选项在project命令中显示地声明项目的语言。</p>
-</li>
-<li>
-<p><strong><code>add_executable(${PROJECT_NAME} hello_world.cpp}</code></strong></p>
-<p>CMake创建一个新可执行文件，其名字为${PROJECT_NAME}（也可以使用其他任意的名字）。这个可执行文件是通过编译和链接源文件hello_world.cpp生成的。</p>
-<p>CMake将为编译器使用默认设置，并自动生成工具。</p>
-</li>
-</ul>
-<h3 id="四操作">四、操作</h3>
-<p>在工程文件夹下，执行如下操作:</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
-</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
-</span></span><span class="line"><span class="cl">cmake ..</span></span></code></pre></td></tr></table>
-</div>
-</div><p>输出结果:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 9.4.0
-</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++
-</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ -- works
-</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
-</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
-</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/01/build</span></span></code></pre></td></tr></table>
-</div>
-</div><p>CMake的构建方式有两种: <strong>源内构建</strong>和<strong>源外构建</strong>。源内构建即在CMakeLists.txt同级目录中进行构建，构建出来的CMake文件将在该目录中，<font color=red><u>这通常是不推荐的，因为这会混合源代码和项目的目录树</u></font>。源外构建的构建方式，就是笔记的构建方式，往后我们都采用源外构建的方式。</p>
-<p>CMake是一个构建系统生成器。将描述构建系统，如Unix Makefile、Ninja、sln等应当如何操作才能编译代码。然后，CMake为所选的构建系统生成相应的指令。默认情况下，在GNU/Linux和macOS系统上，CMake使用Unix Makefile生成器。Windows上，sln是默认的生成器。</p>
-<p>GNU/Linux上，CMake默认生成 Makefile来构建项目:</p>
-<ol>
-<li><strong>Makefile</strong>: make将运行指令来构建项目。</li>
-<li><strong>CMakefile</strong>: 包含临时文件的目录，CMake用于检测操作系统、编译器等。此外，根据所选的生成器，它还包含特定的文件。</li>
-<li><strong>cmake_install.cmake</strong>: 处理安装规则的CMake脚本，在项目安装时使用（命令为执行为make后执行make install）。</li>
-<li><strong>CMakeCache.txt</strong>: 如文件名所示，CMake缓存。CMake在重新运行配置时使用这个文件。</li>
-</ol>
 ]]></description></item></channel></rss>
