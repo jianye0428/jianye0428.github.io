@@ -26,10 +26,7 @@
 
 > https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/01
 
-
-
 <table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
-
 
 ```c++
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
