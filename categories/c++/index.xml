@@ -439,7 +439,392 @@
 </span></span><span class="line"><span class="cl"><span class="o">[==========]</span> <span class="m">2</span> tests from <span class="m">1</span> <span class="nb">test</span> <span class="k">case</span> ran. <span class="o">(</span><span class="m">0</span> ms total<span class="o">)</span>
 </span></span><span class="line"><span class="cl"><span class="o">[</span>  PASSED  <span class="o">]</span> <span class="m">2</span> tests.</span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item><item><title>CMake 笔记 | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+</div>]]></description></item><item><title>CMake 笔记 | [19] 利用Catch2库进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_19/</link><pubDate>Sun, 28 Jan 2024 13:30:42 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_19/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
+<div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content">*<em>上一篇，我们通过返回码来表示**<code>test.cpp</code>*<em>测试的成功或者失败。对于简单的功能没问题，但是通常情况下，我们想要使用一个测试框架，它提供了相关基础设施来运行更复杂的测试，包括固定方式进行测试，与数值公差进行比较，以及在测试失败时输出更好的错误报告。本篇，通过使用目前比较流行的测试库Catch2来进行探索相关内容。这个测试框架有个很好的特性，它可以通过单个头文件包含在项目中进行测试，这使得编译和更新框架特别容易。通过CMake和Catch2结合使用，来测试上一篇的求和代码。</em></em></div>
+    </div>
+  </div>
+<h2 id="二项目结构">二、项目结构</h2>
+<p><mark>NOTE</mark>
+本项目中<code>Catch</code>使用的版本是<code>2.0.1</code>，目前已经更新到<code>3.4.0</code>。关于最新版本的使用我们将在本系列最后开启一个具体的小型项目探索测试框架。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── catch.hpp
+</span></span><span class="line"><span class="cl">├── CMakeLists.txt
+</span></span><span class="line"><span class="cl">├── main.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.cpp
+</span></span><span class="line"><span class="cl">├── sum_integers.h
+</span></span><span class="line"><span class="cl">└── test.cpp</span></span></code></pre></td></tr></table>
+</div>
+</div><p>项目地址：</p>
+<blockquote>
+<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/02"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter4/02<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">CMakeLists.txt</font></td></tr></body></table>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp"># set minimum cmake version
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="cp"># project name and language
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">project</span><span class="p">(</span><span class="n">test_catch2</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># require C++11
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># example library
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_library</span><span class="p">(</span><span class="n">sum_integers</span> <span class="n">sum_integers</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="cp"># main code
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_executable</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">main</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">sum_up</span> <span class="n">sum_integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cp"># testing binary
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_executable</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">test</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">sum_integers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">enable_testing</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">catch_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">success</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="details admonition quote">
+    <div class="details-summary admonition-title">
+      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
+    </div>
+    <div class="details-content">
+      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="n">NAME</span> <span class="n">catch_test</span>
+</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span> <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">success</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>--success</code>选项可传递给单元测试的可执行文件。这是一个<code>Catch2</code>选项，测试成功时，也会有输出。</p></div>
+    </div>
+  </div>
+<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
+<blockquote>
+<p><code>main.cpp</code>、<code>sum_integers.cpp</code>和<code>sum_integers.h</code>与之前的示例相同。</p>
+</blockquote>
+<p><strong>test.cpp</strong></p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;sum_integers.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="c1">// this tells catch to provide a main()
+</span></span></span><span class="line"><span class="cl"><span class="c1">// only do this in one cpp file
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#define CATCH_CONFIG_MAIN
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;catch.hpp&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&#34;Sum of integers for a short vector&#34;</span><span class="p">,</span> <span class="s">&#34;[shirt]&#34;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">integers</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">  <span class="n">REQUIRE</span><span class="p">(</span><span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">15</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&#34;Sum of integers for a longer vector&#34;</span><span class="p">,</span> <span class="s">&#34;[long]&#34;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">integers</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1001</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">integers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="n">REQUIRE</span><span class="p">(</span><span class="n">sum_integers</span><span class="p">(</span><span class="n">integers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">500500</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">输出结果:</font></td></tr></body></table>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir -p build
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
+</span></span><span class="line"><span class="cl">cmake ..
+</span></span><span class="line"><span class="cl">cmake --build .
+</span></span><span class="line"><span class="cl">ctest -V
+</span></span><span class="line"><span class="cl">UpdateCTestConfiguration  from :/home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/build/DartConfiguration.tcl
+</span></span><span class="line"><span class="cl">UpdateCTestConfiguration  from :/home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/build/DartConfiguration.tcl
+</span></span><span class="line"><span class="cl">Test project /home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/build
+</span></span><span class="line"><span class="cl">Constructing a list of tests
+</span></span><span class="line"><span class="cl">Done constructing a list of tests
+</span></span><span class="line"><span class="cl">Updating <span class="nb">test</span> list <span class="k">for</span> fixtures
+</span></span><span class="line"><span class="cl">Added <span class="m">0</span> tests to meet fixture requirements
+</span></span><span class="line"><span class="cl">Checking <span class="nb">test</span> dependency graph...
+</span></span><span class="line"><span class="cl">Checking <span class="nb">test</span> dependency graph end
+</span></span><span class="line"><span class="cl"><span class="nb">test</span> <span class="m">1</span>
+</span></span><span class="line"><span class="cl">    Start 1: catch_test
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">1: Test command: /home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/build/cpp_test <span class="s2">&#34;--success&#34;</span>
+</span></span><span class="line"><span class="cl">1: Test timeout computed to be: <span class="m">10000000</span>
+</span></span><span class="line"><span class="cl">1:
+</span></span><span class="line"><span class="cl">1: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+</span></span><span class="line"><span class="cl">1: cpp_test is a Catch v2.0.1 host application.
+</span></span><span class="line"><span class="cl">1: Run with -? <span class="k">for</span> options
+</span></span><span class="line"><span class="cl">1:
+</span></span><span class="line"><span class="cl">1: -------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">1: Sum of integers <span class="k">for</span> a short vector
+</span></span><span class="line"><span class="cl">1: -------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">1: /home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/test.cpp:13
+</span></span><span class="line"><span class="cl">1: ...............................................................................
+</span></span><span class="line"><span class="cl">1:
+</span></span><span class="line"><span class="cl">1: /home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/test.cpp:15:
+</span></span><span class="line"><span class="cl">1: PASSED:
+</span></span><span class="line"><span class="cl">1:   REQUIRE<span class="o">(</span> sum_integers<span class="o">(</span>integers<span class="o">)</span> <span class="o">==</span> <span class="m">15</span> <span class="o">)</span>
+</span></span><span class="line"><span class="cl">1: with expansion:
+</span></span><span class="line"><span class="cl">1:   <span class="nv">15</span> <span class="o">==</span> <span class="m">15</span>
+</span></span><span class="line"><span class="cl">1:
+</span></span><span class="line"><span class="cl">1: -------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">1: Sum of integers <span class="k">for</span> a longer vector
+</span></span><span class="line"><span class="cl">1: -------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">1: /home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/test.cpp:18
+</span></span><span class="line"><span class="cl">1: ...............................................................................
+</span></span><span class="line"><span class="cl">1:
+</span></span><span class="line"><span class="cl">1: /home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/test.cpp:23:
+</span></span><span class="line"><span class="cl">1: PASSED:
+</span></span><span class="line"><span class="cl">1:   REQUIRE<span class="o">(</span> sum_integers<span class="o">(</span>integers<span class="o">)</span> <span class="o">==</span> <span class="m">500500</span> <span class="o">)</span>
+</span></span><span class="line"><span class="cl">1: with expansion:
+</span></span><span class="line"><span class="cl">1:   <span class="m">500500</span> <span class="o">(</span>0x7a314<span class="o">)</span> <span class="o">==</span> <span class="m">500500</span> <span class="o">(</span>0x7a314<span class="o">)</span>
+</span></span><span class="line"><span class="cl">1:
+</span></span><span class="line"><span class="cl">1: <span class="o">===============================================================================</span>
+</span></span><span class="line"><span class="cl">1: All tests passed <span class="o">(</span><span class="m">2</span> assertions in <span class="m">2</span> <span class="nb">test</span> cases<span class="o">)</span>
+</span></span><span class="line"><span class="cl">1:
+</span></span><span class="line"><span class="cl">1/1 Test <span class="c1">#1: catch_test .......................   Passed    0.00 sec</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">100% tests passed, <span class="m">0</span> tests failed out of <span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Total Test <span class="nb">time</span> <span class="o">(</span>real<span class="o">)</span> <span class="o">=</span>   0.00 sec</span></span></code></pre></td></tr></table>
+</div>
+</div><p>测试<code>cpp_test</code>的二进制文件，可以直接从<code>Catch2</code>中看到输出：</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">./cpp_test --success
+</span></span><span class="line"><span class="cl">~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+</span></span><span class="line"><span class="cl">cpp_test is a Catch v2.0.1 host application.
+</span></span><span class="line"><span class="cl">Run with -? <span class="k">for</span> options
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">-------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Sum of integers <span class="k">for</span> a short vector
+</span></span><span class="line"><span class="cl">-------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">/home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/test.cpp:13
+</span></span><span class="line"><span class="cl">...............................................................................
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/test.cpp:15:
+</span></span><span class="line"><span class="cl">PASSED:
+</span></span><span class="line"><span class="cl">  REQUIRE<span class="o">(</span> sum_integers<span class="o">(</span>integers<span class="o">)</span> <span class="o">==</span> <span class="m">15</span> <span class="o">)</span>
+</span></span><span class="line"><span class="cl">with expansion:
+</span></span><span class="line"><span class="cl">  <span class="nv">15</span> <span class="o">==</span> <span class="m">15</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">-------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Sum of integers <span class="k">for</span> a longer vector
+</span></span><span class="line"><span class="cl">-------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">/home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/test.cpp:18
+</span></span><span class="line"><span class="cl">...............................................................................
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/home/jiangli/repo/tutorials/cmake-tutorial/chapter4/02/test.cpp:23:
+</span></span><span class="line"><span class="cl">PASSED:
+</span></span><span class="line"><span class="cl">  REQUIRE<span class="o">(</span> sum_integers<span class="o">(</span>integers<span class="o">)</span> <span class="o">==</span> <span class="m">500500</span> <span class="o">)</span>
+</span></span><span class="line"><span class="cl">with expansion:
+</span></span><span class="line"><span class="cl">  <span class="m">500500</span> <span class="o">(</span>0x7a314<span class="o">)</span> <span class="o">==</span> <span class="m">500500</span> <span class="o">(</span>0x7a314<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">===============================================================================</span>
+</span></span><span class="line"><span class="cl">All tests passed <span class="o">(</span><span class="m">2</span> assertions in <span class="m">2</span> <span class="nb">test</span> cases<span class="o">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="三附录">三、附录</h2>
+<p><code>Catch2</code>是一个单头文件测试框架，所以不需要定义和构建额外的目标。只需要确保<code>CMake</code>能找到<code>catch.hpp</code>，从而构建<code>test.cpp</code>即可。为了方便起见，将它放在与<code>test.cpp</code>相同的目录中，我们可以选择一个不同的位置，并使用<code>target_include_directory</code>指示该位置。另一种方法是将头部封装到接口库中：</p>
+<div class="highlight" id="id-6"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp"># Prepare &#34;Catch&#34; library for other executables
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">set</span><span class="p">(</span><span class="n">CATCH_INCLUDE_DIR</span>
+</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span><span class="o">/</span><span class="k">catch</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">Catch</span>
+</span></span><span class="line"><span class="cl"><span class="n">INTERFACE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">Catch</span> <span class="n">INTERFACE</span>
+</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="p">{</span><span class="n">CATCH_INCLUDE_DIR</span><span class="p">})</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后，对库进行如下链接:</p>
+<div class="highlight" id="id-7"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">target_link_libraries(cpp_test Catch)</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>Catch2</code>提供了更多功能。有关<code>Catch2</code>框架的完整文档，可访问：</p>
+<blockquote>
+<p><a href="https://github.com/catchorg/Catch2"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/catchorg/Catch2<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<p><code>Catch2</code>代码库包含有<code>CMake</code>函数，用于解析<code>Catch</code>测试并自动创建<code>CMake</code>测试，不需要显式地输入<code>add_test()</code>函数，可见：</p>
+<blockquote>
+<p><a href="https://github.com/catchorg/Catch2/blob/master/contrib/ParseAndAddCatchTests.cmake"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/catchorg/Catch2/blob/master/contrib/ParseAndAddCatchTests.cmake<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+]]></description></item><item><title>CMake 笔记 | [18] 利用CTest进行单元测试</title><link>https://jianye0428.github.io/posts/cmake_note_18/</link><pubDate>Sun, 28 Jan 2024 13:30:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_18/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
 <div class="details admonition quote">
     <div class="details-summary admonition-title">
       <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
@@ -13078,153 +13463,4 @@ function() 函数模板并没有实现完美转发。</p>
 <p><strong>构建所有</strong>: 在vs中的解决方案资源管理器中右键ALL_BUILD，然后点击生成</p>
 <p>编译生成hello-world进程，右键hello-world,然后点击生成。如果我们使用CMake在一个项目中生成了多个进程，我们在测试某一个进程时，在对应的进程上右键设为启动项目即可。</p>
 <p><strong>执行install安装命令</strong>: 在INSTALL上右键，然后点击生成即可。注意：只有当我们的CMake中有install命令时，VS中才会出现INTALL选项。</p>
-]]></description></item><item><title>CMake 笔记 | [1] 单个源文件编译为可执行文件</title><link>https://jianye0428.github.io/posts/cmake_note_1/</link><pubDate>Fri, 12 Jan 2024 14:19:06 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_1/</guid><description><![CDATA[<h3 id="一项目结构">一、项目结构</h3>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">..
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">└── hello_world.cpp
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">0 directories, 2 files</span></span></code></pre></td></tr></table>
-</div>
-</div><p>本项目只包含了一个源文件hello_world.cpp和一个CMake文件。</p>
-<blockquote>
-<p>源码地址: <a href="https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_1/hello-world"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/jianye0428/CMake_Learning_Notes/tree/main/Note_1/hello-world<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<div class="details admonition quote open">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>注意<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">注意: CMake文件的名字只能是CMakeLists.txt，当然如果使用include命令（后续会讲到），可以以任何名字进行命名，只要以.cmake结尾即可。</div>
-    </div>
-  </div>
-<h3 id="二cpp源文件">二、CPP源文件</h3>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;cstdlib&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">SayHello</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">SayHello</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">SayHello</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="s">&#34;Hello, CMake World!&#34;</span><span class="p">);</span> <span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="三cmake文件">三、CMake文件</h3>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-cmake" data-lang="cmake"><span class="line"><span class="cl"><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span> <span class="s">3.10</span> <span class="s">FATAL_ERROR</span><span class="p">)</span><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">project</span><span class="p">(</span><span class="s">hello-world</span> <span class="s">LANGUAGES</span> <span class="s">CXX</span><span class="p">)</span><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err">
-</span></span></span><span class="line"><span class="cl"><span class="err"></span><span class="nb">add_executable</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">    <span class="o">${</span><span class="nv">PROJECT_NAME</span><span class="o">}</span>
-</span></span><span class="line"><span class="cl">    <span class="s">hello_world.cpp</span>
-</span></span><span class="line"><span class="cl"><span class="s">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><ul>
-<li>
-<p><strong><code>cmake_minimum_required(VERSION 3.10 FATAL_ERROR)</code></strong></p>
-<p>设置CMake所需的最低版本的最低版本，如果使用的CMake版本低于该版本，则会发出致命错误。
-今后，笔记中CMake的版本要求都为3.10。vscode中CMake Tool插件使用debug功能要求CMake版本不低于3.10。如果使用的系统ubuntu 16.04的话，需要升级CMake版本，windows请自行安装高于3.10版本的CMake。</p>
-</li>
-<li>
-<p><strong><code>project(hello-world LANGUAGES CXX)</code></strong></p>
-<p>声明了项目的名称和支持的编程语言，且该命令必须生命在cmake_minimum_required之后。一旦声明了项目的名称后，可以使用宏定义${PROJECT_NAME}进行调用。
-在CMake中，C++是默认的编程语言。不过在实际编写代码过程中，仍建议使用LANGUAGES选项在project命令中显示地声明项目的语言。</p>
-</li>
-<li>
-<p><strong><code>add_executable(${PROJECT_NAME} hello_world.cpp}</code></strong></p>
-<p>CMake创建一个新可执行文件，其名字为${PROJECT_NAME}（也可以使用其他任意的名字）。这个可执行文件是通过编译和链接源文件hello_world.cpp生成的。</p>
-<p>CMake将为编译器使用默认设置，并自动生成工具。</p>
-</li>
-</ul>
-<h3 id="四操作">四、操作</h3>
-<p>在工程文件夹下，执行如下操作:</p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">mkdir build
-</span></span><span class="line"><span class="cl"><span class="nb">cd</span> build
-</span></span><span class="line"><span class="cl">cmake ..</span></span></code></pre></td></tr></table>
-</div>
-</div><p>输出结果:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- The CXX compiler identification is GNU 9.4.0
-</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++
-</span></span><span class="line"><span class="cl">-- Check <span class="k">for</span> working CXX compiler: /usr/bin/c++ -- works
-</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info
-</span></span><span class="line"><span class="cl">-- Detecting CXX compiler ABI info - <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Detecting CXX compile features
-</span></span><span class="line"><span class="cl">-- Detecting CXX compile features - <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/jiangli/repo/tutorials/cmake-tutorial/chapter1/01/build</span></span></code></pre></td></tr></table>
-</div>
-</div><p>CMake的构建方式有两种: <strong>源内构建</strong>和<strong>源外构建</strong>。源内构建即在CMakeLists.txt同级目录中进行构建，构建出来的CMake文件将在该目录中，<font color=red><u>这通常是不推荐的，因为这会混合源代码和项目的目录树</u></font>。源外构建的构建方式，就是笔记的构建方式，往后我们都采用源外构建的方式。</p>
-<p>CMake是一个构建系统生成器。将描述构建系统，如Unix Makefile、Ninja、sln等应当如何操作才能编译代码。然后，CMake为所选的构建系统生成相应的指令。默认情况下，在GNU/Linux和macOS系统上，CMake使用Unix Makefile生成器。Windows上，sln是默认的生成器。</p>
-<p>GNU/Linux上，CMake默认生成 Makefile来构建项目:</p>
-<ol>
-<li><strong>Makefile</strong>: make将运行指令来构建项目。</li>
-<li><strong>CMakefile</strong>: 包含临时文件的目录，CMake用于检测操作系统、编译器等。此外，根据所选的生成器，它还包含特定的文件。</li>
-<li><strong>cmake_install.cmake</strong>: 处理安装规则的CMake脚本，在项目安装时使用（命令为执行为make后执行make install）。</li>
-<li><strong>CMakeCache.txt</strong>: 如文件名所示，CMake缓存。CMake在重新运行配置时使用这个文件。</li>
-</ol>
 ]]></description></item></channel></rss>
