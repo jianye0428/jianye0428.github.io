@@ -1,7 +1,7 @@
-# Git Command Notes
+# Git 命令记录
 
 
-## git command record as my cheatsheet
+## Git 命令汇总
 
 ### 1. **<font color=red>git rebase</font>**
    ref: https://git-scm.com/docs/git-rebase
@@ -314,11 +314,16 @@
     ```
   - 如果当前分支只有一个追踪分支，连远程主机名都可以省略
     ```shell
-    git pull
     ```
 
 
 ### 11. **<font color=red>git clone</font>**
+
+
+
+https://mp.weixin.qq.com/s?__biz=MzA4NjkwOTQ2OA==&mid=2459742421&idx=1&sn=48b3849c03a8e99aa4a557e9643a68d1&chksm=89af6fd53c65887bd2c4a8ada2d5afabbffabf2b390477bc298e7ed11e7a563f3ba83fff9e13&scene=132&exptype=timeline_recommend_article_extendread_extendread_for_notrec#wechat_redirect
+[git flow](https://blog.csdn.net/sunyctf/article/details/130587970)
+    git pull
 
 ---
 
