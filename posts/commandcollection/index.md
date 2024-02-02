@@ -96,7 +96,7 @@ set(LIBRARY_OUTPUT_PATH  ${PROJECT_SOURCE_DIR}/lib)
 
 ```c++
 #设定可执行二进制文件的目录
-set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 ```
 
 ### 1.7 设置链接库搜索目录
@@ -104,7 +104,8 @@ set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 例如将链接库搜索目录设置为当前项目文件夹下lib/linux文件夹
 
 ```c++
-link_directories( ${PROJECT_SOURCE_DIR}/lib/linux)
+// ${PROJECT_SOURCE_DIR} 为当前项目文件夹
+link_directories(${PROJECT_SOURCE_DIR}/lib/linux)
 ```
 
 ### 1.8 设置包含目录
@@ -140,13 +141,14 @@ link_libraries(
 )
 ```
 
-注意，link_libraries中的静态库为全路径，常与1.7 link_directories 搭配使用，例如：
+<mark>注意:</mark> link_libraries中的静态库为全路径，常与1.7 link_directories 搭配使用，例如：
 
-lib1.a lib2.a在目录${PROJECT_SOURCE_DIR}/lib/linux下，则先设置链接目录，再链接相应的库
+`lib1.a`, `lib2.a`在目录`${PROJECT_SOURCE_DIR}/lib/linux`下，则先设置链接目录，再链接相应的库
 
 ```c++
 #设置链接目录
-link_directories( ${PROJECT_SOURCE_DIR}/lib/linux)
+link_directories(${PROJECT_SOURCE_DIR}/lib/linux)
+# 链接相应的库
 link_libraries(
         lib1.a
         lib2.a
@@ -165,14 +167,19 @@ target_link_libraries(所需生成的文件名称 所需链接的动态库名称
 target_link_libraries(main dl)
 ```
 
-### 1.12 link_libraries 和 target_link_libraries 区别
+### 1.12 `link_libraries` 和 `target_link_libraries` 区别
 
-在cmake语法中，link_libraries和target_link_libraries是很重要的两个链接库的方式，虽然写法上很相似，但是功能上有很大区别：
+在cmake语法中，`link_libraries`和`target_link_libraries`是很重要的两个链接库的方式，虽然写法上很相似，但是功能上有很大区别：
 
-```c++
-(1) link_libraries用在add_executable之前，target_link_libraries用在add_executable之后
-(2) link_libraries用来链接静态库，target_link_libraries用来链接导入库，即按照header file + .lib + .dll方式隐式调用动态库的.lib库
-```
+{{<admonition quote "注意" false>}}
+
+(1) `link_libraries`用在`add_executable`之前，`target_link_libraries`用在`add_executable`之后
+(2) `link_libraries`用来链接静态库，`target_link_libraries`用来链接导入库，即按照`header file + .lib + .dll`方式隐式调用动态库的`.lib`库
+<mark>注意:</mark>
+  - windows系统下，静态库后缀为`.lib`, 导入库的后缀为`.lib`，动态库的后缀为`.dll`
+  - linux系统写，静态库后缀为`.a`, 动态库的后缀为`.so`
+{{</admonition>}}
+
 
 ### 1.13 file语法
 
@@ -196,7 +203,7 @@ file(GLOB MAIN_HDR ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 
 例如将当前文件夹下（包括子目录下）所有.cpp文件的文件名加入到MAIN_SRC中，所有.h加入到MAIN_HDR中
 
-```c++
+```shell
 file(GLOB_RECURSE MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 file(GLOB_RECURSE MAIN_HDR ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 ```
@@ -229,7 +236,7 @@ list(REMOVE_ITEM MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/add.cpp)
 
 ### 1.14.2 将两个List链接起来
 
-```c++
+```shell
 # 搜索当前目录
 file(GLOB  MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 file(GLOB  MAIN_HDR ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
@@ -289,9 +296,8 @@ install(TARGETS util
   ARCHIVE DESTINATION lib)
 ```
 
-ARCHIVE指静态库，LIBRARY指动态库，RUNTIME指可执行目标二进制，上述示例的意思是：
-
-如果目标util是可执行二进制目标，则安装到${CMAKE_INSTALL_PREFIX}/bin目录 如果目标util是静态库，则安装到安装到${CMAKE_INSTALL_PREFIX}/lib目录 如果目标util是动态库，则安装到安装到${CMAKE_INSTALL_PREFIX}/lib目录
+ARCHIVE指**静态库**，LIBRARY指**动态库**，RUNTIME指**可执行目标二进制**，上述示例的意思是：
+如果目标`util`是可执行二进制目标，则安装到${CMAKE_INSTALL_PREFIX}/bin目录 如果目标util是静态库，则安装到安装到${CMAKE_INSTALL_PREFIX}/lib目录 如果目标util是动态库，则安装到安装到${CMAKE_INSTALL_PREFIX}/lib目录
 
 ### 1.17.2 文件夹安装
 
@@ -299,58 +305,57 @@ ARCHIVE指静态库，LIBRARY指动态库，RUNTIME指可执行目标二进制�
 install(DIRECTORY include/ DESTINATION include/util)
 ```
 
-这个语句的意思是将include/目录安装到include/util目录
+这个语句的意思是将`include/`目录安装到`include/util`目录
 
 ### 1.18 设置编译选项
 
-设置编译选项可以通过add_compile_options命令，也可以通过set命令修改CMAKE_CXX_FLAGS或CMAKE_C_FLAGS。 方式1
+设置编译选项可以通过add_compile_options命令，也可以通过set命令修改CMAKE_CXX_FLAGS或CMAKE_C_FLAGS。
 
-```c++
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -O3 -frtti -fpermissive -fexceptions -pthread")
-```
+- 方式1
 
-方式2
+  ```c++
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -O3 -frtti -fpermissive -fexceptions -pthread")
+  ```
 
-```c++
-add_compile_options(-march=native -O3 -fexceptions -pthread -fPIC)
-```
+- 方式2
+
+  ```c++
+  add_compile_options(-march=native -O3 -fexceptions -pthread -fPIC)
+  ```
 
 这两种方式的区别在于：
+`add_compile_options`命令添加的编译选项是针对所有编译器的(包括c和c++编译器)，而`set`命令设置`CMAKE_C_FLAGS`或`CMAKE_CXX_FLAGS`变量则是分别只针对c和c++编译器的。
 
-```c++
-add_compile_options命令添加的编译选项是针对所有编译器的(包括c和c++编译器)，而set命令设置CMAKE_C_FLAGS或CMAKE_CXX_FLAGS变量则是分别只针对c和c++编译器的。
-```
 
-### 1.19 预定义变量
-
+### 1.19 预定义变**
 ### 1.19.1 基本变量
 
-- ==PROJECT_SOURCE_DIR==-----------------------------------------我们使用cmake命令后紧跟的目录，一般是工程的根目录；
-- ==PROJECT_BINARY_DIR== ------------------------------------------执行cmake命令的目录,通常是${PROJECT_SOURCE_DIR}/build；
-- ==CMAKE_INCLUDE_PATH==-----------------------------------------系统环境变量,非cmake变量；
-- ==CMAKE_LIBRARY_PATH==------------------------------------------系统环境变量,非cmake变量；
-- ==CMAKE_CURRENT_SOURCE_DIR==---------------------------当前处理的CMakeLists.txt所在的路径；
-- ==CMAKE_CURRENT_BINARY_DIR==-----------------------------target编译目录（使用ADD_SURDIRECTORY(src bin)可以更改此变量的值 ，SET(EXECUTABLE_OUTPUT_PATH <新路径>)并不会对此变量有影响,只是改变了最终目标文件的存储路径）；
-- ==CMAKE_CURRENT_LIST_FILE==--------------------------------输出调用这个变量的CMakeLists.txt的完整路径；
-- ==CMAKE_CURRENT_LIST_LINE==--------------------------------输出这个变量所在的行；
-- ==CMAKE_MODULE_PATH==-----------------------------------------定义自己的cmake模块所在的路径（这个变量用于定义自己的cmake模块所在的路径，如果你的工程比较复杂，有可能自己编写一些cmake模块，比如SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake),然后可以用INCLUDE命令来调用自己的模块）；
-- ==EXECUTABLE_OUTPUT_PATH==------------------------------重新定义目标二进制可执行文件的存放位置；
-- ==LIBRARY_OUTPUT_PATH==--------------------------------------重新定义目标链接库文件的存放位置；
-- ==PROJECT_NAME==-------------------------------------------------返回通过PROJECT指令定义的项目名称；
-- ==CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS==—用来控制IF ELSE语句的书写方式；
+- **PROJECT_SOURCE_DIR**-----------------------------------------我们使用cmake命令后紧跟的目录，一般是工程的根目录；
+- **PROJECT_BINARY_DIR** ------------------------------------------执行cmake命令的目录,通常是${PROJECT_SOURCE_DIR}/build；
+- **CMAKE_INCLUDE_PATH**-----------------------------------------系统环境变量,非cmake变量；
+- **CMAKE_LIBRARY_PATH**------------------------------------------系统环境变量,非cmake变量；
+- **CMAKE_CURRENT_SOURCE_DIR**---------------------------当前处理的CMakeLists.txt所在的路径；
+- **CMAKE_CURRENT_BINARY_DIR**-----------------------------target编译目录（使用ADD_SURDIRECTORY(src bin)可以更改此变量的值 ，SET(EXECUTABLE_OUTPUT_PATH <新路径>)并不会对此变量有影响,只是改变了最终目标文件的存储路径）；
+- **CMAKE_CURRENT_LIST_FILE**--------------------------------输出调用这个变量的CMakeLists.txt的完整路径；
+- **CMAKE_CURRENT_LIST_LINE**--------------------------------输出这个变量所在的行；
+- **CMAKE_MODULE_PATH**-----------------------------------------定义自己的cmake模块所在的路径（这个变量用于定义自己的cmake模块所在的路径，如果你的工程比较复杂，有可能自己编写一些cmake模块，比如SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake),然后可以用INCLUDE命令来调用自己的模块）；
+- **EXECUTABLE_OUTPUT_PATH**------------------------------重新定义目标二进制可执行文件的存放位置；
+- **LIBRARY_OUTPUT_PATH**--------------------------------------重新定义目标链接库文件的存放位置；
+- **PROJECT_NAME**-------------------------------------------------返回通过PROJECT指令定义的项目名称；
+- **CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS**—用来控制IF ELSE语句的书写方式；
 
 ### 1.19.2 操作系统变量
 
-- ==CMAKE_MAJOR_VERSION==-----------------------------cmake主版本号,如3.4.1中的3；
-- ==CMAKE_MINOR_VERSION==-----------------------------cmake次版本号,如3.4.1中的4；
-- ==CMAKE_PATCH_VERSION==-----------------------------cmake补丁等级,如3.4.1中的1；
-- ==CMAKE_SYSTEM==----------------------------------------操作系统名称，包括版本名，如Linux-2.6.22；
-- ==CAMKE_SYSTEM_NAME==-------------------------------操作系统名称，不包括版本名，如Linux；
-- ==CMAKE_SYSTEM_VERSION==--------------------------操作系统版本号,如2.6.22；
-- ==CMAKE_SYSTEM_PROCESSOR==--------------------电脑处理器名称，如i686；
-- ==UNIX==--------------------------------------------------------在所有的类UNIX平台为TRUE,包括OS X和cygwin，Linux/Unix操作系统；
-- ==WIN32==-----------------------------------------------------在所有的win32平台为TRUE,包括cygwin，Windows操作系统；
-- ==APPLE==----------------------------------------------------苹果操作系统；
+- **CMAKE_MAJOR_VERSION**-----------------------------cmake主版本号,如3.4.1中的3；
+- **CMAKE_MINOR_VERSION**-----------------------------cmake次版本号,如3.4.1中的4；
+- **CMAKE_PATCH_VERSION**-----------------------------cmake补丁等级,如3.4.1中的1；
+- **CMAKE_SYSTEM**----------------------------------------操作系统名称，包括版本名，如Linux-2.6.22；
+- **CAMKE_SYSTEM_NAME**-------------------------------操作系统名称，不包括版本名，如Linux；
+- **CMAKE_SYSTEM_VERSION**--------------------------操作系统版本号,如2.6.22；
+- **CMAKE_SYSTEM_PROCESSOR**--------------------电脑处理器名称，如i686；
+- **UNIX**--------------------------------------------------------在所有的类UNIX平台为TRUE,包括OS X和cygwin，Linux/Unix操作系统；
+- **WIN32**-----------------------------------------------------在所有的win32平台为TRUE,包括cygwin，Windows操作系统；
+- **APPLE**----------------------------------------------------苹果操作系统；
 
 例如操作系统判断方式一：
 
@@ -367,7 +372,7 @@ endif(WIN32)
 操作系统判断方式二：
 
 ```c++
-if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux**
     message(STATUS "current platform: Linux ")
 elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
     message(STATUS "current platform: Windows")
@@ -380,12 +385,12 @@ endif (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ### 1.19.3 开关选项
 
-- ==BUILD_SHARED_LIBS==---------------------------------------------控制默认的库编译方式。如果未进行设置,使用ADD_LIBRARY时又没有指定库类型,默认编译生成的库都是静态库；
-- ==CMAKE_C_FLAGS==-------------------------------------------------设置C编译选项，也可以通过指令ADD_DEFINITIONS()添加；
-- ==CMAKE_CXX_FLAGS==----------------------------------------------设置C++编译选项，也可以通过指令ADD_DEFINITIONS()添加；
-- ==CMAKE_C_COMPILER==--------------------------------------------指定C编译器；
-- ==CMAKE_CXX_COMPILER==----------------------------------------指定C++编译器；
-- ==CMAKE_BUILD_TYPE==:：build 类型(Debug, Release, …)-CMAKE_BUILD_TYPE=Debug
+- **BUILD_SHARED_LIBS**---------------------------------------------控制默认的库编译方式。如果未进行设置,使用ADD_LIBRARY时又没有指定库类型,默认编译生成的库都是静态库；
+- **CMAKE_C_FLAGS**-------------------------------------------------设置C编译选项，也可以通过指令ADD_DEFINITIONS()添加；
+- **CMAKE_CXX_FLAGS**----------------------------------------------设置C++编译选项，也可以通过指令ADD_DEFINITIONS()添加；
+- **CMAKE_C_COMPILER**--------------------------------------------指定C编译器；
+- **CMAKE_CXX_COMPILER**----------------------------------------指定C++编译器；
+- **CMAKE_BUILD_TYPE**:：build 类型(Debug, Release, …)-CMAKE_BUILD_TYPE=Debug
 
 ### 1.19.4 环境变量
 
@@ -409,7 +414,7 @@ message(STATUS "$env{name}")
 
 ### 1.19.5 CMAKE_INCLUDE_CURRENT_DIR
 
-自动添加CMAKE_CURRENT_BINARY_DIR和CMAKE_CURRENT_SOURCE_DIR到当前处理 的CMakeLists.txt。 相当于在每个CMakeLists.txt加入：
+自动添加`CMAKE_CURRENT_BINARY_DIR`和`CMAKE_CURRENT_SOURCE_DIR`到当前处理的`CMakeLists.txt`。 相当于在每个`CMakeLists.txt`加入：
 
 ```c++
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
@@ -419,41 +424,41 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 ### 1.20.1 逻辑判断和比较
 
-- ==if (expression)==：expression 不为空时为真，false的值包括（0,N,NO,OFF,FALSE,NOTFOUND）；
-- ==if (not exp)==：与上面相反；
-- ==if (var1 AND var2)==：如果两个变量都为真时为真；
-- ==if (var1 OR var2)==：如果两个变量有一个为真时为真；
-- ==if (COMMAND cmd)==：如果 cmd 确实是命令并可调用为真；
-- ==if (EXISTS dir) if (EXISTS file)==：如果目录或文件存在为真；
-- ==if (file1 IS_NEWER_THAN file2)==：当 file1 比 file2 新，或 file1/file2 中有一个不存在时为真，文件名需使用全路径；
-- ==if (IS_DIRECTORY dir)==：当 dir 是目录时为真；
-- ==if (DEFINED var)==：如果变量被定义为真；
-- ==if (var MATCHES regex)==：给定的变量或者字符串能够匹配正则表达式 regex 时为真，此处 var 可以用 var 名，也可以用 ${var}；
-- ==if (string MATCHES regex)==：给定的字符串能够匹配正则表达式regex时为真。
+- **if (expression)**：expression 不为空时为真，false的值包括（0,N,NO,OFF,FALSE,NOTFOUND）；
+- **if (not exp)**：与上面相反；
+- **if (var1 AND var2)**：如果两个变量都为真时为真；
+- **if (var1 OR var2)**：如果两个变量有一个为真时为真；
+- **if (COMMAND cmd)**：如果 cmd 确实是命令并可调用为真；
+- **if (EXISTS dir) if (EXISTS file)**：如果目录或文件存在为真；
+- **if (file1 IS_NEWER_THAN file2)**：当 file1 比 file2 新，或 file1/file2 中有一个不存在时为真，文件名需使用全路径；
+- **if (IS_DIRECTORY dir)**：当 dir 是目录时为真；
+- **if (DEFINED var)**：如果变量被定义为真；
+- **if (var MATCHES regex)**：给定的变量或者字符串能够匹配正则表达式 regex 时为真，此处 var 可以用 var 名，也可以用 ${var}；
+- **if (string MATCHES regex)**：给定的字符串能够匹配正则表达式regex时为真。
 
 ### 1.20.2 数字比较
 
-- ==if (variable LESS number)==：如果variable小于number时为真；
-- ==if (string LESS number)==：如果string小于number时为真；
-- ==if (variable GREATER number)==：如果variable大于number时为真；
-- ==if (string GREATER number)==：如果string大于number时为真；
-- ==if (variable EQUAL number)==：如果variable等于number时为真；
-- ==if (string EQUAL number)==：如果string等于number时为真。
+- **if (variable LESS number)**：如果variable小于number时为真；
+- **if (string LESS number)**：如果string小于number时为真；
+- **if (variable GREATER number)**：如果variable大于number时为真；
+- **if (string GREATER number)**：如果string大于number时为真；
+- **if (variable EQUAL number)**：如果variable等于number时为真；
+- **if (string EQUAL number)**：如果string等于number时为真。
 
 ### 1.20.3 字母表顺序比较
 
-- ==if (variable STRLESS string)==
-- ==if (string STRLESS string)==
-- ==if (variable STRGREATER string)==
-- ==if (string STRGREATER string)==
-- ==if (variable STREQUAL string)==
-- ==if (string STREQUAL string)==
+- **if (variable STRLESS string)**
+- **if (string STRLESS string)**
+- **if (variable STRGREATER string)**
+- **if (string STRGREATER string)**
+- **if (variable STREQUAL string)**
+- **if (string STREQUAL string)**
 
 ### 1.21 循环
 
 ### 1.21.1 foreach
 
-start 表示起始数，stop 表示终止数，step 表示步长
+`start` 表示起始数，`stop` 表示终止数，`step` 表示步长
 
 ```c++
 foreach(loop_var RANGE start stop [step])
@@ -490,7 +495,7 @@ endif()
 
 ### 第一步：
 
-在第三方库的CMakeLists.txt中cmake_minimum_required(VERSION 2.6)中加上set_property(GLOBAL PROPERTY USE_FOLDERS On)
+在第三方库的`CMakeLists.txt`中`cmake_minimum_required(VERSION 2.6)`中加上`set_property(GLOBAL PROPERTY USE_FOLDERS On)`
 
 ### 第二步：在生成编译目标的语法之后，如：
 
@@ -540,7 +545,6 @@ touch *
 
 
 ## 3 参考
-
 
 [1].[cmake常用命令的一些整理](https://zhuanlan.zhihu.com/p/315768216)<br>
 [2].[简明教程](https://cmake-doc.readthedocs.io/zh-cn/latest/guide/tutorial/index.html)<br>
