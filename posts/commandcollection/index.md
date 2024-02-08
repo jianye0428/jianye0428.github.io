@@ -48,7 +48,7 @@ set(SRC_LIST add.h add.cpp)
 #然后再在SRC_LIST中追加main.cpp
 set(SRC_LIST ${SRC_LIST} main.cpp)
 
-# 第二中用法，设置库生成目录或者可执行文件生成目录
+# 第二种用法，设置库生成目录或者可执行文件生成目录
 set( LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib/linux)
 set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 ```
@@ -183,7 +183,7 @@ target_link_libraries(main dl)
 
 ### 1.13 file语法
 
-### 1.13.1 将文件夹所有的类型的文件添加到文件列表
+#### 1.13.1 将文件夹所有的类型的文件添加到文件列表
 
 例如将当前文件夹下所有.cpp文件的文件名加入到MAIN_SRC中，将当前文件夹下所有.h加入到MAIN_HDR中。
 
@@ -199,7 +199,7 @@ file(GLOB MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB MAIN_HDR ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 ```
 
-### 1.13.2 递归搜索该文件夹，将文件夹下（包含子目录）符合类型的文件添加到文件列表
+#### 1.13.2 递归搜索该文件夹，将文件夹下（包含子目录）符合类型的文件添加到文件列表
 
 例如将当前文件夹下（包括子目录下）所有.cpp文件的文件名加入到MAIN_SRC中，所有.h加入到MAIN_HDR中
 
@@ -226,7 +226,7 @@ list(REVERSE <list>)
 list(SORT <list>)
 ```
 
-### 1.14.1 List移除指定项
+#### 1.14.1 List移除指定项
 
 例如从MAIN_SRC移除指定项
 
@@ -234,7 +234,7 @@ list(SORT <list>)
 list(REMOVE_ITEM MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/add.cpp)
 ```
 
-### 1.14.2 将两个List链接起来
+#### 1.14.2 将两个List链接起来
 
 ```shell
 # 搜索当前目录
@@ -285,7 +285,7 @@ message(FATAL_ERROR "Enter cmake ${CMAKE_CURRENT_LIST_DIR}")
 
 install 指令用于定义安装规则，安装的内容包括二进制可执行文件、动态库、静态库以及文件、目录、脚本等。
 
-### 1.17.1 目标文件安装
+#### 1.17.1 目标文件安装
 
 例如：
 
@@ -299,7 +299,7 @@ install(TARGETS util
 ARCHIVE指**静态库**，LIBRARY指**动态库**，RUNTIME指**可执行目标二进制**，上述示例的意思是：
 如果目标`util`是可执行二进制目标，则安装到${CMAKE_INSTALL_PREFIX}/bin目录 如果目标util是静态库，则安装到安装到${CMAKE_INSTALL_PREFIX}/lib目录 如果目标util是动态库，则安装到安装到${CMAKE_INSTALL_PREFIX}/lib目录
 
-### 1.17.2 文件夹安装
+#### 1.17.2 文件夹安装
 
 ```c++
 install(DIRECTORY include/ DESTINATION include/util)
@@ -326,9 +326,8 @@ install(DIRECTORY include/ DESTINATION include/util)
 这两种方式的区别在于：
 `add_compile_options`命令添加的编译选项是针对所有编译器的(包括c和c++编译器)，而`set`命令设置`CMAKE_C_FLAGS`或`CMAKE_CXX_FLAGS`变量则是分别只针对c和c++编译器的。
 
-
-### 1.19 预定义变**
-### 1.19.1 基本变量
+### 1.19 预定义变量
+#### 1.19.1 基本变量
 
 - **PROJECT_SOURCE_DIR**-----------------------------------------我们使用cmake命令后紧跟的目录，一般是工程的根目录；
 - **PROJECT_BINARY_DIR** ------------------------------------------执行cmake命令的目录,通常是${PROJECT_SOURCE_DIR}/build；
@@ -511,6 +510,30 @@ add_library(common SHARED util.cpp) # 生成动态库或共享库
 set_target_properties(${第三方库项目名称} PROPERTIES FOLDER “目标文件夹名称”)
 ```
 
+### 1.24 CMake常用变量
+
+1）`CMAKE_BINARY_DIR`、`PROJECT_BINARY_DIR`、`<projectname>_BINARY_DIR`三个变量指代的内容是一致的，如果是 `in source` 编译，指得就是工程顶层目录，如果是 `out-of-source` 编译，指的是工程编译发生的目录。PROJECT_BINARY_DIR 跟其他指令稍有区别，暂时可以理解为他们是一致的。
+
+（2）`CMAKE_SOURCE_DIR`、`PROJECT_SOURCE_DIR`、`<projectname>_SOURCE_DIR`这三个变量指代的内容是一致的，不论采用何种编译方式，都是工程顶层目录。也就是在in source 编译时，他跟 CMAKE_BINARY_DIR 等变量一致。PROJECT_SOURCE_DIR 跟其他指令稍有区别，暂时理解为他们是一致的。
+
+（3）`CMAKE_CURRENT_SOURCE_DIR`指的是当前处理的`CMakeLists.txt` 所在的路径。
+
+（4）`CMAKE_CURRRENT_BINARY_DIR`，如果是in-source 编译，它跟 `CMAKE_CURRENT_SOURCE_DIR` 一致，如果是out-of-source 编译，他指的是`target` 编译目录。使用`ADD_SUBDIRECTORY(src bin)`可以更改这个变量的值。使用`SET(EXECUTABLE_OUTPUT_PATH <新路径>)`并不会对这个变量造成影响，它仅仅修改了最终目标文件存放的路径。
+
+（5）`CMAKE_CURRENT_LIST_FILE`输出调用这个变量的`CMakeLists.txt` 的完整路径。
+
+（6）`CMAKE_CURRENT_LIST_LINE`输出这个变量所在的行。
+
+（7）`CMAKE_MODULE_PATH`这个变量用来定义自己的`cmake`模块所在的路径。如果你的工程比较复杂，有可能会自己编写一些cmake模块，这些cmake 模块是随你的工程发布的，为了让cmake 在处理 `CMakeLists.txt` 时找到这些模块，你需要通过SET 指令，将自己的cmake 模块路径设置一下。
+
+比如：
+`SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)`, 这时候你就可以通过INCLUDE 指令来调用自己的模块了。
+
+（8）`EXECUTABLE_OUTPUT_PATH` 和 `LIBRARY_OUTPUT_PATH`分别用来重新定义最终结果的存放目录。
+
+（9）`PROJECT_NAME`返回通过`PROJECT`指令定义的项目名称。
+
+
 ## 2 错误解决方案
 
 ### 2.1 Cannot specify link libraries for target “/…/…/lib/linux/libMyDll.a” which
@@ -540,9 +563,6 @@ touch *
 ```
 
 更新所有文件时间。
-
-
-
 
 ## 3 参考
 

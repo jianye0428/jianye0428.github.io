@@ -39,19 +39,19 @@ git config --global credential.helper store
 
 ## 分支操作
 
-`git branch` 创建分支
-`git branch -b` 创建并切换到新建的分支上
-`git checkout` 切换分支
-`git branch` 查看分支列表
-`git branch -v` 查看所有分支的最后一次操作
-`git branch -vv` 查看当前分支
-`git branch -b 分支名 origin/分支名` 创建远程分支到本地
-`git branch --merged` 查看别的分支和当前分支合并过的分支
-`git branch --no-merged` 查看未与当前分支合并的分支
-`git branch -d 分支名` 删除本地分支
-`git branch -D 分支名` 强行删除分支
-`git push origin --delete 分支名` 删除远程仓库分支
-`git merge 分支名` 合并分支到当前分支上
+- `git branch` 创建分支
+- `git branch -b` 创建并切换到新建的分支上
+- `git checkout` 切换分支
+- `git branch` 查看分支列表
+- `git branch -v` 查看所有分支的最后一次操作
+- `git branch -vv` 查看当前分支
+- `git branch -b 分支名 origin/分支名` 创建远程分支到本地
+- `git branch --merged` 查看别的分支和当前分支合并过的分支
+- `git branch --no-merged` 查看未与当前分支合并的分支
+- `git branch -d 分支名` 删除本地分支
+- `git branch -D 分支名` 强行删除分支
+- `git push origin --delete 分支名` 删除远程仓库分支
+- `git merge 分支名` 合并分支到当前分支上
 
 ## 暂存操作
 
@@ -71,25 +71,25 @@ git config --global credential.helper store
 
 ## 标签操作
 
-`git tag 标签名` 添加标签(默认对当前版本)
-`git tag 标签名 commitId` 对某一提交记录打标签
-`git tag -a 标签名 -m '描述'` 创建新标签并增加备注
-`git tag` 列出所有标签列表
-`git show 标签名` 查看标签信息
-`git tag -d 标签名` 删除本地标签
-`git push origin 标签名` 推送标签到远程仓库
-`git push origin --tags` 推送所有标签到远程仓库
-`git push origin :refs/tags/标签名` 从远程仓库中删除标签
+- `git tag 标签名` 添加标签(默认对当前版本)
+- `git tag 标签名 commitId` 对某一提交记录打标签
+- `git tag -a 标签名 -m '描述'` 创建新标签并增加备注
+- `git tag` 列出所有标签列表
+- `git show 标签名` 查看标签信息
+- `git tag -d 标签名` 删除本地标签
+- `git push origin 标签名` 推送标签到远程仓库
+- `git push origin --tags` 推送所有标签到远程仓库
+- `git push origin :refs/tags/标签名` 从远程仓库中删除标签
 
 ## 远程仓库
 
-`git remote -v`查看远程仓库地址
-`git remote show origin`查看远程仓库详情信息
+- `git remote -v`查看远程仓库地址
+- `git remote show origin`查看远程仓库详情信息
 
 ## 查看某个 commit 提交属于哪个分支
 
-`git branch -l --contains <commit_id>` 本地分支
-`git branch -r --contains <commit_id>` 远程分支
+- `git branch -l --contains <commit_id>` 本地分支
+- `git branch -r --contains <commit_id>` 远程分支
 - `git branch --all --contains <commit_id>` 所有分支
 
 ---
