@@ -6,7 +6,7 @@
 ## 常规操作
 
 - `git push origin test` 推送本地分支到远程仓库
-- `git rm -r --cached` 文件/文件夹名字 取消文件被版本控制
+- `git rm -r --cached 文件/文件夹名字` 取消文件被版本控制
 - `git reflog` 获取执行过的命令
 - `git log --graph` 查看分支合并图
 - `git merge --no-ff -m '合并描述'` 分支名 不使用`Fast forward`方式合并，采用这种方式合并可以看到合并记录
@@ -52,6 +52,8 @@ git config --global credential.helper store
 - `git branch -D 分支名` 强行删除分支
 - `git push origin --delete 分支名` 删除远程仓库分支
 - `git merge 分支名` 合并分支到当前分支上
+- `git push -u <remote> <local_branch>` 关联本地分支到远程分支
+- `git push --set-upstream <remote> <local_branch>` 关联本地分支到远程分支
 
 ## 暂存操作
 
