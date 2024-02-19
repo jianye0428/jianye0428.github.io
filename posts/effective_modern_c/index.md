@@ -6956,5 +6956,5 @@ Reference:</br>
 ---
 
 > 作者: [Jian YE](https://github.com/jianye0428)  
-> URL: https://jianye0428.github.io/posts/effective_modern_c-/  
+> URL: https://jianye0428.github.io/posts/effective_modern_c/  
 
