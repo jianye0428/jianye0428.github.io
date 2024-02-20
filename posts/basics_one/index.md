@@ -973,16 +973,14 @@ shared_ptr 是为了解决 auto_ptr 在对象所有权上的局限性(auto_ptr �
 
 ```c++
 class B;
-class A
-{
+class A {
 public:
   shared_ptr<B> pb_;
   ~A(){
     cout<<"A delete";
   }
 };
-class B
-{
+class B {
 public:
   shared_ptr<A> pa_;
   ~B(){
@@ -1072,34 +1070,34 @@ catch (bad_cast b) {
 ref: https://blog.csdn.net/wei_cheng18/article/details/81043858
 
 ```c++
-template <typename T> class A
-{
-   friend T;
-    private:
-     A() {}
-    ~A() {}
+template <typename T> class A {
+  friend T;
+private:
+    A() {}
+   ~A() {}
 };
-class B : virtual public A<B>
-{
-   public:
-    B() {}
-   ~B() {}
+class B : virtual public A<B> {
+public:
+  B() {}
+ ~B() {}
 };
-class C : virtual public B
-{
-   public:
-     C() {}
-    ~C() {}
+class C : virtual public B{
+public:
+  C() {}
+ ~C() {}
 };
-void main( void )
-{
-    B b;
-    //C c;
-    return;
+void main( void ) {
+  B b;
+  //C c;
+  return;
 }
 ```
 
-注意：<font color=red>构造函数是继承实现的关键</font>，每次子类对象构造时，首先调用的是父类的构造函数，然后才 是自己的。
+注意：<font color=red>构造函数是实现继承的关键</font>，每次子类对象构造时，首先调用的是父类的构造函数，然后才是自己的。
+
+- 这里需要说明的是：我们设计的不能被继承的类B对基类A的继承必须是虚继承，这样一来C类继承B类时会去直接调用A的构造函数，而不是像普通继承那样，先调用B的构造函数再调用A的构造函数；
+
+- C类直接调用A类的构造函数，由于A类的构造函数是私有的，而B是A的友元，C类不是A的友元，友元关系不会继承，因此会编译报错。
 
 ### 4.8 访问基类的私有虚函数
 
@@ -1114,7 +1112,7 @@ class A
    {
       cout << "A::g" << endl;
    }
-  private:
+private:
    virtual void f()
    {
       cout << "A::f" << endl;
