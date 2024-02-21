@@ -1,4 +1,315 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Tue, 20 Feb 2024 09:10:15 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>车辆路径规划之Dubins曲线与RS曲线简述</title><link>https://jianye0428.github.io/posts/dubinsandrs/</link><pubDate>Tue, 20 Feb 2024 09:10:15 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/dubinsandrs/</guid><description><![CDATA[<h2 id="0-描述">0. 描述</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 21 Feb 2024 10:38:11 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>RL学习笔记 [2] | 马尔科夫决策过程(MDP)</title><link>https://jianye0428.github.io/posts/rl_learning_note_2/</link><pubDate>Wed, 21 Feb 2024 10:38:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_2/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9385570.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（一）模型基础<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了强化学习模型的8个基本要素。但是仅凭这些要素还是无法使用强化学习来帮助我们解决问题的, 在讲到模型训练前，模型的简化也很重要，这一篇主要就是讲如何利用马尔科夫决策过程(Markov Decision Process，以下简称MDP)来简化强化学习的建模。</p>
+<p>MDP这一篇对应Sutton书的第三章和UCL强化学习课程的第二讲。</p>
+<h1 id="1-强化学习引入mdp的原因">1. 强化学习引入MDP的原因</h1>
+<p>如果按照真实的环境转化过程看，转化到下一个状态 $s′$</p>
+<p>对于马尔科夫性本身，我之前讲过的<a href="http://www.cnblogs.com/pinard/p/6945257.html"target="_blank" rel="external nofollow noopener noreferrer">隐马尔科夫模型HMM（一）HMM模型<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，<a href="http://www.cnblogs.com/pinard/p/7048333.html"target="_blank" rel="external nofollow noopener noreferrer">条件随机场CRF(一)从随机场到线性链条件随机场<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>以及<a href="http://www.cnblogs.com/pinard/p/6632399.html"target="_blank" rel="external nofollow noopener noreferrer">MCMC(二)马尔科夫链<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>都有讲到。它本身是一个比较简单的假设，因此这里就不专门对“马尔可夫性”做专门的讲述了。</p>
+<p>除了对于环境的状态转化模型这个因素做马尔科夫假设外，我们还对强化学习第四个要素个体的策略(policy) $π$ 也做了马尔科夫假设。即在状态$s$时采取动作$a$的概率仅与当前状态$s$有关，与其他的要素无关。用公式表示就是</p>
+<p>$$\pi(a\mid s)=P(A_{t}=a\mid S_{t}=s)$$</p>
+<p>对于第五个要素，价值函数 $v_π(s)$ 也是一样, $v_π(s)$ 现在仅仅依赖于当前状态了，那么现在价值函数 $v_π(s)$ 表示为:</p>
+<p>$$\nu_{\pi}(s)=\mathrm{E}<em>{\pi}(G</em>{t}|S_{t}=s)=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s)$$</p>
+<p>其中，$G_t$ 代表收获(return), 是一个MDP中从某一个状态 $S_t$ 开始采样直到终止状态时所有奖励的有衰减的之和。</p>
+<h1 id="2-mdp的价值函数与贝尔曼方程">2. MDP的价值函数与贝尔曼方程</h1>
+<p>对于MDP，我们在第一节里已经讲到了它的价值函数 $v_π(s)$ 的表达式。但是这个表达式没有考虑到所采用的动作$a$带来的价值影响，因此我们除了 $v_π(s)$ 这个状态价值函数外，还有一个动作价值函数 $q_π(s,a)$，即：</p>
+<p>$$q_{\pi}(s,a)=\operatorname{E}<em>{\pi}(G</em>{t}|S_{t}=s,A_{t}=a)=\operatorname{E}<em>{\pi}(R</em>{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s,A_{t}=a)$$</p>
+<p>根据价值函数的表达式，我们可以推导出价值函数基于状态的递推关系，比如对于状态价值函数 $v_π(s)$，可以发现：</p>
+<p>$$\begin{aligned}
+V_{\pi}(s)&amp; =\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s)  \
+&amp;=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma(R_{t+2}+\gamma R_{t+3}+\ldots)|S_{t}=s) \
+&amp;=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma G_{t+1}|S_{t}=s) \
+&amp;=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma\nu_{\pi}(S_{t+1})|S_{t}=s)
+\end{aligned}$$</p>
+<p>也就是说，在 $t$ 时刻的状态 $S_t$ 和 $t+1$ 时刻的状态 $S_{t+1}$ 是满足递推关系的，即：</p>
+<p>$$v_{\pi}(s)=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma\nu_{\pi}(S_{t+1})\mid S_{t}=s)$$
+　　　　
+这个递推式子我们一般将它叫做<strong>贝尔曼方程</strong>。这个式子告诉我们，一个状态的价值由该状态的奖励以及后续状态价值按一定的衰减比例联合组成。</p>
+<p>同样的方法，我们可以得到动作价值函数 $q_π(s,a)$ 的贝尔曼方程：</p>
+<p>$$q_{\pi}(s,a)=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma q_{\pi}(S_{t+1},A_{t+1})\mid S_{t}=s,A_{t}=a)$$</p>
+<h1 id="3-状态价值函数与动作价值函数的递推关系">3. 状态价值函数与动作价值函数的递推关系</h1>
+<p>根据动作价值函数 $q_π(s,a)$ 和状态价值函数 $v_π(s)$ 的定义，我们很容易得到他们之间的转化关系公式：</p>
+<p>$$\nu_{\pi}(s)=\sum_{a\in A}\pi(a|s)q_{\pi}(s,a)$$</p>
+<p>也就是说，状态价值函数是所有动作价值函数基于策略 $π$ 的期望。通俗说就是某状态下所有状态动作价值乘以该动作出现的概率，最后求和，就得到了对应的状态价值。</p>
+<p>反过来，利用上贝尔曼方程，我们也很容易从状态价值函数 $v_π(s)$ 表示动作价值函数 $q_π(s,a)$，即：</p>
+<p>$$q_{\pi}(s,a)=R_{s}^{a}+\gamma\sum_{s^{\prime}\in S}P_{ss&rsquo;}^{a}\nu_{\pi}(s^{&rsquo;})$$</p>
+<p>通俗说就是状态动作价值有两部分相加组成，第一部分是即时奖励，第二部分是环境所有可能出现的下一个状态的概率乘以该下一状态的状态价值，最后求和，并加上衰减。</p>
+<p>这两个转化过程也可以从下图中直观的看出：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">状态价值函数</div>
+</center>
+<br>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">动作价值函数</div>
+</center>
+<br>
+<p>把上面两个式子互相结合起来，我们可以得到：</p>
+<p>$$\nu_{\pi}(s)=\sum_{a\in A}\pi(a\mid s)(R_{s}^{a}+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^{a}\nu_{\pi}(s^{&rsquo;}))$$</p>
+<p>$$q_\pi(s,a)=R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^a\sum_{a&rsquo; \in A}\pi(a&rsquo; \mid s&rsquo;)q_\pi(s&rsquo;,a&rsquo;)$$</p>
+<h1 id="4-最优价值函数">4. 最优价值函数</h1>
+<p>解决强化学习问题意味着要寻找一个最优的策略让个体在与环境交互过程中获得始终比其它策略都要多的收获，这个最优策略我们可以用 <em>π</em>∗表示。一旦找到这个最优策略$π^∗$，那么我们就解决了这个强化学习问题。一般来说，比较难去找到一个最优策略，但是可以通过比较若干不同策略的优劣来确定一个较好的策略，也就是局部最优解。</p>
+<p>如何比较策略的优劣呢？一般是通过对应的价值函数来比较的，也就是说，寻找较优策略可以通过寻找较优的价值函数来完成。可以定义最优状态价值函数是所有策略下产生的众多状态价值函数中的最大者，即：</p>
+<p>$$\nu_{*}(s)=\max_{\pi}\nu_{\pi}(s)$$</p>
+<p>同理也可以定义最优动作价值函数是所有策略下产生的众多动作状态价值函数中的最大者，即：</p>
+<p>$$q_*(s,a)=\max_\pi q_\pi(s,a)$$</p>
+<p>对于最优的策略，基于动作价值函数我们可以定义为：</p>
+<p>$$\pi_<em>(a|s)=\begin{cases}1&amp;\mathrm{if~}a=\mathrm{arg~}\max_{a\in A}q</em>(s,a)\0&amp;\mathrm{else}&amp;\end{cases}$$</p>
+<p>只要我们找到了最大的状态价值函数或者动作价值函数，那么对应的策略 $π^*$ 就是我们强化学习问题的解。同时，利用状态价值函数和动作价值函数之间的关系，我们也可以得到:</p>
+<p>$$v_<em>(s)=\max_aq_</em>(s,a)$$</p>
+<p>反过来的最优价值函数关系也很容易得到：</p>
+<p>$$q_{<em>}(s,a)=R_{s}^{a}+\gamma\sum_{s&rsquo; \in S}P_{ss}^{a}{}_{</em>}(\mathrm{s&rsquo;})$$</p>
+<p>利用上面的两个式子也可以得到和第三节末尾类似的式子：</p>
+<p>$$\nu_<em>(s)=\max_a(R_s^a+\gamma\sum_{s^{\prime}\in S}P_{ss&rsquo;}^a\nu_</em>(s&rsquo;))$$</p>
+<p>$$q_<em>(s,a)=R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^a\max_{a&rsquo;}q_</em>(s&rsquo;,a&rsquo;)$$</p>
+<h1 id="5-mdp实例">5. MDP实例</h1>
+<p>上面的公式有点多，需要一些时间慢慢消化，这里给出一个UCL讲义上实际的例子，首先看看具体我们如何利用给定策略来计算价值函数。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">MDP 举例</div>
+</center>
+<br>
+<p>例子是一个学生学习考试的MDP。里面左下那个圆圈位置是起点，方框那个位置是终点。上面的动作有study, pub, facebook, quit, sleep，每个状态动作对应的即时奖励R已经标出来了。我们的目标是找到最优的动作价值函数或者状态价值函数，进而找出最优的策略。</p>
+<p>为了方便，我们假设衰减因子 $γ=1$, $π(a|s)=0.5$。</p>
+<p>对于终点方框位置，由于其没有下一个状态，也没有当前状态的动作，因此其状态价值函数为0。对于其余四个状态，我们依次定义其价值为<em>v</em>1,<em>v</em>2,<em>v</em>3,<em>v</em>4， 分别对应左上，左下，中下，右下位置的圆圈。我们基于$\nu_{\pi}(s)=\sum_{a\in A}\pi(a|s)(R_{s}^{a}+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^{a}\nu_{\pi}(s&rsquo;))$计算所有的状态价值函数。可以列出一个方程组。</p>
+<ul>
+<li>
+<p>对于<em>v</em>1位置，我们有：$v_1=0.5*(-1+v_1)+0.5*(0+v_2)$</p>
+</li>
+<li>
+<p>对于<em>v</em>2位置，我们有：$v_2=0.5*(-1+v_1)+0.5*(-2+v_3)$</p>
+</li>
+<li>
+<p>对于<em>v</em>3位置，我们有：$v_3=0.5*(0+0)+0.5*(-2+v_4)$</p>
+</li>
+<li>
+<p>对于<em>v</em>4位置，我们有：$v_4=0.5*(10+0)+0.5*(1+0.2<em>v_2+0.4</em>v_3+0.4*v_4)$</p>
+</li>
+</ul>
+<p>解出这个方程组可以得到 $v_1=−2.3$, $v_2=−1.3$, $v_3=2.7$, $v_4=7.4$, 即每个状态的价值函数如下图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">MDP</div>
+</center>
+<br>
+<p>上面我们固定了策略$ π(a|s)$, 虽然求出了每个状态的状态价值函数，但是却并不一定是最优价值函数。那么如何求出最优价值函数呢？这里由于状态机简单，求出最优的状态价值函数 $v*(s)$ 或者动作价值函数 $q*(s,a)$ s比较容易。</p>
+<p>我们这次以动作价值函数 $q*(s,a)$ 来为例求解。首先终点方框处的好求。</p>
+<p>$$q*(s_3,sleep)=0,q*(s_4,study)=10$$</p>
+<p>接着我们就可利用 $q*(s,a)=R_{s}^{a}+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^{a}\max_{a&rsquo;}q*(s&rsquo;,a&rsquo;)$ 列方程组求出所有的 $q∗(s,a)$ 。有了所有的 $q*(s,a)$,利用 $v_{<em>}(s)=\max_{a}q</em>(s,a)$ 就可以求出所有的 $v∗(s)$。最终求出的所有 $v∗(s)$ 和 $q∗(s,a)$ 如下图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">MDP</div>
+</center>
+<br>
+<p>从而我们的最优决策路径是走6-&gt;6-&gt;8-&gt;10-&gt;结束。　　　　</p>
+<h1 id="6-mdp小结">6. MDP小结</h1>
+<p>MDP是强化学习入门的关键一步，如果这部分研究的比较清楚，后面的学习就会容易很多。因此值得多些时间在这里。虽然MDP可以直接用方程组来直接求解简单的问题，但是更复杂的问题却没有办法求解，因此我们还需要寻找其他有效的求解强化学习的方法。</p>
+<p>下一篇讨论用动态规划的方法来求解强化学习的问题。</p>
+<h1 id="7-ref">7. ref</h1>
+<p><a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/pinard/p/9426283.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>RL学习笔记 [1] | 模型基础</title><link>https://jianye0428.github.io/posts/rl_learning_note_1/</link><pubDate>Wed, 21 Feb 2024 10:38:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_1/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>　从今天开始整理强化学习领域的知识，主要参考的资料是Sutton的强化学习书和UCL强化学习的课程。这个系列大概准备写10到20篇，希望写完后自己的强化学习碎片化知识可以得到融会贯通，也希望可以帮到更多的人，毕竟目前系统的讲解强化学习的中文资料不太多。</p>
+<p>　第一篇会从强化学习的基本概念讲起，对应Sutton书的第一章和UCL课程的第一讲。</p>
+<h1 id="1-强化学习在机器学习中的位置">1. 强化学习在机器学习中的位置</h1>
+<p>强化学习的学习思路和人比较类似，是在实践中学习，比如学习走路，如果摔倒了，那么我们大脑后面会给一个负面的奖励值，说明走的姿势不好。然后我们从摔倒状态中爬起来，如果后面正常走了一步，那么大脑会给一个正面的奖励值，我们会知道这是一个好的走路姿势。那么这个过程和之前讲的机器学习方法有什么区别呢？</p>
+<p>强化学习是和监督学习，非监督学习并列的第三种机器学习方法，从下图我们可以看出来。</p>
+  <br>
+  <center>
+    
+    <br>
+    <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">RL、SL、UL与ML的区别联系</div>
+  </center>
+  <br>
+<p>强化学习来和监督学习最大的区别是它是没有监督学习已经准备好的训练数据输出值的。强化学习只有奖励值，但是这个奖励值和监督学习的输出值不一样，它不是事先给出的，而是延后给出的，比如上面的例子里走路摔倒了才得到大脑的奖励值。同时，强化学习的每一步与时间顺序前后关系紧密。而监督学习的训练数据之间一般都是独立的，没有这种前后的依赖关系。</p>
+<p>再来看看强化学习和非监督学习的区别。也还是在奖励值这个地方。非监督学习是没有输出值也没有奖励值的，它只有数据特征。同时和监督学习一样，数据之间也都是独立的，没有强化学习这样的前后依赖关系。</p>
+<h1 id="2-强化学习的建模">2. 强化学习的建模</h1>
+<p>我们现在来看看强化学习这样的问题我们怎么来建模，简单的来说，是下图这样的：</p>
+  <br>
+  <center>
+    
+    <br>
+    <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">大脑与环境的交互</div>
+  </center>
+  <br>
+<p>上面的大脑代表我们的算法执行个体，我们可以操作个体来做决策，即选择一个合适的动作（Action）$A_t$。下面的地球代表我们要研究的环境,它有自己的状态模型，我们选择了动作 $A_t$ 后，环境的状态(State)会变，我们会发现环境状态已经变为 $S_{t+1}$,同时我们得到了我们采取动作 $A_t$ 的延时奖励(Reward) $R_{t+1}$。然后个体可以继续选择下一个合适的动作，然后环境的状态又会变，又有新的奖励值&hellip;这就是强化学习的思路。</p>
+<p>那么我们可以整理下这个思路里面出现的强化学习要素。</p>
+<ul>
+<li>
+<p>第一个是环境的状态 $S$, $t$ 时刻环境的状态 $S_t$ 是它的环境状态集中某一个状态。</p>
+</li>
+<li>
+<p>第二个是个体的动作 $A$, $t$ 时刻个体采取的动作 $A_t$ 是它的动作集中某一个动作。</p>
+</li>
+<li>
+<p>第三个是环境的奖励 $R$, $t$ 时刻个体在状态 $S_t$ 采取的动作 $A_t$ 对应的奖励 $R_{t+1}$ 会在 $t+1$ 时刻得到。</p>
+</li>
+<li>
+<p>第四个是个体的策略(policy) $π$,它代表个体采取动作的依据，即个体会依据策略 $π$ 来选择动作。最常见的策略表达方式是一个条件概率分布 $π(a|s)$, 即在状态 $s$ 时采取动作 $a$ 的概率。即 $π(a|s)=P(A_t=a|S_t=s)$.此时概率大的动作被个体选择的概率较高。</p>
+</li>
+<li>
+<p>第五个是个体在策略 $π$ 和状态 $s$ 时，采取行动后的价值(value)，一般用 $vπ(s)$ 表示。这个价值一般是一个期望函数。虽然当前动作会给一个延时奖励 $R_{t+1}$,但是光看这个延时奖励是不行的，因为当前的延时奖励高，不代表到了 $t+1$, $t+2$,&hellip;时刻的后续奖励也高。比如下象棋，我们可以某个动作可以吃掉对方的车，这个延时奖励是很高，但是接着后面我们输棋了。此时吃车的动作奖励值高但是价值并不高。因此我们的价值要综合考虑当前的延时奖励和后续的延时奖励。价值函数 $v_{\pi}(s)$ 一般可以表示为下式，不同的算法会有对应的一些价值函数变种，但思路相同。
+$$v_{\pi}(s)=\mathbb{E}<em>π(R</em>{t+1}+γR_{t+2}+γ^2R_{t+3}+&hellip;|S_t=s)$$</p>
+</li>
+<li>
+<p>其中 $γ$ 是第六个模型要素，即奖励衰减因子，在[0，1]之间。如果为0，则是贪婪法，即价值只由当前延时奖励决定，如果是1，则所有的后续状态奖励和当前奖励一视同仁。大多数时候，我们会取一个0到1之间的数字，即当前延时奖励的权重比后续奖励的权重大。</p>
+</li>
+<li>
+<p>第七个是环境的状态转化模型，可以理解为一个概率状态机，它可以表示为一个概率模型，即在状态 $s$ 下采取动作 $a$,转到下一个状态 $s′$ 的概率，表示为 $P^a_{ss′}$。</p>
+</li>
+<li>
+<p>第八个是探索率 $ϵ$，这个比率主要用在强化学习训练迭代过程中，由于我们一般会选择使当前轮迭代价值最大的动作，但是这会导致一些较好的但我们没有执行过的动作被错过。因此我们在训练选择最优动作时，会有一定的概率 $ϵ$ 不选择使当前轮迭代价值最大的动作，而选择其他的动作。</p>
+</li>
+</ul>
+<p>以上8个就是强化学习模型的基本要素了。当然，在不同的强化学习模型中，会考虑一些其他的模型要素，或者不考虑上述要素的某几个，但是这8个是大多数强化学习模型的基本要素。</p>
+<h1 id="3-强化学习的简单实例">3. 强化学习的简单实例</h1>
+<p>这里给出一个简单的强化学习例子Tic-Tac-Toe。这是一个简单的游戏，在一个3x3的九宫格里，两个人轮流下，直到有个人的棋子满足三个一横一竖或者一斜，赢得比赛游戏结束，或者九宫格填满也没有人赢，则和棋。</p>
+<p>这个例子的完整代码在<a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/introduction.py"target="_blank" rel="external nofollow noopener noreferrer">github<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。例子只有一个文件，很简单，代码首先会用两个电脑选手训练模型，然后可以让人和机器对战。当然，由于这个模型很简单，所以只要你不乱走，最后的结果都是和棋，当然想赢电脑也是不可能的。</p>
+<p>我们重点看看这个例子的模型，理解上面第二节的部分。如何训练强化学习模型可以先不管。代码部分大家可以自己去看，只有300多行。</p>
+<ul>
+<li>
+<p>首先看第一个要素环境的状态 $S$。这是一个九宫格，每个格子有三种状态，即没有棋子(取值0)，有第一个选手的棋子(取值1)，有第二个选手的棋子(取值-1)。那么这个模型的状态一共有$3^9=19683$个。</p>
+</li>
+<li>
+<p>接着我们看个体的动作 $A$，这里只有9个格子，每次也只能下一步，所以最多只有9个动作选项。实际上由于已经有棋子的格子是不能再下的，所以动作选项会更少。实际可以选择动作的就是那些取值为0的格子。</p>
+</li>
+<li>
+<p>第三个是环境的奖励 $R$，这个一般是我们自己设计。由于我们的目的是赢棋，所以如果某个动作导致的改变到的状态可以使我们赢棋，结束游戏，那么奖励最高，反之则奖励最低。其余的双方下棋动作都有奖励，但奖励较少。特别的，对于先下的棋手，不会导致结束的动作奖励要比后下的棋手少。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># give reward to two players</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">giveReward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentState</span><span class="o">.</span><span class="n">winner</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">p1Symbol</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p1</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p2</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentState</span><span class="o">.</span><span class="n">winner</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">p2Symbol</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p1</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p2</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p1</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p2</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>第四个是个体的策略(policy) $π$，这个一般是学习得到的，我们会在每轮以较大的概率选择当前价值最高的动作，同时以较小的概率去探索新动作，在这里AI的策略如下面代码所示。里面的exploreRate就是我们的第八个要素探索率 $ϵ$。即策略是以 $1−ϵ$ 的概率选择当前最大价值的动作，以 $ϵ$ 的概率随机选择新动作。</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># determine next action</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">takeAction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">nextStates</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">nextPositions</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">BOARD_ROWS</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">BOARD_COLS</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">nextPositions</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">        <span class="n">nextStates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">nextState</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">)</span><span class="o">.</span><span class="n">getHash</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exploreRate</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">nextPositions</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># Not sure if truncating is the best way to deal with exploratory step</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># Maybe it&#39;s better to only skip this step rather than forget all the history</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">action</span> <span class="o">=</span> <span class="n">nextPositions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">action</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">action</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="nb">hash</span><span class="p">,</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nextStates</span><span class="p">,</span> <span class="n">nextPositions</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">estimations</span><span class="p">[</span><span class="nb">hash</span><span class="p">],</span> <span class="n">pos</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">values</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">action</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">action</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">action</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>第五个是价值函数，代码里用value表示。价值函数的更新代码里只考虑了当前动作的现有价值和得到的奖励两部分，可以认为我们的第六个模型要素衰减因子 $γ$ 为0。具体的代码部分如下，价值更新部分的代码加粗。具体为什么会这样更新价值函数我们以后会讲。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># update estimation according to reward</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">feedReward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reward</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="p">[</span><span class="n">state</span><span class="o">.</span><span class="n">getHash</span><span class="p">()</span> <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">target</span> <span class="o">=</span> <span class="n">reward</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">latestState</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimations</span><span class="p">[</span><span class="n">latestState</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">stepSize</span> <span class="o">*</span> <span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimations</span><span class="p">[</span><span class="n">latestState</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">estimations</span><span class="p">[</span><span class="n">latestState</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+</span></span><span class="line"><span class="cl">      <span class="n">target</span> <span class="o">=</span> <span class="n">value</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="p">[]</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>第七个是环境的状态转化模型, 这里由于每一个动作后，环境的下一个模型状态是确定的，也就是九宫格的每个格子是否有某个选手的棋子是确定的，因此转化的概率都是1，不存在某个动作后会以一定的概率到某几个新状态，比较简单。</p>
+</li>
+</ul>
+<p>从这个例子，相信大家对于强化学习的建模会有一个初步的认识了。　　　　　　　　</p>
+<p>以上就是强化学习的模型基础，下一篇会讨论马尔科夫决策过程。</p>
+]]></description></item><item><title>车辆路径规划之Dubins曲线与RS曲线简述</title><link>https://jianye0428.github.io/posts/dubinsandrs/</link><pubDate>Tue, 20 Feb 2024 09:10:15 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/dubinsandrs/</guid><description><![CDATA[<h2 id="0-描述">0. 描述</h2>
 <p>Dubins和RS曲线都是路径规划的经典算法，其中车辆运动学利用RS曲线居多，因此简单介绍Dubins并引出RS曲线。</p>
 <p>花了点时间看了二者的论文，并阅读了一个开源的代码。</p>
 <h2 id="1-dubins曲线">1. Dubins曲线</h2>
@@ -9322,461 +9633,4 @@
 <br>
 <h2 id="四补充内容">四、补充内容</h2>
 <p>可以改进配置，以便在记录的<code>Git Hash</code>外，包含其他的信息。检测构建环境是否<code>污染</code>(即是否包含未提交的更改和未跟踪的文件)，或者<code>干净</code>。可以使用<code>git describe --abbrev=7 --long --always --dirty --tags</code>检测这些信息。根据可重现性，甚至可以将<code>Git</code>的状态，完整输出记录到头文件中。</p>
-]]></description></item><item><title>CMake 笔记 | [30] 配置时记录Git Hash值</title><link>https://jianye0428.github.io/posts/cmake_note_30/</link><pubDate>Wed, 31 Jan 2024 07:30:45 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_30/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><strong>大多数现代源代码存储库都使用</strong>**<code>Git</code>作为版本控制系统进行跟踪，提交的<code>Git Hash</code>决定了源代码的状态。因此，为了标记可执行文件，尝试将<code>Git Hash</code>记录到可执行文件中，方法是将哈希字符串记录在一个头文件中，该头文件可以包含在代码中。**</div>
-    </div>
-  </div>
-<h2 id="二项目结构">二、项目结构</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
-</span></span><span class="line"><span class="cl">├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">├── example.cpp
-</span></span><span class="line"><span class="cl">└── version.hpp.in</span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter6/04"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter6/04<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<table><body text=red><tr><td style="text-align:left;font-weight:bold" bgcolor=yellow><font size="3" color="red">相关源码</font></td></tr></body></table>
-<p><strong>version.hpp.in</strong></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">GIT_HASH</span> <span class="o">=</span> <span class="s">&#34;@GIT_HASH@&#34;</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>example.cpp</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;version.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;This code has been configured from version &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">GIT_HASH</span>
-</span></span><span class="line"><span class="cl">            <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>CMakeLists.txt</strong></p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">example</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">GIT_HASH</span> <span class="s">&#34;unknown&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">Git</span> <span class="n">QUIET</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">GIT_FOUND</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">execute_process</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">GIT_EXECUTABLE</span><span class="p">}</span> <span class="n">log</span> <span class="o">-</span><span class="mi">1</span> <span class="o">--</span><span class="n">pretty</span><span class="o">=</span><span class="nl">format</span><span class="p">:</span><span class="o">%</span><span class="n">h</span>
-</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_VARIABLE</span> <span class="n">GIT_HASH</span>
-</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_STRIP_TRAILING_WHITESPACE</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ERROR_QUIET</span>
-</span></span><span class="line"><span class="cl">    <span class="n">WORKING_DIRECTORY</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;Git hash is ${GIT_HASH}&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">configure_file</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">version</span><span class="p">.</span><span class="n">hpp</span><span class="p">.</span><span class="n">in</span>
-</span></span><span class="line"><span class="cl">  <span class="n">generated</span><span class="o">/</span><span class="n">version</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="err">@</span><span class="n">ONLY</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">example</span> <span class="n">example</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">example</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">generated</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">GIT_HASH</span> <span class="s">&#34;unknown&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>由于<code>Git</code>命令可能会失败(源代码已经分发到<code>Git</code>存储库之外)，或者<code>Git</code>在系统上不可用，我们希望为这个变量设置一个默认值。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>tips<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">find_package</span><span class="p">(</span><span class="n">Git</span> <span class="n">QUIET</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">GIT_FOUND</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">execute_process</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">    <span class="n">COMMAND</span> <span class="err">$</span><span class="p">{</span><span class="n">GIT_EXECUTABLE</span><span class="p">}</span> <span class="n">log</span> <span class="o">-</span><span class="mi">1</span> <span class="o">--</span><span class="n">pretty</span><span class="o">=</span><span class="nl">format</span><span class="p">:</span><span class="o">%</span><span class="n">h</span>
-</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_VARIABLE</span> <span class="n">GIT_HASH</span>
-</span></span><span class="line"><span class="cl">    <span class="n">OUTPUT_STRIP_TRAILING_WHITESPACE</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ERROR_QUIET</span>
-</span></span><span class="line"><span class="cl">    <span class="n">WORKING_DIRECTORY</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_SOURCE_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>使用<code>find_package(Git QUIET)</code>来检测系统上是否有可用的<code>Git</code>。如果有(<code>GIT_FOUND</code>为<code>True</code>)，运行一个<code>Git</code>命令:<code>${GIT_EXECUTABLE} log -1 --pretty=format:%h</code>。这个命令给出了当前提交<code>Hash</code>的简短版本。</p>
-<p>当然，这里我们可以灵活地运行<code>Git</code>命令。</p>
-<p>要求<code>execute_process</code>命令将结果放入名为<code>GIT_HASH</code>的变量中，然后删除任何尾随的空格。使用<code>ERROR_QUIET</code>，如果<code>Git</code>命令由于某种原因失败，不会停止配置。</p>
-</div>
-    </div>
-  </div>
-<h2 id="三结果展示">三、结果展示</h2>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ mkdir -p build
-</span></span><span class="line"><span class="cl">$ <span class="nb">cd</span> build
-</span></span><span class="line"><span class="cl">$ cmake ..
-</span></span><span class="line"><span class="cl">$ cmake --build .
-</span></span><span class="line"><span class="cl">$ ./example
-</span></span><span class="line"><span class="cl">This code has been configured from version 74e4aa9</span></span></code></pre></td></tr></table>
-</div>
-</div><br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">生成保存git hash的文件</div>
-</center>
-<br>
-<p><strong>version.hpp</strong></p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">GIT_HASH</span> <span class="o">=</span> <span class="s">&#34;74e4aa9&#34;</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item><item><title>CMake 笔记 | [29] 从文件中记录项目版本</title><link>https://jianye0428.github.io/posts/cmake_note_29/</link><pubDate>Wed, 31 Jan 2024 07:30:41 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_29/</guid><description><![CDATA[<h2 id="一-导言">一、 导言</h2>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><strong>本篇内容目的和上一篇相似，但是出发点不同。我们计划是从文件中读取版本信息，而不是将其设置在CMakeLists.txt中。将版本保存在单独文件中的目的，是允许其他构建框架或开发工具使用独立于</strong>**<code>CMake</code>的信息，而不需要将信息复制到多个文件中。**</div>
-    </div>
-  </div>
-<h2 id="二项目结构">二、项目结构</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
-</span></span><span class="line"><span class="cl">├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">├── example.cpp
-</span></span><span class="line"><span class="cl">├── version.hpp.in
-</span></span><span class="line"><span class="cl">└── VERSION.txt</span></span></code></pre></td></tr></table>
-</div>
-</div><blockquote>
-<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter6/03"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter6/03<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<h2 id="三相关源码">三、相关源码</h2>
-<p><strong>VERSION.txt</strong></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">2.0.1-rc-2</span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>version.hpp.in</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">PROGRAM_VERSION</span> <span class="o">=</span> <span class="s">&#34;@PROGRAM_VERSION@&#34;</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>example.cpp</strong></p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;version.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;This is output from code v&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">PROGRAM_VERSION</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;Hello CMake world!&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>CMakeLists.txt</strong></p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">example</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">EXISTS</span> <span class="s">&#34;${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">file</span><span class="p">(</span><span class="n">READ</span> <span class="s">&#34;${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt&#34;</span> <span class="n">PROGRAM_VERSION</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">string</span><span class="p">(</span><span class="n">STRIP</span> <span class="s">&#34;${PROGRAM_VERSION}&#34;</span> <span class="n">PROGRAM_VERSION</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">  <span class="n">message</span><span class="p">(</span><span class="n">FATAL_ERROR</span> <span class="s">&#34;File ${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt not found&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">configure_file</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">version</span><span class="p">.</span><span class="n">hpp</span><span class="p">.</span><span class="n">in</span>
-</span></span><span class="line"><span class="cl">  <span class="n">generated</span><span class="o">/</span><span class="n">version</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="err">@</span><span class="n">ONLY</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">example</span> <span class="n">example</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">example</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">generated</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span><span class="p">(</span><span class="n">EXISTS</span> <span class="s">&#34;${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">file</span><span class="p">(</span><span class="n">READ</span> <span class="s">&#34;${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt&#34;</span> <span class="n">PROGRAM_VERSION</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">string</span><span class="p">(</span><span class="n">STRIP</span> <span class="s">&#34;${PROGRAM_VERSION}&#34;</span> <span class="n">PROGRAM_VERSION</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">  <span class="n">message</span><span class="p">(</span><span class="n">FATAL_ERROR</span> <span class="s">&#34;File ${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt not found&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>首先，检查文件<code>VERSION.txt</code>文件是否存在，如果不存在，则发出错误消息。如果存在，将内容读入<code>PROGRAM_VERSION</code>变量中，该变量会去掉尾部的空格。</p>
-<p>当设置了变量<code>PROGRAM_VERSION</code>，就可以使用它来配置<code>version.hpp.in</code>，生成generated/version.hpp：</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">configure_file</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">version</span><span class="p">.</span><span class="n">hpp</span><span class="p">.</span><span class="n">in</span>
-</span></span><span class="line"><span class="cl">  <span class="n">generated</span><span class="o">/</span><span class="n">version</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="err">@</span><span class="n">ONLY</span>
-</span></span><span class="line"><span class="cl"><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div></div>
-    </div>
-  </div>
-<h2 id="四结果展示">四、结果展示</h2>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ mkdir -p build
-</span></span><span class="line"><span class="cl">$ <span class="nb">cd</span> build
-</span></span><span class="line"><span class="cl">$ cmake ..
-</span></span><span class="line"><span class="cl">$ cmake --build .
-</span></span><span class="line"><span class="cl">$ ./example
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">This is output from code v2.0.1-rc-2
-</span></span><span class="line"><span class="cl">Hello CMake world!</span></span></code></pre></td></tr></table>
-</div>
-</div><br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">生成版本文件</div>
-</center>
-<br>
-<p><strong>version.hpp</strong></p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">PROGRAM_VERSION</span> <span class="o">=</span> <span class="s">&#34;2.0.1-rc-2&#34;</span><span class="p">;</span></span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item></channel></rss>
+]]></description></item></channel></rss>
