@@ -1,4 +1,4 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 22 Feb 2024 13:00:24 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>RL学习笔记 [4] | 用蒙特卡罗法（MC）求解</title><link>https://jianye0428.github.io/posts/rl_learning_note_4/</link><pubDate>Thu, 22 Feb 2024 13:00:24 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_4/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>yejian's blog</title><link>https://jianye0428.github.io/</link><description>Lruihao's Note 李瑞豪的博客：探索、分享、记录自己在工作生活学习到一些东西。人知道得越多，就就会发现无知的越多。有更广袤世界可以探索，真是莫大的快乐啊！</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 22 Feb 2024 17:25:21 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>RL学习笔记 [4] | 用蒙特卡罗法（MC）求解</title><link>https://jianye0428.github.io/posts/rl_learning_note_4/</link><pubDate>Thu, 22 Feb 2024 13:00:24 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_4/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在<a href="https://www.cnblogs.com/pinard/p/9463815.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（三）用动态规划（DP）求解<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了用动态规划来求解强化学习预测问题和控制问题的方法。但是由于动态规划法需要在每一次回溯更新某一个状态的价值时，回溯到该状态的所有可能的后续状态。导致对于复杂问题计算量很大。同时很多时候，我们连环境的状态转化模型 $P$ 都无法知道，这时动态规划法根本没法使用。这时候我们如何求解强化学习问题呢？本文要讨论的蒙特卡罗(Monte-Calo, MC)就是一种可行的方法。</p>
 <p>蒙特卡罗法这一篇对应Sutton书的第五章和UCL强化学习课程的第四讲部分，第五讲部分。</p>
 <h1 id="1-不基于模型的强化学习问题定义">1. 不基于模型的强化学习问题定义</h1>
@@ -11,8 +11,8 @@
 <p><strong>控制问题</strong>，也就是求解最优的价值函数和策略。给定强化学习的5个要素：状态集 $S$, 动作集 $A$, 模型状态转化概率矩阵 $P$, 即时奖励 $R$，衰减因子 $γ$, 求解最优的状态价值函数 $v∗$ 和最优策略 $π∗$　</p>
 </li>
 </ul>
-<p>可见, 模型状态转化概率矩阵 $P$ 始终是已知的，即MDP已知，对于这样的强化学习问题，我们一般称为基于模型的强化学习问题。</p>
-<p>不过有很多强化学习问题，我们没有办法事先得到模型状态转化概率矩阵 $P$ ，这时如果仍然需要我们求解强化学习问题，那么这就是不基于模型的强化学习问题了。它的两个问题一般的定义是：</p>
+<p>可见, 模型状态转化概率矩阵 $P$ 始终是已知的，即MDP已知，对于这样的强化学习问题，我们一般称为<mark>基于模型的强化学习</mark>问题。</p>
+<p>不过有很多强化学习问题，我们没有办法事先得到模型状态转化概率矩阵 $P$ ，这时如果仍然需要我们求解强化学习问题，那么这就是<mark>不基于模型的强化学习</mark>问题了。它的两个问题一般的定义是：</p>
 <ul>
 <li>
 <p><strong>预测问题</strong>，即给定强化学习的5个要素：状态集 $S$, 动作集 $A$, 即时奖励 $R$，衰减因子 $γ$ , 给定策略 $π$， 求解该策略的状态价值函数 $v(π)$</p>
@@ -27,7 +27,7 @@
 <p>蒙特卡罗法通过采样若干经历完整的状态序列(episode)来估计状态的真实价值。所谓的经历完整，就是这个序列必须是达到终点的。比如下棋问题分出输赢，驾车问题成功到达终点或者失败。有了很多组这样经历完整的状态序列，我们就可以来近似的估计状态价值，进而求解预测和控制问题了。</p>
 <p>从特卡罗法法的特点来说，一是和动态规划比，它不需要依赖于模型状态转化概率。二是它从经历过的完整序列学习，完整的经历越多，学习效果越好。</p>
 <h1 id="3-蒙特卡罗法求解强化学习预测问题">3. 蒙特卡罗法求解强化学习预测问题</h1>
-<p>　　　　这里我们先来讨论蒙特卡罗法求解强化学习预测问题的方法，即策略评估。一个给定策略 $π$ 的完整有T个状态的状态序列如下：</p>
+<p>这里我们先来讨论蒙特卡罗法求解强化学习预测问题的方法，即策略评估。一个给定策略 $π$ 的完整有T个状态的状态序列如下：</p>
 <p>$$S_1,A_1,R_2,S_2,A_2,\ldots S_t,A_t,R_{t+1},\ldots R_T,S_T$$</p>
 <p>回忆下<a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（二）马尔科夫决策过程(MDP)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中对于价值函数 $v_π(s)$的定义:</p>
 <p>$$v_\pi(s)=\mathbb{E}_\pi(G_t|S_t=s)=\mathbb{E}_\pi(R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots|S_t=s)$$</p>
@@ -35,8 +35,14 @@
 <p>$$G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots\gamma^{T-t-1}R_T$$</p>
 <p>$$v_\pi(s)\approx average(G_t),s.t.S_t=s$$</p>
 <p>可以看出，预测问题的求解思路还是很简单的。不过有几个点可以优化考虑。</p>
+<ul>
+<li>
 <p>第一个点是: 同样一个状态可能在一个完整的状态序列中重复出现，那么该状态的收获该如何计算？有两种解决方法。第一种是仅把状态序列中第一次出现该状态时的收获值纳入到收获平均值的计算中；另一种是针对一个状态序列中每次出现的该状态，都计算对应的收获值并纳入到收获平均值的计算中。两种方法对应的蒙特卡罗法分别称为：首次访问(first visit) 和每次访问(every visit) 蒙特卡罗法。第二种方法比第一种的计算量要大一些，但是在完整的经历样本序列少的场景下会比第一种方法适用。</p>
+</li>
+<li>
 <p>第二个点是累进更新平均值(incremental mean)。在上面预测问题的求解公式里，我们有一个average的公式，意味着要保存所有该状态的收获值之和最后取平均。这样浪费了太多的存储空间。一个较好的方法是在迭代计算收获均值，即每次保存上一轮迭代得到的收获均值与次数，当计算得到当前轮的收获时，即可计算当前轮收获均值和次数。通过下面的公式就很容易理解这个过程：</p>
+</li>
+</ul>
 <p>$$\mu_k=\frac1k\sum_{j=1}^kx_j=\frac1k(x_k+\sum_{j=1}^{k-1}x_j)=\frac1k(x_k+(k-1)\mu_{k-1})=\mu_{k-1}+\frac1k(x_k-\mu_{k-1})$$</p>
 <p>这样上面的状态价值公式就可以改写成：</p>
 <p>$$N(S_t)=N(S_t)+1$$</p>
