@@ -37,18 +37,18 @@
 
 　　　　这里我们先来讨论蒙特卡罗法求解强化学习预测问题的方法，即策略评估。一个给定策略 $π$ 的完整有T个状态的状态序列如下：
 
-$$S_1,A_1,R_2,S_2,A_2,\ldots S_t,A_t,R_{t+1},\ldots R_T,S_T$$
+$$S\_1,A\_1,R\_2,S\_2,A\_2,\ldots S\_t,A\_t,R\_{t+1},\ldots R\_T,S\_T$$
 
 
-回忆下[强化学习（二）马尔科夫决策过程(MDP)](https://www.cnblogs.com/pinard/p/9426283.html)中对于价值函数 $v_π(s)$的定义:
+回忆下[强化学习（二）马尔科夫决策过程(MDP)](https://www.cnblogs.com/pinard/p/9426283.html)中对于价值函数 $v\_π(s)$的定义:
 
-$$v_\pi(s)=\mathbb{E}_\pi(G_t|S_t=s)=\mathbb{E}_\pi(R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots|S_t=s)$$
+$$v\_\pi(s)=\mathbb{E}\_\pi(G\_t|S\_t=s)=\mathbb{E}\_\pi(R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\ldots|S\_t=s)$$
 
 可以看出每个状态的价值函数等于所有该状态收获的期望，同时这个收获是通过后续的奖励与对应的衰减乘积求和得到。那么对于蒙特卡罗法来说，如果要求某一个状态的状态价值，只需要求出所有的完整序列中该状态出现时候的收获再取平均值即可近似求解，也就是：
 
-$$G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots\gamma^{T-t-1}R_T$$
+$$G\_t=R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\ldots\gamma^{T-t-1}R\_T$$
 
-$$v_\pi(s)\approx average(G_t),s.t.S_t=s$$
+$$v\_\pi(s)\approx average(G\_t),s.t.S\_t=s$$
 
 
 可以看出，预测问题的求解思路还是很简单的。不过有几个点可以优化考虑。
@@ -57,23 +57,23 @@ $$v_\pi(s)\approx average(G_t),s.t.S_t=s$$
 
 第二个点是累进更新平均值(incremental mean)。在上面预测问题的求解公式里，我们有一个average的公式，意味着要保存所有该状态的收获值之和最后取平均。这样浪费了太多的存储空间。一个较好的方法是在迭代计算收获均值，即每次保存上一轮迭代得到的收获均值与次数，当计算得到当前轮的收获时，即可计算当前轮收获均值和次数。通过下面的公式就很容易理解这个过程：
 
-$$\mu_k=\frac1k\sum_{j=1}^kx_j=\frac1k(x_k+\sum_{j=1}^{k-1}x_j)=\frac1k(x_k+(k-1)\mu_{k-1})=\mu_{k-1}+\frac1k(x_k-\mu_{k-1})$$
+$$\mu\_k=\frac1k\sum\_{j=1}^kx\_j=\frac1k(x\_k+\sum\_{j=1}^{k-1}x\_j)=\frac1k(x\_k+(k-1)\mu\_{k-1})=\mu\_{k-1}+\frac1k(x\_k-\mu\_{k-1})$$
 
 这样上面的状态价值公式就可以改写成：
 
-$$N(S_t)=N(S_t)+1$$
+$$N(S\_t)=N(S\_t)+1$$
 
-$$V(S_t)=V(S_t)+\frac1{N(S_t)}(G_t-V(S_t))$$
+$$V(S\_t)=V(S\_t)+\frac1{N(S\_t)}(G\_t-V(S\_t))$$
 
 这样我们无论数据量是多还是少，算法需要的内存基本是固定的 。
 
-有时候，尤其是海量数据做分布式迭代的时候，我们可能无法准确计算当前的次数 $N(S_t)$,这时我们可以用一个系数 $α$ 来代替，即：
+有时候，尤其是海量数据做分布式迭代的时候，我们可能无法准确计算当前的次数 $N(S\_t)$,这时我们可以用一个系数 $α$ 来代替，即：
 
-$$V(S_t)=V(S_t)+\alpha(G_t-V(S_t))$$
+$$V(S\_t)=V(S\_t)+\alpha(G\_t-V(S\_t))$$
 
-对于动作价值函数 $Q(S_t,A_t)$,也是类似的，比如对上面最后一个式子，动作价值函数版本为：
+对于动作价值函数 $Q(S\_t,A\_t)$,也是类似的，比如对上面最后一个式子，动作价值函数版本为：
 
-$$Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t-Q(S_t,A_t))$$
+$$Q(S\_t,A\_t)=Q(S\_t,A\_t)+\alpha(G\_t-Q(S\_t,A\_t))$$
 
 以上就是蒙特卡罗法求解预测问题的整个过程，下面我们来看控制问题求解。
 
@@ -85,7 +85,7 @@ $$Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t-Q(S_t,A_t))$$
   - 一是预测问题策略评估的方法不同，这个第三节已经讲了。
   - 第二是蒙特卡罗法一般是优化最优动作价值函数 $q∗$，而不是状态价值函数 $v∗$。
   - 三是动态规划一般基于贪婪法更新策略。而蒙特卡罗法一般采用 $ϵ−$贪婪法更新。这个 $ϵ$ 就是我们在[强化学习（一）模型基础](https://www.cnblogs.com/pinard/p/9385570.html)中讲到的第8个模型要素 $ϵ$。$ϵ−$贪婪法通过设置一个较小的 $ϵ$ 值，使用 $1−ϵ$ 的概率贪婪地选择目前认为是最大行为价值的行为，而用 $ϵ$ 的概率随机的从所有 $m$ 个可选行为中选择行为。用公式可以表示为：
-    $$\left.\pi(a|s)=\left\{\begin{array}{ll}\epsilon/m+1-\epsilon&if\mathrm{~}a^*=\arg\max_{a\in A}Q(s,a)\\\epsilon/m&else\end{array}\right.\right.$$
+    $$\left.\pi(a|s)=\left\\{\begin{array}{ll}\epsilon/m+1-\epsilon&if\mathrm{~}a^*=\arg\max\_{a\in A}Q(s,a)\\\\\epsilon/m&else\end{array}\right.\right.$$
 
 在实际求解控制问题时，为了使算法可以收敛，一般 $ϵ$会随着算法的迭代过程逐渐减小，并趋于0。这样在迭代前期，我们鼓励探索，而在后期，由于我们有了足够的探索量，开始趋于保守，以贪婪为主，使算法可以稳定收敛。这样我们可以得到一张和动态规划类似的图：
 
@@ -106,17 +106,17 @@ $$Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t-Q(S_t,A_t))$$
   - 输出：最优的动作价值函数 $q∗$ 和最优策略 $π∗$
   - 1. 初始化所有的动作价值 $Q(s,a)=0$ ， 状态次数 $N(s,a)=0$，采样次数 $k=0$，随机初始化一个策略 $π$
   - 2. $k=k+1$, 基于策略 $π$ 进行第k次蒙特卡罗采样，得到一个完整的状态序列:
-  $$S_1,A_1,R_2,S_2,A_2,\ldots S_t,A_t,R_{t+1},\ldots R_T,S_T$$
-  - 3. 对于该状态序列里出现的每一状态行为对 $(S_t,A_t)$，计算其收获 $G_t$, 更新其计数 $N(s,a)$ 和行为价值函数 $Q(s,a)$：
+  $$S\_1,A\_1,R\_2,S\_2,A\_2,\ldots S\_t,A\_t,R\_{t+1},\ldots R\_T,S\_T$$
+  - 3. 对于该状态序列里出现的每一状态行为对 $(S\_t,A\_t)$，计算其收获 $G\_t$, 更新其计数 $N(s,a)$ 和行为价值函数 $Q(s,a)$：
   $$\begin{gathered}
-  G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots\gamma^{T-t-1}R_T \\
-  N(S_t,A_t)=N(S_t,A_t)+1 \\
-  Q(S_t,A_t)=Q(S_t,A_t)+\frac1{N(S_t,A_t)}(G_t-Q(S_t,A_t))
+  G\_t=R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\ldots\gamma^{T-t-1}R\_T \\\\
+  N(S\_t,A\_t)=N(S\_t,A\_t)+1 \\\\
+  Q(S\_t,A\_t)=Q(S\_t,A\_t)+\frac1{N(S\_t,A\_t)}(G\_t-Q(S\_t,A\_t))
   \end{gathered}$$
   - 4. 基于新计算出的动作价值，更新当前的 $ϵ−$贪婪策略：
     $$\begin{gathered}
-    \epsilon=\frac1k \\
-    \left.\pi(a|s)=\left\{\begin{array}{ll}\epsilon/m+1-\epsilon&ifa^*=\arg\max_{a\in A}Q(s,a)\\\epsilon/m&else\end{array}\right.\right.
+    \epsilon=\frac1k \\\\
+    \left.\pi(a|s)=\left\\{\begin{array}{ll}\epsilon/m+1-\epsilon&ifa^*=\arg\max\_{a\in A}Q(s,a)\\\\\epsilon/m&else\end{array}\right.\right.
     \end{gathered}$$
   - 5. 如果所有的 $Q(s,a)$ 收敛，则对应的所有 $Q(s,a)$ 即为最优的动作价值函数 $q∗$。对应的策略 $π(a|s)$ 即为最优策略 $π∗$。否则转到第二步。
 
