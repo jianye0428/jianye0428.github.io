@@ -1,4 +1,190 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>RL - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/rl/</link><description>RL - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Wed, 21 Feb 2024 10:38:11 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/rl/" rel="self" type="application/rss+xml"/><item><title>RL学习笔记 [2] | 马尔科夫决策过程(MDP)</title><link>https://jianye0428.github.io/posts/rl_learning_note_2/</link><pubDate>Wed, 21 Feb 2024 10:38:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_2/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>RL - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/rl/</link><description>RL - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 22 Feb 2024 13:00:24 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/rl/" rel="self" type="application/rss+xml"/><item><title>RL学习笔记 [4] | 用蒙特卡罗法（MC）求解</title><link>https://jianye0428.github.io/posts/rl_learning_note_4/</link><pubDate>Thu, 22 Feb 2024 13:00:24 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_4/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9463815.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（三）用动态规划（DP）求解<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了用动态规划来求解强化学习预测问题和控制问题的方法。但是由于动态规划法需要在每一次回溯更新某一个状态的价值时，回溯到该状态的所有可能的后续状态。导致对于复杂问题计算量很大。同时很多时候，我们连环境的状态转化模型 $P$ 都无法知道，这时动态规划法根本没法使用。这时候我们如何求解强化学习问题呢？本文要讨论的蒙特卡罗(Monte-Calo, MC)就是一种可行的方法。</p>
+<p>蒙特卡罗法这一篇对应Sutton书的第五章和UCL强化学习课程的第四讲部分，第五讲部分。</p>
+<h1 id="1-不基于模型的强化学习问题定义">1. 不基于模型的强化学习问题定义</h1>
+<p>在动态规划法中，强化学习的两个问题是这样定义的:</p>
+<ul>
+<li>
+<p><strong>预测问题</strong>，即给定强化学习的6个要素：状态集 $S$, 动作集 $A$, 模型状态转化概率矩阵 $P$, 即时奖励 $R$，衰减因子 $γ$, 给定策略 $π$， 求解该策略的状态价值函数 $v(π)$</p>
+</li>
+<li>
+<p><strong>控制问题</strong>，也就是求解最优的价值函数和策略。给定强化学习的5个要素：状态集 $S$, 动作集 $A$, 模型状态转化概率矩阵 $P$, 即时奖励 $R$，衰减因子 $γ$, 求解最优的状态价值函数 $v∗$ 和最优策略 $π∗$　</p>
+</li>
+</ul>
+<p>可见, 模型状态转化概率矩阵 $P$ 始终是已知的，即MDP已知，对于这样的强化学习问题，我们一般称为基于模型的强化学习问题。</p>
+<p>不过有很多强化学习问题，我们没有办法事先得到模型状态转化概率矩阵 $P$ ，这时如果仍然需要我们求解强化学习问题，那么这就是不基于模型的强化学习问题了。它的两个问题一般的定义是：</p>
+<ul>
+<li>
+<p><strong>预测问题</strong>，即给定强化学习的5个要素：状态集 $S$, 动作集 $A$, 即时奖励 $R$，衰减因子 $γ$ , 给定策略 $π$， 求解该策略的状态价值函数 $v(π)$</p>
+</li>
+<li>
+<p><strong>控制问题</strong>，也就是求解最优的价值函数和策略。给定强化学习的5个要素：状态集 $S$, 动作集 $A$, 即时奖励 $R$，衰减因子 $γ$, 探索率 $ϵ$, 求解最优的动作价值函数 $q∗$ 和最优策略 $π∗$　</p>
+</li>
+</ul>
+<p>本文要讨论的蒙特卡罗法就是上述不基于模型的强化学习问题。</p>
+<h1 id="2-蒙特卡罗法求解特点">2. 蒙特卡罗法求解特点</h1>
+<p>蒙特卡罗这个词之前的博文也讨论过，尤其是在之前的<a href="https://www.cnblogs.com/pinard/p/MCMC%28%e4%b8%80%29%e8%92%99%e7%89%b9%e5%8d%a1%e7%bd%97%e6%96%b9%e6%b3%95"target="_blank" rel="external nofollow noopener noreferrer">MCMC系列<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中。它是一种通过采样近似求解问题的方法。这里的蒙特卡罗法虽然和MCMC不同，但是采样的思路还是一致的。那么如何采样呢？</p>
+<p>蒙特卡罗法通过采样若干经历完整的状态序列(episode)来估计状态的真实价值。所谓的经历完整，就是这个序列必须是达到终点的。比如下棋问题分出输赢，驾车问题成功到达终点或者失败。有了很多组这样经历完整的状态序列，我们就可以来近似的估计状态价值，进而求解预测和控制问题了。</p>
+<p>从特卡罗法法的特点来说，一是和动态规划比，它不需要依赖于模型状态转化概率。二是它从经历过的完整序列学习，完整的经历越多，学习效果越好。</p>
+<h1 id="3-蒙特卡罗法求解强化学习预测问题">3. 蒙特卡罗法求解强化学习预测问题</h1>
+<p>　　　　这里我们先来讨论蒙特卡罗法求解强化学习预测问题的方法，即策略评估。一个给定策略 $π$ 的完整有T个状态的状态序列如下：</p>
+<p>$$S_1,A_1,R_2,S_2,A_2,\ldots S_t,A_t,R_{t+1},\ldots R_T,S_T$$</p>
+<p>回忆下<a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（二）马尔科夫决策过程(MDP)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中对于价值函数 $v_π(s)$的定义:</p>
+<p>$$v_\pi(s)=\mathbb{E}<em>\pi(G_t|S_t=s)=\mathbb{E}</em>\pi(R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots|S_t=s)$$</p>
+<p>可以看出每个状态的价值函数等于所有该状态收获的期望，同时这个收获是通过后续的奖励与对应的衰减乘积求和得到。那么对于蒙特卡罗法来说，如果要求某一个状态的状态价值，只需要求出所有的完整序列中该状态出现时候的收获再取平均值即可近似求解，也就是：</p>
+<p>$$G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots\gamma^{T-t-1}R_T$$</p>
+<p>$$v_\pi(s)\approx average(G_t),s.t.S_t=s$$</p>
+<p>可以看出，预测问题的求解思路还是很简单的。不过有几个点可以优化考虑。</p>
+<p>第一个点是: 同样一个状态可能在一个完整的状态序列中重复出现，那么该状态的收获该如何计算？有两种解决方法。第一种是仅把状态序列中第一次出现该状态时的收获值纳入到收获平均值的计算中；另一种是针对一个状态序列中每次出现的该状态，都计算对应的收获值并纳入到收获平均值的计算中。两种方法对应的蒙特卡罗法分别称为：首次访问(first visit) 和每次访问(every visit) 蒙特卡罗法。第二种方法比第一种的计算量要大一些，但是在完整的经历样本序列少的场景下会比第一种方法适用。</p>
+<p>第二个点是累进更新平均值(incremental mean)。在上面预测问题的求解公式里，我们有一个average的公式，意味着要保存所有该状态的收获值之和最后取平均。这样浪费了太多的存储空间。一个较好的方法是在迭代计算收获均值，即每次保存上一轮迭代得到的收获均值与次数，当计算得到当前轮的收获时，即可计算当前轮收获均值和次数。通过下面的公式就很容易理解这个过程：</p>
+<p>$$\mu_k=\frac1k\sum_{j=1}^kx_j=\frac1k(x_k+\sum_{j=1}^{k-1}x_j)=\frac1k(x_k+(k-1)\mu_{k-1})=\mu_{k-1}+\frac1k(x_k-\mu_{k-1})$$</p>
+<p>这样上面的状态价值公式就可以改写成：</p>
+<p>$$N(S_t)=N(S_t)+1$$</p>
+<p>$$V(S_t)=V(S_t)+\frac1{N(S_t)}(G_t-V(S_t))$$</p>
+<p>这样我们无论数据量是多还是少，算法需要的内存基本是固定的 。</p>
+<p>有时候，尤其是海量数据做分布式迭代的时候，我们可能无法准确计算当前的次数 $N(S_t)$,这时我们可以用一个系数 $α$ 来代替，即：</p>
+<p>$$V(S_t)=V(S_t)+\alpha(G_t-V(S_t))$$</p>
+<p>对于动作价值函数 $Q(S_t,A_t)$,也是类似的，比如对上面最后一个式子，动作价值函数版本为：</p>
+<p>$$Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t-Q(S_t,A_t))$$</p>
+<p>以上就是蒙特卡罗法求解预测问题的整个过程，下面我们来看控制问题求解。</p>
+<h1 id="4-蒙特卡罗法求解强化学习控制问题">4. 蒙特卡罗法求解强化学习控制问题</h1>
+<p>蒙特卡罗法求解控制问题的思路和动态规划价值迭代的的思路类似。回忆下动态规划价值迭代的的思路， 每轮迭代先做策略评估，计算出价值 $v_k(s)$ ，然后基于据一定的方法（比如贪婪法）更新当前策略 $π$。最后得到最优价值函数 $v∗$ 和最优策略 $π∗$。</p>
+<p>和动态规划比，蒙特卡罗法不同之处体现在三点:</p>
+<ul>
+<li>一是预测问题策略评估的方法不同，这个第三节已经讲了。</li>
+<li>第二是蒙特卡罗法一般是优化最优动作价值函数 $q∗$，而不是状态价值函数 $v∗$。</li>
+<li>三是动态规划一般基于贪婪法更新策略。而蒙特卡罗法一般采用 $ϵ−$贪婪法更新。这个 $ϵ$ 就是我们在<a href="https://www.cnblogs.com/pinard/p/9385570.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（一）模型基础<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中讲到的第8个模型要素 $ϵ$。$ϵ−$贪婪法通过设置一个较小的 $ϵ$ 值，使用 $1−ϵ$ 的概率贪婪地选择目前认为是最大行为价值的行为，而用 $ϵ$ 的概率随机的从所有 $m$ 个可选行为中选择行为。用公式可以表示为：
+$$\left.\pi(a|s)=\left{\begin{array}{ll}\epsilon/m+1-\epsilon&amp;if\mathrm{~}a^*=\arg\max_{a\in A}Q(s,a)\\epsilon/m&amp;else\end{array}\right.\right.$$</li>
+</ul>
+<p>在实际求解控制问题时，为了使算法可以收敛，一般 $ϵ$会随着算法的迭代过程逐渐减小，并趋于0。这样在迭代前期，我们鼓励探索，而在后期，由于我们有了足够的探索量，开始趋于保守，以贪婪为主，使算法可以稳定收敛。这样我们可以得到一张和动态规划类似的图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Mento Carlo 搜索过程示意</div>
+</center>
+<br>
+<h1 id="5-蒙特卡罗法控制问题算法流程">5. 蒙特卡罗法控制问题算法流程</h1>
+<p>在这里总结下蒙特卡罗法求解强化学习控制问题的算法流程，这里的算法是在线(on-policy)版本的,相对的算法还有离线(off-policy)版本的。在线和离线的区别我们在后续的文章里面会讲。同时这里我们用的是every-visit,即个状态序列中每次出现的相同状态，都会计算对应的收获值。</p>
+<p>在线蒙特卡罗法求解强化学习控制问题的算法流程如下:</p>
+<ul>
+<li>输入：状态集 $S$, 动作集 $A$, 即时奖励 $R$，衰减因子 $γ$, 探索率$ϵ$</li>
+<li>输出：最优的动作价值函数 $q∗$ 和最优策略 $π∗$</li>
+<li>
+<ol>
+<li>初始化所有的动作价值 $Q(s,a)=0$ ， 状态次数 $N(s,a)=0$，采样次数 $k=0$，随机初始化一个策略 $π$</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>$k=k+1$, 基于策略 $π$ 进行第k次蒙特卡罗采样，得到一个完整的状态序列:
+$$S_1,A_1,R_2,S_2,A_2,\ldots S_t,A_t,R_{t+1},\ldots R_T,S_T$$</li>
+</ol>
+</li>
+<li>
+<ol start="3">
+<li>对于该状态序列里出现的每一状态行为对 $(S_t,A_t)$，计算其收获 $G_t$, 更新其计数 $N(s,a)$ 和行为价值函数 $Q(s,a)$：
+$$\begin{gathered}
+G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots\gamma^{T-t-1}R_T \
+N(S_t,A_t)=N(S_t,A_t)+1 \
+Q(S_t,A_t)=Q(S_t,A_t)+\frac1{N(S_t,A_t)}(G_t-Q(S_t,A_t))
+\end{gathered}$$</li>
+</ol>
+</li>
+<li>
+<ol start="4">
+<li>基于新计算出的动作价值，更新当前的 $ϵ−$贪婪策略：
+$$\begin{gathered}
+\epsilon=\frac1k \
+\left.\pi(a|s)=\left{\begin{array}{ll}\epsilon/m+1-\epsilon&amp;ifa^*=\arg\max_{a\in A}Q(s,a)\\epsilon/m&amp;else\end{array}\right.\right.
+\end{gathered}$$</li>
+</ol>
+</li>
+<li>
+<ol start="5">
+<li>如果所有的 $Q(s,a)$ 收敛，则对应的所有 $Q(s,a)$ 即为最优的动作价值函数 $q∗$。对应的策略 $π(a|s)$ 即为最优策略 $π∗$。否则转到第二步。</li>
+</ol>
+</li>
+</ul>
+<h1 id="6-蒙特卡罗法求解强化学习问题小结">6. 蒙特卡罗法求解强化学习问题小结</h1>
+<p>蒙特卡罗法是我们第二个讲到的求解强化问题的方法，也是第一个不基于模型的强化问题求解方法。它可以避免动态规划求解过于复杂，同时还可以不事先知道环境转化模型，因此可以用于海量数据和复杂模型。但是它也有自己的缺点，这就是它每次采样都需要一个完整的状态序列。如果我们没有完整的状态序列，或者很难拿到较多的完整的状态序列，这时候蒙特卡罗法就不太好用了， 也就是说，我们还需要寻找其他的更灵活的不基于模型的强化问题求解方法。</p>
+<p>下一篇我们讨论用时序差分方法来求解强化学习预测和控制问题的方法。</p>
+<h1 id="7-ref">7. ref</h1>
+<p><a href="https://www.cnblogs.com/pinard/p/9492980.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/pinard/p/9492980.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>RL学习笔记 [3] | 用动态规划(DP)求解</title><link>https://jianye0428.github.io/posts/rl_learning_note_3/</link><pubDate>Thu, 22 Feb 2024 08:59:02 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_3/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（二）马尔科夫决策过程(MDP)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了用马尔科夫假设来简化强化学习模型的复杂度，这一篇我们在马尔科夫假设和贝尔曼方程的基础上讨论使用动态规划(Dynamic Programming, DP)来求解强化学习的问题。</p>
+<p>动态规划这一篇对应Sutton书的第四章和UCL强化学习课程的第三讲。</p>
+<h1 id="1-动态规划和强化学习问题的联系">1. 动态规划和强化学习问题的联系</h1>
+<p>对于动态规划，相信大家都很熟悉，很多使用算法的地方都会用到。就算是机器学习相关的算法，使用动态规划的也很多，比如之前讲到的<a href="https://www.cnblogs.com/pinard/p/6955871.html"target="_blank" rel="external nofollow noopener noreferrer">隐马尔科夫模型HMM（二）前向后向算法评估观察序列概率<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，<a href="https://www.cnblogs.com/pinard/p/6991852.html"target="_blank" rel="external nofollow noopener noreferrer">隐马尔科夫模型HMM（四）维特比算法解码隐藏状态序列<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>， 都是动态规划的典型例子。</p>
+<p>动态规划的关键点有两个：一是问题的最优解可以由若干小问题的最优解构成，即通过寻找子问题的最优解来得到问题的最优解。第二是可以找到子问题状态之间的递推关系，通过较小的子问题状态递推出较大的子问题的状态。而强化学习的问题恰好是满足这两个条件的。</p>
+<p>我们先看看强化学习的两个基本问题。</p>
+<p>第一个问题是预测，即给定强化学习的6个要素：状态集 $S$, 动作集$A$, 模型状态转化概率矩阵$P$, 即时奖励$R$，衰减因子$γ$, 给定策略$π$， 求解该策略的状态价值函数$v(π)$</p>
+<p>第二个问题是控制，也就是求解最优的价值函数和策略。给定强化学习的5个要素：状态集$S$, 动作集$A$, 模型状态转化概率矩阵$P$, 即时奖励$R$，衰减因子$γ$, 求解最优的状态价值函数 $v∗$ 和最优策略 $π∗$　</p>
+<p>那么如何找到动态规划和强化学习这两个问题的关系呢？</p>
+<p>回忆一下上一篇<a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（二）马尔科夫决策过程(MDP)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中状态价值函数的贝尔曼方程：</p>
+<p>$$v_\pi(s)=\sum_{a\in A}\pi(a|s)(R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^av_\pi(s&rsquo;))$$</p>
+<p>从这个式子我们可以看出，我们可以定义出子问题求解每个状态的状态价值函数，同时这个式子又是一个递推的式子, 意味着利用它，我们可以使用上一个迭代周期内的状态价值来计算更新当前迭代周期某状态 $s$ 的状态价值。可见，使用动态规划来求解强化学习问题是比较自然的。</p>
+<h1 id="2-策略评估求解预测问题">2. 策略评估求解预测问题</h1>
+<p>首先，我们来看如何使用动态规划来求解强化学习的预测问题，即求解给定策略的状态价值函数的问题。这个问题的求解过程我们通常叫做策略评估(Policy Evaluation)。</p>
+<p>策略评估的基本思路是从任意一个状态价值函数开始，依据给定的策略，结合贝尔曼期望方程、状态转移概率和奖励同步迭代更新状态价值函数，直至其收敛，得到该策略下最终的状态价值函数。</p>
+<p>假设我们在第k轮迭代已经计算出了所有的状态的状态价值，那么在第 $k+1$ 轮我们可以利用第k轮计算出的状态价值计算出第k+1+1轮的状态价值。这是通过贝尔曼方程来完成的，即：</p>
+<p>$$v_{k+1}(s)=\sum_{a\in A}\pi(a|s)(R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^av_k(s&rsquo;))$$</p>
+<p>和上一节的式子唯一的区别是由于我们的策略 $π$ 已经给定，我们不再写出，对应加上了迭代轮数的下标。我们每一轮可以对计算得到的新的状态价值函数再次进行迭代，直至状态价值的值改变很小(收敛)，那么我们就得出了预测问题的解，即给定策略的状态价值函数 $v(π)$。</p>
+<p>下面我们用一个具体的例子来说明策略评估的过程。</p>
+<h1 id="3-策略评估求解实例">3. 策略评估求解实例</h1>
+<p>这是一个经典的Grid World的例子。我们有一个4x4的16宫格。只有左上和右下的格子是终止格子。该位置的价值固定为0，个体如果到达了该2个格子，则停止移动，此后每轮奖励都是0。个体在16宫格其他格的每次移动，得到的即时奖励R都是-1。注意个体每次只能移动一个格子，且只能上下左右4种移动选择，不能斜着走, 如果在边界格往外走，则会直接移动回到之前的边界格。衰减因子我们定义为γ=1=1。由于这里每次移动，下一格都是固定的，因此所有可行的的状态转化概率P=1=1。这里给定的策略是随机策略，即每个格子里有25%的概率向周围的4个格子移动。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Grid World</div>
+</center>
+<br>
+<p>首先我们初始化所有格子的状态价值为0，如上图 $k=0$ 的时候。现在我们开始策略迭代了。由于终止格子的价值固定为0，我们可以不将其加入迭代过程。在 $k=1$ 的时候，我们利用上面的贝尔曼方程先计算第二行第一个格子的价值：</p>
+<p>$$v_1^{(21)}=\frac14[(-1+0)+(-1+0)+(-1+0)+(-1+0)]=-1$$</p>
+<p>第二行第二个格子的价值是：</p>
+<p>$$v_1^{(22)}=\frac14[(-1+0)+(-1+0)+(-1+0)+(-1+0)]=-1$$</p>
+<p>其他的格子都是类似的，第一轮的状态价值迭代的结果如上图 $k=1$ 的时候。现在我们第一轮迭代完了。开始动态规划迭代第二轮了。还是看第二行第一个格子的价值：</p>
+<p>$$v_2^{(21)}=\frac14[(-1+0)+(-1-1)+(-1-1)+(-1-1)]=-1.75$$</p>
+<p>第二行第二个格子的价值是：</p>
+<p>$$v_2^{(22)}=\frac14[(-1-1)+(-1-1)+(-1-1)+(-1-1)]=-2$$</p>
+<p>最终得到的结果是上图 $k=2$ 的时候。第三轮的迭代如下：</p>
+<p>$$v_3^{(21)}=\frac14[(-1-1.7)+(-1-2)+(-1-2)+(-1+0)]=-2.425$$</p>
+<p>$$v_3^{(22)}=\frac14[(-1-1.7)+(-1-1.7)+(-1-2)+(-1-2)]=-2.85$$</p>
+<p>最终得到的结果是上图 $k=3$ 的时候。就这样一直迭代下去，直到每个格子的策略价值改变很小为止。这时我们就得到了所有格子的基于随机策略的状态价值。</p>
+<p>可以看到，动态规划的策略评估计算过程并不复杂，但是如果我们的问题是一个非常复杂的模型的话，这个计算量还是非常大的。</p>
+<h1 id="4-策略迭代求解控制问题">4. 策略迭代求解控制问题</h1>
+<p>上面我们讲了使用策略评估求解预测问题，现在我们再来看如何使用动态规划求解强化学习的第二个问题控制问题。一种可行的方法就是根据我们之前基于任意一个给定策略评估得到的状态价值来及时调整我们的动作策略，这个方法我们叫做策略迭代(Policy Iteration)。</p>
+<p>如何调整呢？最简单的方法就是贪婪法。考虑一种如下的贪婪策略：个体在某个状态下选择的行为是其能够到达后续所有可能的状态中状态价值最大的那个状态。还是以第三节的例子为例，如上面的图右边。当我们计算出最终的状态价值后，我们发现，第二行第一个格子周围的价值分别是0,-18,-20，此时我们用贪婪法，则我们调整行动策略为向状态价值为0的方向移动，而不是随机移动。也就是图中箭头向上。而此时第二行第二个格子周围的价值分别是-14,-14,-20,-20。那么我们整行动策略为向状态价值为-14的方向移动，也就是图中的向左向上。</p>
+<p>如果用一副图来表示策略迭代的过程的话，如下图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Policy Iteration</div>
+</center>
+<br>
+<p>在策略迭代过程中，我们循环进行两部分工作，第一步是使用当前策略 $π∗$ 评估计算当前策略的最终状态价值 $v∗$，第二步是根据状态价值 $v∗$ 根据一定的方法（比如贪婪法）更新策略 $π∗$，接着回到第一步，一直迭代下去，最终得到收敛的策略 $π∗$ 和状态价值 $v∗$。</p>
+<h1 id="5-价值迭代求解控制问题">5. 价值迭代求解控制问题</h1>
+<p>观察第三节的图发现，我们如果用贪婪法调整动作策略，那么当k=3=3的时候，我们就已经得到了最优的动作策略。而不用一直迭代到状态价值收敛才去调整策略。那么此时我们的策略迭代优化为价值迭代。</p>
+<p>还是以第三节的例子为例，如上面的图右边。比如当k=2=2时，第二行第一个格子周围的价值分别是0,-2,-2，此时我们用贪婪法，则我们调整行动策略为向状态价值为0的方向移动，而不是随机移动。也就是图中箭头向上。而此时第二行第二个格子周围的价值分别是-1.7,-1.7,-2, -2。那么我们整行动策略为向状态价值为-1.7的方向移动，也就是图中的向左向上。</p>
+<p>和上一节相比，我们没有等到状态价值收敛才调整策略，而是随着状态价值的迭代及时调整策略, 这样可以大大减少迭代次数。此时我们的状态价值的更新方法也和策略迭代不同。现在的贝尔曼方程迭代式子如下：</p>
+<p>$$v_{k+1}(s)=\max_{a\in A}(R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^av_k(s&rsquo;))$$</p>
+<p>可见由于策略调整，我们现在价值每次更新倾向于贪婪法选择的最优策略对应的后续状态价值，这样收敛更快。</p>
+<h1 id="6-异步动态规划算法">6. 异步动态规划算法</h1>
+<p>在前几节我们讲的都是同步动态规划算法，即每轮迭代我会计算出所有的状态价值并保存起来，在下一轮中，我们使用这些保存起来的状态价值来计算新一轮的状态价值。</p>
+<p>另一种动态规划求解是异步动态规划算法，在这些算法里，每一次迭代并不对所有状态的价值进行更新，而是依据一定的原则有选择性的更新部分状态的价值，这类算法有自己的一些独特优势，当然有额会有一些额外的代价。</p>
+<p>常见的异步动态规划算法有三种：</p>
+<p>第一种是原位动态规划 (in-place dynamic programming)， 此时我们不会另外保存一份上一轮计算出的状态价值。而是即时计算即时更新。这样可以减少保存的状态价值的数量，节约内存。代价是收敛速度可能稍慢。</p>
+<p>第二种是优先级动态规划 (prioritised sweeping)：该算法对每一个状态进行优先级分级，优先级越高的状态其状态价值优先得到更新。通常使用贝尔曼误差来评估状态的优先级，贝尔曼误差即新状态价值与前次计算得到的状态价值差的绝对值。这样可以加快收敛速度，代价是需要维护一个优先级队列。</p>
+<p>第三种是实时动态规划 (real-time dynamic programming)：实时动态规划直接使用个体与环境交互产生的实际经历来更新状态价值，对于那些个体实际经历过的状态进行价值更新。这样个体经常访问过的状态将得到较高频次的价值更新，而与个体关系不密切、个体较少访问到的状态其价值得到更新的机会就较少。收敛速度可能稍慢。</p>
+<h1 id="7-动态规划求解强化学习问题小结">7. 动态规划求解强化学习问题小结</h1>
+<p>动态规划是我们讲到的第一个系统求解强化学习预测和控制问题的方法。它的算法思路比较简单，主要就是利用贝尔曼方程来迭代更新状态价值，用贪婪法之类的方法迭代更新最优策略。</p>
+<p>动态规划算法使用全宽度（full-width）的回溯机制来进行状态价值的更新，也就是说，无论是同步还是异步动态规划，在每一次回溯更新某一个状态的价值时，都要回溯到该状态的所有可能的后续状态，并利用贝尔曼方程更新该状态的价值。这种全宽度的价值更新方式对于状态数较少的强化学习问题还是比较有效的，但是当问题规模很大的时候，动态规划算法将会因贝尔曼维度灾难而无法使用。因此我们还需要寻找其他的针对复杂问题的强化学习问题求解方法。</p>
+<p>下一篇我们讨论用蒙特卡罗方法来求解强化学习预测和控制问题的方法。</p>
+<p>ref:
+<a href="https://www.cnblogs.com/pinard/p/9463815.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/pinard/p/9463815.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>RL学习笔记 [2] | 马尔科夫决策过程(MDP)</title><link>https://jianye0428.github.io/posts/rl_learning_note_2/</link><pubDate>Wed, 21 Feb 2024 10:38:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_2/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在<a href="https://www.cnblogs.com/pinard/p/9385570.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（一）模型基础<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了强化学习模型的8个基本要素。但是仅凭这些要素还是无法使用强化学习来帮助我们解决问题的, 在讲到模型训练前，模型的简化也很重要，这一篇主要就是讲如何利用马尔科夫决策过程(Markov Decision Process，以下简称MDP)来简化强化学习的建模。</p>
 <p>MDP这一篇对应Sutton书的第三章和UCL强化学习课程的第二讲。</p>
 <h1 id="1-强化学习引入mdp的原因">1. 强化学习引入MDP的原因</h1>
