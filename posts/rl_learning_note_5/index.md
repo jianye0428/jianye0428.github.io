@@ -18,30 +18,30 @@
 
 回顾蒙特卡罗法中计算状态收获的方法是：
 
-$$G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots\gamma^{T-t-1}R_T$$
+$$G\_t=R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\ldots\gamma^{T-t-1}R\_T$$
 
 而对于时序差分法来说，我们没有完整的状态序列，只有部分的状态序列，那么如何可以近似求出某个状态的收获呢？回顾[强化学习（二）马尔科夫决策过程(MDP)](https://www.cnblogs.com/pinard/p/9426283.html)中的贝尔曼方程：
 
-$$v_\pi(s)=\mathbb{E}_\pi(R_{t+1}+\gamma v_\pi(S_{t+1})|S_t=s)$$
+$$v\_\pi(s)=\mathbb{E}\_\pi(R\_{t+1}+\gamma v\_\pi(S\_{t+1})|S\_t=s)$$
 
-这启发我们可以用 $R_{t+1}+\gamma v(S_{t+1})$ 来近似的代替收获 $G_t$,一般我们把 $R_{t+1}+\gamma V(S_{t+1})$ 称为TD目标值。$R_{t+1}+\gamma V(S_{t+1})-V(S_t)$ 称为TD误差，将用TD目标值近似代替收获 $G(t)$ 的过程称为引导(bootstrapping)。这样我们只需要两个连续的状态与对应的奖励，就可以尝试求解强化学习问题了。
+这启发我们可以用 $R\_{t+1}+\gamma v(S\_{t+1})$ 来近似的代替收获 $G\_t$,一般我们把 $R\_{t+1}+\gamma V(S\_{t+1})$ 称为TD目标值。$R\_{t+1}+\gamma V(S\_{t+1})-V(S\_t)$ 称为TD误差，将用TD目标值近似代替收获 $G(t)$ 的过程称为引导(bootstrapping)。这样我们只需要两个连续的状态与对应的奖励，就可以尝试求解强化学习问题了。
 
-现在我们有了自己的近似收获 $G_t$ 的表达式，那么就可以去求解时序差分的预测问题和控制问题了。
+现在我们有了自己的近似收获 $G\_t$ 的表达式，那么就可以去求解时序差分的预测问题和控制问题了。
 
 # 2. 时序差分TD的预测问题求解
 
-时序差分的预测问题求解和蒙特卡罗法类似，但是主要有两个不同点。一是收获 $G_t$ 的表达式不同，时序差分 $G(t)$ 的表达式为：
+时序差分的预测问题求解和蒙特卡罗法类似，但是主要有两个不同点。一是收获 $G\_t$ 的表达式不同，时序差分 $G(t)$ 的表达式为：
 
-$$G(t)=R_{t+1}+\gamma V(S_{t+1})$$
+$$G(t)=R\_{t+1}+\gamma V(S\_{t+1})$$
 
 二是迭代的式子系数稍有不同，回顾蒙特卡罗法的迭代式子是：
 
-$$V(S_t)=V(S_t)+\frac1{N(S_t)}(G_t-V(S_t))$$
+$$V(S\_t)=V(S\_t)+\frac1{N(S\_t)}(G\_t-V(S\_t))$$
 
-由于在时序差分我们没有完整的序列，也就没有对应的次数 $N(S_t)$ ,一般就用一个[0,1]的系数 $α$ 代替。这样时序差分的价值函数迭代式子是：
+由于在时序差分我们没有完整的序列，也就没有对应的次数 $N(S\_t)$ ,一般就用一个[0,1]的系数 $α$ 代替。这样时序差分的价值函数迭代式子是：
 
-$$V(S_t)=V(S_t)+\alpha(G_t-V(S_t)) \\
-Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t-Q(S_t,A_t)) $$
+$$V(S\_t)=V(S\_t)+\alpha(G\_t-V(S\_t)) \\\\
+Q(S\_t,A\_t)=Q(S\_t,A\_t)+\alpha(G\_t-Q(S\_t,A\_t)) $$
 
 这里我们用一个简单的例子来看看蒙特卡罗法和时序差分法求解预测问题的不同。
 
@@ -53,7 +53,7 @@ Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t-Q(S_t,A_t)) $$
 
 首先我们按蒙特卡罗法来求解预测问题。由于只有第一个序列中包含状态A，因此A的价值仅能通过第一个序列来计算，也就等同于计算该序列中状态A的收获：
 
-$$V(A)=G(A)=R_A+\gamma R_B=0$$
+$$V(A)=G(A)=R\_A+\gamma R\_B=0$$
 
 
 对于B，则需要对其在8个序列中的收获值来平均，其结果是6/8。
@@ -62,7 +62,7 @@ $$V(A)=G(A)=R_A+\gamma R_B=0$$
 
 对于A，只在第一个序列出现，它的价值为：
 
-$$V(A)=R_A+\gamma V(B)=\frac68$$
+$$V(A)=R\_A+\gamma V(B)=\frac68$$
 
 从上面的例子我们也可以看到蒙特卡罗法和时序差分法求解预测问题的区别。
 
@@ -76,11 +76,11 @@ $$V(A)=R_A+\gamma V(B)=\frac68$$
 
 # 3. n步时序差分
 
-在第二节的时序差分法中，我们使用了用 $R_{t+1}+\gamma v(S_{t+1})$ 来近似的代替收获 $G_t$。即向前一步来近似我们的收获 $G_{t}$,那么能不能向前两步呢？当然可以，这时我们的收获 $G_t$ 的近似表达式为：
+在第二节的时序差分法中，我们使用了用 $R\_{t+1}+\gamma v(S\_{t+1})$ 来近似的代替收获 $G\_t$。即向前一步来近似我们的收获 $G\_{t}$,那么能不能向前两步呢？当然可以，这时我们的收获 $G\_t$ 的近似表达式为：
 
-$$G_t^{(2)}=R_{t+1}+\gamma R_{t+2}+\gamma^2V(S_{t+2})$$
+$$G\_t^{(2)}=R\_{t+1}+\gamma R\_{t+2}+\gamma^2V(S\_{t+2})$$
 
-从两步，到三步，再到n步，我们可以归纳出n步时序差分收获 $G^{(n)}_t$表达式为：$$G_t^{(n)}=R_{t+1}+\gamma R_{t+2}+\ldots+\gamma^{n-1}R_{t+n}+\gamma^nV(S_{t+n})$$
+从两步，到三步，再到n步，我们可以归纳出n步时序差分收获 $G^{(n)}\_t$表达式为：$$G\_t^{(n)}=R\_{t+1}+\gamma R\_{t+2}+\ldots+\gamma^{n-1}R\_{t+n}+\gamma^nV(S\_{t+n})$$
 
 当n越来越大，趋于无穷，或者说趋于使用完整的状态序列时，n步时序差分就等价于蒙特卡罗法了。
 
@@ -90,12 +90,12 @@ $$G_t^{(2)}=R_{t+1}+\gamma R_{t+2}+\gamma^2V(S_{t+2})$$
 
 n步时序差分选择多少步数作为一个较优的计算参数是需要尝试的超参数调优问题。为了能在不增加计算复杂度的情况下综合考虑所有步数的预测，我们引入了一个新[0,1]的参数 $\lambda$,定义入—收获是 $n$ 从 $1$ 到 $\infty$ 所有步的收获乘以权重的和。每一步的权重是 $(1-\lambda)\lambda^{n-1}$,这样 $\lambda-$收获的计算公式表示为:
 
-$$G_t^\lambda=(1-\lambda)\sum_{n=1}^\infty\lambda^{n-1}G_t^{(n)}$$
+$$G\_t^\lambda=(1-\lambda)\sum\_{n=1}^\infty\lambda^{n-1}G\_t^{(n)}$$
 
 进而我们可以得到 $TD(λ)$ 的价值函数的迭代公式：
 
-$$V(S_t)=V(S_t)+\alpha(G_t^\lambda-V(S_t)) \\
-Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t^\lambda-Q(S_t,A_t)) $$
+$$V(S\_t)=V(S\_t)+\alpha(G\_t^\lambda-V(S\_t)) \\\\
+Q(S\_t,A\_t)=Q(S\_t,A\_t)+\alpha(G\_t^\lambda-Q(S\_t,A\_t)) $$
 
 每一步收获的权重定义为 $(1−λ)λ^{n−1}$ 的原因是什么呢？其图像如下图所示，可以看到随着n的增大，其第n步收获的权重呈几何级数的衰减。当在T时刻到达终止状态时，未分配的权重全部给予终止状态的实际收获值。这样可以使一个完整的状态序列中所有的n步收获的权重加起来为1，离当前状态越远的收获其权重越小。
 
@@ -107,34 +107,34 @@ Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t^\lambda-Q(S_t,A_t)) $$
 </center>
 <br>
 
-从前向来看 $TD(λ)$， 一个状态的价值 $V(St)$由 $G_t$得到，而Gt��又间接由所有后续状态价值计算得到，因此可以认为更新一个状态的价值需要知道所有后续状态的价值。也就是说，必须要经历完整的状态序列获得包括终止状态的每一个状态的即时奖励才能更新当前状态的价值。这和蒙特卡罗法的要求一样，因此TD(λ)��(�)有着和蒙特卡罗法一样的劣势。当 $λ=0$ 时,就是第二节讲到的普通的时序差分法，当 $λ=1$ 时,就是蒙特卡罗法。
+从前向来看 $TD(λ)$， 一个状态的价值 $V(St)$由 $G\_t$得到，而Gt��又间接由所有后续状态价值计算得到，因此可以认为更新一个状态的价值需要知道所有后续状态的价值。也就是说，必须要经历完整的状态序列获得包括终止状态的每一个状态的即时奖励才能更新当前状态的价值。这和蒙特卡罗法的要求一样，因此TD(λ)��(�)有着和蒙特卡罗法一样的劣势。当 $λ=0$ 时,就是第二节讲到的普通的时序差分法，当 $λ=1$ 时,就是蒙特卡罗法。
 
 从反向来看 $TD(λ)$，它可以分析我们状态对后续状态的影响。比如老鼠在依次连续接受了3 次响铃和1 次亮灯信号后遭到了电击，那么在分析遭电击的原因时，到底是响铃的因素较重要还是亮灯的因素更重要呢？如果把老鼠遭到电击的原因认为是之前接受了较多次数的响铃，则称这种归因为频率启发(frequency heuristic) 式；而把电击归因于最近少数几次状态的影响，则称为就近启发(recency heuristic) 式。
 
 如果给每一个状态引入一个数值：效用(eligibility, E) 来表示该状态对后续状态的影响，就可以同时利用到上述两个启发。而所有状态的效用值总称为效用迹(eligibility traces,ES)。定义为：
 
-$$ E_0(s)=0 \\ \left.E_t(s)=\gamma\lambda E_{t-1}(s)+1(S_t=s)=\left\{\begin{array}{ll}0&t<k\\(\gamma\lambda)^{t-k}&t\geq k\end{array}\right.\right.,\quad s.t.\quad\lambda,\gamma\in[0,1],s\textit{ is visited once at time k}$$
+$$ E\_0(s)=0 \\\\ \left.E\_t(s)=\gamma\lambda E\_{t-1}(s)+1(S\_t=s)=\left\\{\begin{array}{ll}0&t<k\\\\(\gamma\lambda)^{t-k}&t\geq k\end{array}\right.\right.,\quad s.t.\quad\lambda,\gamma\in[0,1],s\textit{ is visited once at time k}$$
 
 此时我们$TD(λ)$的价值函数更新式子可以表示为：
 
-$$\delta_t=R_{t+1}+\gamma v(S_{t+1})-V(S_t)\\V(S_t)=V(S_t)+\alpha\delta_tE_t(s)$$
+$$\delta\_t=R\_{t+1}+\gamma v(S\_{t+1})-V(S\_t)\\\\V(S\_t)=V(S\_t)+\alpha\delta\_tE\_t(s)$$
 
 也许有人会问，这前向的式子和反向的式子看起来不同啊，是不是不同的逻辑呢？其实两者是等价的。现在我们从前向推导一下反向的更新式子。
 
 $$\begin{aligned}
-G_t^\lambda-V(S_t)& =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1})) && \text{(1)}  \\
-&+(1-\lambda)\lambda^1(R_{t+1}+\gamma R_{t+2}+\gamma^2V(S_{t+2}))&& (2)  \\
-&+(1-\lambda)\lambda^2(R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\gamma^3V(S_{t+3}))&& (3)  \\
-&+\ldots && \text{(4)}  \\
-&=-V(S_t)+(\gamma\lambda)^0(R_{t+1}+\gamma V(S_{t+1})-\gamma\lambda V(S_{t+1}))&& (5)  \\
-&+(\gamma\lambda)^1(R_{t+2}+\gamma V(S_{t+2})-\gamma\lambda V(S_{t+2}))&& \text{(6)}  \\
-&+(\gamma\lambda)^2(R_{t+3}+\gamma V(S_{t+3})-\gamma\lambda V(S_{t+3}))&& \text{(7)}  \\
-&\begin{array}{c}+\ldots\end{array}&& \text{(8)}  \\
-&=(\gamma\lambda)^0(R_{t+1}+\gamma V(S_{t+1})-V(S_t))&& \left(9\right)  \\
-&+(\gamma\lambda)^1(R_{t+2}+\gamma V(S_{t+2})-V(S_{t+1}))&& \text{(10)}  \\
-&+(\gamma\lambda)^2(R_{t+3}+\gamma V(S_{t+3})-V(S_{t+2}))&& (11)  \\
-&\begin{array}{c}+\ldots\end{array}&& (12)  \\
-&=\delta_t+\gamma\lambda\delta_{t+1}+(\gamma\lambda)^2\delta_{t+2}+\ldots && (13)
+G\_t^\lambda-V(S\_t)& =-V(S\_t)+(1-\lambda)\lambda^0(R\_{t+1}+\gamma V(S\_{t+1})) && \text{(1)}  \\\\
+&+(1-\lambda)\lambda^1(R\_{t+1}+\gamma R\_{t+2}+\gamma^2V(S\_{t+2}))&& (2)  \\\\
+&+(1-\lambda)\lambda^2(R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\gamma^3V(S\_{t+3}))&& (3)  \\\\
+&+\ldots && \text{(4)}  \\\\
+&=-V(S\_t)+(\gamma\lambda)^0(R\_{t+1}+\gamma V(S\_{t+1})-\gamma\lambda V(S\_{t+1}))&& (5)  \\\\
+&+(\gamma\lambda)^1(R\_{t+2}+\gamma V(S\_{t+2})-\gamma\lambda V(S\_{t+2}))&& \text{(6)}  \\\\
+&+(\gamma\lambda)^2(R\_{t+3}+\gamma V(S\_{t+3})-\gamma\lambda V(S\_{t+3}))&& \text{(7)}  \\\\
+&\begin{array}{c}+\ldots\end{array}&& \text{(8)}  \\\\
+&=(\gamma\lambda)^0(R\_{t+1}+\gamma V(S\_{t+1})-V(S\_t))&& \left(9\right)  \\\\
+&+(\gamma\lambda)^1(R\_{t+2}+\gamma V(S\_{t+2})-V(S\_{t+1}))&& \text{(10)}  \\\\
+&+(\gamma\lambda)^2(R\_{t+3}+\gamma V(S\_{t+3})-V(S\_{t+2}))&& (11)  \\\\
+&\begin{array}{c}+\ldots\end{array}&& (12)  \\\\
+&=\delta\_t+\gamma\lambda\delta\_{t+1}+(\gamma\lambda)^2\delta\_{t+2}+\ldots && (13)
 \end{aligned}$$
 
 可以看出前向TD误差和反向的TD误差实际上一致的。
@@ -143,7 +143,7 @@ G_t^\lambda-V(S_t)& =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1})) && 
 
 现在我们回到普通的时序差分，来看看它控制问题的求解方法。回想上一篇蒙特卡罗法在线控制的方法，我们使用的是$ϵ−$贪婪法来做价值迭代。对于时序差分，我们也可以用$ϵ−$贪婪法来价值迭代，和蒙特卡罗法在线控制的区别主要只是在于收获的计算方式不同。时序差分的在线控制(on-policy)算法最常见的是SARSA算法，我们在下一篇单独讲解。
 
-而除了在线控制，我们还可以做离线控制(off-policy)，离线控制和在线控制的区别主要在于在线控制一般只有一个策略(最常见的是ϵ−�−贪婪法)。而离线控制一般有两个策略，其中一个策略(最常见的是ϵ−�−贪婪法)用于选择新的动作，另一个策略(最常见的是贪婪法)用于更新价值函数。时序差分的离线控制算法最常见的是Q-Learning算法，我们在下下篇单独讲解。
+而除了在线控制，我们还可以做离线控制(off-policy)，离线控制和在线控制的区别主要在于在线控制一般只有一个策略(最常见的是$ϵ−$贪婪法)。而离线控制一般有两个策略，其中一个策略(最常见的是$ϵ−$贪婪法)用于选择新的动作，另一个策略(最常见的是贪婪法)用于更新价值函数。时序差分的离线控制算法最常见的是Q-Learning算法，我们在下下篇单独讲解。
 
 # 6. 时序差分小结
 
