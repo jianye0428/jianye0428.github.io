@@ -1,4 +1,89 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>Draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 29 Jul 2023 15:38:00 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>Effective STL [10] | 注意分配器的协定和约束</title><link>https://jianye0428.github.io/posts/clause_10/</link><pubDate>Sat, 29 Jul 2023 15:38:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_10/</guid><description><![CDATA[<h2 id="分配器">分配器</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Draft - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/draft/</link><description>Draft - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 22 Feb 2024 17:25:21 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/draft/" rel="self" type="application/rss+xml"/><item><title>RL学习笔记 [5] | 用时序差分法（TD）求解</title><link>https://jianye0428.github.io/posts/rl_learning_note_5/</link><pubDate>Thu, 22 Feb 2024 17:25:21 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_5/</guid><description><![CDATA[<h1 id="0-引言">0 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9492980.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（四）用蒙特卡罗法（MC）求解<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了使用蒙特卡罗法来求解强化学习问题的方法，虽然蒙特卡罗法很灵活，不需要环境的状态转化概率模型，但是它需要所有的采样序列都是经历完整的状态序列。如果我们没有完整的状态序列，那么就无法使用蒙特卡罗法求解了。本文我们就来讨论可以不使用完整状态序列求解强化学习问题的方法：时序差分(Temporal-Difference, TD)。</p>
+<p>时序差分这一篇对应Sutton书的第六章部分和UCL强化学习课程的第四讲部分，第五讲部分。</p>
+<h1 id="1-时序差分td简介">1. 时序差分TD简介</h1>
+<p>时序差分法和蒙特卡罗法类似，都是<strong>不基于模型的强化学习问题</strong>求解方法。所以在上一篇定义的不基于模型的强化学习控制问题和预测问题的定义，在这里仍然适用。</p>
+<p>预测问题：即给定强化学习的5个要素：状态集 $S$, 动作集 $A$, 即时奖励 $R$，衰减因子 $γ$, 给定策略 $π$， 求解该策略的状态价值函数 $v(π)$</p>
+<p>控制问题：也就是求解最优的价值函数和策略。给定强化学习的5个要素：状态集 $S$, 动作集 $A$, 即时奖励 $R$，衰减因子 $γ$, 探索率 $ϵ$, 求解最优的动作价值函数 $q∗$ 和最优策略 $π∗$　</p>
+<p>回顾蒙特卡罗法中计算状态收获的方法是：</p>
+<p>$$G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\ldots\gamma^{T-t-1}R_T$$</p>
+<p>而对于时序差分法来说，我们没有完整的状态序列，只有部分的状态序列，那么如何可以近似求出某个状态的收获呢？回顾<a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（二）马尔科夫决策过程(MDP)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中的贝尔曼方程：</p>
+<p>$$v_\pi(s)=\mathbb{E}<em>\pi(R</em>{t+1}+\gamma v_\pi(S_{t+1})|S_t=s)$$</p>
+<p>这启发我们可以用 $R_{t+1}+\gamma v(S_{t+1})$ 来近似的代替收获 $G_t$,一般我们把 $R_{t+1}+\gamma V(S_{t+1})$ 称为TD目标值。$R_{t+1}+\gamma V(S_{t+1})-V(S_t)$ 称为TD误差，将用TD目标值近似代替收获 $G(t)$ 的过程称为引导(bootstrapping)。这样我们只需要两个连续的状态与对应的奖励，就可以尝试求解强化学习问题了。</p>
+<p>现在我们有了自己的近似收获 $G_t$ 的表达式，那么就可以去求解时序差分的预测问题和控制问题了。</p>
+<h1 id="2-时序差分td的预测问题求解">2. 时序差分TD的预测问题求解</h1>
+<p>时序差分的预测问题求解和蒙特卡罗法类似，但是主要有两个不同点。一是收获 $G_t$ 的表达式不同，时序差分 $G(t)$ 的表达式为：</p>
+<p>$$G(t)=R_{t+1}+\gamma V(S_{t+1})$$</p>
+<p>二是迭代的式子系数稍有不同，回顾蒙特卡罗法的迭代式子是：</p>
+<p>$$V(S_t)=V(S_t)+\frac1{N(S_t)}(G_t-V(S_t))$$</p>
+<p>由于在时序差分我们没有完整的序列，也就没有对应的次数 $N(S_t)$ ,一般就用一个[0,1]的系数 $α$ 代替。这样时序差分的价值函数迭代式子是：</p>
+<p>$$V(S_t)=V(S_t)+\alpha(G_t-V(S_t)) \
+Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t-Q(S_t,A_t)) $$</p>
+<p>这里我们用一个简单的例子来看看蒙特卡罗法和时序差分法求解预测问题的不同。</p>
+<p>假设我们的强化学习问题有A,B两个状态，模型未知，不涉及策略和行为。只涉及状态转化和即时奖励。一共有8个完整的状态序列如下：</p>
+<p>　　① A,0,B,0 ②B,1 ③B,1 ④ B,1 ⑤ B,1 ⑥B,1 ⑦B,1 ⑧B,0</p>
+<p>只有第一个状态序列是有状态转移的，其余7个只有一个状态。设置衰减因子 $γ=1$。</p>
+<p>首先我们按蒙特卡罗法来求解预测问题。由于只有第一个序列中包含状态A，因此A的价值仅能通过第一个序列来计算，也就等同于计算该序列中状态A的收获：</p>
+<p>$$V(A)=G(A)=R_A+\gamma R_B=0$$</p>
+<p>对于B，则需要对其在8个序列中的收获值来平均，其结果是6/8。</p>
+<p><strong>再来看看时序差分法求解的过程</strong>。其收获是在计算状态序列中某状态价值时是应用其后续状态的预估价值来计算的，对于B来说，它总是终止状态，没有后续状态，因此它的价值直接用其在8个序列中的收获值来平均，其结果是6/8。</p>
+<p>对于A，只在第一个序列出现，它的价值为：</p>
+<p>$$V(A)=R_A+\gamma V(B)=\frac68$$</p>
+<p>从上面的例子我们也可以看到蒙特卡罗法和时序差分法求解预测问题的区别。</p>
+<p>一是时序差分法在知道结果之前就可以学习，也可以在没有结果时学习，还可以在持续进行的环境中学习，而蒙特卡罗法则要等到最后结果才能学习，时序差分法可以更快速灵活的更新状态的价值估计，这在某些情况下有着非常重要的实际意义。</p>
+<p>二是时序差分法在更新状态价值时使用的是TD 目标值，即基于即时奖励和下一状态的预估价值来替代当前状态在状态序列结束时可能得到的收获，是当前状态价值的有偏估计，而蒙特卡罗法则使用实际的收获来更新状态价值，是某一策略下状态价值的无偏估计，这一点蒙特卡罗法占优。</p>
+<p>三是虽然时序差分法得到的价值是有偏估计，但是其方差却比蒙特卡罗法得到的方差要低，且对初始值敏感，通常比蒙特卡罗法更加高效。</p>
+<p>从上面的描述可以看出时序差分法的优势比较大，因此现在主流的强化学习求解方法都是基于时序差分的。后面的文章也会主要基于时序差分法来扩展讨论。</p>
+<h1 id="3-n步时序差分">3. n步时序差分</h1>
+<p>在第二节的时序差分法中，我们使用了用 $R_{t+1}+\gamma v(S_{t+1})$ 来近似的代替收获 $G_t$。即向前一步来近似我们的收获 $G_{t}$,那么能不能向前两步呢？当然可以，这时我们的收获 $G_t$ 的近似表达式为：</p>
+<p>$$G_t^{(2)}=R_{t+1}+\gamma R_{t+2}+\gamma^2V(S_{t+2})$$</p>
+<p>从两步，到三步，再到n步，我们可以归纳出n步时序差分收获 $G^{(n)}<em>t$表达式为：$$G_t^{(n)}=R</em>{t+1}+\gamma R_{t+2}+\ldots+\gamma^{n-1}R_{t+n}+\gamma^nV(S_{t+n})$$</p>
+<p>当n越来越大，趋于无穷，或者说趋于使用完整的状态序列时，n步时序差分就等价于蒙特卡罗法了。</p>
+<p>对于n步时序差分来说，和普通的时序差分的区别就在于收获的计算方式的差异。那么既然有这个n步的说法，那么n到底是多少步好呢？如何衡量n的好坏呢？我们在下一节讨论。</p>
+<h1 id="4-tdλ">4. TD(λ)</h1>
+<p>n步时序差分选择多少步数作为一个较优的计算参数是需要尝试的超参数调优问题。为了能在不增加计算复杂度的情况下综合考虑所有步数的预测，我们引入了一个新[0,1]的参数 $\lambda$,定义入—收获是 $n$ 从 $1$ 到 $\infty$ 所有步的收获乘以权重的和。每一步的权重是 $(1-\lambda)\lambda^{n-1}$,这样 $\lambda-$收获的计算公式表示为:</p>
+<p>$$G_t^\lambda=(1-\lambda)\sum_{n=1}^\infty\lambda^{n-1}G_t^{(n)}$$</p>
+<p>进而我们可以得到 $TD(λ)$ 的价值函数的迭代公式：</p>
+<p>$$V(S_t)=V(S_t)+\alpha(G_t^\lambda-V(S_t)) \
+Q(S_t,A_t)=Q(S_t,A_t)+\alpha(G_t^\lambda-Q(S_t,A_t)) $$</p>
+<p>每一步收获的权重定义为 $(1−λ)λ^{n−1}$ 的原因是什么呢？其图像如下图所示，可以看到随着n的增大，其第n步收获的权重呈几何级数的衰减。当在T时刻到达终止状态时，未分配的权重全部给予终止状态的实际收获值。这样可以使一个完整的状态序列中所有的n步收获的权重加起来为1，离当前状态越远的收获其权重越小。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">TD(λ)</div>
+</center>
+<br>
+<p>从前向来看 $TD(λ)$， 一个状态的价值 $V(St)$由 $G_t$得到，而Gt��又间接由所有后续状态价值计算得到，因此可以认为更新一个状态的价值需要知道所有后续状态的价值。也就是说，必须要经历完整的状态序列获得包括终止状态的每一个状态的即时奖励才能更新当前状态的价值。这和蒙特卡罗法的要求一样，因此TD(λ)��(�)有着和蒙特卡罗法一样的劣势。当 $λ=0$ 时,就是第二节讲到的普通的时序差分法，当 $λ=1$ 时,就是蒙特卡罗法。</p>
+<p>从反向来看 $TD(λ)$，它可以分析我们状态对后续状态的影响。比如老鼠在依次连续接受了3 次响铃和1 次亮灯信号后遭到了电击，那么在分析遭电击的原因时，到底是响铃的因素较重要还是亮灯的因素更重要呢？如果把老鼠遭到电击的原因认为是之前接受了较多次数的响铃，则称这种归因为频率启发(frequency heuristic) 式；而把电击归因于最近少数几次状态的影响，则称为就近启发(recency heuristic) 式。</p>
+<p>如果给每一个状态引入一个数值：效用(eligibility, E) 来表示该状态对后续状态的影响，就可以同时利用到上述两个启发。而所有状态的效用值总称为效用迹(eligibility traces,ES)。定义为：</p>
+<p>$$ E_0(s)=0 \ \left.E_t(s)=\gamma\lambda E_{t-1}(s)+1(S_t=s)=\left{\begin{array}{ll}0&amp;t&lt;k\(\gamma\lambda)^{t-k}&amp;t\geq k\end{array}\right.\right.,\quad s.t.\quad\lambda,\gamma\in[0,1],s\textit{ is visited once at time k}$$</p>
+<p>此时我们$TD(λ)$的价值函数更新式子可以表示为：</p>
+<p>$$\delta_t=R_{t+1}+\gamma v(S_{t+1})-V(S_t)\V(S_t)=V(S_t)+\alpha\delta_tE_t(s)$$</p>
+<p>也许有人会问，这前向的式子和反向的式子看起来不同啊，是不是不同的逻辑呢？其实两者是等价的。现在我们从前向推导一下反向的更新式子。</p>
+<p>$$\begin{aligned}
+G_t^\lambda-V(S_t)&amp; =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1})) &amp;&amp; \text{(1)}  \
+&amp;+(1-\lambda)\lambda^1(R_{t+1}+\gamma R_{t+2}+\gamma^2V(S_{t+2}))&amp;&amp; (2)  \
+&amp;+(1-\lambda)\lambda^2(R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\gamma^3V(S_{t+3}))&amp;&amp; (3)  \
+&amp;+\ldots &amp;&amp; \text{(4)}  \
+&amp;=-V(S_t)+(\gamma\lambda)^0(R_{t+1}+\gamma V(S_{t+1})-\gamma\lambda V(S_{t+1}))&amp;&amp; (5)  \
+&amp;+(\gamma\lambda)^1(R_{t+2}+\gamma V(S_{t+2})-\gamma\lambda V(S_{t+2}))&amp;&amp; \text{(6)}  \
+&amp;+(\gamma\lambda)^2(R_{t+3}+\gamma V(S_{t+3})-\gamma\lambda V(S_{t+3}))&amp;&amp; \text{(7)}  \
+&amp;\begin{array}{c}+\ldots\end{array}&amp;&amp; \text{(8)}  \
+&amp;=(\gamma\lambda)^0(R_{t+1}+\gamma V(S_{t+1})-V(S_t))&amp;&amp; \left(9\right)  \
+&amp;+(\gamma\lambda)^1(R_{t+2}+\gamma V(S_{t+2})-V(S_{t+1}))&amp;&amp; \text{(10)}  \
+&amp;+(\gamma\lambda)^2(R_{t+3}+\gamma V(S_{t+3})-V(S_{t+2}))&amp;&amp; (11)  \
+&amp;\begin{array}{c}+\ldots\end{array}&amp;&amp; (12)  \
+&amp;=\delta_t+\gamma\lambda\delta_{t+1}+(\gamma\lambda)^2\delta_{t+2}+\ldots &amp;&amp; (13)
+\end{aligned}$$</p>
+<p>可以看出前向TD误差和反向的TD误差实际上一致的。</p>
+<h1 id="5-时序差分的控制问题求解">5. 时序差分的控制问题求解</h1>
+<p>现在我们回到普通的时序差分，来看看它控制问题的求解方法。回想上一篇蒙特卡罗法在线控制的方法，我们使用的是$ϵ−$贪婪法来做价值迭代。对于时序差分，我们也可以用$ϵ−$贪婪法来价值迭代，和蒙特卡罗法在线控制的区别主要只是在于收获的计算方式不同。时序差分的在线控制(on-policy)算法最常见的是SARSA算法，我们在下一篇单独讲解。</p>
+<p>而除了在线控制，我们还可以做离线控制(off-policy)，离线控制和在线控制的区别主要在于在线控制一般只有一个策略(最常见的是ϵ−�−贪婪法)。而离线控制一般有两个策略，其中一个策略(最常见的是ϵ−�−贪婪法)用于选择新的动作，另一个策略(最常见的是贪婪法)用于更新价值函数。时序差分的离线控制算法最常见的是Q-Learning算法，我们在下下篇单独讲解。</p>
+<h1 id="6-时序差分小结">6. 时序差分小结</h1>
+<p>时序差分和蒙特卡罗法比它更加灵活，学习能力更强，因此是目前主流的强化学习求解问题的方法，现在绝大部分强化学习乃至深度强化学习的求解都是以时序差分的思想为基础的。因此后面我们会重点讨论。</p>
+<p>下一篇我们会讨论时序差分的在线控制算法SARSA。</p>
+]]></description></item><item><title>Effective STL [10] | 注意分配器的协定和约束</title><link>https://jianye0428.github.io/posts/clause_10/</link><pubDate>Sat, 29 Jul 2023 15:38:00 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/clause_10/</guid><description><![CDATA[<h2 id="分配器">分配器</h2>
 <p>分配器最初是为抽象内存模型而开发的，允许库开发者忽略在某些16位操作系统上near和far指针的区别，也被设计成促进全功能内存管理器的发展，但事实表明那种方法在STL的一些部分会<font color=red>导致效率损失</font>。</p>
 <p>分配器最初被设想为抽象内存模型，在那种情况下，分配器在它们定义的内存模型中提供指针和引用的<code>typedef</code>才有意义。在C++标准里，类型T的对象的默认分配器（巧妙地称为<code>allocator&lt;T&gt;</code>）提供<code>typedef allocator&lt;T&gt;::pointer</code>和<code>allocator&lt;T&gt;::reference</code>，而且也希望用户定义的分配器也提供这些typedef。</p>
 <p>建立行为像引用的对象是使用代理对象的例子，而代理对象会导致很多问题。</p>
