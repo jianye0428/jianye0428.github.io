@@ -1,4 +1,347 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 23 Feb 2024 13:17:52 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>强化学习笔记 [7] | 时序差分离线控制算法Q-Learning</title><link>https://jianye0428.github.io/posts/rl_learning_note_7/</link><pubDate>Fri, 23 Feb 2024 13:17:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_7/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 23 Feb 2024 13:17:52 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>强化学习笔记 [9] | Deep Q-Learning进阶之Nature DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_9/</link><pubDate>Fri, 23 Feb 2024 13:17:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_9/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9714655.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（八）价值函数的近似表示与Deep Q-Learning<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了Deep Q-Learning（NIPS 2013）的算法和代码，在这个算法基础上，有很多Deep Q-Learning(以下简称DQN)的改进版，今天我们来讨论DQN的第一个改进版Nature DQN(NIPS 2015)。</p>
+<p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和Nature DQN的论文。</p>
+<h1 id="1-dqnnips-2013的问题">1. DQN(NIPS 2013)的问题</h1>
+<p>在上一篇我们已经讨论了DQN(NIPS 2013)的算法原理和代码实现，虽然它可以训练像CartPole这样的简单游戏，但是有很多问题。这里我们先讨论第一个问题。</p>
+<p>注意到DQN(NIPS 2013)里面，我们使用的目标 $Q$值的计算方式：</p>
+<p>$$\left.y_j=\left\{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\\R_j+\gamma\max_{a^{\prime}}Q(\phi(S_j^{\prime}),A_j^{\prime},w)&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</p>
+<p>这里目标Q值的计算使用到了当前要训练的Q网络参数来计算$Q(\phi(S_j^{\prime}),A_j^{\prime},w)$，而实际上，我们又希望通过 $y_j$来后续更新 $Q$网络参数。这样两者循环依赖，迭代起来两者的相关性就太强了。不利于算法的收敛。</p>
+<p>因此，一个改进版的DQN: Nature DQN尝试<strong>用两个Q网络来减少目标Q值计算和要更新Q网络参数之间的依赖关系</strong>。下面我们来看看Nature DQN是怎么做的。</p>
+<h1 id="2-nature-dqn的建模">2. Nature DQN的建模</h1>
+<p>Nature DQN的两个Q网络分别命名为当前Q网络和目标Q网络。</p>
+<p>Nature DQN使用了两个Q网络，一个<strong>当前Q网络</strong>$Q$用来选择动作，更新模型参数，另一个<strong>目标Q网络</strong> $Q&rsquo;$用于计算目标Q值。目标Q网络的网络参数不需要迭代更新，而是每隔一段时间从当前Q网络$Q$复制过来，即延时更新，这样可以减少目标Q值和当前的Q值相关性。</p>
+<p>要注意的是，两个Q网络的结构是一模一样的。这样才可以复制网络参数。</p>
+<p>Nature DQN和上一篇的DQN相比，除了用一个新的相同结构的目标Q网络来计算目标Q值以外，其余部分基本是完全相同的。</p>
+<h1 id="3-nature-dqn的算法流程">3. Nature DQN的算法流程</h1>
+<p>下面我们来总结下Nature DQN的算法流程， 基于DQN NIPS 2015：</p>
+<p>算法输入：迭代轮数 $T$，状态特征维度 $n$, 动作集 $A$, 步长 $α$，衰减因子 $γ$, 探索率 $ϵ$, 当前Q网络 $Q$，目标Q网络 $Q&rsquo;$, 批量梯度下降的样本数 $m$,目标Q网络参数更新频率$C$。</p>
+<p>输出：$Q$网络参数</p>
+<ul>
+<li>
+<ol>
+<li>随机初始化所有的状态和动作对应的价值 $Q$. 随机初始化当前Q网络的所有参数 $w$,初始化目标Q网络 $Q&rsquo;$的参数 $w&rsquo;=w$。清空经验回放的集合 $D$。</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>for i from 1 to T，进行迭代。</li>
+</ol>
+<ul>
+<li>a) 初始化S为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$</li>
+<li>b) 在Q网络中使用 $ϕ(S)$作为输入，得到Q网络的所有动作对应的Q值输出。用 $ϵ−$贪婪法在当前Q值输出中选择对应的动作 $A$</li>
+<li>c) 在状态 $S$ 执行当前动作 $A$,得到新状态 $S&rsquo;$ 对应的特征向量 $ϕ(S&rsquo;)$ 和奖励 $R$,是否终止状态<code>is_end</code></li>
+<li>d) 将 $\{ϕ(S),A,R,ϕ(S′),is_end\}$这个五元组存入经验回放集合 $D$</li>
+<li>e) $S=S'$</li>
+<li>f) 从经验回放集合 $D$ 中采样 $m$ 个样本 ${ϕ(S_j),A_j,R_j,ϕ(S&rsquo;_j),is_end_j},j=1,2.,,,m$，计算当前目标Q值 $y_j$：
+<ul>
+<li>$$\left.y_j=\left\{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\\R_j+\gamma\max_{a^{\prime}}Q^{\prime}(\phi(S_j^{\prime}),A_j^{\prime},w^{\prime})&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</li>
+</ul>
+</li>
+<li>g) 使用均方差损失函数 $\frac1m\sum_{j=1}^m(y_j-Q(\phi(S_j),A_j,w))^2$，通过神经网络的梯度反向传播来更新Q网络的所有参数 $w$</li>
+<li>h) 如果 $i%C=1$, 则更新目标Q网络参数 $w&rsquo;=w$</li>
+<li>i) 如果 $S&rsquo;$是终止状态，当前轮迭代完毕，否则转到步骤b)</li>
+</ul>
+</li>
+</ul>
+<p>注意，上述第二步的f步和g步的Q值计算也都需要通过Q网络计算得到。另外，实际应用中，为了算法较好的收敛，探索率 $ϵ$ 需要随着迭代的进行而变小。</p>
+<h1 id="4-nature-dqn算法实例">4. Nature DQN算法实例</h1>
+<p>下面我们用一个具体的例子来演示DQN的应用。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>完整的代码参见github: <a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/nature_dqn.py"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/nature_dqn.py<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>这里我们重点关注Nature DQN和上一节的NIPS 2013 DQN的代码的不同之处。</p>
+<p>首先是Q网络，上一篇的DQN是一个三层的神经网络，而这里我们有两个一样的三层神经网络，一个是当前Q网络，一个是目标Q网络，网络的定义部分如下：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="k">def</span> <span class="nf">create_Q_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># input layer</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">state_input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="s2">&#34;float&#34;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># network weights</span>
+</span></span><span class="line"><span class="cl">    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;current_net&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">,</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1"># hidden layers</span>
+</span></span><span class="line"><span class="cl">      <span class="n">h_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">,</span><span class="n">W1</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1"># Q Value layer</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">Q_value</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer</span><span class="p">,</span><span class="n">W2</span><span class="p">)</span> <span class="o">+</span> <span class="n">b2</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;target_net&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W1t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">,</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b1t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W2t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b2t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1"># hidden layers</span>
+</span></span><span class="line"><span class="cl">      <span class="n">h_layer_t</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">,</span><span class="n">W1t</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1t</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1"># Q Value layer</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer</span><span class="p">,</span><span class="n">W2t</span><span class="p">)</span> <span class="o">+</span> <span class="n">b2t</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>对于定期将目标Q网络的参数更新的代码如下面两部分：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="n">t_params</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">GraphKeys</span><span class="o">.</span><span class="n">GLOBAL_VARIABLES</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s1">&#39;target_net&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">e_params</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">GraphKeys</span><span class="o">.</span><span class="n">GLOBAL_VARIABLES</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s1">&#39;current_net&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;soft_replacement&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">target_replace_op</span> <span class="o">=</span> <span class="p">[</span><span class="n">tf</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">t_params</span><span class="p">,</span> <span class="n">e_params</span><span class="p">)]</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">update_target_q_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">episode</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># update target Q netowrk</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="n">episode</span> <span class="o">%</span> <span class="n">REPLACE_TARGET_FREQ</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_replace_op</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">#print(&#39;episode &#39;+str(episode) +&#39;, target Q network params replaced!&#39;)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>此外，注意下我们计算目标Q值的部分，这里使用的目标Q网络的参数，而不是当前Q网络的参数：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="c1"># Step 2: calculate y</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y_batch</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Q_value_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">:</span><span class="n">next_state_batch</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">BATCH_SIZE</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">done</span> <span class="o">=</span> <span class="n">minibatch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">GAMMA</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">Q_value_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>其余部分基本和上一篇DQN的代码相同。这里给出我跑的某一次的结果:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">episode: <span class="m">0</span> Evaluation Average Reward: 9.8
+</span></span><span class="line"><span class="cl">episode: <span class="m">100</span> Evaluation Average Reward: 9.8
+</span></span><span class="line"><span class="cl">episode: <span class="m">200</span> Evaluation Average Reward: 9.6
+</span></span><span class="line"><span class="cl">episode: <span class="m">300</span> Evaluation Average Reward: 10.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">400</span> Evaluation Average Reward: 34.8
+</span></span><span class="line"><span class="cl">episode: <span class="m">500</span> Evaluation Average Reward: 177.4
+</span></span><span class="line"><span class="cl">episode: <span class="m">600</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">700</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">800</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">900</span> Evaluation Average Reward: 198.4
+</span></span><span class="line"><span class="cl">episode: <span class="m">1000</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1100</span> Evaluation Average Reward: 193.2
+</span></span><span class="line"><span class="cl">episode: <span class="m">1200</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1300</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1400</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1500</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1600</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1700</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1800</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1900</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2000</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2100</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2200</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2300</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2400</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2500</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2600</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2700</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2800</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2900</span> Evaluation Average Reward: 200.0</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，由于DQN不保证稳定的收敛，所以每次跑的结果会不同，如果你跑的结果后面仍然收敛的不好，可以把代码多跑几次，选择一个最好的训练结果。</p>
+<h1 id="5-nature-dqn总结">5. Nature DQN总结</h1>
+<p>Nature DQN对DQN NIPS 2013做了相关性方面的改进，这个改进虽然不错，但是仍然没有解决DQN的 很多问题，比如：</p>
+<ul>
+<li>1） 目标Q值的计算是否准确？全部通过max Q来计算有没有问题？</li>
+<li>2） 随机采样的方法好吗？按道理不同样本的重要性是不一样的。</li>
+<li>3） Q值代表状态，动作的价值，那么单独动作价值的评估会不会更准确？</li>
+</ul>
+<p>第一个问题对应的改进是Double DQN, 第二个问题的改进是Prioritised Replay DQN，第三个问题的改进是Dueling DQN，这三个DQN的改进版我们在下一篇来讨论。</p>
+]]></description></item><item><title>强化学习笔记 [10] | Double DQN (DDQN)</title><link>https://jianye0428.github.io/posts/rl_learning_note_10/</link><pubDate>Fri, 23 Feb 2024 13:17:52 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_10/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9756075.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（九）Deep Q-Learning进阶之Nature DQN<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了Nature DQN的算法流程，它通过使用两个相同的神经网络，以解决数据样本和网络训练之前的相关性。但是还是有其他值得优化的点，文本就关注于Nature DQN的一个改进版本: Double DQN算法（以下简称DDQN）。</p>
+<p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和DDQN的论文(Deep Reinforcement Learning with Double Q-learning)。</p>
+<h1 id="1-dqn的目标q值计算问题">1. DQN的目标Q值计算问题</h1>
+<p>在DDQN之前，基本上所有的目标Q值都是通过<strong>贪婪法</strong>直接得到的，无论是Q-Learning， DQN(NIPS 2013)还是 Nature DQN，都是如此。比如对于Nature DQN,虽然用了两个Q网络并使用目标Q网络计算Q值，其第j个样本的目标Q值的计算还是贪婪法得到的，计算如下式:</p>
+<p>$$\left.y_j=\left{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\R_j+\gamma\max_{a^{\prime}}Q^{\prime}(\phi(S_j^{\prime}),A_j^{\prime},w^{\prime})&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</p>
+<p>使用max虽然可以快速让Q值向可能的优化目标靠拢，但是很容易过犹不及，导致过度估计(Over Estimation)，所谓过度估计就是最终我们得到的算法模型有很大的偏差(bias)。为了解决这个问题， DDQN通过解耦目标Q值动作的选择和目标Q值的计算这两步，来达到消除过度估计的问题。</p>
+<h1 id="2-ddqn的算法建模">2. DDQN的算法建模</h1>
+<p>DDQN和Nature DQN一样，也有一样的两个Q网络结构。在Nature DQN的基础上，通过解耦目标Q值动作的选择和目标Q值的计算这两步，来消除过度估计的问题。</p>
+<p>在上一节里，Nature DQN对于非终止状态，其目标Q值的计算式子是：</p>
+<p>$$y_j=R_j+\gamma\max_{a^{\prime}}Q^{\prime}(\phi(S_j^{\prime}),A_j^{\prime},w^{\prime})$$</p>
+<p>在DDQN(Double DQN)这里，不再是直接在目标Q网络里面找各个动作中最大Q值，而是先在当前Q网络中先找出最大Q值对应的动作，即:</p>
+<p>$$a^{max}(S_j^{\prime},w)=\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w)$$</p>
+<p>然后利用这个选择出来的动作 $\begin{aligned}&amp;a^{max}(S_j^{\prime},w)\end{aligned}$ 在目标网络里面去计算目标Q值。即：</p>
+<p>$$y_j=R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),a^{max}(S_j^{\prime},w),w^{\prime})$$</p>
+<p>综合起来写就是：</p>
+<p>$$y_j=R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w),w^{\prime})$$</p>
+<p>除了目标Q值的计算方式以外，DDQN算法和Nature DQN的算法流程完全相同。</p>
+<h1 id="3-ddqn算法流程">3. DDQN算法流程</h1>
+<p>这里我们总结下DDQN的算法流程，和Nature DQN的区别仅仅在步骤2.f中目标Q值的计算。</p>
+<ul>
+<li>算法输入：迭代轮数 $T$，状态特征维度 $n$, 动作集 $A$, 步长 $α$，衰减因子 $γ$, 探索率 $ϵ$, 当前Q网络 $Q$，目标Q网络 $Q&rsquo;$, 批量梯度下降的样本 $m$,目标Q网络参数更新频 $C$。</li>
+<li>输出：Q网络参数</li>
+<li>
+<ol>
+<li>随机初始化所有的状态和动作对应的价值 $Q$. 随机初始化当前Q网络的所有参数 $w$,初始化目标Q网络 $Q&rsquo;的参数 $w′=w$ 。清空经验回放的集合 $D$。</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>for i from 1 to T，进行迭代。</li>
+</ol>
+<ul>
+<li>a) 初始化 $S$为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$</li>
+<li>b) 在Q网络中使用 $ϕ(S)$作为输入，得到Q网络的所有动作对应的Q值输出。用 $ϵ−$贪婪法在当前Q值输出中选择对应的动作 $A$</li>
+<li>c) 在状态 $S$执行当前动作 $A$,得到新状态 $S&rsquo;$对应的特征向量 $ϕ(S&rsquo;)$ 和奖励 $R$,是否终止状态 <code>is_end</code></li>
+<li>d) 将 ${ϕ(S),A,R,ϕ(S′),is_end} $,这个五元组存入经验回放集合 $D$</li>
+<li>e) $S=S'$</li>
+<li>f) 从经验回放集合 $D$ 中采样 $m$ 个样本 ${ϕ(S_j),A_j,R_j,ϕ(S&rsquo;_j),is_end_j},j=1,2.,,,m$, 计算当前目标Q值 $y_j$:
+<ul>
+<li>$$\left.y_j=\left{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w),w^{\prime})&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</li>
+</ul>
+</li>
+<li>g) 使用均方差损失函数$\frac1m\sum_{j=1}^m(y_j-Q(\phi(S_j),A_j,w))^2$，通过神经网络的梯度反向传播来更新Q网络的所有参数w�</li>
+<li>h) 如果 $i%C=1$,则更新目标Q网络参数 $w&rsquo;=w$</li>
+<li>i) 如果 $S&rsquo;$是终止状态，当前轮迭代完毕，否则转到步骤b)</li>
+</ul>
+</li>
+</ul>
+<p>注意，上述第二步的f步和g步的Q值计算也都需要通过Q网络计算得到。另外，实际应用中，为了算法较好的收敛，探索率 $ϵ$需要随着迭代的进行而变小。</p>
+<h1 id="4-ddqn算法实例">4. DDQN算法实例　</h1>
+<p>下面我们用一个具体的例子来演示DQN的应用。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>完整的代码参见github: <a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddqn.py"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddqn.py<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>这里我们重点关注DDQN和上一节的Nature DQN的代码的不同之处。代码只有一个地方不一样，就是计算目标Q值的时候，如下：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="c1"># Step 2: calculate y</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y_batch</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">current_Q_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Q_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">:</span> <span class="n">next_state_batch</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">  <span class="n">max_action_next</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">current_Q_batch</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">target_Q_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">:</span> <span class="n">next_state_batch</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">BATCH_SIZE</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">done</span> <span class="o">=</span> <span class="n">minibatch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">target_Q_value</span> <span class="o">=</span> <span class="n">target_Q_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">max_action_next</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">GAMMA</span> <span class="o">*</span> <span class="n">target_Q_value</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>而之前的Nature DQN这里的目标Q值计算是如下这样的：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"> <span class="c1"># Step 2: calculate y</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y_batch</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Q_value_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">:</span><span class="n">next_state_batch</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">BATCH_SIZE</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">done</span> <span class="o">=</span> <span class="n">minibatch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">GAMMA</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">Q_value_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了上面这部分的区别，两个算法的代码完全相同。</p>
+<h1 id="5-ddqn小结">5. DDQN小结</h1>
+<p>DDQN算法出来以后，取得了比较好的效果，因此得到了比较广泛的应用。不过我们的DQN仍然有其他可以优化的点，如上一篇最后讲到的: 随机采样的方法好吗？按道理经验回放里不同样本的重要性是不一样的，TD误差大的样本重要程度应该高。针对这个问题，我们在下一节的Prioritised Replay DQN中讨论。</p>
+]]></description></item><item><title>强化学习笔记 [7] | 时序差分离线控制算法Q-Learning</title><link>https://jianye0428.github.io/posts/rl_learning_note_7/</link><pubDate>Fri, 23 Feb 2024 13:17:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_7/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在<a href="https://www.cnblogs.com/pinard/p/9614290.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（六）时序差分在线控制算法SARSA<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中我们讨论了时序差分的在线控制算法SARSA，而另一类时序差分的离线控制算法还没有讨论，因此本文我们关注于时序差分离线控制算法，主要是经典的Q-Learning算法。</p>
 <p>Q-Learning这一篇对应Sutton书的第六章部分和UCL强化学习课程的第五讲部分。</p>
 <h1 id="1-q-learning算法的引入">1. Q-Learning算法的引入　　　　</h1>
@@ -26240,7 +26583,350 @@ to be added: <br>
 </span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">EXIT_SUCCESS</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item><item><title>强化学习笔记 [8] | 价值函数的近似表示与Deep Q-Learning</title><link>https://jianye0428.github.io/posts/rl_learning_note_8/</link><pubDate>Fri, 23 Feb 2024 13:17:44 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_8/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+</div>]]></description></item><item><title>强化学习笔记 [10] | Double DQN (DDQN)</title><link>https://jianye0428.github.io/posts/rl_learning_note_10/</link><pubDate>Fri, 23 Feb 2024 13:17:52 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_10/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9756075.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（九）Deep Q-Learning进阶之Nature DQN<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了Nature DQN的算法流程，它通过使用两个相同的神经网络，以解决数据样本和网络训练之前的相关性。但是还是有其他值得优化的点，文本就关注于Nature DQN的一个改进版本: Double DQN算法（以下简称DDQN）。</p>
+<p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和DDQN的论文(Deep Reinforcement Learning with Double Q-learning)。</p>
+<h1 id="1-dqn的目标q值计算问题">1. DQN的目标Q值计算问题</h1>
+<p>在DDQN之前，基本上所有的目标Q值都是通过<strong>贪婪法</strong>直接得到的，无论是Q-Learning， DQN(NIPS 2013)还是 Nature DQN，都是如此。比如对于Nature DQN,虽然用了两个Q网络并使用目标Q网络计算Q值，其第j个样本的目标Q值的计算还是贪婪法得到的，计算如下式:</p>
+<p>$$\left.y_j=\left{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\R_j+\gamma\max_{a^{\prime}}Q^{\prime}(\phi(S_j^{\prime}),A_j^{\prime},w^{\prime})&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</p>
+<p>使用max虽然可以快速让Q值向可能的优化目标靠拢，但是很容易过犹不及，导致过度估计(Over Estimation)，所谓过度估计就是最终我们得到的算法模型有很大的偏差(bias)。为了解决这个问题， DDQN通过解耦目标Q值动作的选择和目标Q值的计算这两步，来达到消除过度估计的问题。</p>
+<h1 id="2-ddqn的算法建模">2. DDQN的算法建模</h1>
+<p>DDQN和Nature DQN一样，也有一样的两个Q网络结构。在Nature DQN的基础上，通过解耦目标Q值动作的选择和目标Q值的计算这两步，来消除过度估计的问题。</p>
+<p>在上一节里，Nature DQN对于非终止状态，其目标Q值的计算式子是：</p>
+<p>$$y_j=R_j+\gamma\max_{a^{\prime}}Q^{\prime}(\phi(S_j^{\prime}),A_j^{\prime},w^{\prime})$$</p>
+<p>在DDQN(Double DQN)这里，不再是直接在目标Q网络里面找各个动作中最大Q值，而是先在当前Q网络中先找出最大Q值对应的动作，即:</p>
+<p>$$a^{max}(S_j^{\prime},w)=\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w)$$</p>
+<p>然后利用这个选择出来的动作 $\begin{aligned}&amp;a^{max}(S_j^{\prime},w)\end{aligned}$ 在目标网络里面去计算目标Q值。即：</p>
+<p>$$y_j=R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),a^{max}(S_j^{\prime},w),w^{\prime})$$</p>
+<p>综合起来写就是：</p>
+<p>$$y_j=R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w),w^{\prime})$$</p>
+<p>除了目标Q值的计算方式以外，DDQN算法和Nature DQN的算法流程完全相同。</p>
+<h1 id="3-ddqn算法流程">3. DDQN算法流程</h1>
+<p>这里我们总结下DDQN的算法流程，和Nature DQN的区别仅仅在步骤2.f中目标Q值的计算。</p>
+<ul>
+<li>算法输入：迭代轮数 $T$，状态特征维度 $n$, 动作集 $A$, 步长 $α$，衰减因子 $γ$, 探索率 $ϵ$, 当前Q网络 $Q$，目标Q网络 $Q&rsquo;$, 批量梯度下降的样本 $m$,目标Q网络参数更新频 $C$。</li>
+<li>输出：Q网络参数</li>
+<li>
+<ol>
+<li>随机初始化所有的状态和动作对应的价值 $Q$. 随机初始化当前Q网络的所有参数 $w$,初始化目标Q网络 $Q&rsquo;的参数 $w′=w$ 。清空经验回放的集合 $D$。</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>for i from 1 to T，进行迭代。</li>
+</ol>
+<ul>
+<li>a) 初始化 $S$为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$</li>
+<li>b) 在Q网络中使用 $ϕ(S)$作为输入，得到Q网络的所有动作对应的Q值输出。用 $ϵ−$贪婪法在当前Q值输出中选择对应的动作 $A$</li>
+<li>c) 在状态 $S$执行当前动作 $A$,得到新状态 $S&rsquo;$对应的特征向量 $ϕ(S&rsquo;)$ 和奖励 $R$,是否终止状态 <code>is_end</code></li>
+<li>d) 将 ${ϕ(S),A,R,ϕ(S′),is_end} $,这个五元组存入经验回放集合 $D$</li>
+<li>e) $S=S'$</li>
+<li>f) 从经验回放集合 $D$ 中采样 $m$ 个样本 ${ϕ(S_j),A_j,R_j,ϕ(S&rsquo;_j),is_end_j},j=1,2.,,,m$, 计算当前目标Q值 $y_j$:
+<ul>
+<li>$$\left.y_j=\left{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w),w^{\prime})&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</li>
+</ul>
+</li>
+<li>g) 使用均方差损失函数$\frac1m\sum_{j=1}^m(y_j-Q(\phi(S_j),A_j,w))^2$，通过神经网络的梯度反向传播来更新Q网络的所有参数w�</li>
+<li>h) 如果 $i%C=1$,则更新目标Q网络参数 $w&rsquo;=w$</li>
+<li>i) 如果 $S&rsquo;$是终止状态，当前轮迭代完毕，否则转到步骤b)</li>
+</ul>
+</li>
+</ul>
+<p>注意，上述第二步的f步和g步的Q值计算也都需要通过Q网络计算得到。另外，实际应用中，为了算法较好的收敛，探索率 $ϵ$需要随着迭代的进行而变小。</p>
+<h1 id="4-ddqn算法实例">4. DDQN算法实例　</h1>
+<p>下面我们用一个具体的例子来演示DQN的应用。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>完整的代码参见github: <a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddqn.py"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddqn.py<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>这里我们重点关注DDQN和上一节的Nature DQN的代码的不同之处。代码只有一个地方不一样，就是计算目标Q值的时候，如下：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="c1"># Step 2: calculate y</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y_batch</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">current_Q_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Q_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">:</span> <span class="n">next_state_batch</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">  <span class="n">max_action_next</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">current_Q_batch</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">target_Q_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">:</span> <span class="n">next_state_batch</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">BATCH_SIZE</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">done</span> <span class="o">=</span> <span class="n">minibatch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">target_Q_value</span> <span class="o">=</span> <span class="n">target_Q_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">max_action_next</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">GAMMA</span> <span class="o">*</span> <span class="n">target_Q_value</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>而之前的Nature DQN这里的目标Q值计算是如下这样的：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"> <span class="c1"># Step 2: calculate y</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y_batch</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Q_value_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">:</span><span class="n">next_state_batch</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">BATCH_SIZE</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">done</span> <span class="o">=</span> <span class="n">minibatch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">GAMMA</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">Q_value_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了上面这部分的区别，两个算法的代码完全相同。</p>
+<h1 id="5-ddqn小结">5. DDQN小结</h1>
+<p>DDQN算法出来以后，取得了比较好的效果，因此得到了比较广泛的应用。不过我们的DQN仍然有其他可以优化的点，如上一篇最后讲到的: 随机采样的方法好吗？按道理经验回放里不同样本的重要性是不一样的，TD误差大的样本重要程度应该高。针对这个问题，我们在下一节的Prioritised Replay DQN中讨论。</p>
+]]></description></item><item><title>强化学习笔记 [9] | Deep Q-Learning进阶之Nature DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_9/</link><pubDate>Fri, 23 Feb 2024 13:17:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_9/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9714655.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（八）价值函数的近似表示与Deep Q-Learning<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了Deep Q-Learning（NIPS 2013）的算法和代码，在这个算法基础上，有很多Deep Q-Learning(以下简称DQN)的改进版，今天我们来讨论DQN的第一个改进版Nature DQN(NIPS 2015)。</p>
+<p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和Nature DQN的论文。</p>
+<h1 id="1-dqnnips-2013的问题">1. DQN(NIPS 2013)的问题</h1>
+<p>在上一篇我们已经讨论了DQN(NIPS 2013)的算法原理和代码实现，虽然它可以训练像CartPole这样的简单游戏，但是有很多问题。这里我们先讨论第一个问题。</p>
+<p>注意到DQN(NIPS 2013)里面，我们使用的目标 $Q$值的计算方式：</p>
+<p>$$\left.y_j=\left\{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\\R_j+\gamma\max_{a^{\prime}}Q(\phi(S_j^{\prime}),A_j^{\prime},w)&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</p>
+<p>这里目标Q值的计算使用到了当前要训练的Q网络参数来计算$Q(\phi(S_j^{\prime}),A_j^{\prime},w)$，而实际上，我们又希望通过 $y_j$来后续更新 $Q$网络参数。这样两者循环依赖，迭代起来两者的相关性就太强了。不利于算法的收敛。</p>
+<p>因此，一个改进版的DQN: Nature DQN尝试<strong>用两个Q网络来减少目标Q值计算和要更新Q网络参数之间的依赖关系</strong>。下面我们来看看Nature DQN是怎么做的。</p>
+<h1 id="2-nature-dqn的建模">2. Nature DQN的建模</h1>
+<p>Nature DQN的两个Q网络分别命名为当前Q网络和目标Q网络。</p>
+<p>Nature DQN使用了两个Q网络，一个<strong>当前Q网络</strong>$Q$用来选择动作，更新模型参数，另一个<strong>目标Q网络</strong> $Q&rsquo;$用于计算目标Q值。目标Q网络的网络参数不需要迭代更新，而是每隔一段时间从当前Q网络$Q$复制过来，即延时更新，这样可以减少目标Q值和当前的Q值相关性。</p>
+<p>要注意的是，两个Q网络的结构是一模一样的。这样才可以复制网络参数。</p>
+<p>Nature DQN和上一篇的DQN相比，除了用一个新的相同结构的目标Q网络来计算目标Q值以外，其余部分基本是完全相同的。</p>
+<h1 id="3-nature-dqn的算法流程">3. Nature DQN的算法流程</h1>
+<p>下面我们来总结下Nature DQN的算法流程， 基于DQN NIPS 2015：</p>
+<p>算法输入：迭代轮数 $T$，状态特征维度 $n$, 动作集 $A$, 步长 $α$，衰减因子 $γ$, 探索率 $ϵ$, 当前Q网络 $Q$，目标Q网络 $Q&rsquo;$, 批量梯度下降的样本数 $m$,目标Q网络参数更新频率$C$。</p>
+<p>输出：$Q$网络参数</p>
+<ul>
+<li>
+<ol>
+<li>随机初始化所有的状态和动作对应的价值 $Q$. 随机初始化当前Q网络的所有参数 $w$,初始化目标Q网络 $Q&rsquo;$的参数 $w&rsquo;=w$。清空经验回放的集合 $D$。</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>for i from 1 to T，进行迭代。</li>
+</ol>
+<ul>
+<li>a) 初始化S为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$</li>
+<li>b) 在Q网络中使用 $ϕ(S)$作为输入，得到Q网络的所有动作对应的Q值输出。用 $ϵ−$贪婪法在当前Q值输出中选择对应的动作 $A$</li>
+<li>c) 在状态 $S$ 执行当前动作 $A$,得到新状态 $S&rsquo;$ 对应的特征向量 $ϕ(S&rsquo;)$ 和奖励 $R$,是否终止状态<code>is_end</code></li>
+<li>d) 将 $\{ϕ(S),A,R,ϕ(S′),is_end\}$这个五元组存入经验回放集合 $D$</li>
+<li>e) $S=S'$</li>
+<li>f) 从经验回放集合 $D$ 中采样 $m$ 个样本 ${ϕ(S_j),A_j,R_j,ϕ(S&rsquo;_j),is_end_j},j=1,2.,,,m$，计算当前目标Q值 $y_j$：
+<ul>
+<li>$$\left.y_j=\left\{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\\R_j+\gamma\max_{a^{\prime}}Q^{\prime}(\phi(S_j^{\prime}),A_j^{\prime},w^{\prime})&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</li>
+</ul>
+</li>
+<li>g) 使用均方差损失函数 $\frac1m\sum_{j=1}^m(y_j-Q(\phi(S_j),A_j,w))^2$，通过神经网络的梯度反向传播来更新Q网络的所有参数 $w$</li>
+<li>h) 如果 $i%C=1$, 则更新目标Q网络参数 $w&rsquo;=w$</li>
+<li>i) 如果 $S&rsquo;$是终止状态，当前轮迭代完毕，否则转到步骤b)</li>
+</ul>
+</li>
+</ul>
+<p>注意，上述第二步的f步和g步的Q值计算也都需要通过Q网络计算得到。另外，实际应用中，为了算法较好的收敛，探索率 $ϵ$ 需要随着迭代的进行而变小。</p>
+<h1 id="4-nature-dqn算法实例">4. Nature DQN算法实例</h1>
+<p>下面我们用一个具体的例子来演示DQN的应用。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>完整的代码参见github: <a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/nature_dqn.py"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/nature_dqn.py<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>这里我们重点关注Nature DQN和上一节的NIPS 2013 DQN的代码的不同之处。</p>
+<p>首先是Q网络，上一篇的DQN是一个三层的神经网络，而这里我们有两个一样的三层神经网络，一个是当前Q网络，一个是目标Q网络，网络的定义部分如下：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="k">def</span> <span class="nf">create_Q_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># input layer</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">state_input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="s2">&#34;float&#34;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># network weights</span>
+</span></span><span class="line"><span class="cl">    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;current_net&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">,</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1"># hidden layers</span>
+</span></span><span class="line"><span class="cl">      <span class="n">h_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">,</span><span class="n">W1</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1"># Q Value layer</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">Q_value</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer</span><span class="p">,</span><span class="n">W2</span><span class="p">)</span> <span class="o">+</span> <span class="n">b2</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;target_net&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W1t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">,</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b1t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W2t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b2t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1"># hidden layers</span>
+</span></span><span class="line"><span class="cl">      <span class="n">h_layer_t</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">,</span><span class="n">W1t</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1t</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1"># Q Value layer</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer</span><span class="p">,</span><span class="n">W2t</span><span class="p">)</span> <span class="o">+</span> <span class="n">b2t</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>对于定期将目标Q网络的参数更新的代码如下面两部分：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="n">t_params</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">GraphKeys</span><span class="o">.</span><span class="n">GLOBAL_VARIABLES</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s1">&#39;target_net&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">e_params</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">GraphKeys</span><span class="o">.</span><span class="n">GLOBAL_VARIABLES</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s1">&#39;current_net&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;soft_replacement&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">target_replace_op</span> <span class="o">=</span> <span class="p">[</span><span class="n">tf</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">t_params</span><span class="p">,</span> <span class="n">e_params</span><span class="p">)]</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">update_target_q_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">episode</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># update target Q netowrk</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="n">episode</span> <span class="o">%</span> <span class="n">REPLACE_TARGET_FREQ</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_replace_op</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">#print(&#39;episode &#39;+str(episode) +&#39;, target Q network params replaced!&#39;)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>此外，注意下我们计算目标Q值的部分，这里使用的目标Q网络的参数，而不是当前Q网络的参数：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="c1"># Step 2: calculate y</span>
+</span></span><span class="line"><span class="cl">  <span class="n">y_batch</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Q_value_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">:</span><span class="n">next_state_batch</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">BATCH_SIZE</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">done</span> <span class="o">=</span> <span class="n">minibatch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span> <span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="n">y_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">GAMMA</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">Q_value_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>其余部分基本和上一篇DQN的代码相同。这里给出我跑的某一次的结果:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">episode: <span class="m">0</span> Evaluation Average Reward: 9.8
+</span></span><span class="line"><span class="cl">episode: <span class="m">100</span> Evaluation Average Reward: 9.8
+</span></span><span class="line"><span class="cl">episode: <span class="m">200</span> Evaluation Average Reward: 9.6
+</span></span><span class="line"><span class="cl">episode: <span class="m">300</span> Evaluation Average Reward: 10.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">400</span> Evaluation Average Reward: 34.8
+</span></span><span class="line"><span class="cl">episode: <span class="m">500</span> Evaluation Average Reward: 177.4
+</span></span><span class="line"><span class="cl">episode: <span class="m">600</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">700</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">800</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">900</span> Evaluation Average Reward: 198.4
+</span></span><span class="line"><span class="cl">episode: <span class="m">1000</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1100</span> Evaluation Average Reward: 193.2
+</span></span><span class="line"><span class="cl">episode: <span class="m">1200</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1300</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1400</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1500</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1600</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1700</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1800</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">1900</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2000</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2100</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2200</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2300</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2400</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2500</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2600</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2700</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2800</span> Evaluation Average Reward: 200.0
+</span></span><span class="line"><span class="cl">episode: <span class="m">2900</span> Evaluation Average Reward: 200.0</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，由于DQN不保证稳定的收敛，所以每次跑的结果会不同，如果你跑的结果后面仍然收敛的不好，可以把代码多跑几次，选择一个最好的训练结果。</p>
+<h1 id="5-nature-dqn总结">5. Nature DQN总结</h1>
+<p>Nature DQN对DQN NIPS 2013做了相关性方面的改进，这个改进虽然不错，但是仍然没有解决DQN的 很多问题，比如：</p>
+<ul>
+<li>1） 目标Q值的计算是否准确？全部通过max Q来计算有没有问题？</li>
+<li>2） 随机采样的方法好吗？按道理不同样本的重要性是不一样的。</li>
+<li>3） Q值代表状态，动作的价值，那么单独动作价值的评估会不会更准确？</li>
+</ul>
+<p>第一个问题对应的改进是Double DQN, 第二个问题的改进是Prioritised Replay DQN，第三个问题的改进是Dueling DQN，这三个DQN的改进版我们在下一篇来讨论。</p>
+]]></description></item><item><title>强化学习笔记 [8] | 价值函数的近似表示与Deep Q-Learning</title><link>https://jianye0428.github.io/posts/rl_learning_note_8/</link><pubDate>Fri, 23 Feb 2024 13:17:44 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_8/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在强化学习系列的<a href="https://www.cnblogs.com/pinard/p/9385570.html"target="_blank" rel="external nofollow noopener noreferrer">前七篇<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>里，我们主要讨论的都是规模比较小的强化学习问题求解算法。今天开始我们步入深度强化学习。这一篇关注于价值函数的近似表示和Deep Q-Learning算法。</p>
 <p>Deep Q-Learning这一篇对应Sutton书的第11章部分和UCL强化学习课程的第六讲。</p>
 <h1 id="1-为何需要价值函数的近似表示">1. 为何需要价值函数的近似表示</h1>
@@ -33479,1102 +34165,4 @@ $$v_{\pi}(s)=\mathbb{E}<em>π(R</em>{t+1}+γR_{t+2}+γ^2R_{t+3}+&hellip;|S_t=s)$
   <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">项目结构</div>
 </center>
 <br>
-]]></description></item><item><title>CMake 笔记 | [38] 构建项目的策略及限制变量的范围和副作用</title><link>https://jianye0428.github.io/posts/cmake_note_38/</link><pubDate>Wed, 31 Jan 2024 13:51:42 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_38/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p><strong>我们将讨论构建项目的策略，并限制变量的范围和副作用，目的是降低代码的复杂性和简化项目的维护。本篇，我们将把一个项目分割成几个范围有限的<code>CMakeLists.txt</code>文件，这些文件将使用<code>add_subdirectory</code>命令进行处理。</strong></p>
-<p><strong>将源文件分割成更小、更易于管理的单元是有意义的。可以将所有源代码都编译成一个库或可执行文件。实际上，项目更喜欢将源代码编译分成更小的、定义良好的库。这样做既是为了本地化和简化依赖项，也是为了简化代码维护。这意味着如在这里所做的那样，由许多库构建一个项目是一种常见的情况。</strong></p>
-</div>
-    </div>
-  </div>
-<h2 id="二项目结构">二、项目结构</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
-</span></span><span class="line"><span class="cl">├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">├── external
-</span></span><span class="line"><span class="cl">│    ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│    ├── conversion.cpp
-</span></span><span class="line"><span class="cl">│    └── conversion.hpp
-</span></span><span class="line"><span class="cl">├── src
-</span></span><span class="line"><span class="cl">│    ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│    ├── evolution
-</span></span><span class="line"><span class="cl">│    │    ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│    │    ├── evolution.cpp
-</span></span><span class="line"><span class="cl">│    │    └── evolution.hpp
-</span></span><span class="line"><span class="cl">│    ├── initial
-</span></span><span class="line"><span class="cl">│    │    ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│    │    ├── initial.cpp
-</span></span><span class="line"><span class="cl">│    │    └── initial.hpp
-</span></span><span class="line"><span class="cl">│    ├── io
-</span></span><span class="line"><span class="cl">│    │    ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│    │    ├── io.cpp
-</span></span><span class="line"><span class="cl">│    │    └── io.hpp
-</span></span><span class="line"><span class="cl">│    ├── main.cpp
-</span></span><span class="line"><span class="cl">│    └── parser
-</span></span><span class="line"><span class="cl">│        ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│        ├── parser.cpp
-</span></span><span class="line"><span class="cl">│        └── parser.hpp
-</span></span><span class="line"><span class="cl">└── tests
-</span></span><span class="line"><span class="cl">    ├── catch.hpp
-</span></span><span class="line"><span class="cl">    ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">    └── test.cpp</span></span></code></pre></td></tr></table>
-</div>
-</div><p>项目地址：</p>
-<blockquote>
-<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter7/07"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter7/07<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<h2 id="三相关源码">三、相关源码</h2>
-<p>本篇的代码以及项目结构比较简单，并未涉及到新的内容，所以以下代码都没有具体讲解，相关代码的知识点都在前面笔记中。</p>
-<p><strong>CMakeLists.txt</strong></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.5</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">recipe</span><span class="o">-</span><span class="mo">07</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">GNUInstallDirs</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_ARCHIVE_OUTPUT_DIRECTORY</span>
-</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_INSTALL_LIBDIR</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_LIBRARY_OUTPUT_DIRECTORY</span>
-</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_INSTALL_LIBDIR</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span>
-</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_INSTALL_BINDIR</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl"><span class="cp"># defines targets and sources
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_subdirectory</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="cp"># contains an &#34;external&#34; library we will link to
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">add_subdirectory</span><span class="p">(</span><span class="n">external</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="cp"># enable testing and define tests
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">enable_testing</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="n">add_subdirectory</span><span class="p">(</span><span class="n">tests</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>external/conversion.hpp</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">BinaryRepresentation</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span> <span class="n">decimal</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>external/conversion.cpp</strong></p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;conversion.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;bitset&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">BinaryRepresentation</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span> <span class="n">decimal</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">bitset</span><span class="o">&lt;</span><span class="mi">8</span><span class="o">&gt;</span><span class="p">(</span><span class="n">decimal</span><span class="p">).</span><span class="n">to_string</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>external/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">conversion</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">conversion</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">conversion</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">conversion</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">conversion</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">automata</span> <span class="n">main</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_subdirectory</span><span class="p">(</span><span class="n">evolution</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">add_subdirectory</span><span class="p">(</span><span class="n">initial</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">add_subdirectory</span><span class="p">(</span><span class="n">io</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">add_subdirectory</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">automata</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="n">conversion</span>
-</span></span><span class="line"><span class="cl">    <span class="n">evolution</span>
-</span></span><span class="line"><span class="cl">    <span class="n">initial</span>
-</span></span><span class="line"><span class="cl">    <span class="n">io</span>
-</span></span><span class="line"><span class="cl">    <span class="n">parser</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/evolution/evolution.hpp</strong></p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">Evolve</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">row</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">                        <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">rule_binary</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/evolution/evolution.cpp</strong></p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;evolution.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">Evolve</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">row</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">                        <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">rule_binary</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">result</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">row</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">left</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">?</span> <span class="n">row</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">:</span> <span class="n">i</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">center</span> <span class="o">=</span> <span class="n">i</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">right</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">row</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">ancestors</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">row</span><span class="p">[</span><span class="n">left</span><span class="p">]</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">row</span><span class="p">[</span><span class="n">center</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">row</span><span class="p">[</span><span class="n">right</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">    <span class="n">ancestors</span> <span class="o">=</span> <span class="mi">7</span> <span class="o">-</span> <span class="n">ancestors</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">auto</span> <span class="n">new_state</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">stoi</span><span class="p">(</span><span class="n">rule_binary</span><span class="p">.</span><span class="n">substr</span><span class="p">(</span><span class="n">ancestors</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">result</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">new_state</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/evolution/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">evolution</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">evolution</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="n">evolution</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">evolution</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">evolution</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/initial/initial.hpp</strong></p>
-<div class="highlight" id="id-10"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">InitialDistribution</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span> <span class="n">length</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/initial/initial.cpp</strong></p>
-<div class="highlight" id="id-11"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;initial.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">InitialDistribution</span><span class="p">(</span><span class="k">const</span> <span class="kt">int</span> <span class="n">length</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="c1">// we start with a vector which is zeroed out
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">result</span><span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// more or less in the middle we place a living cell
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">result</span><span class="p">[</span><span class="n">length</span> <span class="o">/</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/initial/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-12"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">initial</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">initial</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="n">initial</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">initial</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">initial</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/io/io.hpp</strong></p>
-<div class="highlight" id="id-13"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">PrintRow</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">row</span><span class="p">);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/io/io.cpp</strong></p>
-<div class="highlight" id="id-14"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;io.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;algorithm&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">PrintRow</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">row</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">row</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">row</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="p">[](</span><span class="kt">int</span> <span class="k">const</span> <span class="o">&amp;</span><span class="n">value</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">value</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">?</span> <span class="sc">&#39;*&#39;</span> <span class="o">:</span> <span class="sc">&#39; &#39;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="p">});</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/io/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-15"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">io</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">io</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="n">io</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">io</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">io</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/parser/parser.hpp</strong></p>
-<div class="highlight" id="id-16"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#pragma once
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;tuple&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="n">ParseArguments</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/parser/parser.cpp</strong></p>
-<div class="highlight" id="id-17"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;parser.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;cassert&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;tuple&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="n">ParseArguments</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">assert</span><span class="p">(</span><span class="n">argc</span> <span class="o">==</span> <span class="mi">4</span> <span class="o">&amp;&amp;</span> <span class="s">&#34;program called with wrong number of arguments&#34;</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">length</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">stoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
-</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">num_steps</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">stoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
-</span></span><span class="line"><span class="cl">  <span class="k">auto</span> <span class="n">rule_decimal</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">stoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">]);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">make_tuple</span><span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">,</span> <span class="n">rule_decimal</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/parser/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-18"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">parser</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">parser</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="n">parser</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">parser</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">parser</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>main.cpp</strong></p>
-<div class="highlight" id="id-19"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;conversion.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;evolution.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;initial.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;io.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;parser.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// parse arguments
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kt">int</span> <span class="n">length</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">,</span> <span class="n">rule_decimal</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">tie</span><span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">,</span> <span class="n">rule_decimal</span><span class="p">)</span> <span class="o">=</span> <span class="n">ParseArguments</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// print information about parameters
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;length: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">length</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;number of steps: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">num_steps</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;rule: &#34;</span> <span class="o">&lt;&lt;</span> <span class="n">rule_decimal</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// obtain binary representation for the rule
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">rule_binary</span> <span class="o">=</span> <span class="n">BinaryRepresentation</span><span class="p">(</span><span class="n">rule_decimal</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// create initial distribution
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">row</span> <span class="o">=</span> <span class="n">InitialDistribution</span><span class="p">(</span><span class="n">length</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// print initial configuration
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">PrintRow</span><span class="p">(</span><span class="n">row</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="c1">// the system evolves, print each step
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">step</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">step</span> <span class="o">&lt;</span> <span class="n">num_steps</span><span class="p">;</span> <span class="n">step</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="n">row</span> <span class="o">=</span> <span class="n">Evolve</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">rule_binary</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">    <span class="n">PrintRow</span><span class="p">(</span><span class="n">row</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>tests/test.cpp</strong></p>
-<div class="highlight" id="id-20"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;evolution.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="c1">// this tells catch to provide a main()
-</span></span></span><span class="line"><span class="cl"><span class="c1">// only do this in one cpp file
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="cp">#define CATCH_CONFIG_MAIN
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;catch.hpp&#34;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
-</span></span><span class="line"><span class="cl"><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&#34;Apply rule 90&#34;</span><span class="p">,</span> <span class="s">&#34;[rule-90]&#34;</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">row</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">rule</span> <span class="o">=</span> <span class="s">&#34;01011010&#34;</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">expected_result</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">REQUIRE</span><span class="p">(</span><span class="n">Evolve</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">rule</span><span class="p">)</span> <span class="o">==</span> <span class="n">expected_result</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&#34;Apply rule 222&#34;</span><span class="p">,</span> <span class="s">&#34;[rule-222]&#34;</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">row</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">rule</span> <span class="o">=</span> <span class="s">&#34;11011110&#34;</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">expected_result</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
-</span></span><span class="line"><span class="cl">  <span class="n">REQUIRE</span><span class="p">(</span><span class="n">Evolve</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">rule</span><span class="p">)</span> <span class="o">==</span> <span class="n">expected_result</span><span class="p">);</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>tests/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-21"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">test</span><span class="p">.</span><span class="n">cpp</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">cpp_test</span> <span class="n">evolution</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">add_test</span><span class="p">(</span>
-</span></span><span class="line"><span class="cl">  <span class="n">NAME</span>
-</span></span><span class="line"><span class="cl">    <span class="n">test_evolution</span>
-</span></span><span class="line"><span class="cl">  <span class="n">COMMAND</span>
-</span></span><span class="line"><span class="cl">    <span class="err">$</span><span class="o">&lt;</span><span class="nl">TARGET_FILE</span><span class="p">:</span><span class="n">cpp_test</span><span class="o">&gt;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="四结果展示">四、结果展示</h2>
-<div class="highlight" id="id-22"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ mkdir -p build
-</span></span><span class="line"><span class="cl">$ <span class="nb">cd</span> build
-</span></span><span class="line"><span class="cl">$ cmake ..
-</span></span><span class="line"><span class="cl">$ cmake --build .
-</span></span><span class="line"><span class="cl">Scanning dependencies of target conversion
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 7%<span class="o">]</span> Building CXX object external/CMakeFiles/conversion.dir/conversion.cpp.o
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 14%<span class="o">]</span> Linking CXX static library ../lib64/libconversion.a
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 14%<span class="o">]</span> Built target conversion
-</span></span><span class="line"><span class="cl">Scanning dependencies of target evolution
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 21%<span class="o">]</span> Building CXX object src/evolution/CMakeFiles/evolution.dir/evolution.cpp.o
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 28%<span class="o">]</span> Linking CXX static library ../../lib64/libevolution.a
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 28%<span class="o">]</span> Built target evolution
-</span></span><span class="line"><span class="cl">Scanning dependencies of target initial
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 35%<span class="o">]</span> Building CXX object src/initial/CMakeFiles/initial.dir/initial.cpp.o
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 42%<span class="o">]</span> Linking CXX static library ../../lib64/libinitial.a
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 42%<span class="o">]</span> Built target initial
-</span></span><span class="line"><span class="cl">Scanning dependencies of target io
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 50%<span class="o">]</span> Building CXX object src/io/CMakeFiles/io.dir/io.cpp.o
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 57%<span class="o">]</span> Linking CXX static library ../../lib64/libio.a
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 57%<span class="o">]</span> Built target io
-</span></span><span class="line"><span class="cl">Scanning dependencies of target parser
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 64%<span class="o">]</span> Building CXX object src/parser/CMakeFiles/parser.dir/parser.cpp.o
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 71%<span class="o">]</span> Linking CXX static library ../../lib64/libparser.a
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 71%<span class="o">]</span> Built target parser
-</span></span><span class="line"><span class="cl">Scanning dependencies of target automata
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 78%<span class="o">]</span> Building CXX object src/CMakeFiles/automata.dir/main.cpp.o
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 85%<span class="o">]</span> Linking CXX executable ../bin/automata
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 85%<span class="o">]</span> Built target automata
-</span></span><span class="line"><span class="cl">Scanning dependencies of target cpp_test
-</span></span><span class="line"><span class="cl"><span class="o">[</span> 92%<span class="o">]</span> Building CXX object tests/CMakeFiles/cpp_test.dir/test.cpp.o
-</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Linking CXX executable ../bin/cpp_test
-</span></span><span class="line"><span class="cl"><span class="o">[</span>100%<span class="o">]</span> Built target cpp_test
-</span></span><span class="line"><span class="cl">$ ctest
-</span></span><span class="line"><span class="cl">Running tests...
-</span></span><span class="line"><span class="cl">Start 1: test_evolution
-</span></span><span class="line"><span class="cl">1/1 Test <span class="c1">#1: test_evolution ................... Passed 0.00 sec</span>
-</span></span><span class="line"><span class="cl">100% tests passed, <span class="m">0</span> tests failed out of <span class="m">1</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>补充内容</strong></p>
-<p><code>CMake</code>可以使用<code>Graphviz</code>图形可视化软件生成项目的依赖关系图:</p>
-<div class="highlight" id="id-23"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cd build
-</span></span><span class="line"><span class="cl">$ cmake --graphviz=example.dot ..
-</span></span><span class="line"><span class="cl">$ dot -T png example.dot -o example.png</span></span></code></pre></td></tr></table>
-</div>
-</div><br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">cmake 项目关系依赖图</div>
-</center>
-<br>]]></description></item><item><title>CMake 笔记 | [37] 使用废弃函数、宏和变量</title><link>https://jianye0428.github.io/posts/cmake_note_37/</link><pubDate>Wed, 31 Jan 2024 13:51:39 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_37/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><strong><code>废弃</code>是在不断发展的项目开发过程中一种重要机制，它向开发人员发出信号，表明将来某个函数、宏或变量将被删除或替换。在一段时间内，函数、宏或变量将继续可访问，但会发出警告，最终可能会上升为错误。</strong></div>
-    </div>
-  </div>
-<h2 id="二项目结构">二、项目结构</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
-</span></span><span class="line"><span class="cl">├── cmake
-</span></span><span class="line"><span class="cl">│   └── custom_guard.cmake
-</span></span><span class="line"><span class="cl">└── CMakeLists.txt</span></span></code></pre></td></tr></table>
-</div>
-</div><p>项目结构：</p>
-<blockquote>
-<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter7/06"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter7/06<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<h2 id="三相关源码">三、相关源码</h2>
-<p><strong>CMakeLists.txt</strong></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">example</span> <span class="n">LANGUAGES</span> <span class="n">NONE</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">macro</span><span class="p">(</span><span class="n">custom_include_guard</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">DEFINED</span> <span class="n">included_modules</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">included_modules</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="s">&#34;${CMAKE_CURRENT_LIST_FILE}&#34;</span> <span class="n">IN_LIST</span> <span class="n">included_modules</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="p">(</span><span class="n">WARNING</span> <span class="s">&#34;module ${CMAKE_CURRENT_LIST_FILE} processed more than once&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">list</span><span class="p">(</span><span class="n">APPEND</span> <span class="n">included_modules</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_FILE</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl"><span class="n">endmacro</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">function</span><span class="p">(</span><span class="n">deprecate_variable</span> <span class="n">_variable</span> <span class="n">_access</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">_access</span> <span class="n">STREQUAL</span> <span class="s">&#34;READ_ACCESS&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="p">(</span><span class="n">DEPRECATION</span> <span class="s">&#34;variable ${_variable} is deprecated&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="n">endfunction</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">CMAKE_VERSION</span> <span class="n">VERSION_GREATER</span> <span class="s">&#34;3.9&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="cp"># deprecate custom_include_guard
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>  <span class="n">macro</span><span class="p">(</span><span class="n">custom_include_guard</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="p">(</span><span class="n">DEPRECATION</span> <span class="s">&#34;custom_include_guard is deprecated - use built-in include_guard instead&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">_custom_include_guard</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">ARGV</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endmacro</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="cp"># deprecate variable included_modules
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>  <span class="n">variable_watch</span><span class="p">(</span><span class="n">included_modules</span> <span class="n">deprecate_variable</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">cmake</span><span class="o">/</span><span class="n">custom_guard</span><span class="p">.</span><span class="n">cmake</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;list of all included modules: ${included_modules}&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">macro</span><span class="p">(</span><span class="n">custom_include_guard</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">NOT</span> <span class="n">DEFINED</span> <span class="n">included_modules</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">set</span><span class="p">(</span><span class="n">included_modules</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="s">&#34;${CMAKE_CURRENT_LIST_FILE}&#34;</span> <span class="n">IN_LIST</span> <span class="n">included_modules</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="p">(</span><span class="n">WARNING</span> <span class="s">&#34;module ${CMAKE_CURRENT_LIST_FILE} processed more than once&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">list</span><span class="p">(</span><span class="n">APPEND</span> <span class="n">included_modules</span> <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_FILE</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl"><span class="n">endmacro</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>定义了一个自定义的<code>包含保护</code>机制，包括一个自定义模块(与上一篇内容相同)，并打印所有包含模块的列表。对于<code>CMake 3.10</code>或更高版本有内置的<code>include_guard</code>。但是，不能简单地删除<code>custom_include_guard</code>和<code>${included_modules}</code>，而是使用一个<code>废弃</code>警告来弃用宏和变量。某个时候，可以将该警告转换为<code>FATAL_ERROR</code>，使代码停止配置，并迫使开发人员对代码进行修改，切换到内置命令。</p></div>
-    </div>
-  </div>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>引用<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p><code>废弃</code>函数、宏和变量的方法如下:</p>
-<p>1.定义一个函数，使用它来弃用一个变量</p>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">function</span><span class="p">(</span><span class="n">deprecate_variable</span> <span class="n">_variable</span> <span class="n">_access</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span><span class="p">(</span><span class="n">_access</span> <span class="n">STREQUAL</span> <span class="s">&#34;READ_ACCESS&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">      <span class="n">message</span><span class="p">(</span><span class="n">DEPRECATION</span> <span class="s">&#34;variable ${_variable} is deprecated&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endif</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="n">endfunction</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>2.如果<code>CMake</code>的版本大于<code>3.9</code>，我们重新定义<code>custom_include_guard</code>并将<code>variable_watch</code>附加到<code>included_modules</code>中:</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span><span class="lnt">9
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">CMAKE_VERSION</span> <span class="n">VERSION_GREATER</span> <span class="s">&#34;3.9&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="cp"># deprecate custom_include_guard
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>  <span class="n">macro</span><span class="p">(</span><span class="n">custom_include_guard</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="p">(</span><span class="n">DEPRECATION</span> <span class="s">&#34;custom_include_guard is deprecated - use built-in include_guard instead&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="n">_custom_include_guard</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">ARGV</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl">  <span class="n">endmacro</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">  <span class="cp"># deprecate variable included_modules
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span>  <span class="n">variable_watch</span><span class="p">(</span><span class="n">included_modules</span> <span class="n">deprecate_variable</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">endif</span><span class="p">()</span></span></span></code></pre></td></tr></table>
-</div>
-</div></div>
-    </div>
-  </div>
-<p><strong>cmake/custom_guard.cmake</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">custom_include_guard</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="n">message</span><span class="p">(</span><span class="n">STATUS</span> <span class="s">&#34;custom.cmake is included and processed&#34;</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="四结果展示">四、结果展示</h2>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ mkdir -p build
-</span></span><span class="line"><span class="cl">$ <span class="nb">cd</span> build
-</span></span><span class="line"><span class="cl">$ cmake ..</span></span></code></pre></td></tr></table>
-</div>
-</div><p><code>CMake3.10</code>以下版本的项目会产生以下结果:</p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">-- custom_custom.cmake is included and processed
-</span></span><span class="line"><span class="cl">-- list of all included modules: /home/jiangli/repo/tutorials/cmake-tutorial/chapter7/06/cmake/custom.cmake</span></span></code></pre></td></tr></table>
-</div>
-</div><p><code>CMake3.10</code>以下版本的项目会产生以下结果:</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">CMake Deprecation Warning at CMakeLists.txt:26 <span class="o">(</span>message<span class="o">)</span>:
-</span></span><span class="line"><span class="cl">  custom_include_guard is deprecated - use built-in include_guard instead
-</span></span><span class="line"><span class="cl">Call Stack <span class="o">(</span>most recent call first<span class="o">)</span>:
-</span></span><span class="line"><span class="cl">  cmake/custom_guard.cmake:1 <span class="o">(</span>custom_include_guard<span class="o">)</span>
-</span></span><span class="line"><span class="cl">  CMakeLists.txt:34 <span class="o">(</span>include<span class="o">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">-- custom_custom.cmake is included and processed
-</span></span><span class="line"><span class="cl">CMake Deprecation Warning at CMakeLists.txt:19 <span class="o">(</span>message<span class="o">)</span>:
-</span></span><span class="line"><span class="cl">  variable included_modules is deprecated
-</span></span><span class="line"><span class="cl">Call Stack <span class="o">(</span>most recent call first<span class="o">)</span>:
-</span></span><span class="line"><span class="cl">  CMakeLists.txt:9999 <span class="o">(</span>deprecate_variable<span class="o">)</span>
-</span></span><span class="line"><span class="cl">  CMakeLists.txt:36 <span class="o">(</span>message<span class="o">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">-- list of all included modules: /home/jiangli/repo/tutorials/cmake-tutorial/chapter7/06/cmake/custom_guard.cmake
-</span></span><span class="line"><span class="cl">-- Configuring <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Generating <span class="k">done</span>
-</span></span><span class="line"><span class="cl">-- Build files have been written to: /home/jiangli/repo/tutorials/cmake-tutorial/chapter7/06/build</span></span></code></pre></td></tr></table>
-</div>
-</div>]]></description></item></channel></rss>
+]]></description></item></channel></rss>
