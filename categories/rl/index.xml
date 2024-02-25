@@ -1,4 +1,1050 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>RL - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/rl/</link><description>RL - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 25 Feb 2024 11:16:48 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/rl/" rel="self" type="application/rss+xml"/><item><title>强化学习笔记 [11] | Prioritized Replay DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_11/</link><pubDate>Sun, 25 Feb 2024 11:16:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_11/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>RL - 分类 - yejian's blog</title><link>https://jianye0428.github.io/categories/rl/</link><description>RL - 分类 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 25 Feb 2024 19:53:22 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/categories/rl/" rel="self" type="application/rss+xml"/><item><title>强化学习笔记 [19] | AlphaGo Zero强化学习原理</title><link>https://jianye0428.github.io/posts/rl_learning_note_19/</link><pubDate>Sun, 25 Feb 2024 19:53:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_19/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/10470571.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十八) 基于模拟的搜索与蒙特卡罗树搜索(MCTS)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了MCTS的原理和在棋类中的基本应用。这里我们在前一节MCTS的基础上，讨论下DeepMind的AlphaGo Zero强化学习原理。</p>
+<p>本篇主要参考了AlphaGo Zero的<a href="https://www.nature.com/articles/nature24270.epdf?author_access_token=VJXbVjaSHxFoctQQ4p2k4tRgN0jAjWel9jnR3ZoTv0PVW4gB86EEpGqTRDtpIz-2rmo8-KG06gqVobU5NSCFeHILHcVFUeMsbvwS-lxjqQGg98faovwjxeTUgZAUMnRQ"target="_blank" rel="external nofollow noopener noreferrer">论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>, <a href="https://www.hhyz.me/2018/08/08/2018-08-08-AlphaGO-Zero/"target="_blank" rel="external nofollow noopener noreferrer">AlphaGo Zero综述<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和AlphaGo Zero Cheat Sheet。</p>
+<h1 id="1-alphago-zero模型基础">1. AlphaGo Zero模型基础</h1>
+<p>AlphaGo Zero不需要学习人类的棋谱，通过自我对弈完成棋力提高。主要使用了两个模型，第一个就是我们上一节介绍MCTS树结构，另一个是一个神经网络。MCTS上一篇已经有基本介绍了，对于神经网络，它的输入是当前的棋局状态，输出两部分，第一部分输出是在当前棋局状态下各个可能的落子动作对应的获胜概率p，可以简单理解为Actor-Critic策略函数部分。另一部分输出为获胜或者失败的评估[-1,1]，可以简单理解为Actor-Critic价值函数部分。</p>
+<p>AlphaGo Zero的行棋主要是由MCTS指导完成的，但是在MCTS搜索的过程中，由于有一些不在树中的状态需要仿真，做局面评估，因此需要一个简单的策略来帮助MCTS评估改进策略，这个策略改进部分由前面提到的神经网络完成。</p>
+<p>这两部分的关系如下图所示：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">AlphaGo Zero 中的MCTS和NN</div>
+</center>
+<br>
+<p>具体AlphaGo Zero的MCTS如何搜索，神经网络如何训练，如何指导MCTS搜索我们在后面再讲。</p>
+<h1 id="2-alphago-zero的训练过程简介">2. AlphaGo Zero的训练过程简介</h1>
+<p>在讨论AlphaGo Zero的MCTS如何搜索，神经网络如何训练等细节之前，我们先看看AlphaGo Zero的训练过程是什么样的。</p>
+<p>AlphaGo Zero训练过程主要分为三个阶段：自我对战学习阶段，训练神经网络阶段和评估网络阶段。</p>
+<p>自我对战学习阶段主要是AlphaGo Zero自我对弈，产生大量棋局样本的过程，由于AlphaGo Zero并不使用围棋大师的棋局来学习，因此需要自我对弈得到训练数据用于后续神经网络的训练。在自我对战学习阶段，每一步的落子是由MCTS搜索来完成的。在MCTS搜索的过程中，遇到不在树中的状态，则使用神经网络的结果来更新MCTS树结构上保存的内容。在每一次迭代过程中，在每个棋局当前状态 $s$ 下，每一次移动使用1600次MCTS搜索模拟。最终MCTS给出最优的落子策略 $π$ ,这个策略 $π$ 和神经网络的输出 $p$ 是不一样的。当每一局对战结束后，我们可以得到最终的胜负奖励 $z$ ,1或者-1. 这样我们可以得到非常多的样本 $(s,π,z)$,这些数据可以训练神经网络阶段。</p>
+<p>在训练神经网络阶段，我们使用自我对战学习阶段得到的样本集合(s,π,z)(�,�,�),训练我们神经网络的模型参数。训练的目的是对于每个输入 $s$, 神经网络输出的 $p,v$和我们训练样本中的 $π$, $z$差距尽可能的少。这个损失函数 $L$ 其实是很简单的：</p>
+<p>$$L=(z-v)^2-\pi^Tlog(p)+c||\theta||^2$$</p>
+<p>损失函数由三部分组成，第一部分是均方误差损失函数，用于评估神经网络预测的胜负结果和真实结果之间的差异。第二部分是交叉熵损失函数，用于评估神经网络的输出策略和我们MCTS输出的策略的差异。第三部分是L2正则化项。</p>
+<p>通过训练神经网络，我们可以优化神经网络的参数 $θ$,用于后续指导我们的MCTS搜索过程。</p>
+<p>当神经网络训练完毕后，我们就进行了评估阶段，这个阶段主要用于确认神经网络的参数是否得到了优化，这个过程中，自我对战的双方各自使用自己的神经网络指导MCTS搜索，并对战若干局，检验AlphaGo Zero在新神经网络参数下棋力是否得到了提高。除了神经网络的参数不同，这个过程和第一阶段的自我对战学习阶段过程是类似的。</p>
+<h1 id="3-alphago-zero的神经网络结构">3. AlphaGo Zero的神经网络结构</h1>
+<p>在第二节我们已经讨论了AlphaGo Zero的主要训练过程，但是还有两块没有讲清楚，一是AlphaGo Zero的MCTS搜索过程是怎么样的，二是AlphaGo Zero的神经网络的结构具体是什么样的。这一节我们来看看AlphaGo Zero的神经网络的细节。</p>
+<p>首先我们看看AlphaGo Zero的输入，当前的棋局状态。由于围棋是19x19的361个点组成的棋局，每个点的状态有二种：如果当前是黑方行棋，则当前有黑棋的点取值1，有白棋或者没有棋子的位置取值为0，反过来，如果当前是白方行棋，则当前有白棋的点取值1，有黑棋或者没有棋子的位置取值为0。同时，为了提供更多的信息，输入的棋局状态不光只有当前的棋局状态，包括了黑棋白棋各自前8步对应的棋局状态。除了这16个棋局状态，还有一个单独的棋局状态用于标识当前行棋方，如果是当前黑棋行棋，则棋局状态上标全1，白棋则棋局状态上标全0。如下图所示：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Game State</div>
+</center>
+<br>
+<p>最终神经网络的输入是一个19x19x17的张量。里面包含黑棋和白棋的最近8步行棋状态和当前行棋方的信息。</p>
+<p>接着我们看看神经网络的输出，神经网络的输出包括策略部分和价值部分。对于策略部分，它预测当前各个行棋点落子的概率。由于围棋有361个落子点，加上还可以Pass一手，因此一共有362个策略端概率输出。对于价值端，输出就简单了，就是当前局面胜负的评估值，在[-1,1]之间。</p>
+<p>看完了神经网络的输入和输出，我们再看看神经网络的结构，主要是用CNN组成的深度残差网络。如下图所示：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;"></div>
+</center>
+<br>
+<p>在19x19x17的张量做了一个基本的卷积后，使用了19层或者39层的深度残差网络，这个是ResNet的经典结构。理论上这里也可以使用DenseNet等其他流行的网络结构。神经网络的损失函数部分我们在第二节已经将了。整个神经网络就是为了当MCTS遇到没有见过的局面时，提供的当前状态下的局面评估和落子概率参考。这部分信息会被MCTS后续综合利用。</p>
+<h1 id="4-alphago-zero的mcts搜索">4. AlphaGo Zero的MCTS搜索</h1>
+<p>　　　　现在我们来再看看AlphaGo Zero的MCTS搜索过程，在<a href="https://www.cnblogs.com/pinard/p/10470571.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十八) 基于模拟的搜索与蒙特卡罗树搜索(MCTS)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>里，我们已经介绍了MCTS的基本原理，和4个主要的搜索阶段：选择，扩展，仿真和回溯。和上一篇的内容相比，这里MCTS的不同主要体现在树结构上保存的信息不同，进而UCT的计算公式也稍有不同。最后MCTS搜索完毕后，AlphaGo Zero也有自己选择真正落子点的策略。</p>
+<p>　　　　在上一篇里，我们的MCTS上保存的数据很简单，就是下的总盘数和赢的总盘数。在AlphaGo Zero这里，我们保存的信息会多一些。主要包括下面的4部分：</p>
+<ul>
+<li>$N(s,a)$:记录边的访问次数</li>
+<li>$W(s,a)$: 合计行动价值</li>
+<li>$Q(s,a)$:平均行动价值</li>
+<li>$P(s,a)$:选择该条边的先验概率</li>
+</ul>
+<p>其中 $s$ 为当前棋局状态，$a$ 为某一落子选择对应的树分支。</p>
+<p>有了MCTS上的数据结构，我们看看AlphaGo Zero的MCTS搜索的4个阶段流程：</p>
+<p>首先是选择，在MCTS内部，出现过的局面，我们会使用UCT选择子分支。子分支的UCT原理和上一节一样。但是具体的公式稍有不同，如下：</p>
+<p>$$\begin{gathered}
+U(s,a)=c_{puct}P(s,a)\frac{\sqrt{\sum_bN(s,b)}}{1+N(s,a)} \\
+a_t=\arg\max_a(Q(s_t,a)+U(s_t,a))
+\end{gathered}$$</p>
+<p>最终我们会选择 $Q+U$最大的子分支作为搜索分支，一直走到棋局结束，或者走到了没有到终局MCTS的叶子节点。$c_{puct}$是决定探索程度的一个系数,上一篇已讲过。</p>
+<p>如果到了没有到终局的MCTS叶子节点，那么我们就需要进入MCTS的第二步，扩展阶段,以及后续的第三步仿真阶段。我们这里一起讲。对于叶子节点状态s�，会利用神经网络对叶子节点做预测，得到当前叶子节点的各个可能的子节点位置sL��落子的概率p�和对应的价值v�,对于这些可能的新节点我们在MCTS中创建出来，初始化其分支上保存的信息为：</p>
+<p>$$\{N(s_L,a)=0,W(s_L,a)=0,Q(s_L,a)=0,P(s_L,a)=P_a\}$$</p>
+<p>这个过程如下图所示：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;"></div>
+</center>
+<br>
+<p>这样扩展后，之前的叶子节点 $s$，现在就是内部节点了。做完了扩展和仿真后，我们需要进行回溯，将新叶子节点分支的信息回溯累加到祖先节点分支上去。这个回溯的逻辑也是很简单的，从每个叶子节点 $L$ 依次向根节点回溯，并依次更新上层分支数据结构如下：</p>
+<p>$$\begin{gathered}
+N(s_t,a_t)=N(s_t,a_t)+1 \\
+W(s_t,a_t)=W(s_t,a_t)+v \\
+Q(s_t,a_t)=\frac{W(s_t,a_t)}{N(s_t,a_t)}
+\end{gathered}$$</p>
+<p>这个MCTS搜索过程在一次真正行棋前，一般会进行约1600次搜索，每次搜索都会进行上述4个阶段。</p>
+<p>这上千次MCTS搜索完毕后，AlphaGo Zero就可以在MCTS的根节点 $s$ 基于以下公式选择行棋的MCTS分支了:</p>
+<p>$$\pi(a|s)=\frac{N(s,a)^{1/\tau}}{\sum_bN(s,b)^{1/\tau}}$$</p>
+<p>其中，$τ$ 为温度参数，控制探索的程度，$τ$ 越大，不同走法间差异变小，探索比例增大，反之，则更多选择当前最优操作。每一次完整的自我对弈的前30步，参数 $τ=1$，这是早期鼓励探索的设置。游戏剩下的步数，该参数将逐渐降低至0。如果是比赛，则直接为0.</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;"></div>
+</center>
+<br>
+<p>同时在随后的时间步中，这个MCTS搜索树将会继续使用，对应于实际所采取的行为的子节点将变成根节点，该子节点下的子树的统计数据将会被保留，而这颗树的其余部分将会丢弃 。</p>
+<p>以上就是AlphaGo Zero MCTS搜索的过程。</p>
+<h1 id="5-alphago-zero小结与强化学习系列小结">5. AlphaGo Zero小结与强化学习系列小结</h1>
+<p>AlphaGo Zero巧妙了使用MCTS搜索树和神经网络一起，通过MCTS搜索树优化神经网络参数，反过来又通过优化的神经网络指导MCTS搜索。两者一主一辅，非常优雅的解决了这类状态完全可见，信息充分的棋类问题。</p>
+<p>当然这类强化学习算法只对特定的这类完全状态可见，信息充分的问题有效，遇到信息不对称的强化学习问题，比如星际，魔兽之类的对战游戏问题，这个算法就不那么有效了。要推广AlphaGo Zero的算法到大多数普通强化学习问题还是很难的。因此后续强化学习算法应该还有很多发展的空间。</p>
+<p>至此强化学习系列就写完了，之前预计的是写三个月，结果由于事情太多，居然花了大半年。但是总算还是完成了，没有烂尾。生活不易，继续努力！</p>
+]]></description></item><item><title>强化学习笔记 [18] | 基于模拟的搜索与蒙特卡罗树搜索(MCTS)</title><link>https://jianye0428.github.io/posts/rl_learning_note_18/</link><pubDate>Sun, 25 Feb 2024 19:53:18 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_18/</guid><description><![CDATA[<ul>
+<li></li>
+</ul>
+<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/10384424.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十七) 基于模型的强化学习与Dyna算法框架<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论基于模型的强化学习方法的基本思路，以及集合基于模型与不基于模型的强化学习框架Dyna。本文我们讨论另一种非常流行的集合基于模型与不基于模型的强化学习方法：基于模拟的搜索(Simulation Based Search)。</p>
+<p>本篇主要参考了UCL强化学习课程的第八讲，第九讲部分。</p>
+<h1 id="1-基于模拟的搜索概述">1. 基于模拟的搜索概述</h1>
+<p>什么是基于模拟的搜索呢？当然主要是两个点：一个是模拟，一个是搜索。模拟我们在上一篇也讨论过，就是基于强化学习模型进行采样，得到样本数据。但是这是数据不是基于和环境交互获得的真实数据，所以是“模拟”。对于搜索，则是为了利用模拟的样本结果来帮我们计算到底应该采用什么样的动作，以实现我们的长期受益最大化。</p>
+<p>那么为什么要进行基于模拟的搜索呢？在这之前我们先看看最简单的前向搜索(forward search)。前向搜索算法从当前我们考虑的状态节点 $S_t$ 开始考虑，怎么考虑呢？对该状态节点所有可能的动作进行扩展，建立一颗以 $S_t$ 为根节点的搜索树，这个搜索树也是一个MDP，只是它是以当前状态为根节点，而不是以起始状态为根节点，所以也叫做sub-MDP。我们求解这个sub-MDP问题，然后得到 $S_t$状态最应该采用的动作 $A_t$。前向搜索的sub-MDP如下图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">forward search sub-MDP</div>
+</center>
+<br>
+<p>前向搜索建立了一个sub-MDP来求解，这很精确，而且这在状态动作数量都很少的时候没有问题，但是只要稍微状态动作数量多一点，每个状态的选择就都特别慢了，因此不太实用，此时基于模拟的搜索就是一种比较好的折衷。</p>
+<h1 id="2-简单蒙特卡罗搜索">2. 简单蒙特卡罗搜索</h1>
+<p>首先我们看看基于模拟的搜索中比较简单的一种方法：简单蒙特卡罗搜索。</p>
+<p>简单蒙特卡罗搜索基于一个强化学习模型 $M_v$ 和一个模拟策略 $π$.在此基础上，对于当前我们要选择动作的状态 $S_t$, 对每一个可能采样的动作 $a∈A$,都进行 $K$ 轮采样，这样每个动作 $a$ 都会得到 $K$ 组经历完整的状态序列(episode)。即：</p>
+<p>$$\{S_t,a,R_{t+1}^k,S_{t+1}^k,A_{t+1}^k,\ldots\ldots S_T^k\}_{k=1}^K\sim M_v,\pi $$</p>
+<p>现在对于每个 $(S_t,a)$ 组合，我们可以基于蒙特卡罗法来计算其动作价值函数并选择最优的动作了。</p>
+<p>$$\begin{gathered}Q(S_t,a)=\frac1K\sum_{k=1}^KG_t\\a_t=\arg\max_{a\in A}Q(S_t,a)\end{gathered}$$</p>
+<p>简单蒙特卡罗搜索和起前向搜索比起来，对于状态动作数量的处理能力上了一个数量级,可以处理中等规模的问题。但是假如我们的状态动作数量达到非常大的量级，比如围棋的级别,那么简单蒙特卡罗搜索也太慢了。同时，由于使用蒙特卡罗法计算其动作价值函数，模拟采样得到的一些中间状态和对应行为的价值就被忽略了，这部分数据能不能利用起来呢？</p>
+<p>下面我们看看蒙特卡罗树搜索(Monte-Carlo Tree Search，以下简称MCTS)怎么优化这个问题的解决方案。</p>
+<h1 id="3-mcts的原理">3. MCTS的原理</h1>
+<p>MCTS摒弃了简单蒙特卡罗搜索里面对当前状态 $S_t$ 每个动作都要进行K次模拟采样的做法，而是总共对当前状态 $S_t$进行K次采样，这样采样到的动作只是动作全集 $A$ 中的一部分。这样做大大降低了采样的数量和采样后的搜索计算。当然，代价是可能动作全集中的很多动作都没有采样到，可能错失好的动作选择，这是一个算法设计上的折衷。</p>
+<p>在MCTS中，基于一个强化学习模型 $M_v$和一个模拟策略$π$，当前状态 $S_t$ 对应的完整的状态序列(episode)是这样的:</p>
+<p>$$\{S_t,A_t^k,R_{t+1}^k,S_{t+1}^k,A_{t+1}^k,\ldots\ldots S_T^k\}_{k=1}^K\sim M_v,\pi $$</p>
+<p>采样完毕后，我们可以基于采样的结果构建一颗MCTS的搜索树，然后近似计算 $Q(st,a)$和最大 $Q(s_t,a)$对应的动作。</p>
+<p>$$\begin{gathered}Q(S_t,a)=\frac1{N(S_t,a)}\sum_{k=1}^K\sum_{u=t}^T1(S_{uk}=S_t,A_{uk}=a)G_u\\a_t=\arg\max_{a\in A}Q(S_t,a)\end{gathered}$$</p>
+<p>MCTS搜索的策略分为两个阶段：第一个是树内策略(tree policy)：为当模拟采样得到的状态存在于当前的MCTS时使用的策略。树内策略可以使 $ϵ−$贪婪策略，随着模拟的进行策略可以得到持续改善，还可以使用上限置信区间算法UCT，这在棋类游戏中很普遍；第二个是默认策略(default policy)：如果当前状态不在MCTS内，使用默认策略来完成整个状态序列的采样，并把当前状态纳入到搜索树中。默认策略可以使随机策略或基于目标价值函数的策略。</p>
+<p>这里讲到的是最经典的强化学习终MCTS的用户，每一步都有延时奖励，但是在棋类之类的零和问题中，中间状态是没有明确奖励的，我们只有在棋下完后知道输赢了才能对前面的动作进行状态奖励，对于这类问题我们的MCTS需要做一些结构上的细化。</p>
+<h1 id="4-上限置信区间算法uct">4. 上限置信区间算法UCT</h1>
+<p>在讨论棋类游戏的MCTS搜索之前，我们先熟悉下上限置信区间算法(Upper Confidence Bound Applied to Trees, 以下简称UCT)。它是一种策略算法，我们之前最常用的是 $ϵ−$贪婪策略。但是在棋类问题中，UCT更常使用。</p>
+<p>在棋类游戏中，经常有这样的问题，我们发现在某种棋的状态下，有2个可选动作，第一个动作历史棋局中是0胜1负，第二个动作历史棋局中是8胜10负，那么我们应该选择哪个动作好呢？如果按 $ϵ−$贪婪策略，则第二个动作非常容易被选择到。但是其实虽然第一个动作胜利0%，但是很可能是因为这个动作的历史棋局少，数据不够导致的，很可能该动作也是一个不错的动作。那么我们如何在最优策略和探索度达到一个选择平衡呢？ $ϵ−$贪婪策略可以用，但是UCT是一个更不错的选择。</p>
+<p>UCT首先计算每一个可选动作节点对应的分数，这个分数考虑了历史最优策略和探索度吗，一个常用的公式如下：</p>
+<p>$$\text{score}=\left.\frac{w_i}{n_i}+c\sqrt{\frac{\ln N_i}{n_i}}\right.$$</p>
+<p>其中，$w_i$ 是 i 节点的胜利次数，$n_i$ 是i节点的模拟次数，$N_i$ 是所有模拟次数，c 是探索常数，理论值为$√2$，可根据经验调整，$c$ 越大就越偏向于广度搜索，$c$ 越小就越偏向于深度搜索。最后我们选择分数最高的动作节点。</p>
+<p>比如对于下面的棋局，对于根节点来说，有3个选择，第一个选择7胜3负，第二个选择5胜3负，第三个选择0胜3负。</p>
+<p>如果我们取c=10,则第一个节点的分数为：$$score(7,10)=7/10+C\cdot\sqrt{\frac{\log(21)}{10}}\approx6.2$$</p>
+<p>第二个节点的分数为：$$score(5,8)=5/8+C\cdot\sqrt{\frac{\log(21)}8}\approx6.8$$</p>
+<p>第三个节点的分数为：$$score(0,3)=0/3+C\cdot\sqrt{\frac{\log(21)}3}\approx10$$</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;"></div>
+</center>
+<br>
+<p>可见，由于我们把探索率 $c$ 设置的比较大，第三个节点是被UCT选中要执行的动作节点。当然如果我们把c设置的比较小的话，第一个或者第二个可能就变成最大的分数了。</p>
+<h1 id="5-棋类游戏mcts搜索">5. 棋类游戏MCTS搜索</h1>
+<p>在像中国象棋，围棋这样的零和问题中，一个动作只有在棋局结束才能拿到真正的奖励，因此我们对MCTS的搜索步骤和树结构上需要根据问题的不同做一些细化。</p>
+<p>对于MCTS的树结构，如果是最简单的方法，只需要在节点上保存状态对应的历史胜负记录。在每条边上保存采样的动作。这样MCTS的搜索需要走4步，如下图(图来自维基百科)：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>第一步是选择(Selection):这一步会从根节点开始，每次都选一个“最值得搜索的子节点”，一般使用UCT选择分数最高的节点，直到来到一个“存在未扩展的子节点”的节点，如图中的 3/3 节点。之所以叫做“存在未扩展的子节点”，是因为这个局面存在未走过的后续着法，也就是MCTS中没有后续的动作可以参考了。这时我们进入第二步。</p>
+<p>第二步是扩展(Expansion)，在这个搜索到的存在未扩展的子节点，加上一个0/0的子节点，表示没有历史记录参考。这时我们进入第三步。</p>
+<p>第三步是仿真(simulation)，从上面这个没有试过的着法开始，用一个简单策略比如快速走子策略（Rollout policy）走到底，得到一个胜负结果。快速走子策略一般适合选择走子很快可能不是很精确的策略。因为如果这个策略走得慢，结果虽然会更准确，但由于耗时多了，在单位时间内的模拟次数就少了，所以不一定会棋力更强，有可能会更弱。这也是为什么我们一般只模拟一次，因为如果模拟多次，虽然更准确，但更慢。</p>
+<p>第四步是回溯(backpropagation), 将我们最后得到的胜负结果回溯加到MCTS树结构上。注意除了之前的MCTS树要回溯外，新加入的节点也要加上一次胜负历史记录，如上图最右边所示。</p>
+<p>以上就是MCTS搜索的整个过程。这4步一般是通用的，但是MCTS树结构上保存的内容而一般根据要解决的问题和建模的复杂度而不同。</p>
+<h1 id="6-mcts小结">6. MCTS小结</h1>
+<p>MCTS通过采样建立MCTS搜索树，并基于4大步骤选择，扩展，仿真和回溯来持续优化树内的策略，进而可以帮助对状态下的动作进行选择，非常适合状态数，动作数海量的强化学习问题。比如AlphaGo和AlphaGo Zero都重度使用了MCTS搜索，我们在下一篇讨论AlphaGo Zero如何结合MCTS和神经网络来求解围棋强化学习问题。</p>
+]]></description></item><item><title>强化学习笔记 [17] | 基于模型的强化学习与Dyna算法框架</title><link>https://jianye0428.github.io/posts/rl_learning_note_17/</link><pubDate>Sun, 25 Feb 2024 19:53:15 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_17/</guid><description><![CDATA[<h1 id="强化学习十七-基于模型的强化学习与dyna算法框架httpswwwcnblogscompinardp10384424html"><a href="https://www.cnblogs.com/pinard/p/10384424.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十七) 基于模型的强化学习与Dyna算法框架<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></h1>
+<p>在前面我们讨论了基于价值的强化学习(Value Based RL)和基于策略的强化学习模型(Policy Based RL)，本篇我们讨论最后一种强化学习流派，基于模型的强化学习(Model Based RL)，以及基于模型的强化学习算法框架Dyna。</p>
+<p>本篇主要参考了UCL强化学习课程的第8讲和Dyna-2的<a href="https://www.davidsilver.uk/wp-content/uploads/2020/03/dyna2_compressed.pdf"target="_blank" rel="external nofollow noopener noreferrer">论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。</p>
+<h1 id="1-基于模型的强化学习简介">1. 基于模型的强化学习简介</h1>
+<p>基于价值的强化学习模型和基于策略的强化学习模型都不是基于模型的，它们从价值函数，策略函数中直接去学习，不用学习环境的状态转化概率模型，即在状态 $s$ 下采取动作 $a$,转到下一个状态 $s&rsquo;$ 的概率 $P^a_{ss&rsquo;}$。</p>
+<p>而基于模型的强化学习则会尝试从环境的模型去学习，一般是下面两个相互独立的模型：</p>
+<ul>
+<li>一个是状态转化预测模型，输入当前状态 $s$和动作 $a$，预测下一个状态 $s&rsquo;$。</li>
+<li>另一个是奖励预测模型，输入当前状态 $s$和动作 $a$，预测环境的奖励 $r$。</li>
+</ul>
+<p>即模型可以描述为下面两个式子：</p>
+<p>$$\begin{gathered}S_{t+1}\sim P(S_{t+1}|S_t,A_t)\\R_{t+1}\sim R(R_{t+1}|S_t,A_t)\end{gathered}$$</p>
+<p>如果模型 $P$, $R$ 可以准确的描述真正的环境的转化模型，那么我们就可以基于模型来预测，当有一个新的状态 $S$ 和动作 $A$到来时，我们可以直接基于模型预测得到新的状态和动作奖励，不需要和环境交互。当然如果我们的模型不好，那么基于模型预测的新状态和动作奖励可能错的离谱。</p>
+<p>从上面的描述我们可以看出基于模型的强化学习和不基于模型的强化学习的主要区别：即基于模型的强化学习是从模型中学习，而不基于模型的强化学习是从和环境交互的经历去学习。</p>
+<p>下面这张图描述了基于模型的强化学习的思路：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Model-based RL</div>
+</center>
+<br>
+<h1 id="2-基于模型的强化学习算法训练流程">2. 基于模型的强化学习算法训练流程</h1>
+<p>这里我们看看基于模型的强化学习算法训练流程，其流程和我们监督学习算法是非常类似的。</p>
+<p>假设训练数据是若干组这样的经历：</p>
+<p>$$S_1,A_1,R_2,S_2,A_2,R_2,\ldots,S_T$$</p>
+<p>对于每组经历，我们可以将其转化为 $T−1$ 组训练样本，即：</p>
+<p>$$\begin{gathered}
+S_1,A_1\to S_2,S_1,A_1\to R_2 \\
+S_2,A_2\to S_3,S_2,A_2\to R_3 \\
+&hellip;&hellip; \\
+S_{T-1},A_{T-1}\rightarrow S_T,~S_{T_1},A_{T-1}\rightarrow R_T
+\end{gathered}$$</p>
+<p>右边的训练样本一起组成了一个分类模型或密度估计模型，输入状态和动作，输出下一个状态。 右边的训练样本一起组成了一个回归模型训练集，输入状态和动作，输出动作奖励值。</p>
+<p>至此我们的强化学习求解过程和传统的监督学习算法没有太多区别了，可以使用传统的监督学习算法来求解这两个模型。</p>
+<p>当然还可以更简单，即通过对训练样本进行查表法进行统计，直接得到 $P(S_{t+1}|S_t,A_t)$ 的概率和 $R(R_{t+1}|S_t,A_t)$ 的平均值，这样就可以直接预测。比使用模型更简单。</p>
+<p>此外，还有其他的方法可以用来得到 $P(S_{t+1}|S_t,A_t)$和 $R(R_{t+1}|S_t,A_t)$，这个我们后面再讲。</p>
+<p>虽然基于模型的强化学习思路很清晰，而且还有不要和环境持续交互优化的优点，但是用于实际产品还是有很多差距的。主要是我们的模型绝大多数时候不能准确的描述真正的环境的转化模型，那么使用基于模型的强化学习算法得到的解大多数时候也不是很实用。那么是不是基于模型的强化学习就不能用了呢？也不是，我们可以将基于模型的强化学习和不基于模型的强化学习集合起来，取长补短，这样做最常见的就是Dyna算法框架。</p>
+<h1 id="3-dyna算法框架">3. Dyna算法框架</h1>
+<p>Dyna算法框架并不是一个具体的强化学习算法，而是一类算法框架的总称。Dyna将基于模型的强化学习和不基于模型的强化学习集合起来，既从模型中学习，也从和环境交互的经历去学习，从而更新价值函数和（或）策略函数。如果用和第一节类似的图，可以表示如下图，和第一节的图相比，多了一个“Direct RL“的箭头，这正是不基于模型的强化学习的思路。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Dyna算法示意图</div>
+</center>
+<br>
+<p>Dyna算法框架和不同的具体的不基于模型的强化学习一起，可以得到具体的不同算法。如果我们使用基于价值函数的Q-Learning，那么我们就得到了Dyna-Q算法。我们基于Dyna-Q来看看Dyna算法框架的一般流程.</p>
+<h1 id="4-dyna-q算法流程">4. Dyna-Q算法流程</h1>
+<p>这里我们给出基于价值函数的Dyna-Q算法的概要流程。假设模型使用的是查表法。</p>
+<ul>
+<li>(1). 初始化任意一个状态 $s$,和任意一个动作 $a$ 对应的状态价值 $Q(s,a)$, 初始化奖励模型 $R(s,a)$和状态模型 $P(s,a)$</li>
+<li>(2). for $i=1$ to 最大迭代次数T：
+<ul>
+<li>(a) $S \leftarrow \text{current state}$</li>
+<li>(b) $A \leftarrow \text{ϵ−greedy(S,Q)}$</li>
+<li>(c) 执行动作 $A$,得到新状态 $S&rsquo;$ 和奖励 $R$</li>
+<li>(d) 使用Q-Learning更新价值函数：$Q(S,A)=Q(S,A)+\alpha[R+\gamma\max_aQ(S^{\prime},a)-Q(S,A)]$</li>
+<li>(e) 使用 $S,A,S^{\prime}$ 更新状态模型 $P(s,a)$，使用 $S,A,R$ 更新状态模型 $R(s,a)$</li>
+<li>(f) $\text{for} \space \space j=1 \space \space \text{to} \text{最大次数}n$：
+<ul>
+<li>(i) 随机选择一个之前出现过的状态 $S$ , 在状态 $S$ 上出现过的动作中随机选择一个动作 $A$</li>
+<li>(ii) 基于模型 $P(S,A)$ 得到 $S&rsquo;$, 基于模型 $R(S,A)$ 得到 $R$</li>
+<li>(iii) 使用Q-Learning更新价值函数: $Q(S,A)=Q(S,A)+\alpha[R+\gamma\max_aQ(S^{\prime},a)-Q(S,A)]$</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>从上面的流程可以看出，Dyna框架在每个迭代轮中，会先和环境交互，并更新价值函数和（或）策略函数，接着进行n次模型的预测，同样更新价值函数和（或）策略函数。这样同时利用上了和环境交互的经历以及模型的预测。</p>
+<h1 id="5-dyna-2算法框架">5. Dyna-2算法框架</h1>
+<p>在Dyna算法框架的基础上后来又发展出了Dyna-2算法框架。和Dyna相比，Dyna-2将和和环境交互的经历以及模型的预测这两部分使用进行了分离。还是以Q函数为例，Dyna-2将记忆分为<strong>永久性记忆</strong>（permanent memory）和<strong>瞬时记忆</strong>（transient memory）, 其中永久性记忆利用实际的经验来更新，瞬时记忆利用模型模拟经验来更新。</p>
+<p>永久性记忆的Q函数定义为：</p>
+<p>$$Q(S,A)=\phi(S,A)^T\theta $$</p>
+<p>瞬时记忆的Q函数定义为：</p>
+<p>$$Q^{\prime}(S,A)=\overline{\phi}(S,A)^T\overline{\theta}$$</p>
+<p>组合起来后记忆的Q函数定义为：</p>
+<p>$$\overline{Q}(S,A)=\phi(S,A)^T\theta+\overline{\phi}(S,A)^T\overline{\theta}$$</p>
+<p>Dyna-2的基本思想是在选择实际的执行动作前，智能体先执行一遍从当前状态开始的基于模型的模拟，该模拟将仿真完整的轨迹，以便评估当前的动作值函数。智能体会根据模拟得到的动作值函数加上实际经验得到的值函数共同选择实际要执行的动作。价值函数的更新方式类似于 $SARSA(λ)$</p>
+<p>以下是Dyna-2的算法流程：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Dyna-2 算法流程</div>
+</center>
+<br>
+<h1 id="6-基于模型的强化学习总结">6. 基于模型的强化学习总结</h1>
+<p>基于模型的强化学习一般不单独使用，而是和不基于模型的强化学习结合起来，因此使用Dyna算法框架是常用的做法。对于模型部分，我们可以用查表法和监督学习法等方法，预测或者采样得到模拟的经历。而对于非模型部分，使用前面的Q-Learning系列的价值函数近似，或者基于Actor-Critic的策略函数的近似都是可以的。</p>
+<p>除了Dyna算法框架，我们还可以使用基于模拟的搜索(simulation-based search)来结合基于模型的强化学习和不基于模型的强化学习,并求解问题。这部分我们在后面再讨论。</p>
+]]></description></item><item><title>强化学习笔记 [16] | 深度确定性策略梯度(DDPG)</title><link>https://jianye0428.github.io/posts/rl_learning_note_16/</link><pubDate>Sun, 25 Feb 2024 19:53:12 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_16/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/10334127.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十五) A3C<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了使用多线程的方法来解决Actor-Critic难收敛的问题，今天我们不使用多线程，而是使用和DDQN类似的方法：即经验回放和双网络的方法来改进Actor-Critic难收敛的问题，这个算法就是是深度确定性策略梯度(Deep Deterministic Policy Gradient，以下简称DDPG)。</p>
+<p>本篇主要参考了DDPG的<a href="https://arxiv.org/pdf/1509.02971.pdf"target="_blank" rel="external nofollow noopener noreferrer">论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。</p>
+<h1 id="1-从随机策略到确定性策略">1. 从随机策略到确定性策略</h1>
+<p>从DDPG这个名字看，它是由D（Deep）+D（Deterministic ）+ PG(Policy Gradient)组成。PG(Policy Gradient)我们在<a href="https://www.cnblogs.com/pinard/p/10137696.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十三) 策略梯度(Policy Gradient)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>里已经讨论过。那什么是确定性策略梯度(Deterministic Policy Gradient，以下简称DPG)呢？</p>
+<p>确定性策略是和随机策略相对而言的，对于某一些动作集合来说，它可能是连续值，或者非常高维的离散值，这样动作的空间维度极大。如果我们使用随机策略，即像DQN一样研究它所有的可能动作的概率，并计算各个可能的动作的价值的话，那需要的样本量是非常大才可行的。于是有人就想出使用确定性策略来简化这个问题。</p>
+<p>作为随机策略，在相同的策略，在同一个状态处，采用的动作是基于一个概率分布的，即是不确定的。而确定性策略则决定简单点，虽然在同一个状态处，采用的动作概率不同，但是最大概率只有一个，如果我们只取最大概率的动作，去掉这个概率分布，那么就简单多了。即作为确定性策略，相同的策略，在同一个状态处，动作是唯一确定的，即策略变成：</p>
+<p>$$\pi_\theta(s)=a$$</p>
+<h1 id="2-从dpg到ddpg">2. 从DPG到DDPG</h1>
+<p>在看确定性策略梯度DPG前，我们看看基于Q值的随机性策略梯度的梯度计算公式：</p>
+<p>$$\nabla_\theta J(\pi_\theta)=E_{s\sim\rho^\pi,a\sim\pi_\theta}[\nabla_\theta log\pi_\theta(s,a)Q_\pi(s,a)]$$</p>
+<p>其中状态的采样空间为$\rho^\pi$, $\nabla_\theta log\pi_\theta(s,a)$是分值函数，可见随机性策略梯度需要在整个动作的空间$\pi_\mathrm{\theta}$进行采样。</p>
+<p>而DPG基于Q值的确定性策略梯度的梯度计算公式是：</p>
+<p>$$\nabla_\theta J(\pi_\theta)=E_{s\sim\rho^\pi}[\nabla_\theta\pi_\theta(s)\nabla_aQ_\pi(s,a)|<em>{a=\pi</em>\theta(s)}]$$</p>
+<p>跟随机策略梯度的式子相比，少了对动作的积分，多了回报Q函数对动作的导数。</p>
+<p>而从DPG到DDPG的过程，完全可以类比DQN到DDQN的过程。除了老生常谈的经验回放以外，我们有了双网络，即当前网络和目标网络的概念。而由于现在我们本来就有Actor网络和Critic两个网络，那么双网络后就变成了4个网络，分别是：Actor当前网络，Actor目标网络，Critic当前网络，Critic目标网络。2个Actor网络的结构相同，2个Critic网络的结构相同。那么这4个网络的功能各自是什么呢？</p>
+<h1 id="3-ddpg的原理">3. DDPG的原理</h1>
+<p>DDPG有4个网络，在了解这4个网络的功能之前，我们先复习DDQN的两个网络：当前Q网络和目标Q网络的作用。可以复习<a href="https://www.cnblogs.com/pinard/p/9778063.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（十）Double DQN (DDQN)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。</p>
+<p>DDQN的当前Q网络负责对当前状态 $S$ 使用 $ϵ$−贪婪法选择动作 $A$，执行动作 $A$,获得新状态 $S&rsquo;$和奖励$R$,将样本放入经验回放池，对经验回放池中采样的下一状态 $S&rsquo;$使用贪婪法选择动作 $A&rsquo;$，供目标Q网络计算目标Q值，当目标Q网络计算出目标Q值后，当前Q网络会进行网络参数的更新，并定期把最新网络参数复制到目标Q网络。</p>
+<p>DDQN的目标Q网络则负责基于经验回放池计算目标Q值, 提供给当前Q网络用，目标Q网络会定期从当前Q网络复制最新网络参数。</p>
+<p>现在我们回到DDPG，作为DDPG，Critic当前网络，Critic目标网络和DDQN的当前Q网络，目标Q网络的功能定位基本类似，但是我们有自己的Actor策略网络，因此不需要 $ϵ$−贪婪法这样的选择方法，这部分DDQN的功能到了DDPG可以在Actor当前网络完成。而对经验回放池中采样的下一状态 $S&rsquo;$ 使用贪婪法选择动作 $A&rsquo;$，这部分工作由于用来估计目标Q值，因此可以放到Actor目标网络完成。</p>
+<p>基于经验回放池和目标Actor网络提供的 $S&rsquo;$, $A&rsquo;$ 计算目标Q值的一部分，这部分由于是评估，因此还是放到Critic目标网络完成。而Critic目标网络计算出目标Q值一部分后，Critic当前网络会计算目标Q值，并进行网络参数的更新，并定期将网络参数复制到Critic目标网络。</p>
+<p>此外，Actor当前网络也会基于Critic当前网络计算出的目标Q值，进行网络参数的更新，并定期将网络参数复制到Actor目标网络。</p>
+<p>有了上面的思路，我们总结下DDPG 4个网络的功能定位：</p>
+<ul>
+<li>
+<p>(1). <strong>Actor当前网络</strong>: 负责策略网络参数 $θ$的迭代更新，负责根据当前状态 $S$选择当前动作 $A$，用于和环境交互生成 $S&rsquo;$, $R$。</p>
+</li>
+<li>
+<p>(2). <strong>Actor目标网络</strong>: 负责根据经验回放池中采样的下一状态 $S&rsquo;$ 选择最优下一动作$A&rsquo;$。网络参数 $θ&rsquo;$定期从 $θ$复制。</p>
+</li>
+<li>
+<p>(3). <strong>Critic当前网络</strong>: 负责价值网络参数 $w$的迭代更新，负责计算负责计算当前Q值 $Q(S,A,w)$。目标Q值$y_i=R+γQ&rsquo;(S&rsquo;,A&rsquo;,w&rsquo;)$</p>
+</li>
+<li>
+<p>(4). <strong>Critic目标网络</strong>: 负责计算目标Q值中的 $Q&rsquo;(S&rsquo;,A&rsquo;,w&rsquo;)$部分。网络参数 $w&rsquo;$ 定期从 $w$复制。</p>
+</li>
+</ul>
+<p>DDPG除了这4个网络结构，还用到了经验回放，这部分用于计算目标Q值，和DQN没有什么区别，这里就不展开了。</p>
+<p>此外，DDPG从当前网络到目标网络的复制和我们之前讲到了DQN不一样。回想DQN，我们是直接把将当前Q网络的参数复制到目标Q网络，即$w$′=$w$, DDPG这里没有使用这种硬更新，而是使用了软更新，即每次参数只更新一点点，即：</p>
+<p>$$\begin{gathered}
+w&rsquo;\leftarrow\tau w+(1-\tau)w&rsquo; \
+\theta&rsquo;\leftarrow\tau\theta+(1-\tau)\theta'
+\end{gathered}$$</p>
+<p>其中 $τ$是更新系数，一般取的比较小，比如0.1或者0.01这样的值。</p>
+<p>同时，为了学习过程可以增加一些随机性，增加学习的覆盖，DDPG对选择出来的动作 $A$会增加一定的噪声 $N$, 即最终和环境交互的动作 $A$ 的表达式是：</p>
+<p>$$A=\pi_\theta(S)+\mathcal{N}$$</p>
+<p>最后，我们来看看DDPG的损失函数。对于Critic当前网络，其损失函数和DQN是类似的，都是均方误差，即：</p>
+<p>$$J(w)=\frac1m\sum_{j=1}^m(y_j-Q(\phi(S_j),A_j,w))^2$$</p>
+<p>而对于 Actor当前网络，其损失函数就和之前讲的PG，A3C不同了，这里由于是确定性策略，原论文定义的损失梯度是：</p>
+<p>$$\nabla_J(\theta)=\frac1m\sum_{j=1}^m[\nabla_aQ_(s_i,a_i,w)|<em>{s=s_i,a=\pi</em>\theta(s)}\nabla_\theta\pi_{\theta(s)}|_{s=s_i}]$$</p>
+<p>这个可以对应上我们第二节的确定性策略梯度，看起来比较麻烦，但是其实理解起来很简单。假如对同一个状态，我们输出了两个不同的动作 $a_1$和$a_2$，从Critic当前网络得到了两个反馈的 $Q$ 值，分别是 $Q_1$,$Q_2$，假设 $Q_1&gt;Q_2$,即采取动作1可以得到更多的奖励，那么策略梯度的思想是什么呢，就是增加 $a_1$的概率，降低$a_2$的概率，也就是说，Actor想要尽可能的得到更大的Q值。所以我们的Actor的损失可以简单的理解为得到的反馈Q值越大损失越小，得到的反馈Q值越小损失越大，因此只要对状态估计网络返回的Q值取个负号即可，即：</p>
+<p>$$J(\theta)=-\frac1m\sum_{j=1}^mQ_(s_i,a_i,w)$$</p>
+<h1 id="4-ddpg算法流程">4. DDPG算法流程</h1>
+<p>这里我们总结下DDPG的算法流程</p>
+<p>输入：Actor当前网络，Actor目标网络，Critic当前网络，Critic目标网络,参数分别为 $θ$,$θ&rsquo;$,$w$,$w&rsquo;$,衰减因子 $γ$, 软更新系数 $τ$, 批量梯度下降的样本数 $m$,目标Q网络参数更新频率 $C$。最大迭代次数 $T$。随机噪音函数 $\mathcal{N}$</p>
+<p>输出：最优Actor当前网络参数 $θ$,Critic当前网络参数 $w$</p>
+<ul>
+<li>(1). 随机初始化$θ$,$w$, $w$′=$w$,$θ$′=$θ$。清空经验回放的集合$D$</li>
+<li>(2). for i from 1 to T，进行迭代。
+<ul>
+<li>a) 初始化 $S$为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$</li>
+<li>b) 在Actor当前网络基于状态 $S$ 得到动作 $A=π_θ(ϕ(S))+\mathcal{N}$</li>
+<li>c) 执行动作$A$,得到新状态$S$′,奖励$R$,是否终止状态%is_end$</li>
+<li>d) 将 ${ϕ(S), A, R, ϕ(S&rsquo;), is_end}$ 这个五元组存入经验回放集合$D$</li>
+<li>e) $S=S'$</li>
+<li>f) 从经验回放集合 $D$ 中采样 $m$ 个样本${\phi(S_j),A_j,R_j,\phi(S_j^{\prime}),is_end_j},j=1,2.,,,m$，计算当前目标Q值$y_j$：
+<ul>
+<li>$$\left.y_j=\left{\begin{array}{ll}R_j&amp;is_end_j\textit{ is true}\R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\pi_{\theta^{\prime}}(\phi(S_j^{\prime})),w^{\prime})&amp;is_end_j\textit{ is false}\end{array}\right.\right.$$</li>
+</ul>
+</li>
+<li>g) 使用均方差损失函数 $\frac1m\sum_{j=1}^m(y_j-Q(\phi(S_j),A_j,w))^2$，通过神经网络的梯度反向传播来更新Critic当前网络的所有参数 $w$</li>
+<li>h) 使用 $\begin{aligned}J(\theta)=-\frac1m\sum_{j=1}^mQ_(s_i,a_i,\theta)\end{aligned}$，通过神经网络的梯度反向传播来更新Actor当前网络的所有参数 $θ$</li>
+<li>i) 如果 i%C=1, 则更新Critic目标网络和Actor目标网络参数：
+<ul>
+<li>$$\begin{gathered} w&rsquo;\leftarrow\tau w+(1-\tau)w&rsquo; \
+\theta&rsquo;\leftarrow\tau\theta+(1-\tau)\theta'
+\end{gathered}$$</li>
+</ul>
+</li>
+<li>j) 如果$S&rsquo;$是终止状态，当前轮迭代完毕，否则转到步骤(b)</li>
+</ul>
+</li>
+</ul>
+<p>以上就是DDPG算法的主流程，要注意的是上面2.f中的 $\pi_{\theta^{\prime}}(\phi(S_j^{\prime}))$ 是通过Actor目标网络得到，而 $Q^{\prime}(\phi(S_i^{\prime}),\pi_{\theta^{\prime}}(\phi(S_i^{\prime})),w^{\prime})$ 则是通过Critic目标网络得到的。</p>
+<h1 id="5-ddpg实例">5. DDPG实例</h1>
+<p>这里我们给出DDPG第一个算法实例，代码主要参考自莫烦的<a href="https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/9_Deep_Deterministic_Policy_Gradient_DDPG/DDPG_update.py"target="_blank" rel="external nofollow noopener noreferrer">Github代码<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。增加了测试模型效果的部分，优化了少量参数。代码详见：https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddpg.py</p>
+<p>这里我们没有用之前的CartPole游戏，因为它不是连续动作。我们使用了Pendulum-v0这个游戏。目的是用最小的力矩使棒子竖起来，这个游戏的详细介绍参见<a href="https://github.com/openai/gym/wiki/Pendulum-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。输入状态是角度的sin，cos值，以及角速度。一共三个值。动作是一个连续的力矩值。</p>
+<p>两个Actor网络和两个Critic网络的定义参见：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_build_a</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">scope</span><span class="p">,</span> <span class="n">trainable</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="n">scope</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">net</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="n">trainable</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">a</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_dim</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="n">trainable</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_bound</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;scaled_a&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_build_c</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">scope</span><span class="p">,</span> <span class="n">trainable</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="n">scope</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">n_l1</span> <span class="o">=</span> <span class="mi">30</span>
+</span></span><span class="line"><span class="cl">    <span class="n">w1_s</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">&#39;w1_s&#39;</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">s_dim</span><span class="p">,</span> <span class="n">n_l1</span><span class="p">],</span> <span class="n">trainable</span><span class="o">=</span><span class="n">trainable</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">w1_a</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">&#39;w1_a&#39;</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">a_dim</span><span class="p">,</span> <span class="n">n_l1</span><span class="p">],</span> <span class="n">trainable</span><span class="o">=</span><span class="n">trainable</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">b1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="s1">&#39;b1&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_l1</span><span class="p">],</span> <span class="n">trainable</span><span class="o">=</span><span class="n">trainable</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">net</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">w1_s</span><span class="p">)</span> <span class="o">+</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">w1_a</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="n">trainable</span><span class="p">)</span>  <span class="c1"># Q(s,a)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>Actor当前网络和Critic当前网络损失函数的定义参见：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="n">td_error</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">mean_squared_error</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">q_target</span><span class="p">,</span> <span class="n">predictions</span><span class="o">=</span><span class="n">q</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">ctrain</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="n">LR_C</span><span class="p">)</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">td_error</span><span class="p">,</span> <span class="n">var_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ce_params</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">a_loss</span> <span class="o">=</span> <span class="o">-</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>    <span class="c1"># maximize the q</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">atrain</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="n">LR_A</span><span class="p">)</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">a_loss</span><span class="p">,</span> <span class="n">var_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ae_params</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>Actor目标网络和Critic目标网络参数软更新，Actor当前网络和Critic当前网络反向传播更新部分的代码如下：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">learn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># soft target replacement</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">soft_replace</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">MEMORY_CAPACITY</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">BATCH_SIZE</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">bt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="p">:]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">bs</span> <span class="o">=</span> <span class="n">bt</span><span class="p">[:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">s_dim</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ba</span> <span class="o">=</span> <span class="n">bt</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_dim</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_dim</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_dim</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">br</span> <span class="o">=</span> <span class="n">bt</span><span class="p">[:,</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">s_dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">s_dim</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">bs_</span> <span class="o">=</span> <span class="n">bt</span><span class="p">[:,</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">s_dim</span><span class="p">:]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">atrain</span><span class="p">,</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">:</span> <span class="n">bs</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ctrain</span><span class="p">,</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">:</span> <span class="n">bs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">:</span> <span class="n">ba</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="p">:</span> <span class="n">br</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">S_</span><span class="p">:</span> <span class="n">bs_</span><span class="p">})</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>其余的可以对照算法和代码一起学习，应该比较容易理解。</p>
+<h1 id="6-ddpg总结">6. DDPG总结</h1>
+<p>DDPG参考了DDQN的算法思想吗，通过双网络和经验回放，加一些其他的优化，比较好的解决了Actor-Critic难收敛的问题。因此在实际产品中尤其是自动化相关的产品中用的比较多，是一个比较成熟的Actor-Critic算法。</p>
+<p>到此，我们的Policy Based RL系列也讨论完了，而在更早我们讨论了Value Based RL系列，至此，我们还剩下Model Based RL没有讨论。后续我们讨论Model Based RL的相关算法。</p>
+]]></description></item><item><title>强化学习笔记 [15] | A3C</title><link>https://jianye0428.github.io/posts/rl_learning_note_15/</link><pubDate>Sun, 25 Feb 2024 15:36:01 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_15/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/10272023.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十四) Actor-Critic<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了Actor-Critic的算法流程，但是由于普通的Actor-Critic算法难以收敛，需要一些其他的优化。而Asynchronous Advantage Actor-critic(以下简称A3C)就是其中比较好的优化算法。本文我们讨论A3C的算法原理和算法流程。</p>
+<p>本文主要参考了A3C的<a href="http://proceedings.mlr.press/v48/mniha16.pdf"target="_blank" rel="external nofollow noopener noreferrer">论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，以及ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。</p>
+<h1 id="1-a3c的引入">1. A3C的引入</h1>
+<p>上一篇Actor-Critic算法的代码，其实很难收敛，无论怎么调参，最后的CartPole都很难稳定在200分，这是Actor-Critic算法的问题。但是我们还是有办法去有优化这个难以收敛的问题的。</p>
+<p>回忆下之前的DQN算法，为了方便收敛使用了经验回放的技巧。那么我们的Actor-Critic是不是也可以使用经验回放的技巧呢？当然可以！不过A3C更进一步，还克服了一些经验回放的问题。经验回放有什么问题呢？ 回放池经验数据相关性太强，用于训练的时候效果很可能不佳。举个例子，我们学习下棋，总是和同一个人下，期望能提高棋艺。这当然没有问题，但是到一定程度就再难提高了，此时最好的方法是另寻高手切磋。</p>
+<p>A3C的思路也是如此，它<font color=green>利用多线程的方法，同时在多个线程里面分别和环境进行交互学习，每个线程都把学习的成果汇总起来，整理保存在一个公共的地方</font>。并且，定期从公共的地方把大家的齐心学习的成果拿回来，指导自己和环境后面的学习交互。</p>
+<p>通过这种方法，A3C避免了经验回放相关性过强的问题，同时做到了异步并发的学习模型。</p>
+<h1 id="2-a3c的算法优化">2. A3C的算法优化</h1>
+<p>现在我们来看看相比Actor-Critic，A3C到底做了哪些具体的优化。</p>
+<p>相比Actor-Critic，A3C的优化主要有3点，分别是异步训练框架，网络结构优化，Critic评估点的优化。其中异步训练框架是最大的优化。</p>
+<p>我们首先来看这个异步训练框架，如下图所示：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">异步训练框架</div>
+</center>
+<br>
+<p>图中上面的Global Network就是上一节说的共享的公共部分，主要是一个公共的神经网络模型，这个神经网络包括Actor网络和Critic网络两部分的功能。下面有n个worker线程，每个线程里有和公共的神经网络一样的网络结构，每个线程会独立的和环境进行交互得到经验数据，这些线程之间互不干扰，独立运行。</p>
+<p>每个线程和环境交互到一定量的数据后，就计算在自己线程里的神经网络损失函数的梯度，但是这些梯度却并不更新自己线程里的神经网络，而是去更新公共的神经网络。也就是n个线程会独立的使用累积的梯度分别更新公共部分的神经网络模型参数。每隔一段时间，线程会将自己的神经网络的参数更新为公共神经网络的参数，进而指导后面的环境交互。</p>
+<p>可见，公共部分的网络模型就是我们要学习的模型，而线程里的网络模型主要是用于和环境交互使用的，这些线程里的模型可以帮助线程更好的和环境交互，拿到高质量的数据帮助模型更快收敛。</p>
+<p>现在我们来看看第二个优化，网络结构的优化。之前在<a href="https://www.cnblogs.com/pinard/p/10272023.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十四) Actor-Critic<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们使用了两个不同的网络Actor和Critic。在A3C这里，我们把两个网络放到了一起，即输入状态 $S$,可以输出状态价值 $V$,和对应的策略 $π$, 当然，我们仍然可以把Actor和Critic看做独立的两块，分别处理，如下图所示：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">把Actor和Critic看做独立的两块，分别处理</div>
+</center>
+<br>
+<p>第三个优化点是Critic评估点的优化，在<a href="https://www.cnblogs.com/pinard/p/10272023.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十四) Actor-Critic<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>第2节中，我们讨论了不同的Critic评估点的选择，其中d部分讲到了使用优势函数 $A$ 来做Critic评估点，优势函数 $A$ 在时刻t不考虑参数的默认表达式为：</p>
+<p>$$A(S,A,t)=Q(S,A)-V(S)$$</p>
+<p>$Q(S,A)$的值一般可以通过单步采样近似估计，即：</p>
+<p>$$Q(S,A)=R+\gamma V(S^{\prime})$$</p>
+<p>这样优势函数去掉动作可以表达为：</p>
+<p>$$A(S,t)=R+\gamma V(S^{\prime})-V(S)$$</p>
+<p>其中 $V(S)$的值需要通过Critic网络来学习得到。</p>
+<p>在A3C中，采样更进一步，使用了N步采样，以加速收敛。这样A3C中使用的优势函数表达为：</p>
+<p>$$A(S,t)=R_t++\gamma R_{t+1}+\ldots\gamma^{n-1}R_{t+n-1}+\gamma^nV(S^{\prime})-V(S)$$</p>
+<p>对于Actor和Critic的损失函数部分，和Actor-Critic基本相同。有一个小的优化点就是在Actor-Critic策略函数的损失函数中，加入了策略 $π$ 的熵项,系数为 $c$, 即策略参数的梯度更新和Actor-Critic相比变成了这样：</p>
+<p>$$\theta=\theta+\alpha\nabla_\theta log\pi_\theta(s_t,a_t)A(S,t)+c\nabla_\theta H(\pi(S_t,\theta))$$</p>
+<p>以上就是A3C和Actor-Critic相比有优化的部分。下面我们来总价下A3C的算法流程。</p>
+<h1 id="3-a3c算法流程">3. A3C算法流程</h1>
+<p>这里我们对A3C算法流程做一个总结，由于A3C是异步多线程的，我们这里给出任意一个线程的算法流程。</p>
+<ul>
+<li>
+<p>输入：公共部分的A3C神经网络结构，对应参数位 $θ$ , $w$，本线程的A3C神经网络结构，对应参数 $θ&rsquo;$, $w&rsquo;$, 全局共享的迭代轮数 $T$，全局最大迭代次数 $T_{max}$, 线程内单次迭代时间序列最大长度 $T_{local}$,状态特征维度 $n$, 动作集 $A$, 步长 $α$, $β$，熵系数 $c$, 衰减因子 $γ$</p>
+</li>
+<li>
+<p>输出：公共部分的A3C神经网络参数 $θ$, $w$</p>
+<ul>
+<li>(1). 更新时间序列 $t=1$</li>
+<li>(2). 重置Actor和Critic的梯度更新量: $dθ←0$,$dw←0$</li>
+<li>(3). 从公共部分的A3C神经网络同步参数到本线程的神经网络：$θ&rsquo;=θ,w&rsquo;=w$</li>
+<li>(4). $t_{start}=t$，初始化状态 $s_t$</li>
+<li>(5). 基于策略 $π(at|st;θ)$ 选择出动作 $a_t$</li>
+<li>(6). 执行动作 $a_t$得到奖励 $r_t$ 和新状态 $s_{t+1}$</li>
+<li>(7). $t←t+1$, $T←T+1$</li>
+<li>(8). 如果 $s_t$是终止状态，或 $t − t_{start}==t_{local}$,则进入步骤(9)，否则回到步骤(5)</li>
+<li>(9). 计算最后一个时间序列位置 $s_t$的 $Q(s,t)$:
+<ul>
+<li>$$\left.Q(s,t)=\left\{\begin{array}{ll}0&amp;terminal~state\\V(s_t,w^{\prime})&amp;none~terminal~state,bootstrapping\end{array}\right.\right.$$</li>
+</ul>
+</li>
+<li>(10). for $i∈(t−1,t−2,&hellip;t_{start})$:
+<ul>
+<li>1). 计算每个时刻的$Q(s,i)$： $Q(s,i)=r_i+\gamma Q(s,i+1)$</li>
+<li>2). 累计Actor的本地梯度更新：
+<ul>
+<li>$$d\theta\leftarrow d\theta+\nabla_{\theta^{\prime}}log\pi_{\theta^{\prime}}(s_i,a_i)(Q(s,i)-V(S_i,w^{\prime}))+c\nabla_{\theta^{\prime}}H(\pi(s_i,\theta^{\prime}))$$</li>
+</ul>
+</li>
+<li>3). 累计Critic的本地梯度更新：
+<ul>
+<li>$$\begin{aligned}dw&amp;\leftarrow dw+\frac{\partial(Q(s,i)-V(S_i,w^{\prime}))^2}{\partial w^{\prime}}\end{aligned}$$</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>(11). 更新全局神经网络的模型参数：
+<ul>
+<li>$$\theta=\theta+\alpha d\theta,~w=w-\beta dw$$</li>
+</ul>
+</li>
+<li>(12). 如果 $T&gt;T_{max}$,则算法结束，输出公共部分的A3C神经网络参数 $θ$, $w$,否则进入步骤(3)</li>
+</ul>
+</li>
+</ul>
+<p>以上就是A3C算法单个线程的算法流程。</p>
+<h1 id="4-a3c算法实例">4. A3C算法实例</h1>
+<p>下面我们基于上述算法流程给出A3C算法实例。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>算法代码大部分参考了莫烦的<a href="https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/10_A3C/A3C_discrete_action.py"target="_blank" rel="external nofollow noopener noreferrer">A3C代码<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，增加了模型测试部分的代码并调整了部分模型参数。完整的代码参见我的Github：https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/a3c.py</p>
+<p>整个算法的Actor和Critic的网络结构都定义在这里， 所有的线程中的网络结构，公共部分的网络结构都在这里定义。</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_build_net</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scope</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="n">w_init</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">random_normal_initializer</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">.1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;actor&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">l_a</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu6</span><span class="p">,</span> <span class="n">kernel_initializer</span><span class="o">=</span><span class="n">w_init</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;la&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">a_prob</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">l_a</span><span class="p">,</span> <span class="n">N_A</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softmax</span><span class="p">,</span> <span class="n">kernel_initializer</span><span class="o">=</span><span class="n">w_init</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;ap&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;critic&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">l_c</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu6</span><span class="p">,</span> <span class="n">kernel_initializer</span><span class="o">=</span><span class="n">w_init</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;lc&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">v</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">l_c</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">kernel_initializer</span><span class="o">=</span><span class="n">w_init</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;v&#39;</span><span class="p">)</span>  <span class="c1"># state value</span>
+</span></span><span class="line"><span class="cl">  <span class="n">a_params</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">GraphKeys</span><span class="o">.</span><span class="n">TRAINABLE_VARIABLES</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">scope</span> <span class="o">+</span> <span class="s1">&#39;/actor&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">c_params</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">GraphKeys</span><span class="o">.</span><span class="n">TRAINABLE_VARIABLES</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">scope</span> <span class="o">+</span> <span class="s1">&#39;/critic&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">a_prob</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">a_params</span><span class="p">,</span> <span class="n">c_params</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>所有线程初始化部分，以及本线程和公共的网络结构初始化部分如下：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&#34;/cpu:0&#34;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="n">OPT_A</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">RMSPropOptimizer</span><span class="p">(</span><span class="n">LR_A</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;RMSPropA&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">OPT_C</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">RMSPropOptimizer</span><span class="p">(</span><span class="n">LR_C</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;RMSPropC&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">GLOBAL_AC</span> <span class="o">=</span> <span class="n">ACNet</span><span class="p">(</span><span class="n">GLOBAL_NET_SCOPE</span><span class="p">)</span>  <span class="c1"># we only need its params</span>
+</span></span><span class="line"><span class="cl">  <span class="n">workers</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># Create worker</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_WORKERS</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">i_name</span> <span class="o">=</span> <span class="s1">&#39;W_</span><span class="si">%i</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span>   <span class="c1"># worker name</span>
+</span></span><span class="line"><span class="cl">    <span class="n">workers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Worker</span><span class="p">(</span><span class="n">i_name</span><span class="p">,</span> <span class="n">GLOBAL_AC</span><span class="p">))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>本线程神经网络将本地的梯度更新量用于更新公共网络参数的逻辑在update_global函数中，而从公共网络把参数拉回到本线程神经网络的逻辑在pull_global中。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">update_global</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feed_dict</span><span class="p">):</span>  <span class="c1"># run by a local</span>
+</span></span><span class="line"><span class="cl">  <span class="n">SESS</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">update_a_op</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_c_op</span><span class="p">],</span> <span class="n">feed_dict</span><span class="p">)</span>  <span class="c1"># local grads applies to global net</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">pull_global</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># run by a local</span>
+</span></span><span class="line"><span class="cl">  <span class="n">SESS</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">pull_a_params_op</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pull_c_params_op</span><span class="p">])</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>详细的内容大家可以对照代码和算法流程一起看。在主函数里我新加了一个测试模型效果的过程，大家可以试试看看最后的模型效果如何。</p>
+<h1 id="5-a3c小结">5. A3C小结</h1>
+<p>A3C解决了Actor-Critic难以收敛的问题，同时更重要的是，提供了一种通用的异步的并发的强化学习框架，也就是说，这个并发框架不光可以用于A3C，还可以用于其他的强化学习算法。这是A3C最大的贡献。目前，已经有基于GPU的A3C框架，这样A3C的框架训练速度就更快了。</p>
+<p>除了A3C, DDPG算法也可以改善Actor-Critic难收敛的问题。它使用了Nature DQN，DDQN类似的思想，用两个Actor网络，两个Critic网络，一共4个神经网络来迭代更新模型参数。在下一篇我们讨论DDPG算法。</p>
+]]></description></item><item><title>强化学习笔记 [14] | Actor-Critic</title><link>https://jianye0428.github.io/posts/rl_learning_note_14/</link><pubDate>Sun, 25 Feb 2024 15:35:58 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_14/</guid><description><![CDATA[<ul>
+<li></li>
+</ul>
+<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/10137696.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十三) 策略梯度(Policy Gradient)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了基于策略(Policy Based)的强化学习方法的基本思路，并讨论了蒙特卡罗策略梯度reinforce算法。但是由于该算法需要完整的状态序列，同时单独对策略函数进行迭代更新，不太容易收敛。</p>
+<p>在本篇我们讨论策略(Policy Based)和价值(Value Based)相结合的方法：Actor-Critic算法。</p>
+<p>本文主要参考了Sutton的强化学习书第13章和UCL强化学习讲义的第7讲。</p>
+<h1 id="1-actor-critic算法简介">1. Actor-Critic算法简介</h1>
+<p>Actor-Critic从名字上看包括两部分，演员(Actor)和评价者(Critic)。其中Actor使用我们上一节讲到的策略函数，负责生成动作(Action)并和环境交互。而Critic使用我们之前讲到了的价值函数，负责评估Actor的表现，并指导Actor下一阶段的动作。</p>
+<p>回想我们上一篇的策略梯度，策略函数就是我们的Actor，但是那里是没有Critic的，我们当时使用了蒙特卡罗法来计算每一步的价值部分替代了Critic的功能，但是场景比较受限。因此现在我们使用类似DQN中用的价值函数来替代蒙特卡罗法，作为一个比较通用的Critic。</p>
+<p>也就是说在Actor-Critic算法中，我们需要做两组近似，第一组是策略函数的近似：</p>
+<p>$$
+\pi_\theta(s,a)=P(a|s,\theta)\approx\pi(a|s)
+$$</p>
+<p>第二组是价值函数的近似，对于状态价值和动作价值函数分别是：</p>
+<p>$$
+\hat{v}(s,w)\approx v_\pi(s)
+$$</p>
+<p>$$
+\hat{q}(s,a,w)\approx q_\pi(s,a)
+$$</p>
+<p>对于我们上一节讲到的蒙特卡罗策略梯度reinforce算法，我们需要进行改造才能变成Actor-Critic算法。首先，在蒙特卡罗策略梯度reinforce算法中，我们的策略的参数更新公式是：</p>
+<p>$$
+\theta=\theta+\alpha\nabla_\theta log\pi_\theta(s_t,a_t)v_t
+$$</p>
+<p>梯度更新部分中，$\nabla_\theta log\pi_\theta(s_t,a_t)$是我们的分值函数，不用动，要变成Actor的话改动的是$v_t$，这块不能再使用蒙特卡罗法来得到，而应该从Critic得到。</p>
+<p>而对于Critic来说，这块是新的，不过我们完全可以参考之前DQN的做法，即用一个Q网络来做为Critic，这个Q网络的输入可以是状态，而输出是每个动作的价值或者最优动作的价值。</p>
+<p>现在我们汇总来说，就是Critic通过Q网络计算状态的最优价值$v_t$,而Actor利用$v_t$这个最优价值迭代更新策略函数的参数$\theta$,进而选择动作，并得到反馈和新的状态，Critic使用反馈和新的状态更新Q网络参数$w$,在后面Critic会使用新的网络参数$w$来帮Actor计算状态的最优价值$v_{te}$</p>
+<h1 id="2-actor-critic算法可选形式">2. Actor-Critic算法可选形式</h1>
+<p>在上一节我们已经对Actor-Critic算法的流程做了一个初步的总结，不过有一个可以注意的点就是，我们对于Critic评估的点选择是和上一篇策略梯度一样的状态价值 $v_t$实际上，我们还可以选择很多其他的指标来做为Critic的评估点。而目前可以使用的Actor-Critic评估点主要有：</p>
+<ul>
+<li>
+<p>a) 基于状态价值：这是我们上一节使用的评估点，这样Actor的策略函数参数更新的法公式是：</p>
+<ul>
+<li>$$\theta=\theta+\alpha\nabla_\theta log\pi_\theta(s_t,a_t)V(s,w)$$</li>
+</ul>
+</li>
+<li>
+<p>b) 基于动作价值：在DQN中，我们一般使用的都是动作价值函数Q来做价值评估，这样Actor的策略函数参数更新的法公式是：</p>
+<ul>
+<li>$$\theta=\theta+\alpha\nabla_\theta log\pi_\theta(s_t,a_t)Q(s,a,w)$$</li>
+</ul>
+</li>
+<li>
+<p>c) 基于TD误差：在<a href="https://www.cnblogs.com/pinard/p/9529828.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（五）用时序差分法（TD）求解<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了TD误差，它的表达式是 $\delta(t)=R_{t+1}+\gamma V(S_{t+1})-V(S_t)$ 或者 $\delta(t)=R_{t+1}+\gamma Q(S_{t+1}\text{,}A_{t+1})-Q(S_t,A_t)$, 这样Actor的策略函数参数更新的法公式是：</p>
+<ul>
+<li>$$\theta=\theta+\alpha\nabla_\theta log\pi_\theta(s_t,a_t)\delta(t)$$</li>
+</ul>
+</li>
+<li>
+<p>d) 基于优势函数：在<a href="https://www.cnblogs.com/pinard/p/9923859.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十二) Dueling DQN<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到过优势函数A的定义：$A(S,A,w,\beta)=Q(S,A,w,\alpha,\beta)-V(S,w,\alpha)$, 即动作价值函数和状态价值函数的差值。这样Actor的策略函数参数更新的法公式是：</p>
+<ul>
+<li>$$\theta=\theta+\alpha\nabla_\theta log\pi_\theta(s_t,a_t)A(S,A,w,\beta)$$</li>
+</ul>
+</li>
+<li>
+<p>e) 基于 $TD(λ)$ 误差：一般都是基于后向 $TD(λ)$误差, 在<a href="https://www.cnblogs.com/pinard/p/9529828.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（五）用时序差分法（TD）求解<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中也有讲到，是TD误差和效用迹E的乘积。这样Actor的策略函数参数更新的法公式是：</p>
+<ul>
+<li>$\theta=\theta+\alpha\nabla_\theta log\pi_\theta(s_t,a_t)\delta(t)E(t)$</li>
+</ul>
+</li>
+</ul>
+<p>对于Critic本身的模型参数 $w$ ，一般都是使用均方误差损失函数来做做迭代更新，类似之前DQN系列中所讲的迭代方法. 如果我们使用的是最简单的线性Q函数，比如 $Q(s,a,w)=ϕ(s,a)^Tw$,则Critic本身的模型参数 $w$的更新公式可以表示为：</p>
+<p>$$\begin{gathered}
+\delta=R_{t+1}+\gamma Q(S_{t+1}\text{,}A_{t+1})-Q(S_t,A_t) \\
+w=w+\beta\delta\phi(s,a)
+\end{gathered}$$</p>
+<p>通过对均方误差损失函数求导可以很容易的得到上式。当然实际应用中，我们一般不使用线性Q函数，而使用神经网络表示状态和Q值的关系。</p>
+<h1 id="3-actor-critic算法流程">3. Actor-Critic算法流程</h1>
+<p>这里给一个Actor-Critic算法的流程总结，评估点基于TD误差，Critic使用神经网络来计算TD误差并更新网络参数，Actor也使用神经网络来更新网络参数　　</p>
+<p>算法输入：迭代轮数 $T$，状态特征维度 $n$, 动作集 $A$, 步长 $α$, $β$，衰减因子 $γ$, 探索率 $ϵ$, Critic网络结构和Actor网络结构。</p>
+<p>输出：Actor 网络参数 $θ$, Critic网络参数 $w$</p>
+<ul>
+<li>(1). 随机初始化所有的状态和动作对应的价值Q�. 随机初始化Critic网络的所有参数$w$。随机初始化Actor网络的所有参数$\theta$。</li>
+<li>(2). for i from 1 to T，进行迭代。
+<ul>
+<li>a) 初始化 $S$ 为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$</li>
+<li>b) 在Actor网络中使用 $ϕ(S)$ 作为输入，输出动作 $A$,基于动作 $A$得到新的状态 $S&rsquo;$,反馈 $R$。</li>
+<li>c) 在Critic网络中分别使用 $ϕ(S)$，$ϕ(S&rsquo;)$ 作为输入，得到Q值输出 $V(S)$，$V(S&rsquo;)$</li>
+<li>d) 计算TD误差 $\delta=R+\gamma V(S^{\prime})-V(S)$</li>
+<li>e) 使用均方差损失函数 $\sum(R+\gamma V(S^{\prime})-V(S,w))^2$ 作Critic网络参数 $w$的梯度更新</li>
+<li>f) 更新Actor网络参数 $θ$:
+<ul>
+<li>$$\theta=\theta+\alpha\nabla_\theta log\pi_\theta(S_t,A)\delta $$</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>对于Actor的分值函数 $∇_θlogπ_θ(S_t,A)$,可以选择softmax或者高斯分值函数。</p>
+<p>上述Actor-Critic算法已经是一个很好的算法框架，但是离实际应用还比较远。主要原因是这里有两个神经网络，都需要梯度更新，而且互相依赖。但是了解这个算法过程后，其他基于Actor-Critic的算法就好理解了。</p>
+<h1 id="4-actor-critic算法实例">4. Actor-Critic算法实例</h1>
+<p>下面我们用一个具体的例子来演示上面的Actor-Critic算法。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>算法流程可以参考上面的第三节，这里的分值函数我们使用的是softmax函数，和上一片的类似。完整的代码参见Github：https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/actor_critic.py</p>
+<p>代码主要分为两部分，第一部分是Actor，第二部分是Critic。对于Actor部分，大家可以和上一篇策略梯度的代码对比，改动并不大，主要区别在于梯度更新部分，策略梯度使用是蒙特卡罗法计算出的价值 $v(t)$,则我们的actor使用的是TD误差。</p>
+<p>在策略梯度部分，对应的位置如下：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">neg_log_prob</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_vt</span><span class="p">)</span>  <span class="c1"># reward guided loss</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>而我们的Actor对应的位置的代码是：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="bp">self</span><span class="o">.</span><span class="n">exp</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">neg_log_prob</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">td_error</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>此处要注意的是，由于使用的是TD误差，而不是价值 $v(t)$,此处需要最大化<code>self.exp</code>,而不是最小化它，这点和策略梯度不同。对应的Actor代码为：</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1">#这里需要最大化当前策略的价值，因此需要最大化self.exp,即最小化-self.exp</span>
+</span></span><span class="line"><span class="cl"><span class="bp">self</span><span class="o">.</span><span class="n">train_op</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="n">LEARNING_RATE</span><span class="p">)</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">exp</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除此之外，Actor部分的代码和策略梯度的代码区别并不大。</p>
+<p>对于Critic部分，我们使用了类似于DQN的三层神经网络。不过我们简化了这个网络的输出，只有一维输出值，而不是之前DQN使用的有多少个可选动作，就有多少维输出值。网络结构如下:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">create_Q_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># network weights</span>
+</span></span><span class="line"><span class="cl">  <span class="n">W1q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">,</span> <span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="n">b1q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="n">W2q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="n">b2q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">state_input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">],</span> <span class="s2">&#34;state&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># hidden layers</span>
+</span></span><span class="line"><span class="cl">  <span class="n">h_layerq</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">,</span> <span class="n">W1q</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1q</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># Q Value layer</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">Q_value</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layerq</span><span class="p">,</span> <span class="n">W2q</span><span class="p">)</span> <span class="o">+</span> <span class="n">b2q</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>和之前的DQN相比，这里还有一个区别就是我们的critic没有使用DQN的经验回放，只是使用了反馈和当前网络在下一个状态的输出来拟合当前状态。</p>
+<p>对于算法中Actor和Critic交互的逻辑，在main函数中：</p>
+<div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">STEP</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="n">action</span> <span class="o">=</span> <span class="n">actor</span><span class="o">.</span><span class="n">choose_action</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="c1"># e-greedy action for train</span>
+</span></span><span class="line"><span class="cl">  <span class="n">next_state</span><span class="p">,</span><span class="n">reward</span><span class="p">,</span><span class="n">done</span><span class="p">,</span><span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">td_error</span> <span class="o">=</span> <span class="n">critic</span><span class="o">.</span><span class="n">train_Q_network</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">next_state</span><span class="p">)</span>  <span class="c1"># gradient = grad[r + gamma * V(s_) - V(s)]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">actor</span><span class="o">.</span><span class="n">learn</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">td_error</span><span class="p">)</span>  <span class="c1"># true_gradient = grad[logPi(s,a) * td_error]</span>
+</span></span><span class="line"><span class="cl">  <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">break</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>大家对照第三节的算法流程和代码应该可以比较容易理清这个过程。但是这个程序很难收敛。因此大家跑了后发现分数总是很低的话是可以理解的。我们需要优化这个问题。</p>
+<h1 id="5-actor-critic算法小结">5. Actor-Critic算法小结</h1>
+<p>基本版的Actor-Critic算法虽然思路很好，但是由于难收敛的原因，还需要做改进。</p>
+<p>目前改进的比较好的有两个经典算法，一个是DDPG算法，使用了双Actor神经网络和双Critic神经网络的方法来改善收敛性。这个方法我们在从DQN到Nature DQN的过程中已经用过一次了。另一个是A3C算法，使用了多线程的方式，一个主线程负责更新Actor和Critic的参数，多个辅线程负责分别和环境交互，得到梯度更新值，汇总更新主线程的参数。而所有的辅线程会定期从主线程更新网络参数。这些辅线程起到了类似DQN中经验回放的作用，但是效果更好。</p>
+<p>在后面的文章中，我们会继续讨论DDPG和A3C。</p>
+<p>　</p>
+]]></description></item><item><title>强化学习笔记 [13] | 策略梯度(Policy Gradient)</title><link>https://jianye0428.github.io/posts/rl_learning_note_13/</link><pubDate>Sun, 25 Feb 2024 15:35:55 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_13/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在前面讲到的DQN系列强化学习算法中，我们主要对价值函数进行了近似表示，基于价值来学习。这种Value Based强化学习方法在很多领域都得到比较好的应用，但是Value Based强化学习方法也有很多局限性，因此在另一些场景下我们需要其他的方法，比如本篇讨论的策略梯度(Policy Gradient)，它是Policy Based强化学习方法，基于策略来学习。</p>
+<p>本文参考了Sutton的强化学习书第13章和策略梯度的<a href="https://homes.cs.washington.edu/~todorov/courses/amath579/reading/PolicyGradient.pdf"target="_blank" rel="external nofollow noopener noreferrer">论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。</p>
+<h1 id="1-value-based强化学习方法的不足">1. Value Based强化学习方法的不足</h1>
+<p>DQN系列强化学习算法主要的 <strong><font color=red>问题</font></strong> 主要有三点。</p>
+<ul>
+<li>
+<p>第一点是对连续动作的处理能力不足。DQN之类的方法一般都是只处理离散动作，无法处理连续动作。虽然有NAF DQN之类的变通方法，但是并不优雅。比如我们之前提到的经典的冰球世界(PuckWorld) 强化学习问题，具体的动态demo见<a href="https://cs.stanford.edu/people/karpathy/reinforcejs/puckworld.html"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。环境由一个正方形区域构成代表着冰球场地，场地内大的圆代表着运动员个体，小圆代表着目标冰球。在这个正方形环境中，小圆会每隔一定的时间随机改变在场地的位置，而代表个体的大圆的任务就是尽可能快的接近冰球目标。大圆可以操作的行为是在水平和竖直共四个方向上施加一个时间乘时长的力，借此来改变大圆的速度。假如此时这个力的大小和方向是可以灵活选择的，那么使用普通的DQN之类的算法就不好做了。因为此时策略是一个有具体值有方向的力，我们可以把这个力在水平和垂直方向分解。那么这个力就是两个连续的向量组成，这个策略使用离散的方式是不好表达的，但是用Policy Based强化学习方法却很容易建模。</p>
+</li>
+<li>
+<p>第二点是对受限状态下的问题处理能力不足。在使用特征来描述状态空间中的某一个状态时，有可能因为个体观测的限制或者建模的局限，导致真实环境下本来不同的两个状态却再我们建模后拥有相同的特征描述，进而很有可能导致我们的value Based方法无法得到最优解。此时使用Policy Based强化学习方法也很有效。</p>
+</li>
+<li>
+<p>第三点是无法解决随机策略问题。Value Based强化学习方法对应的最优策略通常是确定性策略，因为其是从众多行为价值中选择一个最大价值的行为，而有些问题的最优策略却是随机策略，这种情况下同样是无法通过基于价值的学习来求解的。这时也可以考虑使用Policy Based强化学习方法。</p>
+</li>
+</ul>
+<p>由于上面这些原因，Value Based强化学习方法不能通吃所有的场景，我们需要新的解决上述类别问题的方法，比如Policy Based强化学习方法。</p>
+<h1 id="2-policy-based强化学习方法引入">2. Policy Based强化学习方法引入</h1>
+<p>回想我们在Value Based强化学习方法里，我们对价值函数进行了近似表示，引入了一个动作价值函数 $\hat{q}$，这个函数由参数 $w$ 描述，并接受状态 $s$ 与动作 $a$ 作为输入，计算后得到近似的动作价值，即：</p>
+<p>$$\hat{q}\left(s,a,w\right)\approx q_\pi(s,a)$$</p>
+<p>在Policy Based强化学习方法下，我们采样类似的思路，只不过这时我们对策略进行近似表示。此时策略 $π$可以被被描述为一个包含参数 $θ$ 的函数,即：</p>
+<p>$$\pi_\theta(s,a)=P(a|s,\theta)\approx\pi(a|s)$$</p>
+<p>将策略表示成一个连续的函数后，我们就可以用连续函数的优化方法来寻找最优的策略了。而最常用的方法就是梯度上升法了，那么这个梯度对应的优化目标如何定义呢？</p>
+<h1 id="3-策略梯度的优化目标">3. 策略梯度的优化目标</h1>
+<p>我们要用梯度上升来寻找最优的梯度，首先就要找到一个可以优化的函数目标。</p>
+<p>最简单的优化目标就是初始状态收获的期望，即优化目标为：</p>
+<p>$$J_1(\theta)=V_{\pi_\theta}(s_1)=\mathbb{E}_{\pi_\theta}(G_1)$$</p>
+<p>但是有的问题是没有明确的初始状态的，那么我们的优化目标可以定义平均价值，即：
+$$J_{avV}(\theta)=\sum_sd_{\pi_\theta}(s)V_{\pi_\theta}(s)$$</p>
+<p>其中，$d_πθ(s)$ 是基于策略 $π_θ$生成的马尔科夫链关于状态的静态分布。</p>
+<p>或者定义为每一时间步的平均奖励，即：</p>
+<p>$$J_{avR}(\theta)==\sum_sd_{\pi_\theta}(s)\sum_a\pi_\theta(s,a)R_s^a$$</p>
+<p>无论我们是采用 $J_1$, $J_{av}V$, 还是 $J_{av}R$ 来表示优化目标，最终对 $θ$求导的梯度都可以表示为：</p>
+<p>$$\nabla_\theta J(\theta)=\mathbb{E}_{\pi_\theta}[\nabla_\theta log\pi_\theta(s,a)Q_\pi(s,a)]$$</p>
+<p>具体的证明过程这里就不再列了，如果大家感兴趣，可以去看策略梯度的<a href="https://homes.cs.washington.edu/~todorov/courses/amath579/reading/PolicyGradient.pdf"target="_blank" rel="external nofollow noopener noreferrer">论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>的附录1，里面有详细的证明。</p>
+<p>当然我们还可以采用很多其他可能的优化目标来做梯度上升，此时我们的梯度式子里面的 $\nabla_\theta log\pi_\theta(s,a)$ 部分并不改变，变化的只是后面的 $Q_\pi(s,a)$ 部分。对于 $\nabla_\theta log\pi_\theta(s,a)$,我们一般称为<strong>分值函数</strong>(score function)。</p>
+<p>现在梯度的式子已经有了，后面剩下的就是策略函数 $\pi_\theta(s,a)$的设计了。</p>
+<h1 id="4-策略函数的设计">4. 策略函数的设计</h1>
+<p>现在我们回头看一下策略函数 $\pi_\theta(s,a)$ 的设计，在前面它一直是一个数学符号。</p>
+<p>最常用的策略函数就是softmax策略函数了，它主要应用于离散空间中，softmax策略使用描述状态和行为的特征 $ϕ(s,a)$ 与参数 $θ$的线性组合来权衡一个行为发生的几率,即:</p>
+<p>$$\pi_\theta(s,a)=\frac{e^{\phi(s,a)^T\theta}}{\sum_be^{\phi(s,b)^T\theta}}$$</p>
+<p>则通过求导很容易求出对应的分值函数为：</p>
+<p>$$\nabla_\theta log\pi_\theta(s,a)=\phi(s,a)-\mathbb{E}_{\pi_\theta}[\phi(s,.)]$$</p>
+<p>另一种高斯策略则是应用于连续行为空间的一种常用策略。该策略对应的行为从高斯分布 $\mathbb{N}(\phi(\mathrm{s})^{\mathbb{T}}\theta,\sigma^2)$中产生。高斯策略对应的分值函数求导可以得到为:</p>
+<p>$$\nabla_\theta log\pi_\theta(s,a)==\frac{(a-\phi(s)^T\theta)\phi(s)}{\sigma^2}$$</p>
+<p>有策略梯度的公式和策略函数，我们可以得到第一版的策略梯度算法了。</p>
+<h1 id="5-蒙特卡罗策略梯度reinforce算法">5. 蒙特卡罗策略梯度reinforce算法</h1>
+<p>这里我们讨论最简单的策略梯度算法，蒙特卡罗策略梯度reinforce算法, 使用价值函数 $v(s)$ 来近似代替策略梯度公式里面的 $Q_π(s,a)$。算法的流程很简单，如下所示:</p>
+<ul>
+<li>输入：N个蒙特卡罗完整序列,训练步长 $α$</li>
+<li>输出：策略函数的参数 $θ$
+<ul>
+<li>(1). for 每个蒙特卡罗序列:
+<ul>
+<li>a. 用蒙特卡罗法计算序列每个时间位置t的状态价值 $v_t$</li>
+<li>b. 对序列每个时间位置t，使用梯度上升法，更新策略函数的参数 $θ$：
+<ul>
+<li>$$\theta=\theta+\alpha\nabla_\theta log\pi_\theta(s_t,a_t)v_t$$</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>(2).返回策略函数的参数 $θ$</li>
+</ul>
+</li>
+</ul>
+<p>　　这里的策略函数可以是softmax策略，高斯策略或者其他策略。</p>
+<h1 id="6-策略梯度实例">6. 策略梯度实例</h1>
+<p>这里给出第5节的蒙特卡罗策略梯度reinforce算法的一个实例。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>完整的代码参见我的github：https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/policy_gradient.py</p>
+<p>这里我们采用softmax策略作为我们的策略函数，同时，softmax的前置部分，也就是我们的策略模型用一个三层的softmax神经网络来表示。这样好处就是梯度的更新可以交给神经网络来做。</p>
+<p>我们的softmax神经网络的结构如下，注意这个网络不是价值Q网络，而是策略网络：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">create_softmax_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># network weights</span>
+</span></span><span class="line"><span class="cl">  <span class="n">W1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">,</span> <span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="n">b1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="n">W2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="n">b2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># input layer</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">state_input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="s2">&#34;float&#34;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">tf_acts</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&#34;actions_num&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">tf_vt</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&#34;actions_value&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># hidden layers</span>
+</span></span><span class="line"><span class="cl">  <span class="n">h_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">,</span> <span class="n">W1</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># softmax layer</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">softmax_input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer</span><span class="p">,</span> <span class="n">W2</span><span class="p">)</span> <span class="o">+</span> <span class="n">b2</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">#softmax output</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">all_act_prob</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">softmax_input</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;act_prob&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">neg_log_prob</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">sparse_softmax_cross_entropy_with_logits</span><span class="p">(</span><span class="n">logits</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">softmax_input</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tf_acts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">neg_log_prob</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_vt</span><span class="p">)</span>  <span class="c1"># reward guided loss</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">train_op</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="n">LEARNING_RATE</span><span class="p">)</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意我们的损失函数是softmax交叉熵损失函数和状态价值函数的乘积，这样TensorFlow后面可以自动帮我们做梯度的迭代优化。</p>
+<p>另一个要注意的点就是蒙特卡罗法里面价值函数的计算，一般是从后向前算，这样前面的价值的计算可以利用后面的价值作为中间结果，简化计算，对应代码如下：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">learn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="n">discounted_ep_rs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ep_rs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">running_add</span> <span class="o">=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ep_rs</span><span class="p">))):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">running_add</span> <span class="o">=</span> <span class="n">running_add</span> <span class="o">*</span> <span class="n">GAMMA</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ep_rs</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">      <span class="n">discounted_ep_rs</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">running_add</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">discounted_ep_rs</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">discounted_ep_rs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="n">discounted_ep_rs</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">discounted_ep_rs</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>其余部分和之前的DQN的代码类似。</p>
+<h1 id="7-策略梯度小结">7. 策略梯度小结</h1>
+<p>策略梯度提供了和DQN之类的方法不同的新思路，但是我们上面的蒙特卡罗策略梯度reinforce算法却并不完美。由于是蒙特卡罗法，我们需要完全的序列样本才能做算法迭代，同时蒙特卡罗法使用收获的期望来计算状态价值，会导致行为有较多的变异性，我们的参数更新的方向很可能不是策略梯度的最优方向。</p>
+<p>因此，Policy Based的强化学习方法还需要改进，注意到我们之前有Value Based强化学习方法，那么两者能不能结合起来一起使用呢？下一篇我们讨论Policy Based+Value Based结合的策略梯度方法Actor-Critic。</p>
+<p>　　　　</p>
+]]></description></item><item><title>强化学习笔记 [12] | Dueling DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_12/</link><pubDate>Sun, 25 Feb 2024 11:16:52 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_12/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9797695.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十一) Prioritized Replay DQN<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了对DQN的经验回放池按权重采样来优化DQN算法的方法，本文讨论另一种优化方法，Dueling DQN。本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和Dueling DQN的论文(Dueling Network Architectures for Deep Reinforcement Learning)(ICML 2016)。</p>
+<h1 id="1-dueling-dqn的优化点考虑">1. Dueling DQN的优化点考虑</h1>
+<p>在前面讲到的DDQN中，我们通过优化目标Q值的计算来优化算法，在Prioritized Replay DQN中，我们通过优化经验回放池按权重采样来优化算法。而在Dueling DQN中，我们尝试通过<font color=red>优化神经网络的结构</font>来优化算法。</p>
+<p>具体如何优化网络结构呢？Dueling DQN考虑将Q网络分成两部分，第一部分是仅仅与状态 $S$有关，与具体要采用的动作 $A$无关，这部分我们叫做<strong>价值函数部分</strong>，记做 $V(S,w,α)$,第二部分同时与状态状态 $S$ 和动作 $A$有关，这部分叫做**优势函数(Advantage Function)**部分,记为 $A(S,A,w,β)$,那么最终我们的价值函数可以重新表示为：</p>
+<p>$$Q(S,A,w,\alpha,\beta)=V(S,w,\alpha)+A(S,A,w,\beta)$$</p>
+<p>其中，$w$ 是公共部分的网络参数，而 $α$ 是价值函数独有部分的网络参数，而 $β$ 是优势函数独有部分的网络参数。</p>
+<h1 id="2-dueling-dqn网络结构">2. Dueling DQN网络结构</h1>
+<p>由于Q网络的价值函数被分为两部分，因此Dueling DQN的网络结构也和之前的DQN不同。为了简化算法描述，这里不使用原论文的CNN网络结构，而是使用前面文中用到的最简单的三层神经网络来描述。是否使用CNN对Dueling DQN算法本身无影响。</p>
+<p>在前面讲到的DDQN等DQN算法中，我使用了一个简单的三层神经网络：一个输入层，一个隐藏层和一个输出层。如下左图所示：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">神经网络与Dueling DQN</div>
+</center>
+<br>
+<p>而在Dueling DQN中，我们在后面加了两个子网络结构，分别对应上面上到价格函数网络部分和优势函数网络部分。对应上面右图所示。最终Q网络的输出由价格函数网络的输出和优势函数网络的输出线性组合得到。</p>
+<p>我们可以直接使用上一节的价值函数的组合公式得到我们的动作价值，但是这个式子无法辨识最终输出里面 $V(S,w,α)$ 和 $A(S,A,w,β)$各自的作用，为了可以体现这种可辨识性(identifiability),实际使用的组合公式如下：</p>
+<p>$$Q(S,A,w,\alpha,\beta)=V(S,w,\alpha)+(A(S,A,w,\beta)-\frac1{\mathcal{A}}\sum_{a^{\prime}\in\mathcal{A}}A(S,a^{\prime},w,\beta))$$</p>
+<p>其实就是对优势函数部分做了中心化的处理。以上就是Dueling DQN的主要算法思路。由于它仅仅涉及神经网络的中间结构的改进，现有的DQN算法可以在使用Duel DQN网络结构的基础上继续使用现有的算法。由于算法主流程和其他算法没有差异，这里就不单独讲Duel DQN的算法流程了。</p>
+<h1 id="3-dueling-dqn实例">3. Dueling DQN实例</h1>
+<p>下面我们用一个具体的例子来演示Dueling DQN的应用。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>这个实例代基于Nature DQN，并将网络结构改为上图中右边的Dueling DQN网络结构，完整的代码参见github: <a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/duel_dqn.py"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/duel_dqn.py<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>这里我们重点关注Dueling DQN和Nature DQN的代码的不同之处。也就是网络结构定义部分，主要的代码如下，一共有两个相同结构的Q网络，每个Q网络都有状态函数和优势函数的定义，以及组合后的Q网络输出，如代码红色部分：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">create_Q_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># input layer</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">state_input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="s2">&#34;float&#34;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># network weights</span>
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;current_net&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">W1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">,</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="n">b1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># hidden layer 1</span>
+</span></span><span class="line"><span class="cl">    <span class="n">h_layer_1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">,</span><span class="n">W1</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># hidden layer  for state value</span>
+</span></span><span class="line"><span class="cl">    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;Value&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W21</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b21</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">V</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer_1</span><span class="p">,</span> <span class="n">W21</span><span class="p">)</span> <span class="o">+</span> <span class="n">b21</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># hidden layer  for action value</span>
+</span></span><span class="line"><span class="cl">    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;Advantage&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W22</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b22</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer_1</span><span class="p">,</span> <span class="n">W22</span><span class="p">)</span> <span class="o">+</span> <span class="n">b22</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1"># Q Value layer</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">Q_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">V</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">-</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keep_dims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;target_net&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">W1t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">state_dim</span><span class="p">,</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="n">b1t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># hidden layer 1</span>
+</span></span><span class="line"><span class="cl">    <span class="n">h_layer_1t</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_input</span><span class="p">,</span><span class="n">W1t</span><span class="p">)</span> <span class="o">+</span> <span class="n">b1t</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># hidden layer  for state value</span>
+</span></span><span class="line"><span class="cl">    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;Value&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W2v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b2v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">VT</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer_1t</span><span class="p">,</span> <span class="n">W2v</span><span class="p">)</span> <span class="o">+</span> <span class="n">b2v</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># hidden layer  for action value</span>
+</span></span><span class="line"><span class="cl">    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;Advantage&#39;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="n">W2a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_variable</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="n">b2a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variable</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">AT</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">h_layer_1t</span><span class="p">,</span> <span class="n">W2a</span><span class="p">)</span> <span class="o">+</span> <span class="n">b2a</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1"># Q Value layer</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">target_Q_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VT</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">AT</span> <span class="o">-</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">AT</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keep_dims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>其余部分代码和Nature DQN基本相同。当然，我们可以也在前面DDQN，Prioritized Replay DQN代码的基础上，把网络结构改成上面的定义，这样Dueling DQN也可以起作用。</p>
+<h1 id="4-dqn总结">4. DQN总结</h1>
+<p>DQN系列我花了5篇来讲解，一共5个前后有关联的算法：DQN(NIPS2013), Nature DQN, DDQN, Prioritized Replay DQN和Dueling DQN。目前使用的比较主流的是后面三种算法思路，这三种算法思路也是可以混着一起使用的，相互并不排斥。</p>
+<p>当然DQN家族的算法远远不止这些，还有一些其他的DQN算法我没有详细介绍，比如使用一些较复杂的CNN和RNN网络来提高DQN的表达能力，又比如改进探索状态空间的方法等，主要是在DQN的基础上持续优化。</p>
+<p>DQN算是深度强化学习的中的主流流派，代表了Value-Based这一大类深度强化学习算法。但是它也有自己的一些问题，就是绝大多数DQN只能处理离散的动作集合，不能处理连续的动作集合。虽然NAF DQN可以解决这个问题，但是方法过于复杂了。而深度强化学习的另一个主流流派Policy-Based而可以较好的解决这个问题，从下一篇我们开始讨论Policy-Based深度强化学习。</p>
+]]></description></item><item><title>强化学习笔记 [11] | Prioritized Replay DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_11/</link><pubDate>Sun, 25 Feb 2024 11:16:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_11/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在<a href="https://www.cnblogs.com/pinard/p/9778063.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（十）Double DQN (DDQN)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了DDQN使用两个Q网络，用当前Q网络计算最大Q值对应的动作，用目标Q网络计算这个最大动作对应的目标Q值，进而消除贪婪法带来的偏差。今天我们在DDQN的基础上，对经验回放部分的逻辑做优化。对应的算法是Prioritized Replay DQN。</p>
 <p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和Prioritized Replay DQN的论文(Prioritized Experience Replay)(ICLR 2016)。</p>
 <h1 id="1-prioritized-replay-dqn之前算法的问题">1. Prioritized Replay DQN之前算法的问题</h1>
@@ -49,7 +1095,7 @@
 <li>e) $S=S'$</li>
 <li>f) 从SumTree中采样 $m$ 个样本 ${ϕ(S_j),A_j,R_j,ϕ(S&rsquo;_j),is_end_j},j=1,2.,,,m$，每个样本被采样的概率基于 $P(j)=\frac{p_j}{\sum_i(p_i)}$，损失函数权重 $w_j=(N*P(j))^{-\beta}/\max_i(w_i)$，计算当前目标Q值 $y_j$:
 <ul>
-<li>$$\left.y_j=\left{\begin{matrix}R_j&amp;is_end_j\textit{is true}\R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w),w^{\prime})&amp;is_end_j\textit{is false}\end{matrix}\right.\right.$$</li>
+<li>$$\left.y_j=\left\{\begin{matrix}R_j&amp;is_end_j\textit{is true}\\R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w),w^{\prime})&amp;is_end_j\textit{is false}\end{matrix}\right.\right.$$</li>
 </ul>
 </li>
 <li>g) 使用均方差损失函数$\begin{aligned}\frac{1}{m}\sum_{j=1}^mw_j(y_j-Q(\phi(S_j),A_j,w))^2\end{aligned}$，通过神经网络的梯度反向传播来更新Q网络的所有参数 $w$</li>
@@ -1818,196 +2864,4 @@ $$ y_i = r + \gamma \max_{a&rsquo;}Q(s&rsquo;, a&rsquo;; \theta_{t})$$</p>
 <ul>
 <li>作用: 使训练更新更稳定。</li>
 </ul>
-]]></description></item><item><title>RL | 强化学习 -- 简介</title><link>https://jianye0428.github.io/posts/rl_introduction/</link><pubDate>Fri, 14 Jul 2023 08:21:32 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_introduction/</guid><description><![CDATA[<h2 id="1-强化学习">1. 强化学习</h2>
-<p>Reinforcement Learning (RL): 强化学习</br>
-强化学习是人工智能（AI）和机器学习（ML）领域的一个重要子领域，不同于<code>监督学习</code>和<code>无监督学习</code>，强化学习通过智能体与环境的不断交互(即采取动作)，进而获得奖励，从而不断优化自身动作策略，以期待最大化其长期收益(奖励之和)。强化学习特别适合序贯决策问题(涉及一系列有序的决策问题)。</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">ML Categories</div>
-</center>
-<br>
-<p>在实际应用中，针对某些任务，我们往往无法给每个数据或者状态贴上准确的标签，但是能够知道或评估当前情况或数据是好还是坏，可以采用强化学习来处理。例如，下围棋(Go)，星际争霸II(Starcraft II)等游戏。</p>
-<h4 id="11-强化学习的定义">1.1 强化学习的定义</h4>
-<p>Agent interacts with its surroundings known as the environment. Agent will get a reward from the environemnt once it takes an action in the current enrivonment. Meanwhile, the environment evolves to the next state. The goal of the agent is to maximize its total reward (the Return) in the long run.</p>
-<p>智能体与环境的不断交互(即在给定状态采取动作)，进而获得奖励，此时环境从一个状态转移到下一个状态。智能体通过不断优化自身动作策略，以期待最大化其长期回报或收益(奖励之和)。</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">强化学习流程图</div>
-</center>
-<br>
-<h3 id="12-强化学习的相关概念">1.2 强化学习的相关概念</h3>
-<p>(1) <font color=red>状态 State ($S$)</font>: agent’s observation of its environment;</br></p>
-<p>(2) <font color=red>动作 Action ($A$)</font>: the approaches that agent interacts with the environment;</br></p>
-<p>(3) <font color=red>奖励 Reward ($R_t$)</font>: the bonus that agent get once it takes an action in the environment at the given time step t.回报(Return)为Agent所获得的奖励之和。</br></p>
-<p>(4) <font color=red>转移概率 Transistion Probability ($P$)</font>: the transition possibility that environment evolves from one state to another. 环境从一个状态转移到另一个状态，可以是确定性转移过程，例如，$S_{t+1} = f(S_t, A_t)$, 也可以是随机性转移过程，例如 $S_{t+1} \sim p\left( S_{t+1}|S_t, A_t \right)$</br></p>
-<p>(5) <font color=red>折扣因子 Discount factor ( $\gamma$ )</font>: to measure the importance of future reward to agent at the current state.</br></p>
-<p>(6) <font color=red>轨迹(Trajectory)</font>:是一系列的状态、动作、和奖励，可以表述为：</p>
-<p>$$\tau = (S_0, A_0, R_0, S_1, A_1, R_1, &hellip; )$$</p>
-<p>用轨迹$\tau$来记录Agent如何和环境交互。轨迹的初始状态是从起始状态分布中随机采样得到的。一条轨迹有时候也称为片段(Episode)或者回合，是一个从初始状态(Initial State，例如游戏的开局)到最终状态(Terminal State，如游戏中死亡或者胜利)的序列。</br></p>
-<p>(7) <font color=red>探索-利用的折中(Exploration-Exploitation Tradeoff)</font>:
-这里，探索是指Agent通过与环境的交互来获取更多的信息，而利用是指使用当前已知信息来使得Agent的表现达到最佳，例如，贪心(greedy)策略。同一时间，只能二者选一。因此，如何平衡探索和利用二者，以实现长期回报(Long-term Return)最大，是强化学习中非常重要的问题。</br></p>
-<p>因此，可以用$ (S，A，P，R，\gamma) $来描述强化学习过程。</p>
-<h3 id="13-强化学习的数学建模">1.3 强化学习的数学建模</h3>
-<p>(1) 马尔可夫过程 (Markov Process，MP) 是一个具备马尔可夫性质的离散随机过程。</p>
-<p>马尔可夫性质是指下一状态 $ S_{t+1} $ 只取决于当前状态 $S_t$.</p>
-<p>$$p(S_{t+1}|S_{t}) = p(S_{t+1} | S_0, S_1, S_2, &hellip;, S_t)$$</p>
-<p>可以用有限状态集合 $\mathcal{S}$ 和状态转移矩阵 $\mathbf{P}$ 表示MP过程为 $&lt;\mathcal{S}, \mathbf{P}&gt;$。</p>
-<p>为了能够刻画环境对Agent的反馈奖励，马尔可夫奖励过程将上述MP从 $&lt;\mathcal{S}, \mathbf{P}&gt;$ 扩展到了$ &lt;\mathcal{S}, \mathbf{P}, R, \gamma&gt;$。这里，$R$表示奖励函数，而 $\gamma$ 表示奖励折扣因子。</p>
-<p>$$R_t = R(S_t)$$</p>
-<p>回报(Return)是Agent在一个轨迹上的累计奖励。折扣化回报定义如下：</p>
-<p>$$G_{t=0:T} = R(\tau) = \sum_{t=0}^{T}\gamma^{t}R_t$$</p>
-<p>价值函数(Value Function) $V(s)$是Agent在状态$s$的期望回报(Expected Return)。</p>
-<p>$$V^{\pi} (s) = \mathbb{E}[R(\tau) | S_0 = s]$$</p>
-<p>(3) 马尔可夫决策过程 (Markov Decision Process，MDP)</br></p>
-<p>MDP被广泛应用于经济、控制论、排队论、机器人、网络分析等诸多领域。
-马尔可夫决策过程的立即奖励(Reward，$R$)与状态和动作有关。MDP可以用$&lt;\mathcal{S},\mathcal{A}, \mathbf{P}, R, \gamma&gt;$来刻画。
-$\mathcal{A}$表示有限的动作集合，此时，立即奖励变为</p>
-<p>$$R_t = R(S_t, A_t)$$</p>
-<p>策略(Policy)用来刻画Agent根据环境观测采取动作的方式。Policy是从一个状态 $s \in \mathcal{S}$ 到动作 $a \in \mathcal{A}$的概率分布$\pi(a|s)$ 的映射，$\pi(a|s)$ 表示在状态$s$下，采取动作 $a$ 的概率。</p>
-<p>$$\pi (a|s) = p (A_t = a | S_t = s), \exist{t} $$</p>
-<p>期望回报(Expected Return)是指在一个给定策略下所有可能轨迹的回报的期望值，可以表示为：</p>
-<p>$$J(\pi) = \int_{\tau} p(\tau | \pi) R(\tau) = \mathbb{E}_{\tau \sim \pi}[R(\tau)]$$</p>
-<p>这里, $p(\tau|\pi)$表示给定初始状态分布 $\rho_0$ 和策略 $\pi$，马尔可夫决策过程中一个 $T$ 步长的轨迹 $\tau$ 的发生概率，如下：</p>
-<p>$$p(\tau | \pi) = \rho_0(s_0)\prod \limits_{t=0}^{T-1} p(S_{t+1} | S_t, A_t) \pi (A_t | S_t)$$</p>
-<p>强化学习优化问题通过优化方法来提升策略，以最大化期望回报。最优策略$\pi^*$ 可以表示为:</p>
-<p>$$\pi ^ * = \argmax_{\pi} J(\pi)$$</p>
-<p>给定一个策略 $\pi$，价值函数$V(s)$，即给定状态下的期望回报，可以表示为:</p>
-<p>$$V^{\pi}(s) = \mathbb{E}_{\tau \sim \pi} [R(\tau) | S_0 = s] = \mathbb{E}_{A_t \sim \pi(\cdot | S_t)} [\sum_{t=0}^{\infin}\gamma^t R(S_t, A_t) | S_0 = s]$$</p>
-<p>在MDP中，给定一个动作，就有动作价值函数(Action-Value Function)，是基于状态和动作的期望回报。其定义如下：</p>
-<p>$$Q^{\pi}(s, a) = \mathbb{E}_{\tau \sim \pi}[R(\tau) | S_0 = s, A_0 = a] = \mathbb{E}_{A_t \sim \pi(\cdot | S_t)}[\sum_{t=0}^{\infin}\gamma^t R(S_t, A_t)|S_0 = s, A_0 = a]$$</p>
-<p>根据上述定义，可以得到：</p>
-<p>$$V^{\pi}(s) = \mathbb{E}_{a \sim \pi}[Q^{\pi}(s,a)]$$</p>
-<h2 id="2-深度强化学习">2. 深度强化学习</h2>
-<p>Deep Learning + Reinforcement Learning = Deep Reinforcement Learning (DRL)
-深度学习DL有很强的抽象和表示能力，特别适合建模RL中的值函数，例如: 动作价值函数 $Q^\pi \left(s, a \right)$。
-二者结合，极大地拓展了RL的应用范围。</p>
-<h2 id="3-常见深度强化学习算法">3. 常见深度强化学习算法</h2>
-<p>深度强化学习的算法比较多，常见的有：DQN，DDPG，PPO，TRPO，A3C，SAC 等等。</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">常见深度强化学习算法</div>
-</center>
-<br>
-<h3 id="31-deep-q-networks-dqn">3.1 Deep Q-Networks （DQN）</h3>
-<p>DQN网路将Q-Learning和深度学习结合起来，并引入了两种新颖的技术来解决以往采用神经网络等非线性函数逼近器表示动作价值函数 <code>Q(s,a)</code> 所产生的不稳定性问题：</p>
-<ul>
-<li>技术1: 经验回放缓存（Replay Buffer）：将Agent获得的经验存入缓存中，然后从该缓存中均匀采用（也可考虑基于优先级采样）小批量样本用于Q-Learning的更新；</li>
-<li>技术2: 目标网络（Target Network）：引入独立的网络，用来代替所需的Q网络来生成Q-Learning的目标，进一步提高神经网络稳定性。</li>
-</ul>
-<p>其中, 技术1 能够提高样本使用效率，降低样本间相关性，平滑学习过程；技术2 能够是目标值不受最新参数的影响，大大较少发散和震荡。</p>
-<p>DQN算法具体描述如下：
-<br></p>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">DQN 伪代码</div>
-</center>
-<br>
-</br>
-注意：这里随机动作选择概率$\epsilon$一般是随着迭代Episode和Time Step的增加，而逐渐降低，目的是降低随机策略的影响，逐步提高Q网络对Agent动作选择的影响。
-<p>该算法中，Line 14 具体更新方式如下：</p>
-<p>$$\theta^Q\leftarrow\theta^Q+\beta\sum_{i\in\mathcal{N}}\frac{\partial Q(s,a|\theta^Q)}{\partial\theta^Q}\left[y_i-Q(s,a|\theta^Q)\right]$$</p>
-<p>其中，集合$N$中为<code>minibatch</code>的$N$个$(S_t,A_t,R_t,S_{t+1})$经验样本集合，$\beta$表示一次梯度迭代中的迭代步长。</p>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>参考文献<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">[1] V. Mnih et al., “Human-level control through deep reinforcement learning,” Nature, vol. 518, no. 7540, pp. 529–533, Feb. 2015.</div>
-    </div>
-  </div>
-<h3 id="32-deep-deterministic-policy-gradientddpg">3.2 Deep Deterministic Policy Gradient（DDPG）</h3>
-<p>DDPG算法可以看作Deterministic Policy Gradient（DPG）算法和深度神经网络的结合，是对上述深度Q网络（DQN）在连续动作空间的扩展。</p>
-<p>DDPG同时建立Q值函数（Critic）和策略函数（Actor）。这里，Critic与DQN相同，采用TD方法进行更新；而Actor利用Critic的估计，通过策略梯度方法进行更新。</p>
-<p>DDPG算法具体描述如下：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">DDPG 伪代码</div>
-</center>
-<br>
-<p>原论文中采用Ornstein-Uhlenbeck过程（O-U过程）作为添加噪声项N \mathcal{N}N，也可以采用时间不相关的零均值高斯噪声（相关实践表明，其效果也很好）。</p>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>参考文献<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">[1] Lillicrap, Timothy P., et al. “Continuous control with deep reinforcement learning”，arXiv preprint, 2015, online: <a href="https://arxiv.org/pdf/1509.02971.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/pdf/1509.02971.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></div>
-    </div>
-  </div>
-<h3 id="33-proximal-policy-optimizationppo">3.3 Proximal Policy Optimization（PPO）</h3>
-<p>PPO算法是对信赖域策略优化算法(Trust Region Policy Optimization, TRPO) 的一个改进，用一个更简单有效的方法来强制策略$\pi_\theta$与$\pi_{\theta}^{\prime}$相似。</p>
-<p>具体来说，TRPO中的优化问题如下：</p>
-<p>$$\begin{gathered}\max_{\pi_{\theta}^{\prime}}\mathcal{L}_{\pi_{\theta}}(\pi_{\theta}^{\prime})\\s.t.\mathbb{E}_{s\sim\rho_{\pi_\theta}}[D_{KL}\left(\pi_\theta\left|\left|\pi_\theta^{\prime}\right.\right)\right]\leq\delta \end{gathered}$$</p>
-<p>而PPO算法直接优化上述问题的正则版本，即：</p>
-<p>$$\max_{\pi_{\theta}^{\prime}}\mathcal{L}_{\pi_{\theta}}\left(\pi_{\theta}^{\prime}\right)-\lambda\mathbb{E}_{s\sim\rho_{\pi_{\theta}}}\quad[D_{KL}\left(\pi_{\theta}||\pi_{\theta}^{\prime}\right)]$$</p>
-<p>这里，入为正则化系数，对应TRPO优化问题中的每一个$\delta$,都存在一个相应的$\lambda$,使得上述两个优化问题有相同的解。然而，入的值依赖于$\pi_\theta$,因此，在PPO中，需要使用一个可动态调整的$\lambda$。具体来说有两种方法：
-(1) 通过检验KL散度值来决定$\lambda$是增大还是减小，该版本的PPO算法称为PPO-Penalty;
-(2) 直接截断用于策略梯度的目标函数，从而得到更保守的更新，该方法称为PPO-Clip。</p>
-<p>PPO-Clip算法具体描述如下：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">PPO 伪代码</div>
-</center>
-<br>
-<p>$$f(\theta&rsquo;)=\min\left(\ell_t\left(\theta&rsquo;\right)A^{\pi_{\theta_{dd}}}(S_t,A_t),clip(\ell_t\left(\theta&rsquo;\right),1-\epsilon,1+\epsilon)A^{\pi_{\theta_{dd}}}(S_t,A_t)\right)$$</p>
-<p>这里，$clip(x,1-\epsilon,1+\epsilon)$表示将$x$截断在$[1-\epsilon,1+\epsilon]$中。</p>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>参考文献<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content">[1] Schulman, J. , et al. “Proximal Policy Optimization Algorithms”，arXiv preprint, 2017, online: <a href="https://arxiv.org/pdf/1707.06347.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/pdf/1707.06347.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2] Schulman J, Levine S, Abbeel P, et al. “Trust region policy optimization”, International conference on machine learning. PMLR, 2015: 1889-1897, online: <a href="http://proceedings.mlr.press/v37/schulman15.pdf"target="_blank" rel="external nofollow noopener noreferrer">http://proceedings.mlr.press/v37/schulman15.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></div>
-    </div>
-  </div>
-<h2 id="4-深度强化学习算法分类">4. 深度强化学习算法分类</h2>
-<h3 id="41-根据agent训练与测试所采用的策略是否一致">4.1 根据Agent训练与测试所采用的策略是否一致</h3>
-<h4 id="411-off-policy-离轨策略离线策略">4.1.1 off-policy (离轨策略、离线策略)</h4>
-<p>Agent在训练(产生数据)时所使用的策略 $\pi_1$与 agent测试(方法评估与实际使用&ndash;目标策略)时所用的策略 $\pi_2$ 不一致。</p>
-<p>例如，在DQN算法中，训练时，通常采用 $\epsilon-greedy$ 策略；而在测试性能或者实际使用时，采用 $ a^* = arg \max\limits_{a} Q^{\pi}\left( s, a \right) $ 策略。</p>
-<p>常见算法有：DDPG，TD3，Q-learning，DQN等。</p>
-<h4 id="412-on-policy-同轨策略在线策略">4.1.2 on-policy (同轨策略、在线策略)</h4>
-<p>Agent在训练时(产生数据)所使用的策略与其测试(方法评估与提升)时使用的策略为同一个策略 $\pi$。</p>
-<p>常见算法有：Sarsa，Policy Gradient，TRPO，PPO，A3C等。</p>
-<h3 id="42-策略优化的方式不同">4.2 策略优化的方式不同</h3>
-<h4 id="421-value-based-algorithms基于价值的算法">4.2.1 Value-based algorithms(基于价值的算法)</h4>
-<p>基于价值的方法通常意味着对动作价值函数 $Q^{\pi}(s,a)$的优化，最优策略通过选取该函数 $Q^{\pi}(s,a)$ 最大值所对应的动作，即 $\pi^* \approx \arg \max\limits_{\pi}Q^{\pi}(s,a)$，这里，$\approx$ 由函数近似误差导致。</p>
-<p>基于价值的算法具有采样效率相对较高，值函数估计方差小，不易陷入局部最优等优点，缺点是通常不能处理连续动作空间问题，最终策略通常为确定性策略。</p>
-<p>常见算法有 Q-learning，DQN，Double DQN，等，适用于 Discrete action space。其中，DQN算法是基于state-action function $Q(s,a)$ 来进行选择最优action的。</p>
-<h4 id="422-policy-based-algorithms基于策略的算法">4.2.2 Policy-based algorithms(基于策略的算法)</h4>
-<p>基于策略的方法直接对策略进行优化，通过对策略迭代更新，实现累计奖励(回报)最大化。其具有策略参数化简单、收敛速度快的优点，而且适用于连续或者高维动作空间。</p>
-<p>**策略梯度方法(Policy Gradient Method，PGM)**是一类直接针对期望回报通过梯度下降(Gradient Descent，针对最小化问题)进行策略优化的强化学习方法。其不需要在动作空间中求解价值最大化的优化问题，从而比较适用于 continuous and high-Dimension action space，也可以自然地对随机策略进行建模。</p>
-<p>PGM方法通过梯度上升的方法直接在神经网络的参数上优化Agent的策略。</p>
-<p>根据相关理论，期望回报 $J(\pi_{\theta})$ 关于参数 $\theta$ 的梯度可以表示为：</p>
-<p>$$\nabla_\theta J(\pi_\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t=0}^TR_t\nabla_\theta\sum_{t^{\prime}=0}^T\log\pi_\theta(A_{t^{\prime}}|S_{t^{\prime}})\right]=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t^{\prime}=0}^T\nabla_\theta\log\pi_\theta\left(A_{t^{\prime}}|S_{t^{\prime}}\right)\sum_{t=0}^TR_t\right]$$</p>
-<p>当$T \rightarrow \infin$ 时，上式可以表示为：</p>
-<p>$$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t&rsquo;=0}^{\infin}\nabla_{\theta} \log \pi_{\theta}(A_{t&rsquo;} | S_{t&rsquo;}) \gamma^{t&rsquo;}\sum_{t=t&rsquo;}^{\infin} \gamma^{t-t&rsquo;}R_t]$$</p>
-<p>在实际中，经常去掉 $ \gamma^{t^{\prime}} $，从而避免过分强调轨迹早期状态的问题。</p>
-<p>上述方法往往对梯度的估计有较大的方法(奖励 $R_t$ 的随机性可能对轨迹长度L呈指数级增长)。为此，常用的方法是引进一个基准函数 $b(S_i)$，仅是状态 $S_i$ 的函数。可将上述梯度修改为：</p>
-<p>$$\nabla_{\theta}J(\pi_{\theta}) = \mathbb{E}_{\tau \sim \pi_{\theta}}[\sum_{t&rsquo;=0}^{\infin}\nabla_{\theta} \log \pi_{\theta}(A_{t&rsquo;} | S_{t&rsquo;}) (\sum_{t=t&rsquo;}^{\infin} \gamma^{t-t&rsquo;}R_t - b(S_{t&rsquo;}))]$$</p>
-<p>常见的PGM算法有REINFORCE，PG，PPO，TRPO 等。</p>
-<h4 id="423-actor-critic-algorithms-演员-评论家方法">4.2.3 Actor-Critic algorithms (演员-评论家方法)</h4>
-<p>Actor-Critic方法结合了上述 <font color=red>基于价值</font> 的方法和 <font color=red>基于策略</font> 的方法，利用基于价值的方法学习Q值函数或状态价值函数V来提高采样效率(Critic)，并利用基于策略的方法学习策略函数(Actor)，从而适用于连续或高维动作空间。其缺点也继承了二者的缺点，例如，Critic存在过估计问题，而Actor存在探索不足的问题等。</p>
-<p>常见算法有 DDPG, A3C，TD3，SAC等，适用于 continuous and high-Dimension action space</p>
-<h3 id="43-参数更新的方式不同">4.3 参数更新的方式不同</h3>
-<p>Parameters updating methods</p>
-<h4 id="431-monte-carlo-method蒙特卡罗方法">4.3.1 Monte Carlo method(蒙特卡罗方法)</h4>
-<p>蒙特卡罗方法：必须等待一条轨迹 $\tau_k$ 生成(真实值)后才能更新。</p>
-<p>常见算法有：Policy Gradient，TRPO，PPO等。</p>
-<h4 id="432-temporal-difference-method时间差分方法">4.3.2 Temporal Difference method(时间差分方法)</h4>
-<p>时间差分方法：在每一步动作执行都可以通过自举法(Bootstrapping)(估计值)及时更新。</p>
-<p>常见算法有：DDPG，Q-learning，DQN等。</p>
-<h2 id="参考">参考</h2>
-<p>[1]. <a href="https://blog.csdn.net/b_b1949/article/details/128997146"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/b_b1949/article/details/128997146<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
-[2]. <a href="https://blog.csdn.net/magicyangjay111/article/details/132645347"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/magicyangjay111/article/details/132645347<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item></channel></rss>
