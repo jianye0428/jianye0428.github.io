@@ -1,4 +1,220 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 23 Feb 2024 13:17:52 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>强化学习笔记 [9] | Deep Q-Learning进阶之Nature DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_9/</link><pubDate>Fri, 23 Feb 2024 13:17:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_9/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 25 Feb 2024 11:16:52 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>强化学习笔记 [11] | Prioritized Replay DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_11/</link><pubDate>Sun, 25 Feb 2024 11:16:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_11/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9778063.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（十）Double DQN (DDQN)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了DDQN使用两个Q网络，用当前Q网络计算最大Q值对应的动作，用目标Q网络计算这个最大动作对应的目标Q值，进而消除贪婪法带来的偏差。今天我们在DDQN的基础上，对经验回放部分的逻辑做优化。对应的算法是Prioritized Replay DQN。</p>
+<p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和Prioritized Replay DQN的论文(Prioritized Experience Replay)(ICLR 2016)。</p>
+<h1 id="1-prioritized-replay-dqn之前算法的问题">1. Prioritized Replay DQN之前算法的问题</h1>
+<p>在Prioritized Replay DQN之前，我们已经讨论了很多种DQN，比如Nature DQN， DDQN等，他们都是通过经验回放来采样，进而做目标Q值的计算的。在采样的时候，我们是一视同仁，在经验回放池里面的所有的样本都有相同的被采样到的概率。</p>
+<p>但是注意到在经验回放池里面的不同的样本由于TD误差的不同，对我们反向传播的作用是不一样的。TD误差越大，那么对我们反向传播的作用越大。而TD误差小的样本，由于TD误差小，对反向梯度的计算影响不大。在Q网络中，TD误差就是目标Q网络计算的目标Q值和当前Q网络计算的Q值之间的差距。</p>
+<p>这样如果TD误差的绝对值 $|δ(t)|$较大的样本更容易被采样，则我们的算法会比较容易收敛。下面我们看看Prioritized Replay DQN的算法思路。</p>
+<h1 id="2-prioritized-replay-dqn算法的建模">2. Prioritized Replay DQN算法的建模</h1>
+<p>Prioritized Replay DQN根据每个样本的TD误差绝对值 $|δ(t)|$，给定该样本的优先级正比于 $|δ(t)|$，将这个优先级的值存入经验回放池。回忆下之前的DQN算法，我们仅仅只保存和环境交互得到的样本状态，动作，奖励等数据，没有优先级这个说法。</p>
+<p>由于引入了经验回放的优先级，那么Prioritized Replay DQN的经验回放池和之前的其他DQN算法的经验回放池就不一样了。因为这个优先级大小会影响它被采样的概率。在实际使用中，我们通常使用SumTree这样的二叉树结构来做我们的带优先级的经验回放池样本的存储。</p>
+<p>具体的SumTree树结构如下图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">sum_tree 结构图</div>
+</center>
+<br>
+<p>所有的经验回放样本只保存在最下面的叶子节点上面，一个节点一个样本。内部节点不保存样本数据。而叶子节点除了保存数据以外，还要保存该样本的优先级，就是图中的显示的数字。对于内部节点每个节点只保存自己的儿子节点的优先级值之和，如图中内部节点上显示的数字。</p>
+<p>这样保存有什么好处呢？主要是方便采样。以上面的树结构为例，根节点是42，如果要采样一个样本，那么我们可以在[0,42]之间做均匀采样，采样到哪个区间，就是哪个样本。比如我们采样到了26， 在（25-29）这个区间，那么就是第四个叶子节点被采样到。而注意到第三个叶子节点优先级最高，是12，它的区间13-25也是最长的，会比其他节点更容易被采样到。</p>
+<p>如果要采样两个样本，我们可以在[0,21],[21,42]两个区间做均匀采样，方法和上面采样一个样本类似。</p>
+<p>类似的采样算法思想我们在<a href="https://www.cnblogs.com/pinard/p/7249903.html"target="_blank" rel="external nofollow noopener noreferrer">word2vec原理(三) 基于Negative Sampling的模型<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>第四节中也有讲到。</p>
+<p>除了经验回放池，现在我们的Q网络的算法损失函数也有优化，之前我们的损失函数是：</p>
+<p>$$\frac1m\sum_{j=1}^m(y_j-Q(\phi(S_j),A_j,w))^2$$</p>
+<p>现在我们新的考虑了样本优先级的损失函数是</p>
+<p>$$\frac1m\sum_{j=1}^mw_j(y_j-Q(\phi(S_j),A_j,w))^2$$</p>
+<p>其中 $w_j$是第j个样本的优先级权重，由TD误差 $|δ(t)|$归一化得到。</p>
+<p>第三个要注意的点就是当我们对Q网络参数进行了梯度更新后，需要重新计算TD误差，并将TD误差更新到SunTree上面。</p>
+<p>除了以上三个部分，Prioritized Replay DQN和DDQN的算法流程相同。</p>
+<h1 id="3-prioritized-replay-dqn算法流程">3. Prioritized Replay DQN算法流程</h1>
+<p>下面我们总结下Prioritized Replay DQN的算法流程，基于上一节的DDQN，因此这个算法我们应该叫做Prioritized Replay DDQN。主流程参考论文(Prioritized Experience Replay)(ICLR 2016)。</p>
+<ul>
+<li>算法输入：迭代轮数 $T$，状态特征维度 $n$, 动作集 $A$, 步长 $α$，采样权重系数 $β$，衰减因子 $γ$, 探索率 $ϵ$, 当前Q网络 $Q$，目标Q网络 $Q&rsquo;$, 批量梯度下降的样本数 $m$,目标Q网络参数更新频率 $C$, SumTree的叶子节点数 $S$。</li>
+<li>输出：Q网络参数。</li>
+<li>
+<ol>
+<li>随机初始化所有的状态和动作对应的价值 $Q$. 随机初始化当前Q网络的所有参数 $w$,初始化目标Q网络 $Q&rsquo;$的参数 $w&rsquo;=w$。初始化经验回放SumTree的默认数据结构，所有SumTree的S个叶子节点的优先级 $p_j$为1。</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>for i from 1 to T，进行迭代。</li>
+</ol>
+<ul>
+<li>a) 初始化S为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$</li>
+<li>b) 在Q网络中使用 $ϕ(S)$ 作为输入，得到Q网络的所有动作对应的Q值输出。用 $ϵ−$贪婪法在当前Q值输出中选择对应的动作 $A$</li>
+<li>c) 在状态 $S$ 执行当前动作 $A$,得到新状态 $S&rsquo;$ 对应的特征向量 $ϕ(S&rsquo;)$和奖励 $R$,是否终止状态 <code>is_end</code></li>
+<li>d) 将 ${ϕ(S),A,R,ϕ(S&rsquo;),is_end}$这个五元组存入SumTree</li>
+<li>e) $S=S'$</li>
+<li>f) 从SumTree中采样 $m$ 个样本 ${ϕ(S_j),A_j,R_j,ϕ(S&rsquo;_j),is_end_j},j=1,2.,,,m$，每个样本被采样的概率基于 $P(j)=\frac{p_j}{\sum_i(p_i)}$，损失函数权重 $w_j=(N*P(j))^{-\beta}/\max_i(w_i)$，计算当前目标Q值 $y_j$:
+<ul>
+<li>$$\left.y_j=\left{\begin{matrix}R_j&amp;is_end_j\textit{is true}\R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w),w^{\prime})&amp;is_end_j\textit{is false}\end{matrix}\right.\right.$$</li>
+</ul>
+</li>
+<li>g) 使用均方差损失函数$\begin{aligned}\frac{1}{m}\sum_{j=1}^mw_j(y_j-Q(\phi(S_j),A_j,w))^2\end{aligned}$，通过神经网络的梯度反向传播来更新Q网络的所有参数 $w$</li>
+<li>h) 重新计算所有样本的TD误差 $\delta_j=y_j-Q(\phi(S_j),A_j,w)$，更新SumTree中所有节点的优先级 $p_j=|\delta_j|$</li>
+<li>i) 如果i%C=1,则更新目标Q网络参数 $w&rsquo;=w$</li>
+<li>j) 如果 $S&rsquo;$是终止状态，当前轮迭代完毕，否则转到步骤b)</li>
+</ul>
+</li>
+</ul>
+<p>注意，上述第二步的f步和g步的Q值计算也都需要通过Q网络计算得到。另外，实际应用中，为了算法较好的收敛，探索率$ϵ$需要随着迭代的进行而变小。</p>
+<h1 id="4-prioritized-replay-ddqn算法流程">4. Prioritized Replay DDQN算法流程</h1>
+<p>下面我们给出Prioritized Replay DDQN算法的实例代码。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>完整的代码参见我的github: <a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddqn_prioritised_replay.py"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddqn_prioritised_replay.py<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>， 代码中的SumTree的结构和经验回放池的结构参考了morvanzhou的<a href="https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/5.2_Prioritized_Replay_DQN/RL_brain.py"target="_blank" rel="external nofollow noopener noreferrer">github代码<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。</p>
+<p>这里重点讲下和第三节中算法描述不同的地方，主要是 $w_j$的计算。注意到：</p>
+<p>$$w_j=\frac{(N<em>P(j))^{-\beta}}{\max_i(w_i)}=\frac{(N</em>P(j))^{-\beta}}{\max_i((N*P(i))^{-\beta})}=\frac{(P(j))^{-\beta}}{\max_i((P(i))^{-\beta})}=(\frac{P_j}{\min_iP(i)})^{-\beta}$$</p>
+<p>因此代码里面$w_j$，即ISWeights的计算代码是这样的：</p>
+<p><a href="javascript:void%280%29;"></a></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="n">b_idx</span><span class="p">,</span> <span class="n">b_memory</span><span class="p">,</span> <span class="n">ISWeights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">pri_seg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">total_p</span> <span class="o">/</span> <span class="n">n</span>       <span class="c1"># priority segment</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_increment_per_sampling</span><span class="p">])</span>  <span class="c1"># max = 1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">min_prob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">capacity</span><span class="p">:])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">total_p</span>     <span class="c1"># for later calculate ISweight</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="n">min_prob</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">min_prob</span> <span class="o">=</span> <span class="mf">0.00001</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">pri_seg</span> <span class="o">*</span> <span class="n">i</span><span class="p">,</span> <span class="n">pri_seg</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">idx</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">get_leaf</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">prob</span> <span class="o">=</span> <span class="n">p</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">total_p</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ISWeights</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">prob</span><span class="o">/</span><span class="n">min_prob</span><span class="p">,</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">b_idx</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">b_memory</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">idx</span><span class="p">,</span> <span class="n">data</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">b_idx</span><span class="p">,</span> <span class="n">b_memory</span><span class="p">,</span> <span class="n">ISWeights</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>上述代码的采样在第二节已经讲到。根据树的优先级的和total_p和采样数n，将要采样的区间划分为n段，每段来进行均匀采样，根据采样到的值落到的区间，决定被采样到的叶子节点。当我们拿到第i段的均匀采样值v以后，就可以去SumTree中找对应的叶子节点拿样本数据，样本叶子节点序号以及样本优先级了。代码如下：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">get_leaf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">  Tree structure and array storage:
+</span></span></span><span class="line"><span class="cl"><span class="s2">  Tree index:
+</span></span></span><span class="line"><span class="cl"><span class="s2">        0         -&gt; storing priority sum
+</span></span></span><span class="line"><span class="cl"><span class="s2">      / </span><span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span><span class="s2">    1     2
+</span></span></span><span class="line"><span class="cl"><span class="s2">    / \   / </span><span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span><span class="s2">  3   4 5   6    -&gt; storing priority for transitions
+</span></span></span><span class="line"><span class="cl"><span class="s2">  Array type for storing:
+</span></span></span><span class="line"><span class="cl"><span class="s2">  [0,1,2,3,4,5,6]
+</span></span></span><span class="line"><span class="cl"><span class="s2">  &#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">parent_idx</span> <span class="o">=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>     <span class="c1"># the while loop is faster than the method in the reference code</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cl_idx</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">parent_idx</span> <span class="o">+</span> <span class="mi">1</span>         <span class="c1"># this leaf&#39;s left and right kids</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cr_idx</span> <span class="o">=</span> <span class="n">cl_idx</span> <span class="o">+</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">cl_idx</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">):</span>        <span class="c1"># reach bottom, end search</span>
+</span></span><span class="line"><span class="cl">      <span class="n">leaf_idx</span> <span class="o">=</span> <span class="n">parent_idx</span>
+</span></span><span class="line"><span class="cl">      <span class="k">break</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span><span class="p">:</span>       <span class="c1"># downward search, always search for a higher priority node</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="n">v</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">cl_idx</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">parent_idx</span> <span class="o">=</span> <span class="n">cl_idx</span>
+</span></span><span class="line"><span class="cl">      <span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">v</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">cl_idx</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">        <span class="n">parent_idx</span> <span class="o">=</span> <span class="n">cr_idx</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">data_idx</span> <span class="o">=</span> <span class="n">leaf_idx</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">+</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">leaf_idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">leaf_idx</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_idx</span><span class="p">]</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了采样部分，要注意的就是当梯度更新完毕后，我们要去更新SumTree的权重，代码如下，注意叶子节点的权重更新后，要向上回溯，更新所有祖先节点的权重。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="o">.</span><span class="n">batch_update</span><span class="p">(</span><span class="n">tree_idx</span><span class="p">,</span> <span class="n">abs_errors</span><span class="p">)</span>  <span class="c1"># update priority</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="k">def</span> <span class="nf">batch_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree_idx</span><span class="p">,</span> <span class="n">abs_errors</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">abs_errors</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span>  <span class="c1"># convert to abs and avoid 0</span>
+</span></span><span class="line"><span class="cl">    <span class="n">clipped_errors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">abs_errors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">abs_err_upper</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">clipped_errors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">ti</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tree_idx</span><span class="p">,</span> <span class="n">ps</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">ti</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree_idx</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">change</span> <span class="o">=</span> <span class="n">p</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">tree_idx</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">tree_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># then propagate the change through tree</span>
+</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="n">tree_idx</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>    <span class="c1"># this method is faster than the recursive loop in the reference code</span>
+</span></span><span class="line"><span class="cl">      <span class="n">tree_idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">tree_idx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">tree_idx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">change</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了上面这部分的区别，和DDQN比，TensorFlow的网络结构流程中多了一个TD误差的计算节点，以及损失函数多了一个ISWeights系数。此外，区别不大。</p>
+<h1 id="5-prioritized-replay-dqn小结">5. Prioritized Replay DQN小结</h1>
+<p>Prioritized Replay DQN和DDQN相比，收敛速度有了很大的提高，避免了一些没有价值的迭代，因此是一个不错的优化点。同时它也可以直接集成DDQN算法，所以是一个比较常用的DQN算法。</p>
+<p>下一篇我们讨论DQN家族的另一个优化算法Duel DQN，它将价值Q分解为两部分，第一部分是仅仅受状态但不受动作影响的部分，第二部分才是同时受状态和动作影响的部分，算法的效果也很好。</p>
+]]></description></item><item><title>强化学习笔记 [9] | Deep Q-Learning进阶之Nature DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_9/</link><pubDate>Fri, 23 Feb 2024 13:17:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_9/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在<a href="https://www.cnblogs.com/pinard/p/9714655.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（八）价值函数的近似表示与Deep Q-Learning<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了Deep Q-Learning（NIPS 2013）的算法和代码，在这个算法基础上，有很多Deep Q-Learning(以下简称DQN)的改进版，今天我们来讨论DQN的第一个改进版Nature DQN(NIPS 2015)。</p>
 <p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和Nature DQN的论文。</p>
 <h1 id="1-dqnnips-2013的问题">1. DQN(NIPS 2013)的问题</h1>
@@ -26583,7 +26799,223 @@ to be added: <br>
 </span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">EXIT_SUCCESS</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item><item><title>强化学习笔记 [10] | Double DQN (DDQN)</title><link>https://jianye0428.github.io/posts/rl_learning_note_10/</link><pubDate>Fri, 23 Feb 2024 13:17:52 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_10/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+</div>]]></description></item><item><title>强化学习笔记 [11] | Prioritized Replay DQN</title><link>https://jianye0428.github.io/posts/rl_learning_note_11/</link><pubDate>Sun, 25 Feb 2024 11:16:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_11/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
+<p>在<a href="https://www.cnblogs.com/pinard/p/9778063.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（十）Double DQN (DDQN)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了DDQN使用两个Q网络，用当前Q网络计算最大Q值对应的动作，用目标Q网络计算这个最大动作对应的目标Q值，进而消除贪婪法带来的偏差。今天我们在DDQN的基础上，对经验回放部分的逻辑做优化。对应的算法是Prioritized Replay DQN。</p>
+<p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和Prioritized Replay DQN的论文(Prioritized Experience Replay)(ICLR 2016)。</p>
+<h1 id="1-prioritized-replay-dqn之前算法的问题">1. Prioritized Replay DQN之前算法的问题</h1>
+<p>在Prioritized Replay DQN之前，我们已经讨论了很多种DQN，比如Nature DQN， DDQN等，他们都是通过经验回放来采样，进而做目标Q值的计算的。在采样的时候，我们是一视同仁，在经验回放池里面的所有的样本都有相同的被采样到的概率。</p>
+<p>但是注意到在经验回放池里面的不同的样本由于TD误差的不同，对我们反向传播的作用是不一样的。TD误差越大，那么对我们反向传播的作用越大。而TD误差小的样本，由于TD误差小，对反向梯度的计算影响不大。在Q网络中，TD误差就是目标Q网络计算的目标Q值和当前Q网络计算的Q值之间的差距。</p>
+<p>这样如果TD误差的绝对值 $|δ(t)|$较大的样本更容易被采样，则我们的算法会比较容易收敛。下面我们看看Prioritized Replay DQN的算法思路。</p>
+<h1 id="2-prioritized-replay-dqn算法的建模">2. Prioritized Replay DQN算法的建模</h1>
+<p>Prioritized Replay DQN根据每个样本的TD误差绝对值 $|δ(t)|$，给定该样本的优先级正比于 $|δ(t)|$，将这个优先级的值存入经验回放池。回忆下之前的DQN算法，我们仅仅只保存和环境交互得到的样本状态，动作，奖励等数据，没有优先级这个说法。</p>
+<p>由于引入了经验回放的优先级，那么Prioritized Replay DQN的经验回放池和之前的其他DQN算法的经验回放池就不一样了。因为这个优先级大小会影响它被采样的概率。在实际使用中，我们通常使用SumTree这样的二叉树结构来做我们的带优先级的经验回放池样本的存储。</p>
+<p>具体的SumTree树结构如下图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">sum_tree 结构图</div>
+</center>
+<br>
+<p>所有的经验回放样本只保存在最下面的叶子节点上面，一个节点一个样本。内部节点不保存样本数据。而叶子节点除了保存数据以外，还要保存该样本的优先级，就是图中的显示的数字。对于内部节点每个节点只保存自己的儿子节点的优先级值之和，如图中内部节点上显示的数字。</p>
+<p>这样保存有什么好处呢？主要是方便采样。以上面的树结构为例，根节点是42，如果要采样一个样本，那么我们可以在[0,42]之间做均匀采样，采样到哪个区间，就是哪个样本。比如我们采样到了26， 在（25-29）这个区间，那么就是第四个叶子节点被采样到。而注意到第三个叶子节点优先级最高，是12，它的区间13-25也是最长的，会比其他节点更容易被采样到。</p>
+<p>如果要采样两个样本，我们可以在[0,21],[21,42]两个区间做均匀采样，方法和上面采样一个样本类似。</p>
+<p>类似的采样算法思想我们在<a href="https://www.cnblogs.com/pinard/p/7249903.html"target="_blank" rel="external nofollow noopener noreferrer">word2vec原理(三) 基于Negative Sampling的模型<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>第四节中也有讲到。</p>
+<p>除了经验回放池，现在我们的Q网络的算法损失函数也有优化，之前我们的损失函数是：</p>
+<p>$$\frac1m\sum_{j=1}^m(y_j-Q(\phi(S_j),A_j,w))^2$$</p>
+<p>现在我们新的考虑了样本优先级的损失函数是</p>
+<p>$$\frac1m\sum_{j=1}^mw_j(y_j-Q(\phi(S_j),A_j,w))^2$$</p>
+<p>其中 $w_j$是第j个样本的优先级权重，由TD误差 $|δ(t)|$归一化得到。</p>
+<p>第三个要注意的点就是当我们对Q网络参数进行了梯度更新后，需要重新计算TD误差，并将TD误差更新到SunTree上面。</p>
+<p>除了以上三个部分，Prioritized Replay DQN和DDQN的算法流程相同。</p>
+<h1 id="3-prioritized-replay-dqn算法流程">3. Prioritized Replay DQN算法流程</h1>
+<p>下面我们总结下Prioritized Replay DQN的算法流程，基于上一节的DDQN，因此这个算法我们应该叫做Prioritized Replay DDQN。主流程参考论文(Prioritized Experience Replay)(ICLR 2016)。</p>
+<ul>
+<li>算法输入：迭代轮数 $T$，状态特征维度 $n$, 动作集 $A$, 步长 $α$，采样权重系数 $β$，衰减因子 $γ$, 探索率 $ϵ$, 当前Q网络 $Q$，目标Q网络 $Q&rsquo;$, 批量梯度下降的样本数 $m$,目标Q网络参数更新频率 $C$, SumTree的叶子节点数 $S$。</li>
+<li>输出：Q网络参数。</li>
+<li>
+<ol>
+<li>随机初始化所有的状态和动作对应的价值 $Q$. 随机初始化当前Q网络的所有参数 $w$,初始化目标Q网络 $Q&rsquo;$的参数 $w&rsquo;=w$。初始化经验回放SumTree的默认数据结构，所有SumTree的S个叶子节点的优先级 $p_j$为1。</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>for i from 1 to T，进行迭代。</li>
+</ol>
+<ul>
+<li>a) 初始化S为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$</li>
+<li>b) 在Q网络中使用 $ϕ(S)$ 作为输入，得到Q网络的所有动作对应的Q值输出。用 $ϵ−$贪婪法在当前Q值输出中选择对应的动作 $A$</li>
+<li>c) 在状态 $S$ 执行当前动作 $A$,得到新状态 $S&rsquo;$ 对应的特征向量 $ϕ(S&rsquo;)$和奖励 $R$,是否终止状态 <code>is_end</code></li>
+<li>d) 将 ${ϕ(S),A,R,ϕ(S&rsquo;),is_end}$这个五元组存入SumTree</li>
+<li>e) $S=S'$</li>
+<li>f) 从SumTree中采样 $m$ 个样本 ${ϕ(S_j),A_j,R_j,ϕ(S&rsquo;_j),is_end_j},j=1,2.,,,m$，每个样本被采样的概率基于 $P(j)=\frac{p_j}{\sum_i(p_i)}$，损失函数权重 $w_j=(N*P(j))^{-\beta}/\max_i(w_i)$，计算当前目标Q值 $y_j$:
+<ul>
+<li>$$\left.y_j=\left{\begin{matrix}R_j&amp;is_end_j\textit{is true}\R_j+\gamma Q^{\prime}(\phi(S_j^{\prime}),\arg\max_{a^{\prime}}Q(\phi(S_j^{\prime}),a,w),w^{\prime})&amp;is_end_j\textit{is false}\end{matrix}\right.\right.$$</li>
+</ul>
+</li>
+<li>g) 使用均方差损失函数$\begin{aligned}\frac{1}{m}\sum_{j=1}^mw_j(y_j-Q(\phi(S_j),A_j,w))^2\end{aligned}$，通过神经网络的梯度反向传播来更新Q网络的所有参数 $w$</li>
+<li>h) 重新计算所有样本的TD误差 $\delta_j=y_j-Q(\phi(S_j),A_j,w)$，更新SumTree中所有节点的优先级 $p_j=|\delta_j|$</li>
+<li>i) 如果i%C=1,则更新目标Q网络参数 $w&rsquo;=w$</li>
+<li>j) 如果 $S&rsquo;$是终止状态，当前轮迭代完毕，否则转到步骤b)</li>
+</ul>
+</li>
+</ul>
+<p>注意，上述第二步的f步和g步的Q值计算也都需要通过Q网络计算得到。另外，实际应用中，为了算法较好的收敛，探索率$ϵ$需要随着迭代的进行而变小。</p>
+<h1 id="4-prioritized-replay-ddqn算法流程">4. Prioritized Replay DDQN算法流程</h1>
+<p>下面我们给出Prioritized Replay DDQN算法的实例代码。仍然使用了OpenAI Gym中的CartPole-v0游戏来作为我们算法应用。CartPole-v0游戏的介绍参见<a href="https://github.com/openai/gym/wiki/CartPole-v0"target="_blank" rel="external nofollow noopener noreferrer">这里<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。它比较简单，基本要求就是控制下面的cart移动使连接在上面的pole保持垂直不倒。这个任务只有两个离散动作，要么向左用力，要么向右用力。而state状态就是这个cart的位置和速度， pole的角度和角速度，4维的特征。坚持到200分的奖励则为过关。</p>
+<p>完整的代码参见我的github: <a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddqn_prioritised_replay.py"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/ddqn_prioritised_replay.py<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>， 代码中的SumTree的结构和经验回放池的结构参考了morvanzhou的<a href="https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/5.2_Prioritized_Replay_DQN/RL_brain.py"target="_blank" rel="external nofollow noopener noreferrer">github代码<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。</p>
+<p>这里重点讲下和第三节中算法描述不同的地方，主要是 $w_j$的计算。注意到：</p>
+<p>$$w_j=\frac{(N<em>P(j))^{-\beta}}{\max_i(w_i)}=\frac{(N</em>P(j))^{-\beta}}{\max_i((N*P(i))^{-\beta})}=\frac{(P(j))^{-\beta}}{\max_i((P(i))^{-\beta})}=(\frac{P_j}{\min_iP(i)})^{-\beta}$$</p>
+<p>因此代码里面$w_j$，即ISWeights的计算代码是这样的：</p>
+<p><a href="javascript:void%280%29;"></a></p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="n">b_idx</span><span class="p">,</span> <span class="n">b_memory</span><span class="p">,</span> <span class="n">ISWeights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">  <span class="n">pri_seg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">total_p</span> <span class="o">/</span> <span class="n">n</span>       <span class="c1"># priority segment</span>
+</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_increment_per_sampling</span><span class="p">])</span>  <span class="c1"># max = 1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">min_prob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">capacity</span><span class="p">:])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">total_p</span>     <span class="c1"># for later calculate ISweight</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="n">min_prob</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">min_prob</span> <span class="o">=</span> <span class="mf">0.00001</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">pri_seg</span> <span class="o">*</span> <span class="n">i</span><span class="p">,</span> <span class="n">pri_seg</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">idx</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">get_leaf</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">prob</span> <span class="o">=</span> <span class="n">p</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">total_p</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ISWeights</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">prob</span><span class="o">/</span><span class="n">min_prob</span><span class="p">,</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">b_idx</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">b_memory</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">idx</span><span class="p">,</span> <span class="n">data</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">b_idx</span><span class="p">,</span> <span class="n">b_memory</span><span class="p">,</span> <span class="n">ISWeights</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>上述代码的采样在第二节已经讲到。根据树的优先级的和total_p和采样数n，将要采样的区间划分为n段，每段来进行均匀采样，根据采样到的值落到的区间，决定被采样到的叶子节点。当我们拿到第i段的均匀采样值v以后，就可以去SumTree中找对应的叶子节点拿样本数据，样本叶子节点序号以及样本优先级了。代码如下：</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">get_leaf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">  Tree structure and array storage:
+</span></span></span><span class="line"><span class="cl"><span class="s2">  Tree index:
+</span></span></span><span class="line"><span class="cl"><span class="s2">        0         -&gt; storing priority sum
+</span></span></span><span class="line"><span class="cl"><span class="s2">      / </span><span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span><span class="s2">    1     2
+</span></span></span><span class="line"><span class="cl"><span class="s2">    / \   / </span><span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span><span class="s2">  3   4 5   6    -&gt; storing priority for transitions
+</span></span></span><span class="line"><span class="cl"><span class="s2">  Array type for storing:
+</span></span></span><span class="line"><span class="cl"><span class="s2">  [0,1,2,3,4,5,6]
+</span></span></span><span class="line"><span class="cl"><span class="s2">  &#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">parent_idx</span> <span class="o">=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">  <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>     <span class="c1"># the while loop is faster than the method in the reference code</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cl_idx</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">parent_idx</span> <span class="o">+</span> <span class="mi">1</span>         <span class="c1"># this leaf&#39;s left and right kids</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cr_idx</span> <span class="o">=</span> <span class="n">cl_idx</span> <span class="o">+</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">cl_idx</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">):</span>        <span class="c1"># reach bottom, end search</span>
+</span></span><span class="line"><span class="cl">      <span class="n">leaf_idx</span> <span class="o">=</span> <span class="n">parent_idx</span>
+</span></span><span class="line"><span class="cl">      <span class="k">break</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span><span class="p">:</span>       <span class="c1"># downward search, always search for a higher priority node</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="n">v</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">cl_idx</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">parent_idx</span> <span class="o">=</span> <span class="n">cl_idx</span>
+</span></span><span class="line"><span class="cl">      <span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">v</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">cl_idx</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">        <span class="n">parent_idx</span> <span class="o">=</span> <span class="n">cr_idx</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">data_idx</span> <span class="o">=</span> <span class="n">leaf_idx</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">+</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">leaf_idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">leaf_idx</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_idx</span><span class="p">]</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了采样部分，要注意的就是当梯度更新完毕后，我们要去更新SumTree的权重，代码如下，注意叶子节点的权重更新后，要向上回溯，更新所有祖先节点的权重。</p>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="o">.</span><span class="n">batch_update</span><span class="p">(</span><span class="n">tree_idx</span><span class="p">,</span> <span class="n">abs_errors</span><span class="p">)</span>  <span class="c1"># update priority</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="k">def</span> <span class="nf">batch_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree_idx</span><span class="p">,</span> <span class="n">abs_errors</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">abs_errors</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span>  <span class="c1"># convert to abs and avoid 0</span>
+</span></span><span class="line"><span class="cl">    <span class="n">clipped_errors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">abs_errors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">abs_err_upper</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">clipped_errors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">ti</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tree_idx</span><span class="p">,</span> <span class="n">ps</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">ti</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight" id="id-5"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">  <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree_idx</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">change</span> <span class="o">=</span> <span class="n">p</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">tree_idx</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">tree_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># then propagate the change through tree</span>
+</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="n">tree_idx</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>    <span class="c1"># this method is faster than the recursive loop in the reference code</span>
+</span></span><span class="line"><span class="cl">      <span class="n">tree_idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">tree_idx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="p">[</span><span class="n">tree_idx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">change</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了上面这部分的区别，和DDQN比，TensorFlow的网络结构流程中多了一个TD误差的计算节点，以及损失函数多了一个ISWeights系数。此外，区别不大。</p>
+<h1 id="5-prioritized-replay-dqn小结">5. Prioritized Replay DQN小结</h1>
+<p>Prioritized Replay DQN和DDQN相比，收敛速度有了很大的提高，避免了一些没有价值的迭代，因此是一个不错的优化点。同时它也可以直接集成DDQN算法，所以是一个比较常用的DQN算法。</p>
+<p>下一篇我们讨论DQN家族的另一个优化算法Duel DQN，它将价值Q分解为两部分，第一部分是仅仅受状态但不受动作影响的部分，第二部分才是同时受状态和动作影响的部分，算法的效果也很好。</p>
+]]></description></item><item><title>强化学习笔记 [10] | Double DQN (DDQN)</title><link>https://jianye0428.github.io/posts/rl_learning_note_10/</link><pubDate>Fri, 23 Feb 2024 13:17:52 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_10/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在<a href="https://www.cnblogs.com/pinard/p/9756075.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（九）Deep Q-Learning进阶之Nature DQN<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了Nature DQN的算法流程，它通过使用两个相同的神经网络，以解决数据样本和网络训练之前的相关性。但是还是有其他值得优化的点，文本就关注于Nature DQN的一个改进版本: Double DQN算法（以下简称DDQN）。</p>
 <p>本章内容主要参考了ICML 2016的<a href="https://icml.cc/2016/tutorials/deep_rl_tutorial.pdf"target="_blank" rel="external nofollow noopener noreferrer">deep RL tutorial<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和DDQN的论文(Deep Reinforcement Learning with Double Q-learning)。</p>
 <h1 id="1-dqn的目标q值计算问题">1. DQN的目标Q值计算问题</h1>
@@ -33860,309 +34292,4 @@ $$v_{\pi}(s)=\mathbb{E}<em>π(R</em>{t+1}+γR_{t+2}+γ^2R_{t+3}+&hellip;|S_t=s)$
 <li><code>ExternalProject_Add_StepTargets</code>:允许将外部项目中的步骤(例如：构建和测试步骤)定义为单独的目标。这意味着可以从完整的外部项目中单独触发这些步骤，并允许对项目中的复杂依赖项，进行细粒度控制。</li>
 <li><code>ExternalProject_Add_StepDependencies</code>:外部项目的步骤有时可能依赖于外部目标，而这个命令的设计目的就是处理这些情况。</li>
 </ul>
-]]></description></item><item><title>CMake 笔记 | [39] 构建项目策略及限制变量范围2</title><link>https://jianye0428.github.io/posts/cmake_note_39/</link><pubDate>Wed, 31 Jan 2024 13:51:46 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/cmake_note_39/</guid><description><![CDATA[<h2 id="一导言">一、导言</h2>
-<div class="details admonition quote">
-    <div class="details-summary admonition-title">
-      <i class="icon fa-solid fa-quote-right fa-fw" aria-hidden="true"></i>导言<i class="details-icon fa-solid fa-angle-right fa-fw" aria-hidden="true"></i>
-    </div>
-    <div class="details-content">
-      <div class="admonition-content"><p><strong>本篇，我们将讨论上一篇的另一种方法，并不使用<code>add_subdirectory</code>的情况下，使用<code>module include</code>组装不同的<code>CMakeLists.txt</code>文件。其允许我们使用<code>target_link_libraries</code>链接到当前目录之外定义的目标。</strong></p>
-<p><strong>就项目架构而言，不推荐本篇的构建方式。</strong></p>
-</div>
-    </div>
-  </div>
-<h2 id="二项目结构">二、项目结构</h2>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">.
-</span></span><span class="line"><span class="cl">├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">├── external
-</span></span><span class="line"><span class="cl">│   ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│   ├── conversion.cpp
-</span></span><span class="line"><span class="cl">│   └── conversion.hpp
-</span></span><span class="line"><span class="cl">├── src
-</span></span><span class="line"><span class="cl">│   ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│   ├── evolution
-</span></span><span class="line"><span class="cl">│   │   ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│   │   ├── evolution.cpp
-</span></span><span class="line"><span class="cl">│   │   └── evolution.hpp
-</span></span><span class="line"><span class="cl">│   ├── initial
-</span></span><span class="line"><span class="cl">│   │   ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│   │   ├── initial.cpp
-</span></span><span class="line"><span class="cl">│   │   └── initial.hpp
-</span></span><span class="line"><span class="cl">│   ├── io
-</span></span><span class="line"><span class="cl">│   │   ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│   │   ├── io.cpp
-</span></span><span class="line"><span class="cl">│   │   └── io.hpp
-</span></span><span class="line"><span class="cl">│   ├── main.cpp
-</span></span><span class="line"><span class="cl">│   └── parser
-</span></span><span class="line"><span class="cl">│       ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">│       ├── parser.cpp
-</span></span><span class="line"><span class="cl">│       └── parser.hpp
-</span></span><span class="line"><span class="cl">└── tests
-</span></span><span class="line"><span class="cl">    ├── catch.hpp
-</span></span><span class="line"><span class="cl">    ├── CMakeLists.txt
-</span></span><span class="line"><span class="cl">    └── test.cpp</span></span></code></pre></td></tr></table>
-</div>
-</div><p>项目地址：</p>
-<blockquote>
-<p><a href="https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter7/08"target="_blank" rel="external nofollow noopener noreferrer">https://gitee.com/jiangli01/tutorials/tree/master/cmake-tutorial/chapter7/08<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-</blockquote>
-<h2 id="三相关源码">三、相关源码</h2>
-<p>将使用与上一篇相同的源代码。唯一的更改将出现在<code>CMakeLists.txt</code>文件中，我们将在下面的部分中讨论这些更改。
-<strong>CMakeLists.txt</strong></p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.10</span> <span class="n">FATAL_ERROR</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">project</span><span class="p">(</span><span class="n">example</span> <span class="n">LANGUAGES</span> <span class="n">CXX</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_EXTENSIONS</span> <span class="n">OFF</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD_REQUIRED</span> <span class="n">ON</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">GNUInstallDirs</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_ARCHIVE_OUTPUT_DIRECTORY</span>
-</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_INSTALL_LIBDIR</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_LIBRARY_OUTPUT_DIRECTORY</span>
-</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_INSTALL_LIBDIR</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl"><span class="n">set</span><span class="p">(</span><span class="n">CMAKE_RUNTIME_OUTPUT_DIRECTORY</span>
-</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_BINARY_DIR</span><span class="p">}</span><span class="o">/</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_INSTALL_BINDIR</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl"><span class="cp"># defines targets and sources
-</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="n">include</span><span class="p">(</span><span class="n">src</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">external</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">enable_testing</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="n">add_subdirectory</span><span class="p">(</span><span class="n">tests</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">automaton</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">add_library</span><span class="p">(</span><span class="n">evolution</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">evolution</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">initial</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">io</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">parser</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">add_executable</span><span class="p">(</span><span class="n">automata</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">automata</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">main</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_link_libraries</span><span class="p">(</span><span class="n">automata</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">    <span class="n">automaton</span>
-</span></span><span class="line"><span class="cl">    <span class="n">conversion</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>src/evolution/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-4"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">automaton</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">evolution</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">evolution</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">automaton</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">evolution</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">evolution</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">evolution</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">evolution</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>其余<code>CMakeLists.txt</code>文件和<code>src/initial/CMakeLists.txt</code>相同。</p>
-<p><strong>src/initial/CMakeLists.txt</strong></p>
-<div class="highlight" id="id-5"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">target_sources</span><span class="p">(</span><span class="n">automaton</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PRIVATE</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">initial</span><span class="p">.</span><span class="n">cpp</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">initial</span><span class="p">.</span><span class="n">hpp</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">target_include_directories</span><span class="p">(</span><span class="n">automaton</span>
-</span></span><span class="line"><span class="cl">  <span class="n">PUBLIC</span>
-</span></span><span class="line"><span class="cl">      <span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>定义了三个库:</p>
-<ul>
-<li><code>conversion</code>(在<code>external</code>定义)</li>
-<li><code>automaton</code>(包含除转换之外的所有源)</li>
-<li><code>evolution</code>(在<code>src/evolution</code>中定义，并通过<code>cpp_test</code>链接)</li>
-</ul>
-<p>我们通过使用<code>include()</code>引用<code>CMakeLists.txt</code>文件，在父范围内，仍然能保持所有目标可用。</p>
-<div class="highlight" id="id-6"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">src</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="n">external</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>构建一个包含树，记住当进入子目录(<code>src/CMakeLists.txt</code>)时，我们需要使用相对于父范围的路径:</p>
-<div class="highlight" id="id-7"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">evolution</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">initial</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">io</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="n">include</span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">CMAKE_CURRENT_LIST_DIR</span><span class="p">}</span><span class="o">/</span><span class="n">parser</span><span class="o">/</span><span class="n">CMakeLists</span><span class="p">.</span><span class="n">txt</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>这样，我们就可以定义并链接到通过<code>include()</code>语句访问文件树中任何位置的目标。</p>
-<h2 id="四结果展示">四、结果展示</h2>
-<div class="highlight" id="id-8"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span><span class="lnt">8
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ <span class="nb">cd</span> build
-</span></span><span class="line"><span class="cl">$ cmake ..
-</span></span><span class="line"><span class="cl">$ cmake --build build
-</span></span><span class="line"><span class="cl">$ ctest
-</span></span><span class="line"><span class="cl">Running tests...
-</span></span><span class="line"><span class="cl">Start 1: test_evolution
-</span></span><span class="line"><span class="cl">1/1 Test <span class="c1">#1: test_evolution ................... Passed 0.00 sec</span>
-</span></span><span class="line"><span class="cl">100% tests passed, <span class="m">0</span> tests failed out of <span class="m">1</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p><strong>补充内容</strong></p>
-<p>我们可以再次使用<code>CMake</code>和<code>Graphviz</code>生成这个项目的依赖关系图:</p>
-<div class="highlight" id="id-9"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cd build
-</span></span><span class="line"><span class="cl">$ cmake --graphviz=example.dot ..
-</span></span><span class="line"><span class="cl">$ dot -T png example.dot -o example.png</span></span></code></pre></td></tr></table>
-</div>
-</div><br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">项目结构</div>
-</center>
-<br>
 ]]></description></item></channel></rss>
