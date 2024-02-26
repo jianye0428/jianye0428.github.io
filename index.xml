@@ -2492,29 +2492,28 @@ $$\begin{gathered}
 <p>在<a href="https://www.cnblogs.com/pinard/p/9385570.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（一）模型基础<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了强化学习模型的8个基本要素。但是仅凭这些要素还是无法使用强化学习来帮助我们解决问题的, 在讲到模型训练前，模型的简化也很重要，这一篇主要就是讲如何利用马尔科夫决策过程(Markov Decision Process，以下简称MDP)来简化强化学习的建模。</p>
 <p>MDP这一篇对应Sutton书的第三章和UCL强化学习课程的第二讲。</p>
 <h1 id="1-强化学习引入mdp的原因">1. 强化学习引入MDP的原因</h1>
-<p>如果按照真实的环境转化过程看，转化到下一个状态 $s′$</p>
 <p>对于马尔科夫性本身，我之前讲过的<a href="http://www.cnblogs.com/pinard/p/6945257.html"target="_blank" rel="external nofollow noopener noreferrer">隐马尔科夫模型HMM（一）HMM模型<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，<a href="http://www.cnblogs.com/pinard/p/7048333.html"target="_blank" rel="external nofollow noopener noreferrer">条件随机场CRF(一)从随机场到线性链条件随机场<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>以及<a href="http://www.cnblogs.com/pinard/p/6632399.html"target="_blank" rel="external nofollow noopener noreferrer">MCMC(二)马尔科夫链<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>都有讲到。它本身是一个比较简单的假设，因此这里就不专门对“马尔可夫性”做专门的讲述了。</p>
 <p>除了对于环境的状态转化模型这个因素做马尔科夫假设外，我们还对强化学习第四个要素个体的策略(policy) $π$ 也做了马尔科夫假设。即在状态$s$时采取动作$a$的概率仅与当前状态$s$有关，与其他的要素无关。用公式表示就是</p>
 <p>$$\pi(a\mid s)=P(A_{t}=a\mid S_{t}=s)$$</p>
 <p>对于第五个要素，价值函数 $v_π(s)$ 也是一样, $v_π(s)$ 现在仅仅依赖于当前状态了，那么现在价值函数 $v_π(s)$ 表示为:</p>
-<p>$$\nu_{\pi}(s)=\mathrm{E}<em>{\pi}(G</em>{t}|S_{t}=s)=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s)$$</p>
+<p>$$\nu_{\pi}(s)=\mathrm{E}_{\pi}(G_{t}|S_{t}=s)=\mathrm{E}_{\pi}(R_{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s)$$</p>
 <p>其中，$G_t$ 代表收获(return), 是一个MDP中从某一个状态 $S_t$ 开始采样直到终止状态时所有奖励的有衰减的之和。</p>
 <h1 id="2-mdp的价值函数与贝尔曼方程">2. MDP的价值函数与贝尔曼方程</h1>
 <p>对于MDP，我们在第一节里已经讲到了它的价值函数 $v_π(s)$ 的表达式。但是这个表达式没有考虑到所采用的动作$a$带来的价值影响，因此我们除了 $v_π(s)$ 这个状态价值函数外，还有一个动作价值函数 $q_π(s,a)$，即：</p>
-<p>$$q_{\pi}(s,a)=\operatorname{E}<em>{\pi}(G</em>{t}|S_{t}=s,A_{t}=a)=\operatorname{E}<em>{\pi}(R</em>{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s,A_{t}=a)$$</p>
+<p>$$q_{\pi}(s,a)=\operatorname{E}_{\pi}(G_{t}|S_{t}=s,A_{t}=a)=\operatorname{E}_{\pi}(R_{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s,A_{t}=a)$$</p>
 <p>根据价值函数的表达式，我们可以推导出价值函数基于状态的递推关系，比如对于状态价值函数 $v_π(s)$，可以发现：</p>
 <p>$$\begin{aligned}
-V_{\pi}(s)&amp; =\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s)  \
-&amp;=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma(R_{t+2}+\gamma R_{t+3}+\ldots)|S_{t}=s) \
-&amp;=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma G_{t+1}|S_{t}=s) \
-&amp;=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma\nu_{\pi}(S_{t+1})|S_{t}=s)
+V_{\pi}(s)&amp; =\mathrm{E}_{\pi}(R_{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s)  \\
+&amp;=\mathrm{E}_{\pi}(R_{t+1}+\gamma(R_{t+2}+\gamma R_{t+3}+\ldots)|S_{t}=s) \\
+&amp;=\mathrm{E}_{\pi}(R_{t+1}+\gamma G_{t+1}|S_{t}=s) \\
+&amp;=\mathrm{E}_{\pi}(R_{t+1}+\gamma\nu_{\pi}(S_{t+1})|S_{t}=s)
 \end{aligned}$$</p>
 <p>也就是说，在 $t$ 时刻的状态 $S_t$ 和 $t+1$ 时刻的状态 $S_{t+1}$ 是满足递推关系的，即：</p>
-<p>$$v_{\pi}(s)=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma\nu_{\pi}(S_{t+1})\mid S_{t}=s)$$
+<p>$$v_{\pi}(s)=\mathrm{E}_{\pi}(R_{t+1}+\gamma\nu_{\pi}(S_{t+1})\mid S_{t}=s)$$
 　　　　
 这个递推式子我们一般将它叫做<strong>贝尔曼方程</strong>。这个式子告诉我们，一个状态的价值由该状态的奖励以及后续状态价值按一定的衰减比例联合组成。</p>
 <p>同样的方法，我们可以得到动作价值函数 $q_π(s,a)$ 的贝尔曼方程：</p>
-<p>$$q_{\pi}(s,a)=\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma q_{\pi}(S_{t+1},A_{t+1})\mid S_{t}=s,A_{t}=a)$$</p>
+<p>$$q_{\pi}(s,a)=\mathrm{E}_{\pi}(R_{t+1}+\gamma q_{\pi}(S_{t+1},A_{t+1})\mid S_{t}=s,A_{t}=a)$$</p>
 <h1 id="3-状态价值函数与动作价值函数的递推关系">3. 状态价值函数与动作价值函数的递推关系</h1>
 <p>根据动作价值函数 $q_π(s,a)$ 和状态价值函数 $v_π(s)$ 的定义，我们很容易得到他们之间的转化关系公式：</p>
 <p>$$\nu_{\pi}(s)=\sum_{a\in A}\pi(a|s)q_{\pi}(s,a)$$</p>
@@ -2547,7 +2546,7 @@ V_{\pi}(s)&amp; =\mathrm{E}<em>{\pi}(R</em>{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3
 <p>同理也可以定义最优动作价值函数是所有策略下产生的众多动作状态价值函数中的最大者，即：</p>
 <p>$$q_*(s,a)=\max_\pi q_\pi(s,a)$$</p>
 <p>对于最优的策略，基于动作价值函数我们可以定义为：</p>
-<p>$$\pi_<em>(a|s)=\begin{cases}1&amp;\mathrm{if~}a=\mathrm{arg~}\max_{a\in A}q</em>(s,a)\0&amp;\mathrm{else}&amp;\end{cases}$$</p>
+<p>$$\pi_<em>(a|s)=\begin{cases}1&amp;\mathrm{if~}a=\mathrm{arg~}\max_{a\in A}q</em>(s,a)\\0&amp;\mathrm{else}&amp;\end{cases}$$</p>
 <p>只要我们找到了最大的状态价值函数或者动作价值函数，那么对应的策略 $π^*$ 就是我们强化学习问题的解。同时，利用状态价值函数和动作价值函数之间的关系，我们也可以得到:</p>
 <p>$$v_<em>(s)=\max_aq_</em>(s,a)$$</p>
 <p>反过来的最优价值函数关系也很容易得到：</p>
@@ -2653,7 +2652,7 @@ $$v_{\pi}(s)=\mathbb{E}_π(R_{t+1}+γR_{t+2}+γ^2R_{t+3}+&hellip;|S_t=s)$$</p>
 <p>其中 $γ$ 是第六个模型要素，即奖励衰减因子，在[0，1]之间。如果为0，则是贪婪法，即价值只由当前延时奖励决定，如果是1，则所有的后续状态奖励和当前奖励一视同仁。大多数时候，我们会取一个0到1之间的数字，即当前延时奖励的权重比后续奖励的权重大。</p>
 </li>
 <li>
-<p>第七个是环境的状态转化模型，可以理解为一个概率状态机，它可以表示为一个概率模型，即在状态 $s$ 下采取动作 $a$,转到下一个状态 $s′$ 的概率，表示为 $P^a_{ss′}$。</p>
+<p>第七个是环境的状态转化模型，可以理解为一个概率状态机，它可以表示为一个概率模型，即在状态 $s$ 下采取动作 $a$,转到下一个状态 $s&rsquo;$ 的概率，表示为 $P^a_{ss&rsquo;}$。</p>
 </li>
 <li>
 <p>第八个是探索率 $ϵ$，这个比率主要用在强化学习训练迭代过程中，由于我们一般会选择使当前轮迭代价值最大的动作，但是这会导致一些较好的但我们没有执行过的动作被错过。因此我们在训练选择最优动作时，会有一定的概率 $ϵ$ 不选择使当前轮迭代价值最大的动作，而选择其他的动作。</p>
