@@ -40,7 +40,7 @@ $$V(S\_t)=V(S\_t)+\frac1{N(S\_t)}(G\_t-V(S\_t))$$
 
 由于在时序差分我们没有完整的序列，也就没有对应的次数 $N(S\_t)$ ,一般就用一个[0,1]的系数 $α$ 代替。这样时序差分的价值函数迭代式子是：
 
-$$V(S\_t)=V(S\_t)+\alpha(G\_t-V(S\_t)) \\\\
+$$V(S\_t)=V(S\_t)+\alpha(G\_t-V(S\_t)) \\\\\\\\
 Q(S\_t,A\_t)=Q(S\_t,A\_t)+\alpha(G\_t-Q(S\_t,A\_t)) $$
 
 这里我们用一个简单的例子来看看蒙特卡罗法和时序差分法求解预测问题的不同。
@@ -94,7 +94,7 @@ $$G\_t^\lambda=(1-\lambda)\sum\_{n=1}^\infty\lambda^{n-1}G\_t^{(n)}$$
 
 进而我们可以得到 $TD(λ)$ 的价值函数的迭代公式：
 
-$$V(S\_t)=V(S\_t)+\alpha(G\_t^\lambda-V(S\_t)) \\\\
+$$V(S\_t)=V(S\_t)+\alpha(G\_t^\lambda-V(S\_t)) \\\\\\\\
 Q(S\_t,A\_t)=Q(S\_t,A\_t)+\alpha(G\_t^\lambda-Q(S\_t,A\_t)) $$
 
 每一步收获的权重定义为 $(1−λ)λ^{n−1}$ 的原因是什么呢？其图像如下图所示，可以看到随着n的增大，其第n步收获的权重呈几何级数的衰减。当在T时刻到达终止状态时，未分配的权重全部给予终止状态的实际收获值。这样可以使一个完整的状态序列中所有的n步收获的权重加起来为1，离当前状态越远的收获其权重越小。
@@ -113,27 +113,27 @@ Q(S\_t,A\_t)=Q(S\_t,A\_t)+\alpha(G\_t^\lambda-Q(S\_t,A\_t)) $$
 
 如果给每一个状态引入一个数值：效用(eligibility, E) 来表示该状态对后续状态的影响，就可以同时利用到上述两个启发。而所有状态的效用值总称为效用迹(eligibility traces,ES)。定义为：
 
-$$ E\_0(s)=0 \\\\ \left.E\_t(s)=\gamma\lambda E\_{t-1}(s)+1(S\_t=s)=\left\\{\begin{array}{ll}0&t<k\\\\(\gamma\lambda)^{t-k}&t\geq k\end{array}\right.\right.,\quad s.t.\quad\lambda,\gamma\in[0,1],s\textit{ is visited once at time k}$$
+$$ E\_0(s)=0 \\\\\\\\ \left.E\_t(s)=\gamma\lambda E\_{t-1}(s)+1(S\_t=s)=\left\\\\{\begin{array}{ll}0&t<k\\\\\\\\(\gamma\lambda)^{t-k}&t\geq k\end{array}\right.\right.,\quad s.t.\quad\lambda,\gamma\in[0,1],s\textit{ is visited once at time k}$$
 
 此时我们$TD(λ)$的价值函数更新式子可以表示为：
 
-$$\delta\_t=R\_{t+1}+\gamma v(S\_{t+1})-V(S\_t)\\\\V(S\_t)=V(S\_t)+\alpha\delta\_tE\_t(s)$$
+$$\delta\_t=R\_{t+1}+\gamma v(S\_{t+1})-V(S\_t)\\\\\\\\V(S\_t)=V(S\_t)+\alpha\delta\_tE\_t(s)$$
 
 也许有人会问，这前向的式子和反向的式子看起来不同啊，是不是不同的逻辑呢？其实两者是等价的。现在我们从前向推导一下反向的更新式子。
 
 $$\begin{aligned}
-G\_t^\lambda-V(S\_t)& =-V(S\_t)+(1-\lambda)\lambda^0(R\_{t+1}+\gamma V(S\_{t+1})) && \text{(1)}  \\\\
-&+(1-\lambda)\lambda^1(R\_{t+1}+\gamma R\_{t+2}+\gamma^2V(S\_{t+2}))&& (2)  \\\\
-&+(1-\lambda)\lambda^2(R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\gamma^3V(S\_{t+3}))&& (3)  \\\\
-&+\ldots && \text{(4)}  \\\\
-&=-V(S\_t)+(\gamma\lambda)^0(R\_{t+1}+\gamma V(S\_{t+1})-\gamma\lambda V(S\_{t+1}))&& (5)  \\\\
-&+(\gamma\lambda)^1(R\_{t+2}+\gamma V(S\_{t+2})-\gamma\lambda V(S\_{t+2}))&& \text{(6)}  \\\\
-&+(\gamma\lambda)^2(R\_{t+3}+\gamma V(S\_{t+3})-\gamma\lambda V(S\_{t+3}))&& \text{(7)}  \\\\
-&\begin{array}{c}+\ldots\end{array}&& \text{(8)}  \\\\
-&=(\gamma\lambda)^0(R\_{t+1}+\gamma V(S\_{t+1})-V(S\_t))&& \left(9\right)  \\\\
-&+(\gamma\lambda)^1(R\_{t+2}+\gamma V(S\_{t+2})-V(S\_{t+1}))&& \text{(10)}  \\\\
-&+(\gamma\lambda)^2(R\_{t+3}+\gamma V(S\_{t+3})-V(S\_{t+2}))&& (11)  \\\\
-&\begin{array}{c}+\ldots\end{array}&& (12)  \\\\
+G\_t^\lambda-V(S\_t)& =-V(S\_t)+(1-\lambda)\lambda^0(R\_{t+1}+\gamma V(S\_{t+1})) && \text{(1)}  \\\\\\\\
+&+(1-\lambda)\lambda^1(R\_{t+1}+\gamma R\_{t+2}+\gamma^2V(S\_{t+2}))&& (2)  \\\\\\\\
+&+(1-\lambda)\lambda^2(R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\gamma^3V(S\_{t+3}))&& (3)  \\\\\\\\
+&+\ldots && \text{(4)}  \\\\\\\\
+&=-V(S\_t)+(\gamma\lambda)^0(R\_{t+1}+\gamma V(S\_{t+1})-\gamma\lambda V(S\_{t+1}))&& (5)  \\\\\\\\
+&+(\gamma\lambda)^1(R\_{t+2}+\gamma V(S\_{t+2})-\gamma\lambda V(S\_{t+2}))&& \text{(6)}  \\\\\\\\
+&+(\gamma\lambda)^2(R\_{t+3}+\gamma V(S\_{t+3})-\gamma\lambda V(S\_{t+3}))&& \text{(7)}  \\\\\\\\
+&\begin{array}{c}+\ldots\end{array}&& \text{(8)}  \\\\\\\\
+&=(\gamma\lambda)^0(R\_{t+1}+\gamma V(S\_{t+1})-V(S\_t))&& \left(9\right)  \\\\\\\\
+&+(\gamma\lambda)^1(R\_{t+2}+\gamma V(S\_{t+2})-V(S\_{t+1}))&& \text{(10)}  \\\\\\\\
+&+(\gamma\lambda)^2(R\_{t+3}+\gamma V(S\_{t+3})-V(S\_{t+2}))&& (11)  \\\\\\\\
+&\begin{array}{c}+\ldots\end{array}&& (12)  \\\\\\\\
 &=\delta\_t+\gamma\lambda\delta\_{t+1}+(\gamma\lambda)^2\delta\_{t+2}+\ldots && (13)
 \end{aligned}$$
 

@@ -77,13 +77,13 @@ $$Q(S\_t,A\_t)=Q(S\_t,A\_t)+\alpha(G\_t-Q(S\_t,A\_t))$$
 
 # 4. 蒙特卡罗法求解强化学习控制问题
 
-蒙特卡罗法求解控制问题的思路和动态规划价值迭代的的思路类似。回忆下动态规划价值迭代的的思路， 每轮迭代先做策略评估，计算出价值 $v_k(s)$ ，然后基于据一定的方法（比如贪婪法）更新当前策略 $π$。最后得到最优价值函数 $v∗$ 和最优策略 $π∗$。
+蒙特卡罗法求解控制问题的思路和动态规划价值迭代的的思路类似。回忆下动态规划价值迭代的的思路， 每轮迭代先做策略评估，计算出价值 $v\_k(s)$ ，然后基于据一定的方法（比如贪婪法）更新当前策略 $π$。最后得到最优价值函数 $v∗$ 和最优策略 $π∗$。
 
 和动态规划比，蒙特卡罗法不同之处体现在三点:
   - 一是预测问题策略评估的方法不同，这个第三节已经讲了。
   - 第二是蒙特卡罗法一般是优化最优动作价值函数 $q∗$，而不是状态价值函数 $v∗$。
   - 三是动态规划一般基于贪婪法更新策略。而蒙特卡罗法一般采用 $ϵ−$贪婪法更新。这个 $ϵ$ 就是我们在[强化学习（一）模型基础](https://www.cnblogs.com/pinard/p/9385570.html)中讲到的第8个模型要素 $ϵ$。$ϵ−$贪婪法通过设置一个较小的 $ϵ$ 值，使用 $1−ϵ$ 的概率贪婪地选择目前认为是最大行为价值的行为，而用 $ϵ$ 的概率随机的从所有 $m$ 个可选行为中选择行为。用公式可以表示为：
-    $$\left.\pi(a|s)=\left\\{\begin{array}{ll}\epsilon/m+1-\epsilon&if\mathrm{~}a^*=\arg\max\_{a\in A}Q(s,a)\\\\\epsilon/m&else\end{array}\right.\right.$$
+    $$\left.\pi(a|s)=\left\\\\{\begin{array}{ll}\epsilon/m+1-\epsilon&if\mathrm{~}a^*=\arg\max\_{a\in A}Q(s,a)\\\\\\\\\epsilon/m&else\end{array}\right.\right.$$
 
 在实际求解控制问题时，为了使算法可以收敛，一般 $ϵ$会随着算法的迭代过程逐渐减小，并趋于0。这样在迭代前期，我们鼓励探索，而在后期，由于我们有了足够的探索量，开始趋于保守，以贪婪为主，使算法可以稳定收敛。这样我们可以得到一张和动态规划类似的图：
 
@@ -107,14 +107,14 @@ $$Q(S\_t,A\_t)=Q(S\_t,A\_t)+\alpha(G\_t-Q(S\_t,A\_t))$$
   $$S\_1,A\_1,R\_2,S\_2,A\_2,\ldots S\_t,A\_t,R\_{t+1},\ldots R\_T,S\_T$$
   - 3. 对于该状态序列里出现的每一状态行为对 $(S\_t,A\_t)$，计算其收获 $G\_t$, 更新其计数 $N(s,a)$ 和行为价值函数 $Q(s,a)$：
   $$\begin{gathered}
-  G\_t=R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\ldots\gamma^{T-t-1}R\_T \\\\
-  N(S\_t,A\_t)=N(S\_t,A\_t)+1 \\\\
+  G\_t=R\_{t+1}+\gamma R\_{t+2}+\gamma^2R\_{t+3}+\ldots\gamma^{T-t-1}R\_T \\\\\\\\
+  N(S\_t,A\_t)=N(S\_t,A\_t)+1 \\\\\\\\
   Q(S\_t,A\_t)=Q(S\_t,A\_t)+\frac1{N(S\_t,A\_t)}(G\_t-Q(S\_t,A\_t))
   \end{gathered}$$
   - 4. 基于新计算出的动作价值，更新当前的 $ϵ−$贪婪策略：
     $$\begin{gathered}
-    \epsilon=\frac1k \\\\
-    \left.\pi(a|s)=\left\\{\begin{array}{ll}\epsilon/m+1-\epsilon&ifa^*=\arg\max\_{a\in A}Q(s,a)\\\\\epsilon/m&else\end{array}\right.\right.
+    \epsilon=\frac1k \\\\\\\\
+    \left.\pi(a|s)=\left\\\\{\begin{array}{ll}\epsilon/m+1-\epsilon&ifa^*=\arg\max\_{a\in A}Q(s,a)\\\\\\\\\epsilon/m&else\end{array}\right.\right.
     \end{gathered}$$
   - 5. 如果所有的 $Q(s,a)$ 收敛，则对应的所有 $Q(s,a)$ 即为最优的动作价值函数 $q∗$。对应的策略 $π(a|s)$ 即为最优策略 $π∗$。否则转到第二步。
 

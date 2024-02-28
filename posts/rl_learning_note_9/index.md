@@ -13,7 +13,7 @@
 
 注意到DQN(NIPS 2013)里面，我们使用的目标 $Q$值的计算方式：
 
-$$\left.y\_j=\left\\{\begin{array}{ll}R\_j&is\_end\_j\textit{ is true}\\\\R\_j+\gamma\max\_{a^{\prime}}Q(\phi(S\_j^{\prime}),A\_j^{\prime},w)&is\_end\_j\textit{ is false}\end{array}\right.\right.$$
+$$\left.y\_j=\left\\\\{\begin{array}{ll}R\_j&is\_end\_j\textit{ is true}\\\\\\\\R\_j+\gamma\max\_{a^{\prime}}Q(\phi(S\_j^{\prime}),A\_j^{\prime},w)&is\_end\_j\textit{ is false}\end{array}\right.\right.$$
 
 这里目标Q值的计算使用到了当前要训练的Q网络参数来计算$Q(\phi(S\_j^{\prime}),A\_j^{\prime},w)$，而实际上，我们又希望通过 $y\_j$来后续更新 $Q$网络参数。这样两者循环依赖，迭代起来两者的相关性就太强了。不利于算法的收敛。
 
@@ -41,10 +41,10 @@ Nature DQN和上一篇的DQN相比，除了用一个新的相同结构的目标Q
     - a) 初始化S为当前状态序列的第一个状态, 拿到其特征向量 $ϕ(S)$
     - b) 在Q网络中使用 $ϕ(S)$作为输入，得到Q网络的所有动作对应的Q值输出。用 $ϵ−$贪婪法在当前Q值输出中选择对应的动作 $A$
     - c) 在状态 $S$ 执行当前动作 $A$,得到新状态 $S'$ 对应的特征向量 $ϕ(S')$ 和奖励 $R$,是否终止状态`is_end`
-    - d) 将 $\\{ϕ(S),A,R,ϕ(S′),is\_end\\}$这个五元组存入经验回放集合 $D$
+    - d) 将 $\\\\{ϕ(S),A,R,ϕ(S′),is\_end\\\\}$这个五元组存入经验回放集合 $D$
     - e) $S=S'$
     - f) 从经验回放集合 $D$ 中采样 $m$ 个样本 ${ϕ(S\_j),A\_j,R\_j,ϕ(S'\_j),is\_end\_j},j=1,2.,,,m$，计算当前目标Q值 $y\_j$：
-      - $$\left.y\_j=\left\\{\begin{array}{ll}R\_j&is\_end\_j\textit{ is true}\\\\R\_j+\gamma\max\_{a^{\prime}}Q^{\prime}(\phi(S\_j^{\prime}),A\_j^{\prime},w^{\prime})&is\_end\_j\textit{ is false}\end{array}\right.\right.$$
+      - $$\left.y\_j=\left\\\\{\begin{array}{ll}R\_j&is\_end\_j\textit{ is true}\\\\\\\\R\_j+\gamma\max\_{a^{\prime}}Q^{\prime}(\phi(S\_j^{\prime}),A\_j^{\prime},w^{\prime})&is\_end\_j\textit{ is false}\end{array}\right.\right.$$
     - g) 使用均方差损失函数 $\frac1m\sum\_{j=1}^m(y\_j-Q(\phi(S\_j),A\_j,w))^2$，通过神经网络的梯度反向传播来更新Q网络的所有参数 $w$
     - h) 如果 $i%C=1$, 则更新目标Q网络参数 $w'=w$
     - i) 如果 $S'$是终止状态，当前轮迭代完毕，否则转到步骤b)

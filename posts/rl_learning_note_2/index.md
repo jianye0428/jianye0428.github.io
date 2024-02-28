@@ -30,9 +30,9 @@
   根据价值函数的表达式，我们可以推导出价值函数基于状态的递推关系，比如对于状态价值函数 $v\_π(s)$，可以发现：
 
   $$\begin{aligned}
-  V\_{\pi}(s)& =\mathrm{E}\_{\pi}(R\_{t+1}+\gamma R\_{t+2}+\gamma^{2}R\_{t+3}+\ldots\mid S\_{t}=s)  \\\\
-  &=\mathrm{E}\_{\pi}(R\_{t+1}+\gamma(R\_{t+2}+\gamma R\_{t+3}+\ldots)|S\_{t}=s) \\\\
-  &=\mathrm{E}\_{\pi}(R\_{t+1}+\gamma G\_{t+1}|S\_{t}=s) \\\\
+  V\_{\pi}(s)& =\mathrm{E}\_{\pi}(R\_{t+1}+\gamma R\_{t+2}+\gamma^{2}R\_{t+3}+\ldots\mid S\_{t}=s)  \\\\\\\\
+  &=\mathrm{E}\_{\pi}(R\_{t+1}+\gamma(R\_{t+2}+\gamma R\_{t+3}+\ldots)|S\_{t}=s) \\\\\\\\
+  &=\mathrm{E}\_{\pi}(R\_{t+1}+\gamma G\_{t+1}|S\_{t}=s) \\\\\\\\
   &=\mathrm{E}\_{\pi}(R\_{t+1}+\gamma\nu\_{\pi}(S\_{t+1})|S\_{t}=s)
   \end{aligned}$$
 
@@ -98,7 +98,7 @@ $$q\_*(s,a)=\max\_\pi q\_\pi(s,a)$$
 
 对于最优的策略，基于动作价值函数我们可以定义为：
 
-$$\pi\_*(a|s)=\begin{cases}1&\mathrm{if~}a=\mathrm{arg~}\max\_{a\in A}q*(s,a)\\\\0&\mathrm{else}&\end{cases}$$
+$$\pi\_*(a|s)=\begin{cases}1&\mathrm{if~}a=\mathrm{arg~}\max\_{a\in A}q*(s,a)\\\\\\\\0&\mathrm{else}&\end{cases}$$
 
 只要我们找到了最大的状态价值函数或者动作价值函数，那么对应的策略 $π^*$ 就是我们强化学习问题的解。同时，利用状态价值函数和动作价值函数之间的关系，我们也可以得到:
 

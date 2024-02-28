@@ -67,7 +67,7 @@ $$\frac1m\sum\_{j=1}^mw\_j(y\_j-Q(\phi(S\_j),A\_j,w))^2$$
     - d) 将 ${ϕ(S),A,R,ϕ(S'),is\_end}$这个五元组存入SumTree
     - e) $S=S'$
     - f) 从SumTree中采样 $m$ 个样本 ${ϕ(S\_j),A\_j,R\_j,ϕ(S'\_j),is\_end\_j},j=1,2.,,,m$，每个样本被采样的概率基于 $P(j)=\frac{p\_j}{\sum\_i(p\_i)}$，损失函数权重 $w\_j=(N*P(j))^{-\beta}/\max\_i(w\_i)$，计算当前目标Q值 $y\_j$:
-      - $$\left.y\_j=\left\\{\begin{matrix}R\_j&is\_end\_j\textit{is true}\\\\R\_j+\gamma Q^{\prime}(\phi(S\_j^{\prime}),\arg\max\_{a^{\prime}}Q(\phi(S\_j^{\prime}),a,w),w^{\prime})&is\_end\_j\textit{is false}\end{matrix}\right.\right.$$
+      - $$\left.y\_j=\left\\\\{\begin{matrix}R\_j&is\_end\_j\textit{is true}\\\\\\\\R\_j+\gamma Q^{\prime}(\phi(S\_j^{\prime}),\arg\max\_{a^{\prime}}Q(\phi(S\_j^{\prime}),a,w),w^{\prime})&is\_end\_j\textit{is false}\end{matrix}\right.\right.$$
     - g) 使用均方差损失函数$\begin{aligned}\frac{1}{m}\sum\_{j=1}^mw\_j(y\_j-Q(\phi(S\_j),A\_j,w))^2\end{aligned}$，通过神经网络的梯度反向传播来更新Q网络的所有参数 $w$
     - h) 重新计算所有样本的TD误差 $\delta\_j=y\_j-Q(\phi(S\_j),A\_j,w)$，更新SumTree中所有节点的优先级 $p\_j=|\delta\_j|$
     - i) 如果i%C=1,则更新目标Q网络参数 $w'=w$
