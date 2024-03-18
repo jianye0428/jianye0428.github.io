@@ -288,7 +288,7 @@ G_t^\lambda-V(S_t)&amp; =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1}))
 </div><p>这很高效，只花费对数时间，<strong>序列容器的基于删除的技术需要线性时间</strong>。并且，关联容器的<code>erase</code>成员函数有基于等价而不是相等的优势。</p>
 <h2 id="消除判断式">消除判断式</h2>
 <p>消除下面判断式，返回真的每个对象:</p>
-<div class="highlight" id="id-1"><div class="chroma">
+<div class="highlight" id="id-5"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
@@ -299,7 +299,7 @@ G_t^\lambda-V(S_t)&amp; =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1}))
 </div><ul>
 <li>对于序列容器（<code>vector</code>、<code>string</code>、<code>deque</code>和<code>list</code>），把每个<code>remove</code>替换为<code>remove_if</code>：</li>
 </ul>
-<div class="highlight" id="id-2"><div class="chroma">
+<div class="highlight" id="id-6"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
@@ -316,7 +316,7 @@ G_t^\lambda-V(S_t)&amp; =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1}))
 </div><ul>
 <li>对于标准关联容器，有两种方法处理该问题，一个更容易编码，另一个更高效。</li>
 </ul>
-<div class="highlight" id="id-3"><div class="chroma">
+<div class="highlight" id="id-7"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
@@ -338,7 +338,7 @@ G_t^\lambda-V(S_t)&amp; =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1}))
 </div>
 </div><p>对这种方法的<strong>缺点</strong>是它拷贝了所有不删除的元素。</p>
 <p>因为关联容器没有提供类似<code>remove_if</code>的成员函数，所以必须写一个循环来迭代c中的元素，和原来一样删除元素。不幸的是，那些正确工作的代码很少是跃出脑海的代码。例如，这是很多程序员首先想到的：</p>
-<div class="highlight" id="id-4"><div class="chroma">
+<div class="highlight" id="id-8"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
@@ -360,7 +360,7 @@ G_t^\lambda-V(S_t)&amp; =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1}))
 </div>
 </div><p>这有未定义的行为。当容器的一个元素被删时，<strong>指向那个元素的所有迭代器都失效了</strong>。</p>
 <p>当<code>c.erase(i)</code>返回时，<code>i</code>已经失效。那对于这个循环是个坏消息，因为在<code>erase</code>返回后，<code>i</code>通过for循环的<code>++i</code>部分自增。为了避免这个问题，我们必须保证在调用<code>erase</code>之前就得到了c中下一元素的迭代器。最容易的方法是当我们调用时在i上使用后置递增：</p>
-<div class="highlight" id="id-5"><div class="chroma">
+<div class="highlight" id="id-9"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -393,7 +393,7 @@ G_t^\lambda-V(S_t)&amp; =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1}))
 <li>“更容易但效率较低”的解决方案用<code>remove_copy_if</code><strong>把需要的值拷贝到一个新容器中，然后把原容器的内容和新的交换</strong>：</li>
 </ul>
 <p>对于<strong>关联容器</strong>，这说多容易就有多容易，因为只需要对刚才开发的循环做一个微不足道的修改就行了：</p>
-<div class="highlight" id="id-6"><div class="chroma">
+<div class="highlight" id="id-10"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -427,7 +427,7 @@ G_t^\lambda-V(S_t)&amp; =-V(S_t)+(1-\lambda)\lambda^0(R_{t+1}+\gamma V(S_{t+1}))
 <p>要记得对于那样的容器，<strong>调用<code>erase</code>不仅使所有指向被删元素的迭代器失效，也使被删元素之后的所有迭代器失效</strong>。</p>
 <p>包括所有i之后的迭代器。我们写<code>i++</code>，<code>++i</code>或你能想起的其它任何东西都没有用，因为没有能导致迭代器有效的。必须利用erase的返回值。那个返回值正是我们需要的：<strong>一旦删除完成，它就是指向紧接在被删元素之后的元素的有效迭代器。</strong></p>
 <p>我们这么写：</p>
-<div class="highlight" id="id-7"><div class="chroma">
+<div class="highlight" id="id-11"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
