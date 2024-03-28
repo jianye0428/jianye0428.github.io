@@ -46,7 +46,7 @@
 </span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>ciStringCompareImpl</span><span class=p>(</span><span class=n>s1</span><span class=p>,</span> <span class=n>s2</span><span class=p>);</span>
 </span></span><span class=line><span class=cl>  <span class=k>else</span>
 </span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=o>-</span><span class=n>ciStringCompareImpl</span><span class=p>(</span><span class=n>s2</span><span class=p>,</span> <span class=n>s1</span><span class=p>);</span>
-</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>在ciStringCompareImpl中，大部分工作由mismatch来完成。它返回一对迭代器，表示了区间中第一个对应的字符不相同的位置：</p><div class=highlight id=id-3><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>在ciStringCompareImpl中，大部分工作由mismatch来完成。它返回一对迭代器，表示了区间中第一个对应的字符不相同的位置：</p><div class=highlight id=id-1><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
 </span><span class=lnt> 2
 </span><span class=lnt> 3
 </span><span class=lnt> 4
@@ -80,7 +80,7 @@
 </span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=n>ciCharCompare</span><span class=p>(</span><span class=o>*</span><span class=n>p</span><span class=p>.</span><span class=n>first</span><span class=p>,</span>
 </span></span><span class=line><span class=cl>                       <span class=o>*</span><span class=n>p</span><span class=p>.</span><span class=n>second</span><span class=p>);</span>  <span class=c1>// 两个字符串的关系 和不匹配的字符一样
 </span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><strong>比较过程</strong></p><p>当字符匹配时这个判断式返回true，因为当判断式返回false时mismatch会停止。我们不能为此使用ciCharCompare，因为它返回-1、1或0，而当字符匹配时它返回0，就像strcmp。</p><p>如果我们把ciCharCompare作为判断式传给mismatch，C++会把ciCharCompare的返回类型转换为bool，而当然bool中零的等价物是false，正好和我们想要的相反！同样的，当ciCharCompare返回1或-1，那会被解释成true，因为，就像C，所有非零整数值都看作true。这再次和我们想要的相反。</p><p>要修正这个语义倒置，我们在ciCharCompare前面放上not2和ptr_fun。</p><p><strong>std::not1 和 std::not2</strong>
-std::not1 和 std::not2是用来把“符合某种条件的函数对象”转换为反义函数对象的函数。</p><p><code>std::ptr_fun</code>用来把函数指针封装为符合某种条件的函数对象的函数，C++11 里可以用<code>std::bind</code>或<code>std::function</code>代替</p><h2 id=lexicographical_compare>lexicographical_compare</h2><p>可以在关联容器中用作比较函数的函数，可以把ciCharCompare修改为一个有判断式接口的字符比较函数，然后把进行字符串比较的工作交给STL中名字第二长的算法——lexicographical_compare：</p><div class=highlight id=id-4><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+std::not1 和 std::not2是用来把“符合某种条件的函数对象”转换为反义函数对象的函数。</p><p><code>std::ptr_fun</code>用来把函数指针封装为符合某种条件的函数对象的函数，C++11 里可以用<code>std::bind</code>或<code>std::function</code>代替</p><h2 id=lexicographical_compare>lexicographical_compare</h2><p>可以在关联容器中用作比较函数的函数，可以把ciCharCompare修改为一个有判断式接口的字符比较函数，然后把进行字符串比较的工作交给STL中名字第二长的算法——lexicographical_compare：</p><div class=highlight id=id-2><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
 </span><span class=lnt> 2
 </span><span class=lnt> 3
 </span><span class=lnt> 4
