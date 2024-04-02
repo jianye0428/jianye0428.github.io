@@ -1,16 +1,10 @@
-# KnapSack Problem
+# KnapSack Problem 背包问题
 
-
-ref:</br>
-`dp:` https://juejin.cn/post/6844903993429196813</br>
-`knapsack problem:` https://blog.csdn.net/qq_38410730/article/details/81667885</br>
-`完全背包问题:` https://www.cnblogs.com/darkerg/p/15464987.html</br>
 
 ### KnapSack 背包问题
-
 #### Definiton 定义
 
-<u>背包问题</u>是一种组合优化的NP完全问题:有N个物品和容量为W的背包，每个物品都有自己的体积w和价值v， 求拿哪些物品可以使得背包所装下的物品的总价值最大。如果限定每种物品只能选择0个或者1个，则称问题为<u>0-1背包问题</u>;如果不限定每种物品的数量，则问题称为<u>无界背包问题和或者完全背包问题</u>。
+<u>背包问题</u>是一种组合优化的NP完全问题:有N个物品和容量为W的背包，每个物品都有自己的体积w和价值v，求拿哪些物品可以使得背包所装下的物品的总价值最大。如果限定每种物品只能选择0个或者1个，则称问题为<u>0-1背包问题</u>;如果不限定每种物品的数量，则问题称为<u>无界背包问题和或者完全背包问题</u>。
 
 #### 0-1 背包问题
 
@@ -85,6 +79,12 @@ int knapsack(vector<int>& weights, vector<int>& values, int N, int W) {
     return dp[W];
 }
 ```
+
+ref:</br>
+`dp:` https://juejin.cn/post/6844903993429196813</br>
+`knapsack problem:` https://blog.csdn.net/qq_38410730/article/details/81667885</br>
+`完全背包问题:` https://www.cnblogs.com/darkerg/p/15464987.html</br>
+
 
 ---
 

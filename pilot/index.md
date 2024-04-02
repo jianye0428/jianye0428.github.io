@@ -10,6 +10,8 @@
   - Cmake
     - [CMake简介](https://jianye0428.github.io/posts/cmake_introduction/)
     - [CMake常用命令](https://jianye0428.github.io/posts/commandcollection/)
+    - [cmake_cookbook](https://www.bookstack.cn/read/CMake-Cookbook/content-chapter7-7.8-chinese.md)
+    - [professional cmake](https://crascit.com/wp-content/uploads/2024/01/ProfessionalCMake_17th_Edition_GettingStarted.pdf)
   - C++ Concurrency In Action
   - Effective Modern C++
   - Effective C++

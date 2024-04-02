@@ -49,8 +49,8 @@ set(SRC_LIST add.h add.cpp)
 set(SRC_LIST ${SRC_LIST} main.cpp)
 
 # 第二种用法，设置库生成目录或者可执行文件生成目录
-set( LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib/linux)
-set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib/linux)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 ```
 
 ### 1.4 设置编译类型
@@ -69,11 +69,11 @@ add_executable(可执行程序名 代码文件名称)
 例如：
 
 ```c++
-# 编译静态库
+# 把`.cpp`、`.h`文件编译成静态库
 add_library(add STATIC add.h add.cpp)
 add_library(add STATIC ${ADD_SRC} ${ADD_HDR})
 
-# 编译动态库
+# 把`.cpp`、`.h`文件编译成动态库
 add_library(add  SHARED add.h add.cpp)
 add_library(add SHARED  ${ADD_SRC} ${ADD_HDR})
 
@@ -87,6 +87,7 @@ add_executable(main ${MAIN_SRC} ${MAIN_HDR})
 例如将当前编译的静态库或者动态库输出到当前项目文件夹lib子目录下
 
 ```c++
+// cmake中`LIBRARY_OUTPUT_PATH`变量为库文件输出路径
 set(LIBRARY_OUTPUT_PATH  ${PROJECT_SOURCE_DIR}/lib)
 ```
 
@@ -95,7 +96,7 @@ set(LIBRARY_OUTPUT_PATH  ${PROJECT_SOURCE_DIR}/lib)
 例如将当前可执行程序输出到当前项目文件夹的bin子目录下
 
 ```c++
-#设定可执行二进制文件的目录
+// 设定可执行二进制文件的目录
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 ```
 
@@ -107,6 +108,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 // ${PROJECT_SOURCE_DIR} 为当前项目文件夹
 link_directories(${PROJECT_SOURCE_DIR}/lib/linux)
 ```
+
 
 ### 1.8 设置包含目录
 
@@ -140,6 +142,7 @@ link_libraries(
     ...
 )
 ```
+tips: [link_libraries 和 target_link_libraries 链接库](https://blog.csdn.net/qq_26849933/article/details/127139052)
 
 <mark>注意:</mark> link_libraries中的静态库为全路径，常与1.7 link_directories 搭配使用，例如：
 
@@ -173,8 +176,8 @@ target_link_libraries(main dl)
 
 {{<admonition quote "注意" false>}}
 
-(1) `link_libraries`用在`add_executable`之前，`target_link_libraries`用在`add_executable`之后
-(2) `link_libraries`用来链接静态库，`target_link_libraries`用来链接导入库，即按照`header file + .lib + .dll`方式隐式调用动态库的`.lib`库
+(1) `link_libraries`用在`add_executable`之前，`target_link_libraries`用在`add_executable`之后</br>
+(2) `link_libraries`用来链接静态库，`target_link_libraries`用来链接导入库，即按照`header file + .lib + .dll`方式隐式调用动态库的`.lib`库</br>
 <mark>注意:</mark>
   - windows系统下，静态库后缀为`.lib`, 导入库的后缀为`.lib`，动态库的后缀为`.dll`
   - linux系统写，静态库后缀为`.a`, 动态库的后缀为`.so`
@@ -259,7 +262,7 @@ list(APPEND MAIN_HDR ${MAIN_HDR_ELSE})
 add_subdirectory(src)
 ```
 
-该语句会在执行完当前文件夹CMakeLists.txt之后执行src子目录下的CMakeLists.txt
+该语句会在执行完当前文件夹`CMakeLists.txt`之后执行src子目录下的`CMakeLists.txt`。
 
 ### 1.16 message输出消息机制
 
@@ -281,7 +284,7 @@ message(WARNING "Enter cmake ${CMAKE_CURRENT_LIST_DIR}")
 message(FATAL_ERROR "Enter cmake ${CMAKE_CURRENT_LIST_DIR}")
 ```
 
-### 1.17 安装
+### 1.17 安装 `install()`
 
 install 指令用于定义安装规则，安装的内容包括二进制可执行文件、动态库、静态库以及文件、目录、脚本等。
 
@@ -533,6 +536,9 @@ set_target_properties(${第三方库项目名称} PROPERTIES FOLDER “目标文
 
 （9）`PROJECT_NAME`返回通过`PROJECT`指令定义的项目名称。
 
+### 1.25 target_sources()
+来源: https://blog.csdn.net/guaaaaaaa/article/details/125601766
+作用: 使用 `target_sources()` 将当前文件夹下的所有`.c`、`.h`文件作为源文件添加到项目中
 
 ## 2 错误解决方案
 
@@ -573,6 +579,7 @@ touch *
 [5].https://blog.csdn.net/Zhanganliu/article/details/85257728<br>
 [6].https://blog.csdn.net/llffss/article/details/120121617<br>
 [7].https://blog.csdn.net/wzj_110/category_10357507.html<br>
+[8].https://blog.csdn.net/fengbingchun/category_783053.html
 
 
 
