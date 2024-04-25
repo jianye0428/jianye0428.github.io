@@ -22,7 +22,7 @@
 </span></span><span class=line><span class=cl>    <span class=n>vwp</span><span class=p>.</span><span class=n>push_back</span><span class=p>(</span><span class=k>new</span> <span class=n>Widget</span><span class=p>);</span>
 </span></span><span class=line><span class=cl>    <span class=p>...</span> <span class=c1>// work
 </span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span> <span class=c1>// Widgets在这里泄漏！
-</span></span></span></code></pre></td></tr></table></div></div><p>这段代码将直接导致内存泄露。</p><p>当<code>vwp</code>结束其生命周期后，<code>vwp</code>的每个元素都被销毁，但不会<code>delete</code>每个<code>new</code>得到的对象。</p><p>那样的删除是你的职责，而不是vector的。这是一个特性。只有你知道一个指针是否应该被删除。</p><p>可以很简单地实现：</p><div class=highlight id=id-1><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></span></span></code></pre></td></tr></table></div></div><p>这段代码将直接导致内存泄露。</p><p>当<code>vwp</code>结束其生命周期后，<code>vwp</code>的每个元素都被销毁，但不会<code>delete</code>每个<code>new</code>得到的对象。</p><p>那样的删除是你的职责，而不是vector的。这是一个特性。只有你知道一个指针是否应该被删除。</p><p>可以很简单地实现：</p><div class=highlight id=id-2><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
 </span><span class=lnt>2
 </span><span class=lnt>3
 </span><span class=lnt>4
@@ -39,7 +39,7 @@
 </span></span><span class=line><span class=cl>    <span class=n>i</span> <span class=o>!=</span> <span class=n>vwp</span><span class=p>.</span><span class=n>end</span><span class=p>(),</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span> <span class=p>{</span>
 </span></span><span class=line><span class=cl>     <span class=k>delete</span> <span class=o>*</span><span class=n>i</span><span class=p>;</span>
 </span></span><span class=line><span class=cl>    <span class=p>}</span>
-</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>这段销毁的代码，仍然有2个问题：</p><ul><li>新的for循环代码比for_each多得多，没有使用for_each来的清楚</li><li>这段代码不是异常安全的。如果在用指针填充了vwp的时候和你要删除它们之间抛出了一个异常，你会再次资源泄漏。</li></ul><p><strong>for_each删除对象</strong></p><p>要把你的类似for_each的循环转化为真正使用for_each，你需要把delete转入一个函数对象中。</p><div class=highlight id=id-2><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>这段销毁的代码，仍然有2个问题：</p><ul><li>新的for循环代码比for_each多得多，没有使用for_each来的清楚</li><li>这段代码不是异常安全的。如果在用指针填充了vwp的时候和你要删除它们之间抛出了一个异常，你会再次资源泄漏。</li></ul><p><strong>for_each删除对象</strong></p><p>要把你的类似for_each的循环转化为真正使用for_each，你需要把delete转入一个函数对象中。</p><div class=highlight id=id-3><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
 </span><span class=lnt>2
 </span><span class=lnt>3
 </span><span class=lnt>4
@@ -54,7 +54,7 @@
 </span></span><span class=line><span class=cl>    <span class=p>{</span>
 </span></span><span class=line><span class=cl>     <span class=k>delete</span> <span class=n>ptr</span><span class=p>;</span>
 </span></span><span class=line><span class=cl>    <span class=p>}</span>
-</span></span><span class=line><span class=cl><span class=p>};</span></span></span></code></pre></td></tr></table></div></div><p>现在可以这么删除对象</p><div class=highlight id=id-3><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></span><span class=line><span class=cl><span class=p>};</span></span></span></code></pre></td></tr></table></div></div><p>现在可以这么删除对象</p><div class=highlight id=id-4><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
 </span><span class=lnt>2
 </span><span class=lnt>3
 </span><span class=lnt>4
@@ -63,8 +63,8 @@
 </span></span><span class=line><span class=cl><span class=p>{</span>
 </span></span><span class=line><span class=cl>    <span class=p>...</span> <span class=c1>// work
 </span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>for_each</span><span class=p>(</span><span class=n>vwp</span><span class=p>.</span><span class=n>begin</span><span class=p>(),</span> <span class=n>vwp</span><span class=p>.</span><span class=n>end</span><span class=p>(),</span> <span class=n>DeleteObject</span><span class=o>&lt;</span><span class=n>Widget</span><span class=o>&gt;</span><span class=p>);</span>
-</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><strong>问题</strong></p><p>如果有人编写了一个类，该类继承了 string</p><div class=highlight id=id-4><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=k>class</span> <span class=nc>SpecialString</span><span class=o>:</span> <span class=k>public</span> <span class=n>string</span> <span class=p>{</span> <span class=p>...</span> <span class=p>};</span></span></span></code></pre></td></tr></table></div></div><p>这是很危险的行为，因为string，就像所有的标准STL容器，<strong>缺少虚析构函数</strong>，而从没有虚析构函数的类公有继承是一个大的C++禁忌。</p><p>当他删除 SpecialString 时就会资源泄露</p><div class=highlight id=id-5><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><strong>问题</strong></p><p>如果有人编写了一个类，该类继承了 string</p><div class=highlight id=id-5><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c++ data-lang=c++><span class=line><span class=cl><span class=k>class</span> <span class=nc>SpecialString</span><span class=o>:</span> <span class=k>public</span> <span class=n>string</span> <span class=p>{</span> <span class=p>...</span> <span class=p>};</span></span></span></code></pre></td></tr></table></div></div><p>这是很危险的行为，因为string，就像所有的标准STL容器，<strong>缺少虚析构函数</strong>，而从没有虚析构函数的类公有继承是一个大的C++禁忌。</p><p>当他删除 SpecialString 时就会资源泄露</p><div class=highlight id=id-6><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
 </span><span class=lnt>2
 </span><span class=lnt>3
 </span><span class=lnt>4
@@ -78,7 +78,7 @@
 </span></span><span class=line><span class=cl>    <span class=n>for_each</span><span class=p>(</span><span class=n>dssp</span><span class=p>.</span><span class=n>begin</span><span class=p>(),</span> <span class=n>dssp</span><span class=p>.</span><span class=n>end</span><span class=p>(),</span> <span class=c1>// 行为未定义！通过没有
 </span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>DeleteObject</span><span class=o>&lt;</span><span class=n>string</span><span class=o>&gt;</span><span class=p>());</span> <span class=c1>// 虚析构函数的基类
 </span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span> <span class=c1>// 指针来删除派生对象
-</span></span></span></code></pre></td></tr></table></div></div><p><strong>解决</strong></p><p>可以通过编译器推断传给<code>DeleteObject::operator()</code>的指针的类型来消除这个错误（也减少DeleteObject的用户需要的击键次数）。</p><p><strong>把模板化从DeleteObject移到它的operator()</strong>：</p><div class=highlight id=id-6><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></span></span></code></pre></td></tr></table></div></div><p><strong>解决</strong></p><p>可以通过编译器推断传给<code>DeleteObject::operator()</code>的指针的类型来消除这个错误（也减少DeleteObject的用户需要的击键次数）。</p><p><strong>把模板化从DeleteObject移到它的operator()</strong>：</p><div class=highlight id=id-7><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
 </span><span class=lnt>2
 </span><span class=lnt>3
 </span><span class=lnt>4
@@ -93,7 +93,7 @@
 </span></span><span class=line><span class=cl>    <span class=p>{</span>
 </span></span><span class=line><span class=cl>     <span class=k>delete</span> <span class=n>ptr</span><span class=p>;</span>
 </span></span><span class=line><span class=cl>    <span class=p>}</span>
-</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>通过传给<code>DeleteObject::operator()</code>的指针的类型，自动实例化一个<code>operator()</code>。这种类型演绎下降让我们放弃使<code>DeleteObject</code>可适配的能力</p><p>现在删除 SpecialString 就会正常了</p><div class=highlight id=id-7><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p>通过传给<code>DeleteObject::operator()</code>的指针的类型，自动实例化一个<code>operator()</code>。这种类型演绎下降让我们放弃使<code>DeleteObject</code>可适配的能力</p><p>现在删除 SpecialString 就会正常了</p><div class=highlight id=id-8><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
 </span><span class=lnt>2
 </span><span class=lnt>3
 </span><span class=lnt>4
@@ -104,7 +104,7 @@
 </span></span><span class=line><span class=cl>    <span class=n>deque</span><span class=o>&lt;</span><span class=n>SpecialString</span><span class=o>*&gt;</span> <span class=n>dssp</span><span class=p>;</span>
 </span></span><span class=line><span class=cl>    <span class=p>...</span>
 </span></span><span class=line><span class=cl>    <span class=n>for_each</span><span class=p>(</span><span class=n>dssp</span><span class=p>.</span><span class=n>begin</span><span class=p>(),</span> <span class=n>dssp</span><span class=p>.</span><span class=n>end</span><span class=p>(),</span> <span class=n>DeleteObject</span><span class=p>());</span> <span class=c1>// good！
-</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><font color=red>现在仍不是异常安全的。</font></p><p>果在SpecialString被new但在调用for_each之前抛出一个异常，就会发生泄漏。</p><p>这个问题可以以多种方式被解决，但最简单的可能是用<strong>智能指针的容器来代替指针的容器，典型的是引用计数指针</strong>。</p><h2 id=boost库中的shared_ptr>Boost库中的shared_ptr</h2><p>利用Boost的shared_ptr，本条款的原始例子可以重写为这样：</p><div class=highlight id=id-8><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span></span></span></code></pre></td></tr></table></div></div><p><font color=red>现在仍不是异常安全的。</font></p><p>果在SpecialString被new但在调用for_each之前抛出一个异常，就会发生泄漏。</p><p>这个问题可以以多种方式被解决，但最简单的可能是用<strong>智能指针的容器来代替指针的容器，典型的是引用计数指针</strong>。</p><h2 id=boost库中的shared_ptr>Boost库中的shared_ptr</h2><p>利用Boost的shared_ptr，本条款的原始例子可以重写为这样：</p><div class=highlight id=id-9><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
 </span><span class=lnt>2
 </span><span class=lnt>3
 </span><span class=lnt>4
