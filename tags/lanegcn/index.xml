@@ -1,0 +1,210 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>LaneGCN - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/lanegcn/</link><description>LaneGCN - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sun, 16 Jul 2023 15:53:35 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/lanegcn/" rel="self" type="application/rss+xml"/><item><title>LaneGCN 论文解读</title><link>https://jianye0428.github.io/posts/lanegcn/</link><pubDate>Sun, 16 Jul 2023 15:53:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/lanegcn/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2007.13732"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2007.13732<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<code>PPT:</code> <a href="https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<h2 id="architechture">Architechture</h2>
+<p><strong><font color=red>Lane Graph + Actor Map:</font></strong></p>
+<ul>
+<li>
+<p>construct lane graph from vectorized map data to preserve the map structure and can avoid information loss 构建矢量化地图信息，避免地图信息丢失</p>
+</li>
+<li>
+<p>LaneGCN:</p>
+<ul>
+<li>
+<p>extends <strong>graph convolutions with multiple adjacency matrices</strong> and along-lane dilation</p>
+<ul>
+<li>to capture complex topology and long range dependencies of the lane graph.</li>
+</ul>
+</li>
+<li>
+<p>exploit a <strong>fusion network</strong> consisting of four types of interactions: <code>actor-to-lane</code>, <code>lane-to-actor</code>, <code>actor-to-actor</code>, <code>lane-to-lane</code>.</p>
+<ul>
+<li>present both actors and lanes as nodes in the graph and use a 1D CNN and LaneGCN to extract the features for the actor and lane nodes respectively, and then exploit spatial attention and another LaneGCN to model four types of interactions.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p></p>
+<p><strong><font color=red>Difference between VectorNet and LaneGCN:</font></strong></p>
+<ul>
+<li><u>VecotrNet</u> uses vanilla graph networks with undirected full connections; <u>LaneGCN</u> uses connected lane graph folllowing the map topology and propose task specific multi-type and dilated graph operators.</li>
+<li>VectorNet uses polyline-level nodes for interactions; LaneGCN uses polyline segments as map nodes to capture higher resolution.</li>
+</ul>
+<h2 id="lane-graph-representations-for-motion-forecasting">Lane Graph Representations for Motion Forecasting</h2>
+<p></p>
+<h3 id="font-colorredactornetfont-extracting-traffic-participant-representations"><font color=red>ActorNet</font>: Extracting Traffic Participant Representations</h3>
+<p>Each Trajctory is represented as a sequence of displacement ${ \bigtriangleup{p_{-(T-1)},&hellip;,\bigtriangleup{p_{-1}}, \bigtriangleup{p_0}}}$, where $\bigtriangleup{p_t}$ is the 2D displacement from time step $t-1$ to t, and T is the trajectory size.</p>
+<p>For trajectories with sizes smaller than $T$ , we pad them with zeros. We add a binary $1 × T$ mask to indicate if the element at each step is padded or not and concatenate it with the trajectory tensor, resulting in an input tensor of size $3 × T$.</p>
+<p>1D CNN is used to process the trajectory input for its effectiveness in extracting multi-scale features
+and efficiency in parallel computing. The output of ActorNet is a temporal feature map, whose element at $t = 0$ is used as the actor feature. The network has 3 groups/scales of 1D convolutions.</p>
+<p>Each group consists of 2 residual blocks, with the stride of the first block as 2. We then use a Feature Pyramid Network (FPN) to fuse the
+multi-scale features, and apply another residual block to obtain the output tensor. For all layers, the convolution kernel size is 3 and the number of output channels is 128. Layer normalization and the Rectified Linear Unit (ReLU) are used after each convolution.</p>
+<p></p>
+<h3 id="font-colorredmapnetfont-extracting-structured-map-representation"><font color=red>MapNet</font>: Extracting Structured Map Representation</h3>
+<p>General Architecture:</p>
+<ul>
+<li>part 1: building a lane graph from vectorized map data;</li>
+<li>part 2: applying our novel LaneGCN to the lane graph to output the map features.</li>
+</ul>
+<p><strong>Map Data:</strong></p>
+<p>In this paper, we adopt a simple form of vectorized map data as our representation of HD maps. Specifically, the map data is represented as a set of lanes and their connectivity. Each lane contains a centerline, i.e., a sequence of 2D BEV points, which are arranged following the lane direction (see Fig. 3, top). For any two lanes which are directly reachable, 4 types of connections are given: <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
+<p><strong>Lane Graph Construction:</strong></p>
+<p>first define a lane node as the straight line segment formed by any two consecutive points (grey circles in Fig. 3) of the centerline. The location of a lane node is the averaged coordinates of its two end points. Following the connections between lane centerlines, we also derive 4 connectivity types for the lane nodes, i.e., <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
+<p>We denote the lane nodes with $V ∈ \mathbb R^{N ×2}$ , where $N$ is the number of lane nodes and the $i$-th row of $V$ is the BEV coordinates of the $i$-th node. We represent the connectivity with 4 adjacency matrices ${\lbrace A_i \rbrace}_{i \in {pre,suc,left,right}}$ , with $A_i \in \mathbb R^{N ×N}$.</p>
+<p>We denote $A_{i,jk}$, as the element in the $j$-th row and $k$-th column of $A_i$. Then $A_{i,jk} = 1$ if node $k$ is an $i$-type neighbor of node $j$.</p>
+<p><strong>LaneConv Operator:</strong></p>
+<p><font color=green><em>Node Feature:</em></font>
+Each lane node corresponds to a straight line segment of a centerline. To encode all the lane node information, we need to take into account both the shape (size and orientation) and the location (the coordinates of the center) of the corresponding line segment. We parameterize the node feature as follows,</p>
+<p>$$x_i = MLP_{shape} (v_{i}^{end} - v_{i}^{start}) + MLP_{loc}(v_i) $$</p>
+<p>where $MLP$ indicates a multi-layer perceptron and the two subscripts refer to shape and location, respectively. $v_i$ is the location of the i-th lane node, i.e., the center between two end points, $v_i^{start}$ and $v_i^{end}$ are the BEV coordinates of the node $i’s$ starting and ending points, and $x_i$ is the $i$-th row of the node feature matrix $X$, denoting the input feature of the $i$-th lane node.</p>
+<p><font color=green><em>LaneConv:</em> </font>
+To aggregate the topology information of the lane graph at a larger scale, we design the following LaneConv operator:</p>
+<p>$$Y = XW_0 + \sum_{i\in{pre, suc, left, right}}A_iXW_i,\tag{2}$$</p>
+<p>where $A_i$ and $W_i$ are the adjacency and the weight matrices corresponding to the $i$-th connection type respectively. Since we order the lane nodes from the start to the end of the lane, $A_{suc}$ and $A_{pre}$ are matrices obtained by shifting the identity matrix (diagnal 1) one step towards upper right (non-zero superdiagonal) and lower left (non-zero subdiagonal). $A_{suc}$ and $A_{pre}$ can propagate information from the forward and backward neighbours whereas $A_{left}$ and $A_{right}$ allow information to flow from the cross-lane neighbours. It is not hard to see that our LaneConv builds on top of the general graph convolution and encodes more geometric (e.g., connection type/direction) information. As shown in our experiments this improves over the vanilla graph convolution.</p>
+<p><font color=green><em>Dilated LaneConv:</em></font></p>
+<p>Functionality: The model needs to capture the long range dependency along the lane direction for accurate prediction.</p>
+<p>the k-dilation LaneConv operator is defined as follows:</p>
+<p>$$Y = XW_0 + A_{pre}^k XW_{pre,k} + A_{suc}^k X W_{suc,k} \tag{3}$$</p>
+<p>where $A_{pre}^k$ is the $k$-th matrix power of $A_{pre}$. This allows us to directly propagate information along the lane for $k$ steps, with $k$ a hyperparameter. Since $A_{pre}^k$ is highly sparse, one can efficiently compute it using sparse matrix multiplication. Note that the dilated LaneConv is only used for predecessor and successor, as the long range dependency is mostly along the lane direction.</p>
+<p><font color=green><em>LaneGCN:</em></font></p>
+<p>With Eq.(2) and Eq.(3), we get a multi-scale LaneConv operator with C dilation size as follows:</p>
+<p>$$Y = XW_0 + \sum_{i\in \lbrace left, right \rbrace} A_i X W_i + \sum_{c=1}^C (A_{pre}^{k_c}XW_{pre, k_c} + A_{suc}^{k_c}XW_{suc, k_c})， \tag{4}$$</p>
+<p>where $k_c$ is the $c$-th dilation size. We denote $LaneConv(k_1 , · · · , k_C)$ this multi-scale layer.</p>
+<p></p>
+<h3 id="font-colorredfusion-netfont"><font color=red>Fusion Net</font></h3>
+<p>Four types fusion modules:</p>
+<ul>
+<li>A2L: introduces real-time traffic information to lane nodes, such as blockage or usage of the lanes.</li>
+<li>L2L: updates lane node features by propagating the traffic information over the lane graph. -&gt; LaneGCN</li>
+<li>L2A: fuses updated map features with real-time traffic information back to the actors.</li>
+<li>A2A: handles the interactions between actors and produces the output actor features, which are then used by the prediction header for motion forecasting.</li>
+</ul>
+<p>We implement L2L using another LaneGCN, which has the same architecture as the one used in our MapNet (see Section 3.2). In the following we describe the other three modules in detail. We exploit a spatial attention layer for A2L, L2A and A2A. The attention layer applies to each of the three modules in the same way. Taking A2L as an example, given an actor node i, we aggregate the features from its context lane nodes j as follows:</p>
+<p>$$y_i = x_i W_0 + \sum_j \phi (concat(x_i, \Delta_{i,j}, x_j)W_1)W_2, \tag{5}$$</p>
+<p>with $x_i$ the feature of the $i$-th node, $W$ a weight matrix, $\phi$ the compositon of layer notmalization and RelU, and $\Delta_{ij} = MLP(v_j - v_i)$, where $v$ denotes the node location.</p>
+<h3 id="font-colorredprediction-headerfont"><font color=red>Prediction Header</font></h3>
+<p>Take after-fusion actor features as input, a multi-modal prediction header outputs the final motion forecasting. For each actor, it predicts $K$ possible future trajectories and their confidence scores.</p>
+<p>The header has two branches, a regression branch to predict
+the trajectory of each mode and a classification branch to predict the confidence score of each mode.</p>
+<p>For the m-th actor, we apply a residual block and a linear layer in the
+regression branch to regress the K sequences of BEV coordinates:</p>
+<p>$$O_{m,reg} = \lbrace (p_{m,1}^k, p_{m,2}^k, &hellip;, p_{m,T}^k) \rbrace _{k\in[0,K-1]}$$</p>
+<p>where $p_{m,i}^k$ is the predicted $m$-th actor&rsquo;s BEV coordinates of the $k$-th mode at the $i$-th time step. For the classification branch, we apply an MLP to $p^k_{m,T} − p_{m,0}$ to get $K$ distance embeddings. We then concatenate each distance embedding with the actor feature, apply a residual block and a linear layer to output $K$ confidence scores, $O_{m,cls} = (c_{m,0}, c_{m,1}, &hellip;, c_{m,K−1})$.</p>
+<h3 id="font-colorredlearningfont"><font color=red>Learning</font></h3>
+<p>use the sum of classification and regreesion losses to train the model:</p>
+<p>$$ L = L_{cls} + \alpha L_{reg},$$</p>
+<p>where $\alpha = 1.0$.</p>
+<p>For classification, we use the max-margin loss:</p>
+<p>$$L_{cls} = \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k \neq \hat{k}} \max(0, c_{m,k} + \epsilon - c_{m, \hat{k}}) \tag{6}$$</p>
+<p>where $\epsilon$ is the margin and $M$ is the total number of actors. For regression, we apply the smooth $l1$ loss on all predicted time steps:</p>
+<p>$$L_{reg} = \frac{1}{MT} \sum_{m=1}^M \sum_{t=1}^T reg(p_{m,y}^{\hat{k}} - p_{m,t}^*) \tag{7}$$</p>
+<p>where $p_t^*$ is the ground truth BEV coordinates at time step $t$, $reg(x) = \sum\limits_i d(x_i)$, $x_i$ is the $i$-th element of $x$, and $d(x_i)$ is the smooth $\ell1$ loss defined as:</p>
+<p>$$d(x_i) = \begin{cases}
+0.5x_i^2 &amp;\text{if} ||x|| &lt; 1, \
+||x_i|| - 0.5 &amp; \text{otherwise,}
+\end{cases} \tag{8}$$</p>
+<p>where $||x_i||$ denotes the $\ell1$ norm of $x_i$.</p>
+<h3 id="font-colorred-neural-network-layoutfont"><font color=red> Neural Network Layout</font></h3>
+<p></p>
+<h3 id="font-colorreddata-process-and-network-constructionfont"><font color=red>Data Process And Network Construction</font></h3>
+<blockquote>
+<p>以官方的2645.csv数据集为例子</p>
+</blockquote>
+<p><strong>agent node:</strong></p>
+<ul>
+<li><code>data['city']:</code>城市名称</li>
+<li><code>data['trajs'] = [agt_traj] + ctx_trajs:</code>轨迹点，(agent + context vehicles)</li>
+<li><code>data['steps'] = [agt_step] + ctx_steps:</code>在原始数据中的位置</li>
+<li><code>data['feats'] = feats:</code> (13 X 20 X 3) 前20预测轨迹 + 一维是否存在点</li>
+<li><code>data['ctrs'] = ctrs:</code> (13 X 2) 中心点</li>
+<li><code>data['orig'] = orig:</code> AGENT 当前点坐标</li>
+<li><code>data['theta'] = theta:</code> AGENT 偏转角</li>
+<li><code>data['rot'] = rot:</code> (2 X 2) 旋转矩阵</li>
+<li><code>data['gt_preds'] = gt_preds:</code>(13 X 30 X 2) 后30帧真实轨迹</li>
+<li><code>data['has_preds'] = has_preds:</code> (13 X 30) 标识后30帧轨迹是否存在</li>
+</ul>
+<p><strong>lane node:</strong></p>
+<ul>
+<li><code>graph['ctrs'] = np.concatenate(ctrs, 0):</code> lane node的中心点坐标</li>
+<li><code>graph['num_nodes'] = num_nodes:</code> lane node的数量</li>
+<li><code>graph['feats'] = np.concatenate(feats, 0):</code> lane node 方向向量</li>
+<li><code>graph['turn'] = np.concatenate(turn, 0):</code> lane node 转向标识</li>
+<li><code>graph['control'] = np.concatenate(control, 0):</code> lane node 的 has_traffic_control 标识</li>
+<li><code>graph['intersect'] = np.concatenate(intersect, 0):</code> lane node 的 is_intersection 标识</li>
+<li><code>graph['pre'] = [pre]:</code> pre[&lsquo;u&rsquo;] 和 pre[&lsquo;v&rsquo;], v 是 u 的pre， 这里表述的是lane node之间的关系</li>
+<li><code>graph['suc'] = [suc]:</code> suc[&lsquo;u&rsquo;] 和 suc[&lsquo;v&rsquo;], v 是 u 的suc， 这里表述的是lane node之间的关系</li>
+<li><code>graph['lane_idcs'] = lane_idcs:</code> lane node index
+<ul>
+<li>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="mi">1</span> <span class="mi">1</span> <span class="mi">1</span> <span class="o">...</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="mi">83</span> <span class="mi">83</span> <span class="mi">83</span> <span class="o">...</span> <span class="mi">83</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+</li>
+<li><code>graph['pre_pairs'] = pre_pairs:</code> pair 表述的是lane之间的关系</li>
+<li><code>graph['suc_pairs'] = suc_pairs:</code> pair 表述的是lane之间的关系</li>
+<li><code>graph['left_pairs'] = left_pairs:</code> pair 表述的是lane之间的关系</li>
+<li><code>graph['right_pairs'] = right_pairs:</code> pair 表述的是lane之间的关系
+<ul>
+<li>对于<code>pre['u']</code>和<code>pre['v']</code>, v 是 u 的 pre</li>
+<li>对于<code>suc['u']</code>和<code>suc['v']</code>, v 是 u 的 suc</li>
+<li>对于<code>left['u']</code>和<code>left['v']</code>, v 是 u 的 left</li>
+<li>对于<code>right['u']</code>和<code>right['v']</code>, v 是 u 的 right</li>
+</ul>
+</li>
+</ul>
+<p><strong>Net结构</strong></p>
+<ul>
+<li><strong>ActorNet</strong>
+<code>input:</code> M x 3 x 20
+<code>output:</code> M x 128 x 20</li>
+</ul>
+<p>解释:</p>
+<ul>
+<li>
+<p><strong>MapNet</strong>: 把 v 按照 u 加到center上
+<code>input:</code> N x 4
+<code>output:</code> N x 128</p>
+</li>
+<li>
+<p><strong>A2M</strong>
+<code>input:</code> N x 128
+<code>output:</code> N x 128</p>
+</li>
+<li>
+<p><strong>M2M</strong>
+<code>input:</code> N x 128
+<code>output:</code> N x 128</p>
+</li>
+<li>
+<p><strong>M2A</strong>
+<code>input:</code> N x 128
+<code>output:</code> M x 128</p>
+</li>
+<li>
+<p><strong>A2A</strong>
+<code>input:</code> N x 128
+<code>output:</code> N x 128</p>
+</li>
+<li>
+<p><strong>Prediction Header:</strong>
+<code>input</code> M x 128</p>
+<ul>
+<li>MLP Regression</li>
+<li>MLP Classification</li>
+</ul>
+</li>
+</ul>
+<p>ref link: <a href="https://zhuanlan.zhihu.com/p/447129428"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/447129428<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item></channel></rss>

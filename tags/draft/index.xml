@@ -3632,215 +3632,6 @@ DenseTNT(右图)是通过密集地采点避免了定义anchor，同时也避免�
 <p>$$\mathcal{L}<em>{s1} = \mathcal{L}</em>{lane} + \mathcal{L}<em>{goal}+ \mathcal{L}</em>{completion}$$</p>
 <p>第二个stage主要负责goal set predictor的部分。</p>
 <p>$$\mathcal{L}<em>{s2} = \mathcal{L}</em>{head} + \mathcal{L}_{set}$$</p>
-]]></description></item><item><title>LaneGCN 论文解读</title><link>https://jianye0428.github.io/posts/lanegcn/</link><pubDate>Sun, 16 Jul 2023 15:53:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/lanegcn/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2007.13732"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2007.13732<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-<code>PPT:</code> <a href="https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h2 id="architechture">Architechture</h2>
-<p><strong><font color=red>Lane Graph + Actor Map:</font></strong></p>
-<ul>
-<li>
-<p>construct lane graph from vectorized map data to preserve the map structure and can avoid information loss 构建矢量化地图信息，避免地图信息丢失</p>
-</li>
-<li>
-<p>LaneGCN:</p>
-<ul>
-<li>
-<p>extends <strong>graph convolutions with multiple adjacency matrices</strong> and along-lane dilation</p>
-<ul>
-<li>to capture complex topology and long range dependencies of the lane graph.</li>
-</ul>
-</li>
-<li>
-<p>exploit a <strong>fusion network</strong> consisting of four types of interactions: <code>actor-to-lane</code>, <code>lane-to-actor</code>, <code>actor-to-actor</code>, <code>lane-to-lane</code>.</p>
-<ul>
-<li>present both actors and lanes as nodes in the graph and use a 1D CNN and LaneGCN to extract the features for the actor and lane nodes respectively, and then exploit spatial attention and another LaneGCN to model four types of interactions.</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<p></p>
-<p><strong><font color=red>Difference between VectorNet and LaneGCN:</font></strong></p>
-<ul>
-<li><u>VecotrNet</u> uses vanilla graph networks with undirected full connections; <u>LaneGCN</u> uses connected lane graph folllowing the map topology and propose task specific multi-type and dilated graph operators.</li>
-<li>VectorNet uses polyline-level nodes for interactions; LaneGCN uses polyline segments as map nodes to capture higher resolution.</li>
-</ul>
-<h2 id="lane-graph-representations-for-motion-forecasting">Lane Graph Representations for Motion Forecasting</h2>
-<p></p>
-<h3 id="font-colorredactornetfont-extracting-traffic-participant-representations"><font color=red>ActorNet</font>: Extracting Traffic Participant Representations</h3>
-<p>Each Trajctory is represented as a sequence of displacement ${ \bigtriangleup{p_{-(T-1)},&hellip;,\bigtriangleup{p_{-1}}, \bigtriangleup{p_0}}}$, where $\bigtriangleup{p_t}$ is the 2D displacement from time step $t-1$ to t, and T is the trajectory size.</p>
-<p>For trajectories with sizes smaller than $T$ , we pad them with zeros. We add a binary $1 × T$ mask to indicate if the element at each step is padded or not and concatenate it with the trajectory tensor, resulting in an input tensor of size $3 × T$.</p>
-<p>1D CNN is used to process the trajectory input for its effectiveness in extracting multi-scale features
-and efficiency in parallel computing. The output of ActorNet is a temporal feature map, whose element at $t = 0$ is used as the actor feature. The network has 3 groups/scales of 1D convolutions.</p>
-<p>Each group consists of 2 residual blocks, with the stride of the first block as 2. We then use a Feature Pyramid Network (FPN) to fuse the
-multi-scale features, and apply another residual block to obtain the output tensor. For all layers, the convolution kernel size is 3 and the number of output channels is 128. Layer normalization and the Rectified Linear Unit (ReLU) are used after each convolution.</p>
-<p></p>
-<h3 id="font-colorredmapnetfont-extracting-structured-map-representation"><font color=red>MapNet</font>: Extracting Structured Map Representation</h3>
-<p>General Architecture:</p>
-<ul>
-<li>part 1: building a lane graph from vectorized map data;</li>
-<li>part 2: applying our novel LaneGCN to the lane graph to output the map features.</li>
-</ul>
-<p><strong>Map Data:</strong></p>
-<p>In this paper, we adopt a simple form of vectorized map data as our representation of HD maps. Specifically, the map data is represented as a set of lanes and their connectivity. Each lane contains a centerline, i.e., a sequence of 2D BEV points, which are arranged following the lane direction (see Fig. 3, top). For any two lanes which are directly reachable, 4 types of connections are given: <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
-<p><strong>Lane Graph Construction:</strong></p>
-<p>first define a lane node as the straight line segment formed by any two consecutive points (grey circles in Fig. 3) of the centerline. The location of a lane node is the averaged coordinates of its two end points. Following the connections between lane centerlines, we also derive 4 connectivity types for the lane nodes, i.e., <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
-<p>We denote the lane nodes with $V ∈ \mathbb R^{N ×2}$ , where $N$ is the number of lane nodes and the $i$-th row of $V$ is the BEV coordinates of the $i$-th node. We represent the connectivity with 4 adjacency matrices ${\lbrace A_i \rbrace}_{i \in {pre,suc,left,right}}$ , with $A_i \in \mathbb R^{N ×N}$.</p>
-<p>We denote $A_{i,jk}$, as the element in the $j$-th row and $k$-th column of $A_i$. Then $A_{i,jk} = 1$ if node $k$ is an $i$-type neighbor of node $j$.</p>
-<p><strong>LaneConv Operator:</strong></p>
-<p><font color=green><em>Node Feature:</em></font>
-Each lane node corresponds to a straight line segment of a centerline. To encode all the lane node information, we need to take into account both the shape (size and orientation) and the location (the coordinates of the center) of the corresponding line segment. We parameterize the node feature as follows,</p>
-<p>$$x_i = MLP_{shape} (v_{i}^{end} - v_{i}^{start}) + MLP_{loc}(v_i) $$</p>
-<p>where $MLP$ indicates a multi-layer perceptron and the two subscripts refer to shape and location, respectively. $v_i$ is the location of the i-th lane node, i.e., the center between two end points, $v_i^{start}$ and $v_i^{end}$ are the BEV coordinates of the node $i’s$ starting and ending points, and $x_i$ is the $i$-th row of the node feature matrix $X$, denoting the input feature of the $i$-th lane node.</p>
-<p><font color=green><em>LaneConv:</em> </font>
-To aggregate the topology information of the lane graph at a larger scale, we design the following LaneConv operator:</p>
-<p>$$Y = XW_0 + \sum_{i\in{pre, suc, left, right}}A_iXW_i,\tag{2}$$</p>
-<p>where $A_i$ and $W_i$ are the adjacency and the weight matrices corresponding to the $i$-th connection type respectively. Since we order the lane nodes from the start to the end of the lane, $A_{suc}$ and $A_{pre}$ are matrices obtained by shifting the identity matrix (diagnal 1) one step towards upper right (non-zero superdiagonal) and lower left (non-zero subdiagonal). $A_{suc}$ and $A_{pre}$ can propagate information from the forward and backward neighbours whereas $A_{left}$ and $A_{right}$ allow information to flow from the cross-lane neighbours. It is not hard to see that our LaneConv builds on top of the general graph convolution and encodes more geometric (e.g., connection type/direction) information. As shown in our experiments this improves over the vanilla graph convolution.</p>
-<p><font color=green><em>Dilated LaneConv:</em></font></p>
-<p>Functionality: The model needs to capture the long range dependency along the lane direction for accurate prediction.</p>
-<p>the k-dilation LaneConv operator is defined as follows:</p>
-<p>$$Y = XW_0 + A_{pre}^k XW_{pre,k} + A_{suc}^k X W_{suc,k} \tag{3}$$</p>
-<p>where $A_{pre}^k$ is the $k$-th matrix power of $A_{pre}$. This allows us to directly propagate information along the lane for $k$ steps, with $k$ a hyperparameter. Since $A_{pre}^k$ is highly sparse, one can efficiently compute it using sparse matrix multiplication. Note that the dilated LaneConv is only used for predecessor and successor, as the long range dependency is mostly along the lane direction.</p>
-<p><font color=green><em>LaneGCN:</em></font></p>
-<p>With Eq.(2) and Eq.(3), we get a multi-scale LaneConv operator with C dilation size as follows:</p>
-<p>$$Y = XW_0 + \sum_{i\in \lbrace left, right \rbrace} A_i X W_i + \sum_{c=1}^C (A_{pre}^{k_c}XW_{pre, k_c} + A_{suc}^{k_c}XW_{suc, k_c})， \tag{4}$$</p>
-<p>where $k_c$ is the $c$-th dilation size. We denote $LaneConv(k_1 , · · · , k_C)$ this multi-scale layer.</p>
-<p></p>
-<h3 id="font-colorredfusion-netfont"><font color=red>Fusion Net</font></h3>
-<p>Four types fusion modules:</p>
-<ul>
-<li>A2L: introduces real-time traffic information to lane nodes, such as blockage or usage of the lanes.</li>
-<li>L2L: updates lane node features by propagating the traffic information over the lane graph. -&gt; LaneGCN</li>
-<li>L2A: fuses updated map features with real-time traffic information back to the actors.</li>
-<li>A2A: handles the interactions between actors and produces the output actor features, which are then used by the prediction header for motion forecasting.</li>
-</ul>
-<p>We implement L2L using another LaneGCN, which has the same architecture as the one used in our MapNet (see Section 3.2). In the following we describe the other three modules in detail. We exploit a spatial attention layer for A2L, L2A and A2A. The attention layer applies to each of the three modules in the same way. Taking A2L as an example, given an actor node i, we aggregate the features from its context lane nodes j as follows:</p>
-<p>$$y_i = x_i W_0 + \sum_j \phi (concat(x_i, \Delta_{i,j}, x_j)W_1)W_2, \tag{5}$$</p>
-<p>with $x_i$ the feature of the $i$-th node, $W$ a weight matrix, $\phi$ the compositon of layer notmalization and RelU, and $\Delta_{ij} = MLP(v_j - v_i)$, where $v$ denotes the node location.</p>
-<h3 id="font-colorredprediction-headerfont"><font color=red>Prediction Header</font></h3>
-<p>Take after-fusion actor features as input, a multi-modal prediction header outputs the final motion forecasting. For each actor, it predicts $K$ possible future trajectories and their confidence scores.</p>
-<p>The header has two branches, a regression branch to predict
-the trajectory of each mode and a classification branch to predict the confidence score of each mode.</p>
-<p>For the m-th actor, we apply a residual block and a linear layer in the
-regression branch to regress the K sequences of BEV coordinates:</p>
-<p>$$O_{m,reg} = \lbrace (p_{m,1}^k, p_{m,2}^k, &hellip;, p_{m,T}^k) \rbrace _{k\in[0,K-1]}$$</p>
-<p>where $p_{m,i}^k$ is the predicted $m$-th actor&rsquo;s BEV coordinates of the $k$-th mode at the $i$-th time step. For the classification branch, we apply an MLP to $p^k_{m,T} − p_{m,0}$ to get $K$ distance embeddings. We then concatenate each distance embedding with the actor feature, apply a residual block and a linear layer to output $K$ confidence scores, $O_{m,cls} = (c_{m,0}, c_{m,1}, &hellip;, c_{m,K−1})$.</p>
-<h3 id="font-colorredlearningfont"><font color=red>Learning</font></h3>
-<p>use the sum of classification and regreesion losses to train the model:</p>
-<p>$$ L = L_{cls} + \alpha L_{reg},$$</p>
-<p>where $\alpha = 1.0$.</p>
-<p>For classification, we use the max-margin loss:</p>
-<p>$$L_{cls} = \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k \neq \hat{k}} \max(0, c_{m,k} + \epsilon - c_{m, \hat{k}}) \tag{6}$$</p>
-<p>where $\epsilon$ is the margin and $M$ is the total number of actors. For regression, we apply the smooth $l1$ loss on all predicted time steps:</p>
-<p>$$L_{reg} = \frac{1}{MT} \sum_{m=1}^M \sum_{t=1}^T reg(p_{m,y}^{\hat{k}} - p_{m,t}^*) \tag{7}$$</p>
-<p>where $p_t^*$ is the ground truth BEV coordinates at time step $t$, $reg(x) = \sum\limits_i d(x_i)$, $x_i$ is the $i$-th element of $x$, and $d(x_i)$ is the smooth $\ell1$ loss defined as:</p>
-<p>$$d(x_i) = \begin{cases}
-0.5x_i^2 &amp;\text{if} ||x|| &lt; 1, \
-||x_i|| - 0.5 &amp; \text{otherwise,}
-\end{cases} \tag{8}$$</p>
-<p>where $||x_i||$ denotes the $\ell1$ norm of $x_i$.</p>
-<h3 id="font-colorred-neural-network-layoutfont"><font color=red> Neural Network Layout</font></h3>
-<p></p>
-<h3 id="font-colorreddata-process-and-network-constructionfont"><font color=red>Data Process And Network Construction</font></h3>
-<blockquote>
-<p>以官方的2645.csv数据集为例子</p>
-</blockquote>
-<p><strong>agent node:</strong></p>
-<ul>
-<li><code>data['city']:</code>城市名称</li>
-<li><code>data['trajs'] = [agt_traj] + ctx_trajs:</code>轨迹点，(agent + context vehicles)</li>
-<li><code>data['steps'] = [agt_step] + ctx_steps:</code>在原始数据中的位置</li>
-<li><code>data['feats'] = feats:</code> (13 X 20 X 3) 前20预测轨迹 + 一维是否存在点</li>
-<li><code>data['ctrs'] = ctrs:</code> (13 X 2) 中心点</li>
-<li><code>data['orig'] = orig:</code> AGENT 当前点坐标</li>
-<li><code>data['theta'] = theta:</code> AGENT 偏转角</li>
-<li><code>data['rot'] = rot:</code> (2 X 2) 旋转矩阵</li>
-<li><code>data['gt_preds'] = gt_preds:</code>(13 X 30 X 2) 后30帧真实轨迹</li>
-<li><code>data['has_preds'] = has_preds:</code> (13 X 30) 标识后30帧轨迹是否存在</li>
-</ul>
-<p><strong>lane node:</strong></p>
-<ul>
-<li><code>graph['ctrs'] = np.concatenate(ctrs, 0):</code> lane node的中心点坐标</li>
-<li><code>graph['num_nodes'] = num_nodes:</code> lane node的数量</li>
-<li><code>graph['feats'] = np.concatenate(feats, 0):</code> lane node 方向向量</li>
-<li><code>graph['turn'] = np.concatenate(turn, 0):</code> lane node 转向标识</li>
-<li><code>graph['control'] = np.concatenate(control, 0):</code> lane node 的 has_traffic_control 标识</li>
-<li><code>graph['intersect'] = np.concatenate(intersect, 0):</code> lane node 的 is_intersection 标识</li>
-<li><code>graph['pre'] = [pre]:</code> pre[&lsquo;u&rsquo;] 和 pre[&lsquo;v&rsquo;], v 是 u 的pre， 这里表述的是lane node之间的关系</li>
-<li><code>graph['suc'] = [suc]:</code> suc[&lsquo;u&rsquo;] 和 suc[&lsquo;v&rsquo;], v 是 u 的suc， 这里表述的是lane node之间的关系</li>
-<li><code>graph['lane_idcs'] = lane_idcs:</code> lane node index
-<ul>
-<li>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">0</span>
-</span></span><span class="line"><span class="cl"><span class="mi">1</span> <span class="mi">1</span> <span class="mi">1</span> <span class="o">...</span> <span class="mi">1</span>
-</span></span><span class="line"><span class="cl">    <span class="o">...</span>
-</span></span><span class="line"><span class="cl"><span class="mi">83</span> <span class="mi">83</span> <span class="mi">83</span> <span class="o">...</span> <span class="mi">83</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-</li>
-<li><code>graph['pre_pairs'] = pre_pairs:</code> pair 表述的是lane之间的关系</li>
-<li><code>graph['suc_pairs'] = suc_pairs:</code> pair 表述的是lane之间的关系</li>
-<li><code>graph['left_pairs'] = left_pairs:</code> pair 表述的是lane之间的关系</li>
-<li><code>graph['right_pairs'] = right_pairs:</code> pair 表述的是lane之间的关系
-<ul>
-<li>对于<code>pre['u']</code>和<code>pre['v']</code>, v 是 u 的 pre</li>
-<li>对于<code>suc['u']</code>和<code>suc['v']</code>, v 是 u 的 suc</li>
-<li>对于<code>left['u']</code>和<code>left['v']</code>, v 是 u 的 left</li>
-<li>对于<code>right['u']</code>和<code>right['v']</code>, v 是 u 的 right</li>
-</ul>
-</li>
-</ul>
-<p><strong>Net结构</strong></p>
-<ul>
-<li><strong>ActorNet</strong>
-<code>input:</code> M x 3 x 20
-<code>output:</code> M x 128 x 20</li>
-</ul>
-<p>解释:</p>
-<ul>
-<li>
-<p><strong>MapNet</strong>: 把 v 按照 u 加到center上
-<code>input:</code> N x 4
-<code>output:</code> N x 128</p>
-</li>
-<li>
-<p><strong>A2M</strong>
-<code>input:</code> N x 128
-<code>output:</code> N x 128</p>
-</li>
-<li>
-<p><strong>M2M</strong>
-<code>input:</code> N x 128
-<code>output:</code> N x 128</p>
-</li>
-<li>
-<p><strong>M2A</strong>
-<code>input:</code> N x 128
-<code>output:</code> M x 128</p>
-</li>
-<li>
-<p><strong>A2A</strong>
-<code>input:</code> N x 128
-<code>output:</code> N x 128</p>
-</li>
-<li>
-<p><strong>Prediction Header:</strong>
-<code>input</code> M x 128</p>
-<ul>
-<li>MLP Regression</li>
-<li>MLP Classification</li>
-</ul>
-</li>
-</ul>
-<p>ref link: <a href="https://zhuanlan.zhihu.com/p/447129428"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/447129428<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>Social_NCE 论文解读</title><link>https://jianye0428.github.io/posts/social_nce/</link><pubDate>Sun, 16 Jul 2023 15:53:27 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/social_nce/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2012.11717"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2012.11717<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
 <code>论文解读参考:</code>
 [1] <a href="https://zhuanlan.zhihu.com/p/434650863"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/434650863<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
@@ -7291,4 +7082,244 @@ Parameters：device (torch.device or int, optional) – selected device. Returns
 <p>[``]</p>
 </li>
 </ol>
+]]></description></item><item><title>Classification and Regression Metrics</title><link>https://jianye0428.github.io/posts/metrics/</link><pubDate>Sat, 15 Jul 2023 17:47:13 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/metrics/</guid><description><![CDATA[<p>ref:</br>
+[1] <a href="https://www.cnblogs.com/rushup0930/p/13359513.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/rushup0930/p/13359513.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2] <a href="https://blog.csdn.net/u013250861/article/details/123029585#t12"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/u013250861/article/details/123029585#t12<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[3] <a href="https://blog.csdn.net/wf592523813/article/details/95202448"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/wf592523813/article/details/95202448<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[4] <a href="https://zhuanlan.zhihu.com/p/69101372"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/69101372<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br></p>
+<h1 id="classification-分类">classification 分类</h1>
+<p>主要涉及的知识点：</p>
+<ul>
+<li>混淆矩阵、Precision(精准率)、Recall(召回率)、Accuracy(准确率)、F1-score    （包括二分类和多分类问题）</li>
+<li>ROC、AUC</li>
+</ul>
+<blockquote>
+<p>最常见的指标Accuracy到底有哪些不足？
+解: Accuracy是分类问题中最常用的指标，它计算了分类正确的预测数与总预测数的比值。但是，<font color=red>对于不平衡数据集而言，Accuracy并不是一个好指标</font>。
+假设我们有100张图片，其中91张图片是「狗」，5张是「猫」，4张是「猪」，我们希望训练一个三分类器，能正确识别图片里动物的类别。其中，狗这个类别就是大多数类 (majority class)。当大多数类中样本（狗）的数量远超过其他类别（猫、猪）时，如果采用Accuracy来评估分类器的好坏，那么即便模型性能很差 (如无论输入什么图片，都预测为「狗」)，也可以得到较高的Accuracy Score (如91%)。此时，虽然Accuracy Score很高，但是意义不大。当数据异常不平衡时，Accuracy评估方法的缺陷尤为显著。</p>
+</blockquote>
+<h2 id="二分类模型的常见指标">二分类模型的常见指标</h2>
+<p>在二分类问题中，假设该样本一共有两种类别：Positive和Negative。当分类器预测结束，我们可以绘制出混淆矩阵（confusion matrix）。其中分类结果分为如下几种：</p>
+<p></p>
+<ul>
+<li>True Positive (TP): 把正样本成功预测为正。</li>
+<li>True Negative (TN)：把负样本成功预测为负。</li>
+<li>False Positive (FP)：把负样本错误地预测为正。</li>
+<li>False Negative (FN)：把正样本错误的预测为负。</li>
+</ul>
+<blockquote>
+<p>一个小技巧， <font color=red>第一个字母表示划分正确与否</font>， T 表示判定正确（判定正确）， F表示判定错误(False)； <font color=red>第二个字母表示分类器判定结果</font>， P表示判定为正例， N表示判定为负例。</p>
+</blockquote>
+<p>在二分类模型中，Accuracy，Precision，Recall和F1 score的定义如下：</p>
+<p>$$\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}$$</p>
+<blockquote>
+<blockquote>
+<p>Accuracy 能够清晰的判断我们模型的表现，但有一个严重的缺陷： 在正负样本不均衡的情况下，占比大的类别往往会成为影响 Accuracy 的最主要因素，此时的 Accuracy 并不能很好的反映模型的整体情况。</p>
+</blockquote>
+</blockquote>
+<p>$$\text{Precision} = \frac{TP}{TP + FP}$$</p>
+<blockquote>
+<blockquote>
+<p>Precision着重评估在预测为Positive的所有数据中，真实Positve的数据到底占多少？</p>
+</blockquote>
+</blockquote>
+<p>精确率高，意味着分类器要尽量在 “更有把握” 的情况下才将样本预测为正样本， 这意味着精确率能够很好的体现模型对于负样本的区分能力，精确率越高，则模型对负样本区分能力越强。</p>
+<p>$$\text{Recall} = \frac{TP}{TP + FN}$$</p>
+<blockquote>
+<blockquote>
+<p>Recall着重评估：在所有的Positive数据中，到底有多少数据被成功预测为Positive</p>
+</blockquote>
+</blockquote>
+<p>召回率高，意味着分类器尽可能将有可能为正样本的样本预测为正样本，这意味着<font color=red>召回率能够很好的体现模型对于正样本的区分能力，召回率越高，则模型对正样本的区分能力越强</font>。</p>
+<p><strong>举例</strong>:</p>
+<p>一个医院新开发了一套癌症AI诊断系统，想评估其性能好坏。我们把病人得了癌症定义为Positive，没得癌症定义为Negative。那么， 到底该用什么指标进行评估呢？</p>
+<ul>
+<li>如用Precision对系统进行评估，那么其回答的问题就是：
+<blockquote>
+<p>在诊断为癌症的一堆人中，到底有多少人真得了癌症？</p>
+</blockquote>
+</li>
+<li>如用Recall对系统进行评估，那么其回答的问题就是：
+<blockquote>
+<p>在一堆得了癌症的病人中，到底有多少人能被成功检测出癌症？</p>
+</blockquote>
+</li>
+<li>如用Accuracy对系统进行评估，那么其回答的问题就是：
+<blockquote>
+<p>在一堆癌症病人和正常人中，有多少人被系统给出了正确诊断结果（患癌或没患癌）？</p>
+</blockquote>
+</li>
+</ul>
+<p><font color=red>那啥时候应该更注重Recall而不是Precision呢？</font></p>
+<blockquote>
+<p>当False Negative (FN)的成本代价很高 (后果很严重)，希望尽量避免产生FN时，应该着重考虑提高Recall指标。</p>
+</blockquote>
+<p><font color=red>那啥时候应该更注重Precision而不是Recall呢？</font></p>
+<blockquote>
+<p>当False Positive (FP)的成本代价很高 (后果很严重)时，即期望尽量避免产生FP时，应该着重考虑提高Precision指标。</p>
+</blockquote>
+<p>$$\text{F1-score} = \frac{2 \times Precision \times Recall}{Precision + Recall}$$</p>
+<p>而F1-score是Precision和Recall两者的综合。</p>
+<p>举个更有意思的例子（我拍脑袋想出来的，绝对原创哈），假设检察机关想将罪犯捉拿归案，需要对所有人群进行分析，以判断某人犯了罪（Positive），还是没犯罪（Negative）。显然，检察机关希望不漏掉一个罪人（提高recall），也不错怪一个好人（提高precision），所以就需要同时权衡recall和precision两个指标。</p>
+<p>尤其在上个世纪，中国司法体制会更偏向Recall，即「天网恢恢，疏而不漏，任何罪犯都插翅难飞」。而西方司法系统会更偏向Precision，即「绝不冤枉一个好人，但是难免有罪犯成为漏网之鱼，逍遥法外」。到底是哪种更好呢？显然，极端并不可取。Precision和Recall都应该越高越好，也就是F1应该越高越好。</p>
+<p><strong><font color=green>如何通俗的解释召回率与精确率？</font></strong></p>
+<blockquote>
+<p>例：公园里有50只皮卡丘和10只臭臭泥。有正常审美的人都会想要用精灵球把尽可能多的皮卡丘抓回来，同时尽可能少地抓住臭臭泥。 最终我们的精灵球成功抓回来了45只皮卡丘和10只臭臭泥。
+我们就可以说50只皮卡丘中有45只被召唤 (call) 回来 (re) 了，所以 recall = 45 / 50。
+但同时，这台机器还误把5只臭臭泥识别为皮卡丘，在它抓回来的所有55只神奇宝贝中，精灵球对皮卡丘判断的精准性 (precision)  = 45 / 55。
+在上面的例子中，精灵球=预测模型，皮卡丘=正样本，臭臭泥=负样本。
+总结这两个概念的用处：描述模型对正样本的预测性能
+1、recall描述模型“把正样本叫 (call) 回来(re)”的能力。
+2、precision描述模型“叫回来的正样本”有多少是精确的。</p>
+</blockquote>
+<h2 id="aoc--auc">AOC / AUC</h2>
+<p>混淆矩阵中有着Positive、Negative、True、False的概念，其意义如下：</p>
+<ul>
+<li>称预测类别为1的为Positive（阳性），预测类别为0的为Negative（阴性）。</li>
+<li>预测正确的为True（真），预测错误的为False（伪）。</li>
+</ul>
+<p>对上述概念进行组合，就产生了如下的混淆矩阵:</p>
+<p></p>
+<p>然后，由此引出True Positive Rate（真阳率）、False Positive（伪阳率）两个概念：</p>
+<p>$$TP Rate = \frac{TP}{TP + FN}$$
+$$FP Rate = \frac{FP}{FP + TN}$$</p>
+<p>仔细看这两个公式，发现其实TPRate就是TP除以TP所在的列，FPRate就是FP除以FP所在的列，二者意义如下：</p>
+<ul>
+<li>TPRate的意义是所有真实类别为1的样本中，预测类别为1的比例。</li>
+<li>FPRate的意义是所有真实类别为0的样本中，预测类别为1的比例。</li>
+</ul>
+<p>如果上述概念都弄懂了，那么ROC曲线和AUC就so easy了：</p>
+<p>按照定义，AUC即ROC曲线下的面积，而ROC曲线的横轴是FPRate，纵轴是TPRate，当二者相等时，即y=x，如下图:</p>
+<p></p>
+<p>表示的意义是：对于不论真实类别是1还是0的样本，分类器预测为1的概率是相等的。</p>
+<p>换句话说，分类器对于正例和负例毫无区分能力，和抛硬币没什么区别，一个抛硬币的分类器是我们能想象的最差的情况，因此一般来说我们认为AUC的最小值为0.5（当然也存在预测相反这种极端的情况，AUC小于0.5，这种情况相当于分类器总是把对的说成错的，错的认为是对的，那么只要把预测类别取反，便得到了一个AUC大于0.5的分类器）。</p>
+<p>而我们希望分类器达到的效果是：对于真实类别为1的样本，分类器预测为1的概率（即TPRate），要大于真实类别为0而预测类别为1的概率（即FPRate），即y＞x，因此大部分的ROC曲线长成下面这个样子：</p>
+<p></p>
+<p>说了这么多还是不够直观，不妨举个简单的例子。</p>
+<p>首先对于硬分类器（例如SVM，NB），预测类别为离散标签，对于8个样本的预测情况如下：</p>
+<p></p>
+<p>得到混淆矩阵如下：</p>
+<p></p>
+<p>进而算得TPRate=3/4，FPRate=2/4，得到ROC曲线：</p>
+<p></p>
+<p>最终得到AUC为0.625。</p>
+<p>对于LR等预测类别为概率的分类器，依然用上述例子，假设预测结果如下：</p>
+<p></p>
+<p>这时，需要设置阈值来得到混淆矩阵，不同的阈值会影响得到的TPRate，FPRate，如果阈值取0.5，小于0.5的为0，否则为1，那么我们就得到了与之前一样的混淆矩阵。其他的阈值就不再啰嗦了。依次使用所有预测值作为阈值，得到一系列TPRate，FPRate，描点，求面积，即可得到AUC。</p>
+<p>最后说说AUC的优势，AUC的计算方法同时考虑了分类器对于正例和负例的分类能力，在样本不平衡的情况下，依然能够对分类器作出合理的评价。</p>
+<p>例如在反欺诈场景，设欺诈类样本为正例，正例占比很少（假设0.1%），如果使用准确率评估，把所有的样本预测为负例，便可以获得99.9%的准确率。</p>
+<p>但是如果使用AUC，把所有样本预测为负例，TPRate和FPRate同时为0（没有Positive），与(0,0) (1,1)连接，得出AUC仅为0.5，成功规避了样本不均匀带来的问题。</p>
+<h2 id="多分类模型的常见指标详细解析">多分类模型的常见指标详细解析</h2>
+<p>在多分类（大于两个类）问题中，假设我们要开发一个动物识别系统，来区分输入图片是猫，狗还是猪。给定分类器一堆动物图片，产生了如下结果混淆矩阵。</p>
+<p></p>
+<p>在混淆矩阵中，正确的分类样本（Actual label = Predicted label）分布在左上到右下的对角线上。其中，Accuracy的定义为分类正确（对角线上）的样本数与总样本数的比值。<strong>Accuracy度量的是全局样本预测情况。而对于Precision和Recall而言，每个类都需要单独计算其Precision和Recall。</strong>
+classify_multiclass_prediction
+</p>
+<p>比如，对类别「猪」而言，其Precision和Recall分别为:</p>
+<p>$$\text{Precision} = \frac{TP}{TP + FP} = \frac{20}{20 + 50} = \frac{2}{7}$$</p>
+<p>$$\text{Recall} = \frac{TP}{TP + FN} = \frac{20}{10} = \frac{2}{3}$$</p>
+<p>也就是:
+$$P_{cat} = \frac{8}{15}, P_{dog} = \frac{17}{23}, P_{pig} = \frac{2}{7}, (P代表Precision) $$
+$$R_{cat} = \frac{4}{7}, R_{dog} = \frac{17}{32}, R_{pig} = \frac{2}{3}, (R代表Recall) $$</p>
+<p>如果想评估该识别系统的总体功能，必须考虑猫、狗、猪三个类别的综合预测性能。那么，到底要怎么综合这三个类别的Precision呢？是简单加起来做平均吗？通常来说， 我们有如下几种解决方案（<a href="https://link.zhihu.com/?target=https%3A//scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_score.html"target="_blank" rel="external nofollow noopener noreferrer">也可参考scikit-learn官网<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>）：</p>
+<p><strong>1. Macro-average方法</strong>
+该方法最简单，直接将不同类别的评估指标（Precision/ Recall/ F1-score）加起来求平均，给所有类别相同的权重。该方法能够平等看待每个类别，但是它的值会受<strong>稀有类别</strong>影响。</p>
+<p>$$\text{Macro-Precision} = \frac{P_{cat} + P_{dog} + P_{pig}}{3} = 0.5194$$
+$$\text{Macro-Recall} = \frac{R_{cat} + R_{dog} + R_{pig}}{3} = 0.5898$$</p>
+<p><strong>2. Weighted-average方法</strong></p>
+<p>该方法给不同类别不同权重（权重根据该类别的真实分布比例确定），每个类别乘权重后再进行相加。该方法考虑了类别不平衡情况，它的值更容易受到常见类（majority class）的影响。</p>
+<p>$$W_{cat} : W_{dog} : W_{pig} = N_{cat} : N_{dog} : N_{pig} = \frac{7}{26} : \frac{16}{26} : \frac{3}{26} (W代表权重，N代表样本在该类别下的真实数目)$$
+$$\text{Weighted-Precision} = P_{cat} \times W_{cat} + P_{dog} \times W_{dog} + P_{pig} \times W_{pig} = 0.6314$$
+$$\text{Weighted-Recall} = {R_{cat} \times W_{cat} + R_{dog} \times W_{dog} + R_{pig} \times W_{pig}}= 0.5577$$</p>
+<p><strong>3. Micro-average方法</strong></p>
+<p>该方法把每个类别的TP, FP, FN先相加之后，在根据二分类的公式进行计算。</p>
+<p>$$\text{Micro-Precision} = \frac{TP_{cat} + TP_{dog} + TP_{pig}}{TP_{cat} + TP_{dog} + TP_{pig} + FP_{cat} + FP_{dog} + FP_{pig}} = 0.5577$$
+$$\text{Micro-Recall} = \frac{TP_{cat} + TP_{dog} + TP_{pig}}{TP_{cat} + TP_{dog} + TP_{pig} + FN_{cat} + FN_{dog} + FN_{pig}} = 0.5577$$</p>
+<p>其中，特别有意思的是，<u>Micro-precision 和 Micro-recall竟然始终相同！</u>这是为啥呢？</p>
+<p>这是因为在某一类中的False Positive样本，一定是其他某类别的False Negative样本。听起来有点抽象？举个例子，比如说系统错把「狗」预测成「猫」，那么对于狗而言，其错误类型就是False Negative，对于猫而言，其错误类型就是False Positive。于此同时，Micro-precision和Micro-recall的数值都等于Accuracy，因为它们计算了对角线样本数和总样本数的比值，总结就是</p>
+<p>$$\text{Micro-Precision} = \text{Micro-Recall} = \text{Micro-F1 score} = \text{Accuracy}$$</p>
+<p>demo示例:</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">confusion_matrix</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">accuracy_score</span><span class="p">,</span> <span class="n">average_precision_score</span><span class="p">,</span><span class="n">precision_score</span><span class="p">,</span><span class="n">f1_score</span><span class="p">,</span><span class="n">recall_score</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># create confusion matrix</span>
+</span></span><span class="line"><span class="cl"><span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">70</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">160</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">30</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">y_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">40</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span> <span class="o">+</span>
+</span></span><span class="line"><span class="cl">                  <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">30</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">80</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">30</span> <span class="o">+</span>
+</span></span><span class="line"><span class="cl">                  <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">5</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">15</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">cm</span> <span class="o">=</span> <span class="n">confusion_matrix</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">conf_matrix</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">cm</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Cat&#39;</span><span class="p">,</span><span class="s1">&#39;Dog&#39;</span><span class="p">,</span><span class="s1">&#39;Pig&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Cat&#39;</span><span class="p">,</span><span class="s1">&#39;Dog&#39;</span><span class="p">,</span><span class="s1">&#39;Pig&#39;</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># plot size setting</span>
+</span></span><span class="line"><span class="cl"><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4.5</span><span class="p">,</span><span class="mf">3.5</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">conf_matrix</span><span class="p">,</span> <span class="n">annot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">annot_kws</span><span class="o">=</span><span class="p">{</span><span class="s2">&#34;size&#34;</span><span class="p">:</span> <span class="mi">19</span><span class="p">},</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&#34;Blues&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;True label&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Predicted label&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;confusion.pdf&#39;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------Weighted------&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Weighted precision&#39;</span><span class="p">,</span> <span class="n">precision_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;weighted&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Weighted recall&#39;</span><span class="p">,</span> <span class="n">recall_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;weighted&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Weighted f1-score&#39;</span><span class="p">,</span> <span class="n">f1_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;weighted&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------Macro------&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Macro precision&#39;</span><span class="p">,</span> <span class="n">precision_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;macro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Macro recall&#39;</span><span class="p">,</span> <span class="n">recall_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;macro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Macro f1-score&#39;</span><span class="p">,</span> <span class="n">f1_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;macro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------Micro------&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Micro precision&#39;</span><span class="p">,</span> <span class="n">precision_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;micro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Micro recall&#39;</span><span class="p">,</span> <span class="n">recall_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;micro&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Micro f1-score&#39;</span><span class="p">,</span> <span class="n">f1_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s1">&#39;micro&#39;</span><span class="p">))</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="regression-回归">Regression 回归</h1>
+<p>回归算法的评价指标就是MSE，RMSE，MAE、R-Squared。</p>
+<p>　　MSE和MAE适用于误差相对明显的时候，大的误差也有比较高的权重，RMSE则是针对误差不是很明显的时候；MAE是一个线性的指标，所有个体差异在平均值上均等加权，所以它更加凸显出异常值，相比MSE；</p>
+<p>　　RMSLE: 主要针对数据集中有一个特别大的异常值，这种情况下，data会被skew，RMSE会被明显拉大，这时候就需要先对数据log下，再求RMSE，这个过程就是RMSLE。对低估值（under-predicted）的判罚明显多于估值过高(over-predicted)的情况（RMSE则相反）</p>
 ]]></description></item></channel></rss>
