@@ -6,8 +6,8 @@
 - C++
   - C++基础
     {{<admonition quote "C++基础" false>}}
-    - [C++基础(一)](https://jianye0428.github.io/posts/basics_one/)
-    - [C++基础(二)](https://jianye0428.github.io/posts/basics_two/)
+    - [C++基础(一)]: https://jianye0428.github.io/posts/basics_one/
+    - [C++基础(二)]: https://jianye0428.github.io/posts/basics_two/
     {{</admonition>}}
   - Cmake
     - [CMake简介](https://jianye0428.github.io/posts/cmake_introduction/)
