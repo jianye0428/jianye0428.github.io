@@ -410,7 +410,7 @@ DenseTNT(右图)是通过密集地采点避免了定义anchor，同时也避免�
 <p></p>
 <p><strong><font color=red>Difference between VectorNet and LaneGCN:</font></strong></p>
 <ul>
-<li><u>VecotrNet</u> uses vanilla graph networks with undirected full connections; <u>LaneGCN</u> uses connected lane graph folllowing the map topology and propose task specific multi-type and dilated graph operators.</li>
+<li><u>VecotrNet</u> uses vanilla graph networks with undirected full connections; <u>LaneGCN</u> uses connected lane graph following the map topology and propose task specific multi-type and dilated graph operators.</li>
 <li>VectorNet uses polyline-level nodes for interactions; LaneGCN uses polyline segments as map nodes to capture higher resolution.</li>
 </ul>
 <h2 id="lane-graph-representations-for-motion-forecasting">Lane Graph Representations for Motion Forecasting</h2>
@@ -420,26 +420,25 @@ DenseTNT(右图)是通过密集地采点避免了定义anchor，同时也避免�
 <p>For trajectories with sizes smaller than $T$ , we pad them with zeros. We add a binary $1 × T$ mask to indicate if the element at each step is padded or not and concatenate it with the trajectory tensor, resulting in an input tensor of size $3 × T$.</p>
 <p>1D CNN is used to process the trajectory input for its effectiveness in extracting multi-scale features
 and efficiency in parallel computing. The output of ActorNet is a temporal feature map, whose element at $t = 0$ is used as the actor feature. The network has 3 groups/scales of 1D convolutions.</p>
-<p>Each group consists of 2 residual blocks, with the stride of the first block as 2. We then use a Feature Pyramid Network (FPN) to fuse the
-multi-scale features, and apply another residual block to obtain the output tensor. For all layers, the convolution kernel size is 3 and the number of output channels is 128. Layer normalization and the Rectified Linear Unit (ReLU) are used after each convolution.</p>
+<p>Each group consists of 2 residual blocks, with the stride of the first block as 2. We then use a <strong><font color=red>Feature Pyramid Network (FPN)</font></strong>  to fuse the multi-scale features, and apply another residual block to obtain the output tensor. For all layers, the convolution kernel size is 3 and the number of output channels is 128. <strong><font color=red>Layer Normalization</font></strong> and the <strong><font color=red>Rectified Linear Unit (ReLU)</font></strong> are used after each convolution.</p>
 <p></p>
 <h3 id="font-colorredmapnetfont-extracting-structured-map-representation"><font color=red>MapNet</font>: Extracting Structured Map Representation</h3>
-<p>General Architecture:</p>
+<p><strong>General Architecture</strong>:</p>
 <ul>
 <li>part 1: building a lane graph from vectorized map data;</li>
 <li>part 2: applying our novel LaneGCN to the lane graph to output the map features.</li>
 </ul>
 <p><strong>Map Data:</strong></p>
-<p>In this paper, we adopt a simple form of vectorized map data as our representation of HD maps. Specifically, the map data is represented as a set of lanes and their connectivity. Each lane contains a centerline, i.e., a sequence of 2D BEV points, which are arranged following the lane direction (see Fig. 3, top). For any two lanes which are directly reachable, 4 types of connections are given: <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
+<p>In this paper, we adopt a simple form of <strong>vectorized map data</strong> as our representation of HD maps. Specifically, the map data is represented as a set of lanes and their connectivity. Each lane contains a centerline, i.e., <font color=green>a sequence of 2D BEV points</font>, which are arranged following the lane direction (see Fig. 3, top). For any two lanes which are directly reachable, 4 types of connections are given: <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
 <p><strong>Lane Graph Construction:</strong></p>
-<p>first define a lane node as the straight line segment formed by any two consecutive points (grey circles in Fig. 3) of the centerline. The location of a lane node is the averaged coordinates of its two end points. Following the connections between lane centerlines, we also derive 4 connectivity types for the lane nodes, i.e., <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
+<p>first define a lane node as the straight line segment formed by any two consecutive points (grey circles in Fig. 3) of the centerline. The location of a lane node is the averaged coordinates of its two end points. Following the connections between lane centerlines, we also derive <font color=red>4 connectivity types</font> 4 connectivity types for the lane nodes, i.e., <code>predecessor</code>, <code>successor</code>, <code>left neighbour</code> and <code>right neighbour</code>.</p>
 <p>We denote the lane nodes with $V ∈ \mathbb R^{N ×2}$ , where $N$ is the number of lane nodes and the $i$-th row of $V$ is the BEV coordinates of the $i$-th node. We represent the connectivity with 4 adjacency matrices ${\lbrace A_i \rbrace}_{i \in {pre,suc,left,right}}$ , with $A_i \in \mathbb R^{N ×N}$.</p>
-<p>We denote $A_{i,jk}$, as the element in the $j$-th row and $k$-th column of $A_i$. Then $A_{i,jk} = 1$ if node $k$ is an $i$-type neighbor of node $j$.</p>
+<p>We denote $A_{i,j,k}$, as the element in the $j$-th row and $k$-th column of $A_i$. Then $A_{i,j,k} = 1$ if node $k$ is an $i$-type neighbor of node $j$.</p>
 <p><strong>LaneConv Operator:</strong></p>
 <p><font color=green><em>Node Feature:</em></font>
 Each lane node corresponds to a straight line segment of a centerline. To encode all the lane node information, we need to take into account both the shape (size and orientation) and the location (the coordinates of the center) of the corresponding line segment. We parameterize the node feature as follows,</p>
 <p>$$x_i = MLP_{shape} (v_{i}^{end} - v_{i}^{start}) + MLP_{loc}(v_i) $$</p>
-<p>where $MLP$ indicates a multi-layer perceptron and the two subscripts refer to shape and location, respectively. $v_i$ is the location of the i-th lane node, i.e., the center between two end points, $v_i^{start}$ and $v_i^{end}$ are the BEV coordinates of the node $i’s$ starting and ending points, and $x_i$ is the $i$-th row of the node feature matrix $X$, denoting the input feature of the $i$-th lane node.</p>
+<p>where $MLP$ indicates a multi-layer perceptron and the two subscripts refer to shape and location, respectively. $v_i$ is the location of the i-th lane node, i.e., the center between two end points, $v_i^{start}$ and $v_i^{end}$ are the BEV coordinates of the node $i&rsquo;s$ starting and ending points, and $x_i$ is the $i$-th row of the node feature matrix $X$, denoting the input feature of the $i$-th lane node.</p>
 <p><font color=green><em>LaneConv:</em> </font>
 To aggregate the topology information of the lane graph at a larger scale, we design the following LaneConv operator:</p>
 <p>$$Y = XW_0 + \sum_{i\in{pre, suc, left, right}}A_iXW_i,\tag{2}$$</p>
@@ -467,8 +466,8 @@ To aggregate the topology information of the lane graph at a larger scale, we de
 <p>with $x_i$ the feature of the $i$-th node, $W$ a weight matrix, $\phi$ the compositon of layer notmalization and RelU, and $\Delta_{ij} = MLP(v_j - v_i)$, where $v$ denotes the node location.</p>
 <h3 id="font-colorredprediction-headerfont"><font color=red>Prediction Header</font></h3>
 <p>Take after-fusion actor features as input, a multi-modal prediction header outputs the final motion forecasting. For each actor, it predicts $K$ possible future trajectories and their confidence scores.</p>
-<p>The header has two branches, a regression branch to predict
-the trajectory of each mode and a classification branch to predict the confidence score of each mode.</p>
+<p>The header has two branches, <strong>a regression branch</strong> to predict
+the trajectory of each mode and <strong>a classification branch</strong> to predict the confidence score of each mode.</p>
 <p>For the m-th actor, we apply a residual block and a linear layer in the
 regression branch to regress the K sequences of BEV coordinates:</p>
 <p>$$O_{m,reg} = \lbrace (p_{m,1}^k, p_{m,2}^k, &hellip;, p_{m,T}^k) \rbrace _{k\in[0,K-1]}$$</p>
@@ -477,7 +476,7 @@ regression branch to regress the K sequences of BEV coordinates:</p>
 <p>use the sum of classification and regreesion losses to train the model:</p>
 <p>$$ L = L_{cls} + \alpha L_{reg},$$</p>
 <p>where $\alpha = 1.0$.</p>
-<p>For classification, we use the max-margin loss:</p>
+<p>For classification, we use the <strong>max-margin loss</strong>:</p>
 <p>$$L_{cls} = \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k \neq \hat{k}} \max(0, c_{m,k} + \epsilon - c_{m, \hat{k}}) \tag{6}$$</p>
 <p>where $\epsilon$ is the margin and $M$ is the total number of actors. For regression, we apply the smooth $l1$ loss on all predicted time steps:</p>
 <p>$$L_{reg} = \frac{1}{MT} \sum_{m=1}^M \sum_{t=1}^T reg(p_{m,y}^{\hat{k}} - p_{m,t}^*) \tag{7}$$</p>
