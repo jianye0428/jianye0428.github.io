@@ -37,7 +37,7 @@ Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<fo
 
 注意，我们一般以字为单位训练 Transformer 模型。首先初始化字编码的大小为 [vocab_size, embedding_dimension]，vocab_size 为字库中所有字的数量，embedding_dimension 为字向量的维度，对应到 PyTorch 中，其实就是 nn.Embedding(vocab_size, embedding_dimension)
 
-论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:
+在论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:
 
 $$\left\\{\begin{aligned}
 PE(pos, 2i) = \sin (pos/10000^{2i/d\_{model}}) \cr
