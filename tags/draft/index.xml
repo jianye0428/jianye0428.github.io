@@ -3249,13 +3249,7 @@ $$</p>
 </span></span><span class="line"><span class="cl"><span class="nf">empty</span><span class="p">()</span> <span class="k">const</span> <span class="n">_GLIBCXX_NOEXCEPT</span>
 </span></span><span class="line"><span class="cl"><span class="p">{</span> <span class="k">return</span> <span class="k">this</span><span class="o">-&gt;</span><span class="n">_M_impl</span><span class="p">.</span><span class="n">_M_node</span><span class="p">.</span><span class="n">_M_next</span> <span class="o">==</span> <span class="o">&amp;</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">_M_impl</span><span class="p">.</span><span class="n">_M_node</span><span class="p">;</span> <span class="p">}</span></span></span></code></pre></td></tr></table>
 </div>
-</div>]]></description></item><item><title>VectorNet 论文解读</title><link>https://jianye0428.github.io/posts/vectornet/</link><pubDate>Sun, 16 Jul 2023 17:13:44 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/vectornet/</guid><description><![CDATA[<p><code>ref link</code>:
-[1] <a href="https://blog.csdn.net/qq_41897558/article/details/120087113"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41897558/article/details/120087113<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2] <a href="https://zhuanlan.zhihu.com/p/355131328"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/355131328<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-<code>ref code</code>:
-[1]https://github.com/xk-huang/yet-another-vectornet
-[2]https://github.com/DQSSSSS/VectorNet</p>
-<h2 id="novel-highlights">Novel Highlights</h2>
+</div>]]></description></item><item><title>VectorNet 论文解读</title><link>https://jianye0428.github.io/posts/vectornet/</link><pubDate>Sun, 16 Jul 2023 17:13:44 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/vectornet/</guid><description><![CDATA[<h2 id="novel-highlights">Novel Highlights</h2>
 <p>(1) 使用矢量化的高精地图以及障碍物的历史轨迹，从而避免有损渲染以及ConvNet编码(计算开销比较大)。</p>
 <p>(2) 设计子图网络以及全局图网络，建模低阶以及高阶交互</p>
 <p>(3) auxiliary task 提高网络性能</p>
@@ -3268,7 +3262,7 @@ $$</p>
 <li>对于agent轨迹，按照0.1s sample关键点，并将它们连接成向量。</li>
 </ul>
 <p>通过向量化的过程，可以得到折线polylines，这个polylines和轨迹、地图标注之间是一一对应的。如果给定的时空间隔足够小，得到的这些折线就与原始地图和轨迹十分接近。</p>
-<p>我们将属于折线 $P_j$​ 的每一个向量$v_i$看出图中的一个节点，节点特征如下:</p>
+<p>我们将属于折线 $P_j$​ 的每一个向量$v_i$看作图中的一个节点，节点特征如下:</p>
 <p>$$v_i = [d_i^s, d_i^e, a_i, j]$$</p>
 <ul>
 <li>其中前两个vector分别是vector的start point和end point的坐标，可以是(x,y)或者(x,y,z)三维的形式</li>
@@ -3318,7 +3312,7 @@ $$GNN(P) = softmax(P_Q P_K^T)P_V$$</p>
 <p>论文中，decoder $φ_{traj}(⋅)$ 使用的是MLP，当然也可以用MultiPath中anchor-based的方法或者variational RNNs 来进行多模态轨迹预测。</p>
 <h3 id="辅助任务训练-auxiliary-graph-completion-task">辅助任务训练 auxiliary graph completion task</h3>
 <p>为了让全局交互图能更好地捕捉不同轨迹和地图元素之间的交互信息，论文还提出了一个辅助的任务：在训练过程中，随机mask掉一些节点的特征，然后尝试去还原被掩盖的节点特征:</p>
-<p>$$\hat{P}<em>i = \varphi</em>{node}(P_i^{L_t})$$</p>
+<p>$$\hat{P}<em>_i = \varphi</em>_{node}(P_i^{L_t})$$</p>
 <p>这里节点的decoder $φ_{node}(⋅)$ 也是一个MLP，只在训练的时候使用,在inference过程中不使用。</p>
 <h3 id="损失函数-loss-function">损失函数 Loss Function</h3>
 <p>多任务训练目标， multi-task training task:</p>
@@ -3357,7 +3351,7 @@ negative Gaussian Log Likelihood 损失函数为:</p>
 <p><strong>网络部分:</strong></p>
 <ul>
 <li>
-<p>构建subgraphnet: 针对每一个polyline，通过mlp和maxpool构构建subgraphnet</p>
+<p>构建subgraphnet: 针对每一个polyline，通过mlp和maxpool构建subgraphnet</p>
 </li>
 <li>
 <p>构建globalgraphnet: 以每个polyline作为graph node，构建全局图网络，采用全链接，通过自注意力机制$GNN(P) = softmax(P_Q, P_K)^T(P_V)$</p>
@@ -3365,6 +3359,12 @@ negative Gaussian Log Likelihood 损失函数为:</p>
 </ul>
 <p><strong>轨迹生成:</strong></p>
 <p>将全局网络的节点特征，通过mlp进行轨迹生成。</p>
+<p><code>ref link</code>:
+[1] <a href="https://blog.csdn.net/qq_41897558/article/details/120087113"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41897558/article/details/120087113<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2] <a href="https://zhuanlan.zhihu.com/p/355131328"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/355131328<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+<code>ref code</code>:
+[1]https://github.com/xk-huang/yet-another-vectornet</br>
+[2]https://github.com/DQSSSSS/VectorNet</br></p>
 ]]></description></item><item><title>CRAT-Prediction</title><link>https://jianye0428.github.io/posts/crat_pred/</link><pubDate>Sun, 16 Jul 2023 15:54:26 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/crat_pred/</guid><description><![CDATA[<h2 id="overview">Overview</h2>
 <p><code>paper link:</code><a href="https://arxiv.org/pdf/2202.04488.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/pdf/2202.04488.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <h2 id="论文概览">论文概览</h2>

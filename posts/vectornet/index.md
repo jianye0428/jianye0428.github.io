@@ -2,12 +2,7 @@
 
 
 
-`ref link`:
-[1] https://blog.csdn.net/qq_41897558/article/details/120087113
-[2] https://zhuanlan.zhihu.com/p/355131328
-`ref code`:
-[1]https://github.com/xk-huang/yet-another-vectornet
-[2]https://github.com/DQSSSSS/VectorNet
+
 ## Novel Highlights
 
  (1) 使用矢量化的高精地图以及障碍物的历史轨迹，从而避免有损渲染以及ConvNet编码(计算开销比较大)。
@@ -30,7 +25,7 @@ lane可以表示为splines，人行道可以表示为一个很多个点组成的
 
 通过向量化的过程，可以得到折线polylines，这个polylines和轨迹、地图标注之间是一一对应的。如果给定的时空间隔足够小，得到的这些折线就与原始地图和轨迹十分接近。
 
-我们将属于折线 $P_j$​ 的每一个向量$v_i$看出图中的一个节点，节点特征如下:
+我们将属于折线 $P_j$​ 的每一个向量$v_i$看作图中的一个节点，节点特征如下:
 
 $$v_i = [d_i^s, d_i^e, a_i, j]$$
 
@@ -86,7 +81,7 @@ $$v_i^{future} = \varphi_{traj}(P_i^{L_t})$$
 
 为了让全局交互图能更好地捕捉不同轨迹和地图元素之间的交互信息，论文还提出了一个辅助的任务：在训练过程中，随机mask掉一些节点的特征，然后尝试去还原被掩盖的节点特征:
 
-$$\hat{P}_i = \varphi_{node}(P_i^{L_t})$$
+$$\hat{P}_\_i = \varphi_\_{node}(P_i^{L_t})$$
 
 这里节点的decoder $φ_{node}(⋅)$ 也是一个MLP，只在训练的时候使用,在inference过程中不使用。
 
@@ -128,13 +123,21 @@ $$ L(Y|f(x))= \begin{cases} \frac{1}{2} (Y-f(x))^2, & |Y-f(x)|<= \delta \\\\ \de
 
 **网络部分:**
 
-- 构建subgraphnet: 针对每一个polyline，通过mlp和maxpool构构建subgraphnet
+- 构建subgraphnet: 针对每一个polyline，通过mlp和maxpool构建subgraphnet
 
 - 构建globalgraphnet: 以每个polyline作为graph node，构建全局图网络，采用全链接，通过自注意力机制$GNN(P) = softmax(P_Q, P_K)^T(P_V)$
 
 **轨迹生成:**
 
 将全局网络的节点特征，通过mlp进行轨迹生成。
+
+
+`ref link`:
+[1] https://blog.csdn.net/qq_41897558/article/details/120087113</br>
+[2] https://zhuanlan.zhihu.com/p/355131328</br>
+`ref code`:
+[1]https://github.com/xk-huang/yet-another-vectornet</br>
+[2]https://github.com/DQSSSSS/VectorNet</br>
 
 ---
 

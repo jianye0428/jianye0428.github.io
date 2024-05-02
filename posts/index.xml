@@ -1,4 +1,120 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 26 Apr 2024 17:15:15 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>LaneGCN 论文解读</title><link>https://jianye0428.github.io/posts/lanegcn/</link><pubDate>Sun, 16 Jul 2023 15:53:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/lanegcn/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2007.13732"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2007.13732<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 26 Apr 2024 17:15:15 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>VectorNet 论文解读</title><link>https://jianye0428.github.io/posts/vectornet/</link><pubDate>Sun, 16 Jul 2023 17:13:44 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/vectornet/</guid><description><![CDATA[<h2 id="novel-highlights">Novel Highlights</h2>
+<p>(1) 使用矢量化的高精地图以及障碍物的历史轨迹，从而避免有损渲染以及ConvNet编码(计算开销比较大)。</p>
+<p>(2) 设计子图网络以及全局图网络，建模低阶以及高阶交互</p>
+<p>(3) auxiliary task 提高网络性能</p>
+<p></p>
+<h2 id="vecotornet-网络介绍">VecotorNet 网络介绍</h2>
+<h3 id="轨迹和地图的向量表示-representing-trajectories-and-hd-maps">轨迹和地图的向量表示 Representing trajectories and HD maps</h3>
+<p>lane可以表示为splines，人行道可以表示为一个很多个点组成的polygon，stop sign标记可以表示为单一个点。 对于agent来说，他们的轨迹也是一种splines。 这些元素都可以向量表示。</p>
+<ul>
+<li>对于地图的特征：选择一个start point和朝向，等间距均匀采样关键点，并于相邻的关键点相连为向量</li>
+<li>对于agent轨迹，按照0.1s sample关键点，并将它们连接成向量。</li>
+</ul>
+<p>通过向量化的过程，可以得到折线polylines，这个polylines和轨迹、地图标注之间是一一对应的。如果给定的时空间隔足够小，得到的这些折线就与原始地图和轨迹十分接近。</p>
+<p>我们将属于折线 $P_j$​ 的每一个向量$v_i$看作图中的一个节点，节点特征如下:</p>
+<p>$$v_i = [d_i^s, d_i^e, a_i, j]$$</p>
+<ul>
+<li>其中前两个vector分别是vector的start point和end point的坐标，可以是(x,y)或者(x,y,z)三维的形式</li>
+<li>第三个向量则是attribute属性的特征，比如object的类型，轨迹的时间戳，道路的特征，道路限速等</li>
+<li>最后一个是障碍物id，表示 $v_i$ ​属于 $P_j$</li>
+</ul>
+<h3 id="polyline-子图构建">Polyline 子图构建</h3>
+<p>对于一个Polyline P, 它的节点有 ${v_1,v_2,&hellip;,v_p}$， 可以定义一个子图网络：</p>
+<p>$$v_i^{l+1} = \varphi_{rel}(g_{enc}(v_i^{(l)}), \varphi({g_{enc}(v_j^{(l)})}))$$</p>
+<ul>
+<li>
+<p>$v_i^{(l)}$​ 代表第i个节点第L层的节点特征。</p>
+</li>
+<li>
+<p>$g_{enc}(\cdot)$代表节点的变换，实践中采用MLP来实现。</p>
+</li>
+<li>
+<p>$\varphi_{agg}(\cdot)$代表特征聚合，用来从相邻的节点来获取信息，实践中采用的是max_pooling。</p>
+</li>
+<li>
+<p>$\varphi_{rel}(\cdot)$代表vi和周围节点的关系，实践中采用的是concate的操作。</p>
+</li>
+</ul>
+<p></p>
+<p>最后经过多层的堆叠，来获取整个Polyline级别的特征：</p>
+<p>$$P = \varphi_{agg}(v_i^{L_p})$$</p>
+<p>这里， $φ_{agg}(⋅)$也是max pooling操作.</p>
+<h3 id="全局图的高阶交互-global-graph-for-high-order-interactions">全局图的高阶交互 Global graph for high-order interactions</h3>
+<p>经过上面的子图进行低阶模型建模后，现在有了polyline级别节点的特征${p_1,p_2,&hellip;,p_P}$.</p>
+<p>为了建立高阶的交互，需要建立一个global的交互图，详见论文图2的第3个子图。</p>
+<p>$$P_i^{l+1} = GNN(p^l_i, A)$$</p>
+<ul>
+<li>
+<p>$p_i^l$​代表polyline节点的集合</p>
+</li>
+<li>
+<p>A代表邻接矩阵，实践中采用全链接</p>
+</li>
+<li>
+<p>$GNN(⋅)$代表一层的GNN网络，实践中采用的是self attention layer：
+$$GNN(P) = softmax(P_Q P_K^T)P_V$$</p>
+<p>其中，P是node的feature matrix， $P_Q$,$P_k$,$P_v$ ​则是它的线性投影。</p>
+</li>
+</ul>
+<p>经过了全局的网络之后，就生成了节点的特征$P^{L_t}_i$，其中Lt是全局GNN网络的层数。然后将$P^{(L_t)}_i$放入decoder进行轨迹的生成:</p>
+<p>$$v_i^{future} = \varphi_{traj}(P_i^{L_t})$$</p>
+<p>论文中，decoder $φ_{traj}(⋅)$ 使用的是MLP，当然也可以用MultiPath中anchor-based的方法或者variational RNNs 来进行多模态轨迹预测。</p>
+<h3 id="辅助任务训练-auxiliary-graph-completion-task">辅助任务训练 auxiliary graph completion task</h3>
+<p>为了让全局交互图能更好地捕捉不同轨迹和地图元素之间的交互信息，论文还提出了一个辅助的任务：在训练过程中，随机mask掉一些节点的特征，然后尝试去还原被掩盖的节点特征:</p>
+<p>$$\hat{P}<em>_i = \varphi</em>_{node}(P_i^{L_t})$$</p>
+<p>这里节点的decoder $φ_{node}(⋅)$ 也是一个MLP，只在训练的时候使用,在inference过程中不使用。</p>
+<h3 id="损失函数-loss-function">损失函数 Loss Function</h3>
+<p>多任务训练目标， multi-task training task:</p>
+<p>$$\mathcal{L} = \mathcal{L_{traj}} + \alpha \mathcal{L_{node}}$$</p>
+<ul>
+<li>
+<p>$L_{traj}​$: negative Gaussian log-likelihood loss</p>
+</li>
+<li>
+<p>$L_{node}$​: 是预测的节点和被掩盖节点的huber损失函数</p>
+</li>
+</ul>
+<p>其中，
+negative Gaussian Log Likelihood 损失函数为:</p>
+<p>$$L(x, y) = -\log P(y) = - \log P(y|\mu(x), \sum(x))$$</p>
+<p>where,</p>
+<p>$$p(y) = p(y∣μ,Σ)=1(2π)n/2∣Σ∣1/2exp−12(y−μ)⊤Σ−1(y−μ)$$</p>
+<p>Huber 损失函数为:</p>
+<p>$$ L(Y|f(x))= \begin{cases} \frac{1}{2} (Y-f(x))^2, &amp; |Y-f(x)|&lt;= \delta \\ \delta |Y-f(x)| - \frac{1}{2}\delta^2, &amp; |Y-f(x)| &gt; \delta \end{cases} $$</p>
+<h2 id="整理">整理</h2>
+<p><strong>VectorNet数据处理部分:</strong></p>
+<ul>
+<li>
+<p>对actor的处理:</p>
+<ul>
+<li>输入: 取轨迹点，每两个轨迹点构建vector, 形式为(x1, x2, y1, y2), 其他特征(object type, timestamp, track_id)</li>
+</ul>
+</li>
+<li>
+<p>对lane node的处理:</p>
+<ul>
+<li>输入: 针对lane segment 的点，求polyline，原则上求lane segment的左右边界的点的向量(x_start, x_end, y_start, y_end, turn_direction, traffic_control, is_intersection, lane_id)</li>
+</ul>
+</li>
+</ul>
+<p><strong>网络部分:</strong></p>
+<ul>
+<li>
+<p>构建subgraphnet: 针对每一个polyline，通过mlp和maxpool构建subgraphnet</p>
+</li>
+<li>
+<p>构建globalgraphnet: 以每个polyline作为graph node，构建全局图网络，采用全链接，通过自注意力机制$GNN(P) = softmax(P_Q, P_K)^T(P_V)$</p>
+</li>
+</ul>
+<p><strong>轨迹生成:</strong></p>
+<p>将全局网络的节点特征，通过mlp进行轨迹生成。</p>
+<p><code>ref link</code>:
+[1] <a href="https://blog.csdn.net/qq_41897558/article/details/120087113"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/qq_41897558/article/details/120087113<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+[2] <a href="https://zhuanlan.zhihu.com/p/355131328"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/355131328<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
+<code>ref code</code>:
+[1]https://github.com/xk-huang/yet-another-vectornet</br>
+[2]https://github.com/DQSSSSS/VectorNet</br></p>
+]]></description></item><item><title>LaneGCN 论文解读</title><link>https://jianye0428.github.io/posts/lanegcn/</link><pubDate>Sun, 16 Jul 2023 15:53:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/lanegcn/</guid><description><![CDATA[<p><code>paper link:</code> <a href="https://arxiv.org/abs/2007.13732"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2007.13732<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
 <code>PPT:</code> <a href="https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://www.cs.toronto.edu/~byang/slides/LaneGCN.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <h2 id="architechture">Architechture</h2>
 <p><strong><font color=red>Lane Graph + Actor Map:</font></strong></p>
