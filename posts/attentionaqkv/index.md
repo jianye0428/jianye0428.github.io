@@ -13,8 +13,9 @@
     self.value = nn.Linear(config.hidden_size, self.all_head_size)
   ```
   注意，这里的query, key, value只是一种操作(线性变换)的名称，实际的Q/K/V是它们三个的输出
+
 2. 假设三种操作的输入都是同一个矩阵(暂且先别管为什么输入是同一个矩阵)，这里暂且定为长度为L的句子，每个token的特征维度是768，那么输入就是(L, 768)，每一行就是一个字，像这样：
-   ![word2vec](images/A1_1.png)
+   ![word2vec](images/A1_1.png)</br>
    乘以上面三种操作就得到了Q/K/V，(L, 768)*(768,768) = (L,768)，维度其实没变，即此刻的Q/K/V分别为：
    ![Q K V](images/A1_2.png)
    代码为:

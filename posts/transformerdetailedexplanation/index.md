@@ -23,7 +23,7 @@ Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<fo
 
 ![general architecture](images/Transformer_xiangjie_1.png#center)
 
-本篇文章大部分内容在于解释 Encoder 部分，即把自然语言序列映射为隐藏层的数学表达的过程。理解了 Encoder 的结构，再理解 Decoder 就很简单了
+本篇文章大部分内容在于解释 Encoder 部分，即 **<font color=red>把自然语言序列映射为隐藏层的数学表达</font>**的过程。理解了 Encoder 的结构，再理解 Decoder 就很简单了
 
 ![general architecture -- encoder](images/Transformer_xiangjie_2.png#center)
 
@@ -33,20 +33,20 @@ Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<fo
 
 由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能<font color=red>识别出语言中的顺序关系</font>。
 
-现在定义一个**位置嵌入**的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成
+现在定义一个 **<font color=red>位置嵌入</font>** 的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成。
 
 注意，我们一般以字为单位训练 Transformer 模型。首先初始化字编码的大小为 [vocab_size, embedding_dimension]，vocab_size 为字库中所有字的数量，embedding_dimension 为字向量的维度，对应到 PyTorch 中，其实就是 nn.Embedding(vocab_size, embedding_dimension)
 
-在论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:
+在论文中使用了 sin 和 cos 函数的线性变换来提供给模型**位置信息**:
 
 $$\left\\{\begin{aligned}
 PE(pos, 2i) = \sin (pos/10000^{2i/d\_{model}}) \cr
 PE(pos, 2i + 1) = \cos (pos/10000^{2i/d\_{model}}) \cr
 \end{aligned}\right.$$
 
-上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max \_ sequence\_ length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding\_ dimension} / 2]$ ， $d\_{model}$ 指的是 embedding_dimension​的值
+上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max_sequence_length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding_dimension} / 2]$ ， $d\_{model}$ 指的是 embedding_dimension​的值
 
-上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到**位置之间的依赖关系和自然语言的时序特性**。
+上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生唯一的纹理位置信息，最终使得模型学到**位置之间的依赖关系和自然语言的时序特性**。
 
 如果不理解这里为何这么设计，可以看这篇文章 [Transformer 中的 Positional Encoding](https://wmathor.com/index.php/archives/1453/)
 
@@ -244,7 +244,7 @@ $$X\_{hidden} = X\_{attention} + X\_{hidden}$$
 $$X\_{hidden} = LayerNorm(X\_{hidden})$$
 
 其中
-$$X\_{hidden} \in \mathbb{R}^{batch\_size * seq\_len * embed\_dim}$$
+$$X\_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$
 
 ### 5. Transformer Decoder 整体结构
 我们先从 HighLevel 的角度观察一下 Decoder 结构，从下到上依次是：
@@ -286,7 +286,7 @@ Multi-Head Self-Attention 无非就是并行的对上述步骤多做几次，前
 下面有几个问题，是我从网上找的，感觉看完之后能对 Transformer 有一个更深的理解
 
 <font color=red>Transformer 为什么需要进行 Multi-head Attention？</font>
-- 原论文中说到进行 Multi-head Attention 的原因是将模型分为多个头，形成多个子空间，可以让模型去关注不同方面的信息，最后再将各个方面的信息综合起来。其实直观上也可以想到，如果自己设计这样的一个模型，必然也不会只做一次 attention，多次 attention 综合的结果至少能够起到增强模型的作用，也可以类比 CNN 中同时使用多个卷积核的作用，直观上讲，多头的注意力有助于网络捕捉到更丰富的特征 / 信息
+- 原论文中说到进行 Multi-head Attention 的原因是将模型分为多个头，形成多个子空间，可以让模型去关注不同方面的信息，最后再将各个方面的信息综合起来。其实直观上也可以想到，如果自己设计这样的一个模型，必然也不会只做一次 attention，多次 attention 综合的结果至少能够起到增强模型的作用，也可以类比 CNN 中同时使用多个卷积核的作用，直观上讲，多头的注意力有助于网络捕捉到更丰富的特征信息
 
 <font color=red>Transformer 相比于 RNN/LSTM，有什么优势？为什么？</font>
 - RNN 系列的模型，无法并行计算，因为 T 时刻的计算依赖 T-1 时刻的隐层计算结果，而 T-1 时刻的计算依赖 T-2 时刻的隐层计算结果

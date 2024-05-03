@@ -174,9 +174,11 @@
 </span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">key</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">hidden_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_head_size</span><span class="p">)</span> <span class="c1"># 输入768， 输出768</span>
 </span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">hidden_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_head_size</span><span class="p">)</span></span></span></code></pre></td></tr></table>
 </div>
-</div><p>注意，这里的query, key, value只是一种操作(线性变换)的名称，实际的Q/K/V是它们三个的输出
-2. 假设三种操作的输入都是同一个矩阵(暂且先别管为什么输入是同一个矩阵)，这里暂且定为长度为L的句子，每个token的特征维度是768，那么输入就是(L, 768)，每一行就是一个字，像这样：
-
+</div><p>注意，这里的query, key, value只是一种操作(线性变换)的名称，实际的Q/K/V是它们三个的输出</p>
+<ol start="2">
+<li>
+<p>假设三种操作的输入都是同一个矩阵(暂且先别管为什么输入是同一个矩阵)，这里暂且定为长度为L的句子，每个token的特征维度是768，那么输入就是(L, 768)，每一行就是一个字，像这样：
+</br>
 乘以上面三种操作就得到了Q/K/V，(L, 768)*(768,768) = (L,768)，维度其实没变，即此刻的Q/K/V分别为：
 
 代码为:</p>
@@ -205,7 +207,7 @@
 </span></span><span class="line"><span class="cl">     <span class="n">K</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">     <span class="n">V</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span></span></span></code></pre></td></tr></table>
 </div>
-</div><ol start="3">
+</div></li>
 <li>
 <p>然后来实现这个操作:
 $$Attention(Q,K_i,V_i)\color{red}{\boxed{=softmax(\frac{Q^TK_i}{\sqrt{d_k}})V_i}}$$
@@ -295,20 +297,20 @@ $$Attention(Q,K_i,V_i)\color{red}{\boxed{=softmax(\frac{Q^TK_i}{\sqrt{d_k}})V_i}
 <p>Transformer 和 LSTM 的最大区别，就是 <font color=green>LSTM 的训练是迭代的、串行的，必须要等当前字处理完，才可以处理下一个字</font>。而 Transformer 的训练时<strong>并行</strong>的，即所有字是同时训练的，这样就大大增加了计算效率。<font color=green>Transformer 使用了位置嵌入 (Positional Encoding) 来理解语言的顺序</font>，使用自注意力机制(Self Attention Mechanism)和全连接层进行计算，这些后面会讲到。</p>
 <p>Transformer 模型主要分为两大部分，分别是 Encoder 和 Decoder。<font color=red>Encoder 负责把输入(语言序列)映射成隐藏层(下图中第 2 步用九宫格代表的部分)，然后解码器再把隐藏层映射为自然语言序列</font>。例如下图机器翻译的例子(Decoder 输出的时候，是通过 N 层 Decoder Layer 才输出一个 token，并不是通过一层 Decoder Layer 就输出一个 token)。</p>
 <p></p>
-<p>本篇文章大部分内容在于解释 Encoder 部分，即把自然语言序列映射为隐藏层的数学表达的过程。理解了 Encoder 的结构，再理解 Decoder 就很简单了</p>
+<p>本篇文章大部分内容在于解释 Encoder 部分，即 **<font color=red>把自然语言序列映射为隐藏层的数学表达</font>**的过程。理解了 Encoder 的结构，再理解 Decoder 就很简单了</p>
 <p></p>
 <p>上图为 Transformer Encoder Block 结构图，注意：下面的内容标题编号分别对应着图中 1,2,3,4 个方框的序号</p>
 <h3 id="1-positional-encoding">1. Positional Encoding</h3>
 <p>由于 Transformer 模型没有循环神经网络的迭代操作，所以我们必须提供每个字的位置信息给 Transformer，这样它才能<font color=red>识别出语言中的顺序关系</font>。</p>
-<p>现在定义一个<strong>位置嵌入</strong>的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成</p>
+<p>现在定义一个 <strong><font color=red>位置嵌入</font></strong> 的概念，也就是 Positional Encoding，位置嵌入的维度为 [max_sequence_length, embedding_dimension], 位置嵌入的维度与词向量的维度是相同的，都是 embedding_dimension。max_sequence_length 属于超参数，指的是限定每个句子最长由多少个词构成。</p>
 <p>注意，我们一般以字为单位训练 Transformer 模型。首先初始化字编码的大小为 [vocab_size, embedding_dimension]，vocab_size 为字库中所有字的数量，embedding_dimension 为字向量的维度，对应到 PyTorch 中，其实就是 nn.Embedding(vocab_size, embedding_dimension)</p>
-<p>在论文中使用了 sin 和 cos 函数的线性变换来提供给模型位置信息:</p>
+<p>在论文中使用了 sin 和 cos 函数的线性变换来提供给模型<strong>位置信息</strong>:</p>
 <p>$$\left\{\begin{aligned}
 PE(pos, 2i) = \sin (pos/10000^{2i/d_{model}}) \cr
 PE(pos, 2i + 1) = \cos (pos/10000^{2i/d_{model}}) \cr
 \end{aligned}\right.$$</p>
-<p>上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max _ sequence_ length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding_ dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值</p>
-<p>上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生独一的纹理位置信息，最终使得模型学到<strong>位置之间的依赖关系和自然语言的时序特性</strong>。</p>
+<p>上式中 $pos$ 指的是一句话中某个字的位置，取值范围是 $[0, \text{max_sequence_length}]$ ， $i$ 指的是字向量的维度序号，取值范围是 $[0, \text{embedding_dimension} / 2]$ ， $d_{model}$ 指的是 embedding_dimension​的值</p>
+<p>上面有 sin 和 cos 一组公式，也就是对应着 embedding_dimension 维度的一组奇数和偶数的序号的维度，例如 0,1 一组，2,3 一组，分别用上面的 sin 和 cos 函数做处理，从而产生不同的周期性变化，而位置嵌入在 embedding_dimension​维度上随着维度序号增大，周期变化会越来越慢，最终产生一种包含位置信息的纹理，就像论文原文中第六页讲的，位置嵌入函数的周期从 $ 2\pi $ 到 $10000 * 2 \pi$ 变化，而每一个位置在 embedding_dimension ​维度上都会得到不同周期的 $ \sin $ 和 $ \cos $ 函数的取值组合，从而产生唯一的纹理位置信息，最终使得模型学到<strong>位置之间的依赖关系和自然语言的时序特性</strong>。</p>
 <p>如果不理解这里为何这么设计，可以看这篇文章 <a href="https://wmathor.com/index.php/archives/1453/"target="_blank" rel="external nofollow noopener noreferrer">Transformer 中的 Positional Encoding<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <p>下面画一下位置嵌入，纵向观察，可见随着 embedding_dimension​序号增大，位置嵌入函数的周期变化越来越平缓</p>
 <div class="highlight" id="id-1"><div class="chroma">
@@ -521,7 +523,7 @@ $$X_{hidden} \in \mathbb{R}^{batch_size * seq_len * embed_dim}$$</p>
 <p>下面有几个问题，是我从网上找的，感觉看完之后能对 Transformer 有一个更深的理解</p>
 <p><font color=red>Transformer 为什么需要进行 Multi-head Attention？</font></p>
 <ul>
-<li>原论文中说到进行 Multi-head Attention 的原因是将模型分为多个头，形成多个子空间，可以让模型去关注不同方面的信息，最后再将各个方面的信息综合起来。其实直观上也可以想到，如果自己设计这样的一个模型，必然也不会只做一次 attention，多次 attention 综合的结果至少能够起到增强模型的作用，也可以类比 CNN 中同时使用多个卷积核的作用，直观上讲，多头的注意力有助于网络捕捉到更丰富的特征 / 信息</li>
+<li>原论文中说到进行 Multi-head Attention 的原因是将模型分为多个头，形成多个子空间，可以让模型去关注不同方面的信息，最后再将各个方面的信息综合起来。其实直观上也可以想到，如果自己设计这样的一个模型，必然也不会只做一次 attention，多次 attention 综合的结果至少能够起到增强模型的作用，也可以类比 CNN 中同时使用多个卷积核的作用，直观上讲，多头的注意力有助于网络捕捉到更丰富的特征信息</li>
 </ul>
 <p><font color=red>Transformer 相比于 RNN/LSTM，有什么优势？为什么？</font></p>
 <ul>
