@@ -1,4 +1,871 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Fri, 26 Apr 2024 17:15:15 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>Transformer 详解</title><link>https://jianye0428.github.io/posts/transformerdetailedexplanation/</link><pubDate>Mon, 24 Jul 2023 17:37:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerdetailedexplanation/</guid><description><![CDATA[<h2 id="transformer-详解">Transformer 详解</h2>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 04 May 2024 17:42:03 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>大模型学习笔记 | GPT 系列</title><link>https://jianye0428.github.io/posts/survey/</link><pubDate>Fri, 03 May 2024 16:33:37 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/survey/</guid><description><![CDATA[<h1 id="万字长文cver-转-llm-学习笔记之大模型gpt-系列">万字长文，CVer 转 LLM 学习笔记之大模型GPT 系列</h1>
+<h2 id="导读">导读</h2>
+<p>本文是作者对 GPT 系列文章的学习笔记，从个人角度梳理了 GPT 系列的迭代逻辑，从技术的逻辑连续性和关联性都有很好的讲解，篇幅较长，建议大家点赞收藏。</p>
+<p>这个系列的笔记主要面向像我一样已经具备一定的深度学习基础，但是新接触 NLP 和大模型领域的读者，目的是能提纲挈领地快速把握这个领域的一系列关键工作节点。</p>
+<p>这篇笔记涵盖的内容有：</p>
+<ul>
+<li>GPT-1 论文</li>
+<li>GPT-2 论文</li>
+<li>GPT-3 论文</li>
+<li>InstructGPT 论文（GPT-3.5 背后的技术）</li>
+<li>GPT-4 技术报告</li>
+<li>GPT-4 微软评测报告</li>
+<li>GPT-4V 微软评测报告</li>
+</ul>
+<p>作为一个从 CV 转到 LLM 的新人，难免犯一些常见或低级的错误，欢迎任何读者及时指出和斧正，也欢迎任何留言讨论。</p>
+<h2 id="要点-tldl">要点 (TL;DL)</h2>
+<ul>
+<li><strong>注重能力，而非过程</strong>：预训练任务其实形式不重要，可以是 classification，可以是预测 next token，真正重要的是 model 和 data 的 scaling up，以此快速高效地得到一个有优异泛化能力的特征提取器:
+<ul>
+<li>data: 找到/设计一个能把海量的数据用起来的任务，能用的数据越多越好，训练越快越好</li>
+<li>model: <strong>模型性能</strong>可以随着参数量巨量地提升而不会快速饱和，一个优秀的模型架构是 scaling up 的基础保障</li>
+</ul>
+</li>
+<li><strong>三种范式</strong>：
+<ul>
+<li>我们可以将专属任务上微调得到的模型，看成一种用户输入 0 个特殊 token，解决 1 种任务的范式，所以<strong>第一范式</strong>下的每个模型只能用于解决一个专属任务。</li>
+<li><strong>第二范式</strong>的模型是为每一种任务准备 1 个特殊 token，因此通过改变输入 token，就能用一个模型解决不同的任务。</li>
+<li><strong>第三范式</strong>的模型把特殊 token 替换成了特殊 token 序列，而自然语言正好就是一种最符合人类习惯和直觉的特殊 token 序列。</li>
+</ul>
+</li>
+<li><strong>RLHF</strong>：
+<ul>
+<li>SFT 模型(16 epoch)</li>
+<li>RM</li>
+<li>PPO 继续训练出来的最终模型</li>
+<li>SFT 数据(13k 条): 人工设计的问题，人工标注答案</li>
+<li>Feedback 数据(33k 条): 针对上面人工设计的问题，模型输出的几份答案的排序（打分）</li>
+<li>PPO 使用的数据(31k 条): 人工设计的问题(上面的模型没见过的新问题)，用 RM 的评分来继续训练，这份数据不需要人工标注答案</li>
+</ul>
+</li>
+<li><strong>对 GPT-4 的全面探索</strong>：
+<ul>
+<li><strong>心理学角度</strong>：人类思维是快思考与慢思考两个系统的混合体，而 GPT-4 目前更类似于单纯的快思考</li>
+<li>GPT-4 还有哪些<strong>局限性</strong>，以及哪些可以<strong>改进的地方</strong>（见 GPT-4 微软报告）</li>
+</ul>
+</li>
+<li><strong>GPT-4V 的全面探索</strong>：
+<ul>
+<li>支持哪些输入和工作模式</li>
+<li>在不同领域和任务上的能力质量和通用性如何</li>
+<li>有效使用和提示方法</li>
+<li>未来方向</li>
+</ul>
+</li>
+</ul>
+<h2 id="1-improving-language-understanding-by-generative-pre-training-201806">1. Improving Language Understanding by Generative Pre-Training (2018.06)</h2>
+<p>GPT 系列的第一篇论文，定下了纯 <strong><font color=red>Transformer-Decoder</font></strong> 路线。</p>
+<p>深度学习的早期突破很多来自于 CV 领域，其中很重要的一个原因是 CV 有 ImageNet 这个百万量级的有标注数据集，在 ImageNet 上训练分类任务得到的模型 Backbone 天然就是一个优秀的图片特征提取器，基于这个特征提取器在任意的子任务上做 fine-tuning 效果都不会太差（至少能展现出一定的泛化能力）。而 NLP 领域缺少这样大的数据集，因此，一直以来 NLP 模型发力卡在了特征提取器的构筑上，<font color=red>GPT 提出用训练语言模型的方式来得到这个特征提取器，然后用它来做子任务上的微调。</font></p>
+<p>语言模型由于做的是“预测下一个词”这样的一个任务，因此不依赖于人工标注，可以实现海量数据的预训练和泛化。</p>
+<p>GPT 工作是在 BERT 之前的，很多的 setting 都被 BERT 直接沿用了，比如 12 层 Transformer，768 的维度，800M 的 BookCorpus 数据集 等。</p>
+<p>文章剩余部分介绍了如何在 NLP 四大主流任务类型上运用 GPT，即如何把不同形式的任务都表示成一个序列+对应的标签的形式。</p>
+<p>对笔者的启示:</p>
+<ul>
+<li><strong>注重能力，而非过程</strong>：预训练任务其实形式不重要，可以是 classification，可以是预测 next token，真正重要的是 model 和 data 的 scaling up，以此快速高效地得到一个有优异泛化能力的特征提取器:
+<ul>
+<li>data: 找到/设计一个能把海量的数据用起来的任务，能用的数据越多越好，训练越快越好</li>
+<li>model: 模型性能可以随着参数量巨量地提升而不会快速饱和，一个优秀的模型架构是 scaling up 的基础保障</li>
+</ul>
+</li>
+</ul>
+<h2 id="2-language-models-are-unsupervised-multitask-learners-201902">2. Language Models are Unsupervised Multitask Learners (2019.02)</h2>
+<p>GPT 系列的第二篇工作。</p>
+<p>参数量提升到了 1.5B，也用了更大量的数据。GPT-2 最大的贡献是把研究的重点从单个任务上的针对性调参刷榜，转向了 <strong>zero-shot</strong>，即， <font color=red>训练好的模型不再需要微调就能去做不同任务了，尽管性能上距离每个任务的 SOTA 都还有距离，但方案的可行性已经验证了</font>。要实现这一点，原来为特殊任务准备特殊 token 的做法就不合适了，因为预训练阶段模型是没见过这些 token 的，毕竟语言模型预训练阶段只见过自然语言，所以非常自然地就引出了 prompt 的概念，用自然语言来替代原本的任务 token，实现不同任务的 zero-shot。</p>
+<p>可以看到，在这个时候 GPT-2 就已经初具 ChatGPT 的雏形了，只不过用户的输入还不完全是任意自然语言，而是类似于这样的模板输入。：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">翻译任务：
+</span></span><span class="line"><span class="cl">(translate to
+</span></span><span class="line"><span class="cl">french, english text, french text)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">QA 任务：
+</span></span><span class="line"><span class="cl">(answer the question, document,
+</span></span><span class="line"><span class="cl">question, answer)</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="3-language-models-are-few-shot-learners-200514165">3. Language Models are Few-Shot Learners (2005.14165)</h2>
+<p>GPT 系列的第三篇工作。</p>
+<p>GPT-3 的参数量来到了 175B，训练数据从一开始 GPT-1 的几千本书的数据集，开始进入到了网站爬虫数据和清洗的模式。</p>
+<p>其实在 GPT-2 中就已经提到了一个叫 Common Crawl 的公开网络数据，但是因为他们觉得这份数据实在太脏了所以放弃了，而现在为了训练更大的模型也不得不用起来，因此清洗数据是免不了的。</p>
+<p>数据清洗经历了两个过程：</p>
+<ol>
+<li><strong>过滤</strong>：他们将原来 GPT-2 训练用的数据作为正样本，Common Crawl 作为负样本训练了一个二分类器，然后用这个分类器来做数据筛选，过滤掉一些特别显著的脏数据。</li>
+<li><strong>去重</strong>：用经典的 LSH 算法进行去重</li>
+</ol>
+<p>另一方面，GPT-3 也正式提出了“in-context learning”的概念，在模型参数不进行更新的情况下，通过输入的上下文来帮助模型提升表现。</p>
+<p>对于笔者而言，这张图相当形象:</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>这揭示了模型学习的另一个维度，提升模型表现并不只有 SGD 梯度更新这一个优化方向。结合 GPT-2 中 prompt 的由来，prompt 的前身是语言模型做多任务 zero-shot 时，针对不同任务给的特殊 token，因此一个更加富有信息量的“特殊 token 序列”能提升模型表现似乎是一件非常符合直觉的事情。</p>
+<p>相比于过去使用一个特殊 token 来代表某一种特定的任务，GPT-3 的 few-shot prompt，或者说 in-context learning 形式，在笔者看来是一种推广，用户输入的自然语言和 few-shot 样例可以看成是一组特殊 token 的序列，因为自然语言的 token 具有语义和逻辑关联性，一个强大的预训练模型做到了“特殊 token”之间的泛化。</p>
+<p>通过实验我们也可以观察到，随着给出的示例样本数变多，模型的表现也在提升：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>从笔者个人的角度来总结：</p>
+<ul>
+<li>我们可以将专属任务上微调得到的模型，看成一种用户输入 0 个特殊 token，解决 1 种任务的范式，所以<strong>第一范式</strong>下的每个模型只能用于解决一个专属任务。</li>
+<li><strong>第二范式</strong>的模型是为每一种任务准备 1 个特殊 token，因此通过改变输入 token，就能用一个模型解决不同的任务。</li>
+<li><strong>第三范式</strong>的模型把特殊 token 替换成了特殊 token 序列，而自然语言正好就是一种最符合人类习惯和直觉的特殊 token 序列。</li>
+</ul>
+<h2 id="4-training-language-models-to-follow-instructions-with-human-feedback-220302155">4. Training language models to follow instructions with human feedback (2203.02155)</h2>
+<p>InstructGPT 被认为是 ChatGPT（GPT3.5） 背后的技术，核心点是把 RLHF，即<strong>基于人类反馈的强化学习</strong>，用到了语言模型上来<strong>进行人类喜好对齐</strong>。经过 RLHF 的 1.3B GPT 模型能在人类主观评分上超过 175B 的 GPT-3.</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>这篇工作里将模型输出与人类意愿不一致的这个现象称为“misaligned”，并分析原因在于语言模型的训练目标只是预测下一个 token，这跟我们希望模型“follow the user&rsquo;s instructions helpfully and safely”的目标之间显然是存在差距的。</p>
+<p>用 Anthropic 的工作里的话来说，大模型应该遵循 3H 原则，即：</p>
+<ul>
+<li>helpful：帮助用户解决问题</li>
+<li>honest：不能伪造信息或误导用户</li>
+<li>harmless：不能对人或环境造成身体、心理或社会伤害</li>
+</ul>
+<p>语言模型之所以存在这个问题，原因也很简单，因为使用的是无监督学习，本身的学习目标里就没有人为控制，所以很直观地可以想到用**监督微调（SFT）**的方式来把缺失的人类监督信号加进来。</p>
+<p>但是前面 GPT 三篇工作好不容易才把模型做到 175B 这么大，现在又重新开始标数据做监督学习显然是有点不聪明的，而且模型大了以后也更容易过拟合，对于人类偏好这一类的问题标注起来难度又很大，简单地全靠 SFT 肯定是行不通的。所以很自然地，OpenAI 想到了用他们家的拿手好戏强化学习，要知道 OpenAI 本身就是做强化学习起家的，本文使用的强化学习方法 PPO 也全是之前他们已经提出的算法，没有任何新的算法被提出，甚至论文里都没有对已有的算法进行太多的解释和铺垫，需要你感兴趣自己去翻他们的论文。</p>
+<br>
+<center>
+  
+  <br>
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>他们的方法整体可以概括如下：</p>
+<ol>
+<li>人工标一批 SFT 数据（包含问题和回答），对 GPT-3 模型（在强化学习里对应 Policy）进行微调</li>
+<li>用 SFT 得到的模型，针对每个问题生成几份回答，然后人工给这些回答质量打分（排序）</li>
+<li>用这份打分数据训练一个奖励模型（Reward Model, RM），让奖励模型代替人工打分</li>
+<li>采用 PPO 算法，基于奖励模型的评分来继续训练 GPT-3 模型</li>
+</ol>
+<p>换言之，他们一共<strong>造了三份数据</strong>：</p>
+<ul>
+<li>SFT 数据（13k 条）：人工设计的问题，人工标注答案</li>
+<li>Feedback 数据（33k 条）：针对上面人工设计的问题，模型输出的几份答案的排序（打分）</li>
+<li>PPO 使用的数据（31k 条）：人工设计的问题（上面的模型没见过的新问题），用 RM 的评分来继续训练，这份数据不需要人工标注答案</li>
+</ul>
+<p><strong>训练三个模型</strong>：</p>
+<ul>
+<li>SFT 模型（16 epoch）</li>
+<li>RM (Reward Model 奖励模型)</li>
+<li>PPO 继续训练出来的最终模型</li>
+</ul>
+<p>他们甚至对问题类型进行了一些分类：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>模型训练部分，个人觉得值得注意的点有：</p>
+<ol>
+<li>SFT 阶段，在训了 1 epoch 后模型就已经过拟合了，但他们发现继续训练过拟合的模型依然可以提升 RM 性能，所以他们训练了 16 epoch</li>
+<li>RM 的权重是直接用 SFT 模型初始化的，因为评分模型也需要语言能力，直接拷贝一份权重是比较省事的。RM 的输入是问题+几份答案，输出是排序。</li>
+<li>RM 模型只有 6B，因为 175B 的 RM 很难训</li>
+<li>强化学习阶段加了一个逐 token 的 KL 散度，用来让最终模型跟第一版 SFT 模型的要输出分布尽量保持一致，因为 RM 是在训练 SFT 模型的数据上训的，如果分布差异太大，RM 的评分就不准了</li>
+</ol>
+<p>强化学习的目标函数如下：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>简单翻译一下：</p>
+<p>$$损失 = RM 评分 + 新旧模型输出token分布的KL散度 + 旧问题上SFT的损失$$</p>
+<p>其中：</p>
+<ul>
+<li>RM 评分是 RM 对当前正在训练的模型在新问题（第三份数据）上的输出的评分</li>
+<li>KL 散度是当前模型跟旧的 SFT 模型输出之间计算的</li>
+<li>旧问题 SFT 损失是用第一份数据集继续按 SFT 方法训当前模型得到的</li>
+</ul>
+<p>另外，关于训练数据和评测方面的取舍也有所不同，训练中他们更看重 helpful，而评测阶段则更看重 honest 和 harmless。</p>
+<h2 id="5-gpt-4-technical-report-230308774">5. GPT-4 Technical Report (2303.08774)</h2>
+<p><strong>多模</strong></p>
+<p>基于上面笔者三种模型范式的思路，多模态的模型可以看成是让特殊 token 的类型从文本 token 拓宽到了视觉 token，将模型解决的任务从 NLP 任务拓宽到了 CV 任务，而两种模态 token 对齐的技术也早被 OpenAI 研究过了，也就是大名鼎鼎的 CLIP。因此，GPT-4 具备多模能力本身并不是一件意外的事情。</p>
+<p><strong>RLHF</strong></p>
+<p>在笔者看来，RLHF 等技术更多地是在不限制输入 token 序列的情况下，去约束模型输出的技术，当然从某种意义上，也可以看成是在监督 prompts -&gt; task 的映射关系的技术（其实发展到现在，task 这个词已经不太准确了，可以意会一下）。</p>
+<p>GPT-4 的报告中明确指出，RLHF 并不能提升模型解决任务的质量（不会增加知识），甚至很多时候调的不好还会损害各个任务上的指标。RLHF 更多地是在构建一些明确的 prompts -&gt; task 映射关系，因为自然语言是具有歧义性的，尤其是在输入信息较少的情况下，模型根据 prompts “理解”到的那个 task，并不一定是人类真正心里的那个意图，RLHF 实现了一种定制化的映射搭建，或者说，人类喜好对齐。</p>
+<p><strong>Predictable scaling</strong></p>
+<p>由于大模型实验的成本日渐高昂，我们不再能像小模型那样随便起实验调参了。因此 OpenAI 的大部分实验应该是在一个比 GPT-4 小很多倍的模型上进行的，然后通过这个小模型的训练 loss，来预测大模型最终训练出来的 loss</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>同样的， predictable scaling laws 也在很多 HumanEval 集上得到了观察。当然，在一部分的任务上也还无法被拟合的性能曲线，因此 OpenAI 说后续还会进一步优化他们模型性能预测的方法。</p>
+<h2 id="6-sparks-of-artifificial-general-intelligence-early-experiments-with-gpt-4-230312712">6. Sparks of Artifificial General Intelligence: Early experiments with GPT-4 (2303.12712)</h2>
+<p>智能（Intelligence）是一个多方面且难以捉摸的概念，长期以来缺乏一个共识性的定义。1994 年 52 名 心理学家组成的公式小组出版的关于智力科学的社论中，将只能定义为一种非常普遍的心理能力，包括<strong>推理、计划、解决问题、抽象思考、理解复杂想法、快速学习和从经验中学习的能力</strong>。</p>
+<p>这篇是微软关于 GPT-4 的研究报告，长达 55 页，文中的实验都是在 <strong>早期的文本单一模态版的 GPT-4</strong> 上进行的（而不是后面更新的多模态版本）, 其目标是生成一些新颖而困难的任务和问题，来证明 GPT-4 的能力并不是单纯的记忆，并且它对<strong>概念、技能和领域有深刻而灵活的理解</strong>。另外还旨在探索 GPT-4 的响应和行为，以验证其<strong>一致性、连贯性和正确性</strong>，揭示其<strong>局限性和偏差</strong>。</p>
+<p><strong>如何衡量 GPT-4 的智能</strong></p>
+<p>传统机器学习的标准做法是准备一组标准评测数据集，确保它们独立于训练数据之外，覆盖一系列的任务和领域。</p>
+<p>但这种方法并不太适用于 GPT-4，因为 GPT-4 是闭源模型，相关的训练数据集信息不公开，并且可以预见地非常庞大，因此我们不能保证目前公开的基准测试集不在它的训练数据里。也正因为此，本文采用的研究方法更接近于传统心理学，而不是机器学习方法。</p>
+<p><strong>多模态与跨学科整合</strong></p>
+<p>智能的一个重要衡量指标是综合不同领域信息的能力，以及跨学科地应用知识和技能的能力。这一节中作者举了四个例子来说明 GPT-4 具有很强的多模态与跨学科整合能力：</p>
+<ol>
+<li>写 JavaScript 代码来生成画家 Wassily Kandinsky 风格的作品。图一是该画家的原作，后面分别是 GPT-4 和 ChatGPT 写的代码画出的。</li>
+</ol>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ol start="2">
+<li>用莎士比亚的文风来证明素数无穷定理</li>
+</ol>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ol start="3">
+<li>以圣雄甘地的口吻写一封信给他的妻子，内容是支持“电子”成为美国总统候选人</li>
+</ol>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ol start="4">
+<li>写 Python 代码，以年龄、性别、体重、身高和血液测试结果向量作为输入，来预测用户是否有患糖尿病的风险</li>
+</ol>
+<p>这些对比可以体现 GPT-4 能创新性地整合不同领域的概念，并且显著强于 ChatGPT。除此之外作者也测试了 GPT-4 在音乐、绘图、空间理解方面的能力。</p>
+<p><strong>代码</strong></p>
+<p>除了常见的 leetcode 刷题，作者测试了 GPT-4 生成逆向工程代码、解释已有代码、用自然语言模拟代码执行过程、运行伪代码等能力。</p>
+<p><strong>数学</strong></p>
+<p>在一系列的分析实验后，作者从以下三方面总结了GPT-4的数学能力：</p>
+<ol>
+<li><strong>创造性推理</strong>：识别每个阶段可能相关的参数、中间步骤、计算或代数操作的能力。该组件通常基于启发式猜测或直觉，通常被认为是数学解决问题的最实质性和最深刻的方面</li>
+<li><strong>技术熟练程度</strong>：执行遵循指定步骤集的常规计算或操作的能力</li>
+<li><strong>批判性推理</strong>：批判性地检查论点的每个步骤的能力，将其分解为其子组件，解释它需要的内容，它与其余论点相关以及为什么是正确的</li>
+</ol>
+<p>这一节作者发现 GPT-4 的很多缺陷，如：</p>
+<ul>
+<li>在执行一些很常规且机械的计算时经常算错和混淆</li>
+<li>GPT-4 由于是自回归模型，因此是实时线性输出的，而没有办法“打腹稿”</li>
+</ul>
+<p><strong>与世界的交互</strong></p>
+<p>智能的另一重要方面是交互能力，即跟外界环境和智能体进行交互的能力，作者主要通过<strong>工具调用</strong>和<strong>具身交互</strong>两个维度来评估。</p>
+<p>工具调用这里不多赘述了，具身交互方面测试了文字跑团游戏，以及交互式地指导人员找到天花板漏水的地方并进行修补，逐步根据人类的每一步反馈，给出行动建议和指示。</p>
+<p><strong>与人类的交互</strong></p>
+<p>GPT-4 在推理他人心理状态方面表现非常突出，特别是在模拟现实场景中，它的解释能力也很强，能对自己的判断和言论进行自我解释。</p>
+<p><strong>判别能力</strong></p>
+<p>判别能力主要指模型区别不同事物、概念和情景的能力。比如，区分两个食物哪个是可以安全食用，哪个是有毒的。</p>
+<p>这一节的测试里，揭示出当前的评测指标存在的缺陷：对于语句相似度捕捉不够，依然严重依赖单词和短句的相似度，因此在很多时候参考答案很短，而 GPT-4 生成的答案很长，会被 ROUGE 这样的指标判定为答案不匹配，而人工检查后发现 GPT-4 的答案更加高质量和具有说服力。</p>
+<p>另一方面作者也测试了用 GPT-4 作为评分员，对回答进行打分，实验现实尽管距离人类打分还存在一些差距，但在一些强约束的场景下已经很具有竞争力了。</p>
+<p><strong>自回归结构的局限性</strong></p>
+<p>自回归结构的输出是实时进行的，因此不存在“打草稿”的机会，因此无法“step-by-step”地处理问题，而引入思维链则可以显著地提升模型准确度。</p>
+<p>对于一些依赖递归回溯的问题，比如一步一步输出汉诺塔问题的解法，GPT-4 表现非常差，在解决不能以连续方式处理的复杂或创造性问题时，都暴露出了严重的局限性。</p>
+<p>比如要求 GPT-4 修改“9 * 4 + 6 * 6 = 72”这个等式左边的一个数字，来让等式计算结果变成 99，这就是一个无法简单“step-by-step”推理得到答案的问题，GPT-4 最后的准确率也非常低。</p>
+<p>这一节的讨论中，作者指出，理解这些局限性的一个方法是类比诺奖作者卡尼曼提出的“快思考”和“慢思考”的概念。卡尼曼认为人类思维分成快、慢两个系统，快思考是一种自动的、直观的、不需要花费精力的思考方式，速度快但是容易出错和偏见。慢思考是一种受控的、理性的、耗费精力的思考方式，虽然速度慢但是准确可靠。</p>
+<p>当前的 GPT-4 很大程度上可以看成是在执行快思考，但缺少慢思考能力。</p>
+<p><strong>未来方向</strong></p>
+<p>作者在这一节总结了未来 GPT-4 可以研究和改进的方向：</p>
+<ul>
+<li><strong>置信度校验</strong>：模型的输出缺乏置信度，既会编造训练集中没有的内容（open-domain 幻觉），也会生成与 Prompt 不一致的内容（close-domain 幻觉）</li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li><strong>长期记忆</strong>：即长的上下文</li>
+<li><strong>持续学习</strong>：当前微调和自我更新成本过高、缺乏有效且稳定的手段（保持已有能力不丢失和遗忘）</li>
+<li><strong>个性化</strong>：根据应用和需求进行定制、扮演、调整风格等</li>
+<li><strong>提前规划和概念性跳跃</strong>：推理过程过于线性，在需要思维跳跃性的任务上表现不佳</li>
+<li><strong>透明度、可解释性和一致性</strong></li>
+<li><strong>认知谬误和非理性</strong>：数据中存在的偏见、成见或错误引入了认知偏差和非理性</li>
+<li><strong>对输入的敏感性</strong>：对于 Prompt 过于敏感，鲁棒性不够</li>
+</ul>
+<p>这些局限性均指向一个核心问题：<strong>哪些缺陷是自回归架构的先天缺陷，哪些是在已有架构上可以通过处理数据、增加外挂的组件和增大参数量解决的。</strong></p>
+<h3 id="7-the-dawn-of-lmms-preliminary-explorations-with-gpt-4vision-230917421">7. The Dawn of LMMs: Preliminary Explorations with GPT-4V(ision) (2309.17421)</h3>
+<p>微软发布的 166 页的 GPT-4V 报告，主要围绕以下四个点进行展开研究：</p>
+<ol>
+<li>GPT-4V 支持哪些输入和工作模式？</li>
+<li>GPT-4V 在不同领域和任务上的能力质量和通用性如何？</li>
+<li>GPT-4V 有效使用和提示方法有哪些？</li>
+<li>未来有哪些有前途的方向？</li>
+</ol>
+<p><strong>GPT-4V 的输入模式</strong></p>
+<ul>
+<li>纯文本</li>
+<li>单个图像-文本对</li>
+<li>图像文本交替输入</li>
+</ul>
+<p>前两种相对来说比较简单，第三种交替输入的情况，已经非常接近于人的聊天模式了。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>GPT-4V 的工作模式和提示技术</strong></p>
+<p>实验证明，在 LLM 上研究出来上各种提示技术，在 GPT-4V 上也是好使的，比如思维链、few-shot 提示等。</p>
+<p>这一节提到了一个“LLMs don&rsquo;t want to succeed”的理论，貌似是来自于 Andrej Karpathy 的某次演讲，里面展示了一种类似于催眠一样的提示技术，即，<strong>你想要你的 LLM 表现更出色，你就要用直接的提示词说“你是xxx方面的专家”，否则它之后表现出一般普通人水平的能力</strong>。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>完整的 PPT 可以看这里：https://karpathy.ai/stateofgpt.pdf</p>
+<p>在论文中作者是举了一个数苹果的案例，让 GPT-4V 来数一下画面中有几个苹果。一开始 GPT-4V 并不能轻易得到正确答案，但经过一系列我们已知的 LLM Prompt 技巧加强后，GPT-4V 变得可靠，能够正确计数：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在日常的人和人交互中，在图片中画圈、画箭头来指向关键信息是一种很自然且常见的方式， 经实验 GPT-4V 在这方面的理解能力非常强大。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>作者实验了一些很有挑战性的 case，发现基本上难不倒它：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在 In-context few-shot learning 方面，作者也用一个很有代表性的例子说明了提供示例样本的重要性。作者给了一张仪表的图，让 GPT-4V 读出当前仪表指针指向的数值，一开始不论如何改良 prompt 都无法得到正确的结果。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>甚至在给出一个示例的情况下模型仍然表现不佳，但当示例增加到两个后，GPT-4V 就突然能成功读数了，可见<strong>提供上下文示例对于提升大模型性能至关重要</strong>。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>视觉语言能力</strong></p>
+<p>在大部分已有的 CV 子任务上，GPT-4V 都表现出了不错的能力，常见的场景描述等更是表现出色，在相对小众的领域，如医学图像上，同样让人印象深刻，GPT-4V 可以根据 CT 图判断出智齿和骨折等。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>当然，在一些已经被做得非常深入的子任务上，GPT-4V 相较于 SOTA 模型还有不小的差距，但还是那句话，潜力大于绝对精度，目前 GPT-4V 已经展现出了让人鼓舞的性能，优化个别任务上的表现只是时间问题。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>GPT-4V 甚至能看懂梗图，解释其中的笑点：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>借助 GPT-4V 强大的推理能力和具备的常识，我们甚至可以“<strong>假如你是一名侦探，你可以从图中推理出哪些线索？</strong>”</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>时间序列和视频理解</strong></p>
+<p>作者实验了多图像序列，GPT-4V 能够识别出这是一组动态图像序列，并且能结合起来判断画面中的人正在做俯卧撑：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>情商测试</strong></p>
+<p>在这一节，GPT-4V 可以基于予以内容和图像样式解释视觉情感，如满意、愤怒、敬畏和恐惧等：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>甚至可以一张图片让 GPT-4V 用两种不同方式来描述，分别让人感到不安和感到舒适（新闻学让它玩明白了）：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>新兴应用亮点</strong></p>
+<ul>
+<li>行业：
+<ul>
+<li>缺陷检测</li>
+<li>安全检查</li>
+<li>杂货结账</li>
+</ul>
+</li>
+<li>医疗</li>
+<li>汽车保险
+<ul>
+<li>损害评估</li>
+<li>保险报告</li>
+</ul>
+</li>
+<li>定制化
+<ul>
+<li>照片组织</li>
+<li>密集标注与分割</li>
+</ul>
+</li>
+<li>图像生成
+<ul>
+<li>生成图像的评估</li>
+<li>图像编辑的提示生成</li>
+</ul>
+</li>
+<li>具象化智能体
+<ul>
+<li>操作机器</li>
+<li>导航</li>
+</ul>
+</li>
+<li>GUI 导航（软件层面的交互和导航）</li>
+</ul>
+<p>整篇报告篇幅较多，并且举了大量详细的例子，在这里就不一一展开了，感兴趣的同学可以自行翻阅。</p>
+<hr>
+<p>至此，我总结了 GPT 系列工作里一些我关注到的点，从中可以感受到 OpenAI 的工作之间都有着很深的逻辑链条，很多推广都似乎是最符合直觉的。OpenAI 早期公开的论文里各种细节还是很丰富的，不仅细致地告诉你如何清洗和构造数据，甚至还教你如何找到一个合适的标注员给你标数据。</p>
+<p>作为一个从 CV 转到 LLM 的新人，难免犯一些常见或低级的错误，欢迎任何读者及时指出和斧正，也欢迎任何留言讨论。</p>
+<p>本篇笔记的写作参考了沐神的几期 B 站视频，以及知乎@苏打的文章，特此感谢</p>
+]]></description></item><item><title>LLM预训练之RLHF（一）：RLHF及其变种</title><link>https://jianye0428.github.io/posts/pretrain_rlhf_one/</link><pubDate>Sat, 04 May 2024 14:23:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/pretrain_rlhf_one/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
+<p>在ChatGPT引领的大型语言模型时代，国内外的大模型呈现爆发式发展，尤其是以年初的LLaMA模型为首的开源大模型和最近百川智能的baichuan模型，但无一例外，都使用了「基于人类反馈的强化学习」（RLHF）来提升语言模型的性能，并在模型重注入了人类的偏好，以提高模型的有用性和安全性。不过RLHF也早已更新换代，我们以如下目录进行详细讲述RLHF及其变种：</p>
+<ul>
+<li>LLM的经典预训练Pipeline</li>
+<li>Llama 2中的RLHF</li>
+<li>RLHF替代方案</li>
+</ul>
+<h2 id="一llm的经典预训练pipeline">一、LLM的经典预训练Pipeline</h2>
+<p>​  目前基于Transformer decoder的LLM，比如ChatGPT、LLaMA、baichuan等，通常都会有基于预训练的base模型和在base模型至少使用RLHF微调的Chat模型，Chat模型的训练一般都包括如下三个步骤：预训练，有监督微调和对齐。</p>
+<p>​  在<strong>预训练</strong>阶段，模型会从大量无标注文本数据集中学习通用知识，然后使用「<strong>有监督微调」（SFT）<strong>优化模型以更好地遵守特定指令，最后使用</strong>对齐</strong>技术使LLM可以更有用且更安全地响应用户提示。</p>
+<h3 id="11-预训练pre-training">1.1 预训练（Pre-training）</h3>
+<p>预训练阶段通常需要包含数十亿到数万亿个token的庞大文本语料库，但训练目标是<strong>模型需要根据提供的文本来预测「下一个单词」</strong>。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>1.2 有监督微调（Supervised Finetuning）</strong></p>
+<p>​SFT的训练过程类似Pre-training阶段，也是预测「下一个单词」，但是<strong>需要人工标注的指令数据集</strong>，其中模型的输入是一个指令（根据任务的不同，也可能包含一段输入文本），输出为模型的预期回复内容。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>数据形式类似于：</p>
+<blockquote>
+<p>Instruction: &ldquo;Write a limerick about a pelican.&rdquo;</p>
+<p>指令：“写一首关于鹈鹕的打油诗。“</p>
+<p>Output: &ldquo;There once was a pelican so fine&hellip;&rdquo;</p>
+<p>输出：“从前有一只鹈鹕很好&hellip;“</p>
+</blockquote>
+<p>模型会把“Write a limerick about a pelican”作为输入，逐个token进行预测，输出“There once was a pelican so fine&hellip;”</p>
+<p>虽然两个阶段都采用类似的训练目标，但有监督微调数据集通常比预训练数据小得多，指令数据集需要人类（或其他高质量的LLM）提供标注结果，所以无法大规模应用。</p>
+<p><strong>1.3 对齐（Alignment）</strong></p>
+<p>第三阶段依然是微调，不过其主要目标在于将语言模型与人类的偏好、价值观进行对齐，这也是RLHF机制发挥的地方。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h2 id="二reinforcement-learning-with-human-feedback-rlhf">二、Reinforcement Learning with Human Feedback (RLHF)</h2>
+<p>上节，我们讨论了现代LLM的三个训练过程；本小节，我们重点讨论「上述两个微调阶段」（Supervised Tinetuning和Alignment）中使用的RLHF技术。</p>
+<p>RLHF主要包括三步：</p>
+<ol>
+<li>在预训练好的模型上进行「有监督微调」（SFT）；</li>
+<li>在有监督微调模型基础上创建一个reward model（RM）模型；</li>
+<li>基于RM模型使用PPO算法微调SFT模型；</li>
+</ol>
+<h3 id="21-在预训练好的模型上进行有监督微调">2.1 在预训练好的模型上进行有监督微调**</h3>
+<p>先收集一个Prompts集合，并要求标注人员写出高质量的回复，然后使用该数据集以监督的方式微调预训练的基础模型。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>​该步骤与上小节的Supervised Finetuning类似，但这是RLHF不可或缺的一个步骤。</p>
+<h3 id="22-在有监督微调模型基础上创建一个rm模型">2.2 在有监督微调模型基础上创建一个RM模型</h3>
+<p>对于每个Prompt，要求有监督微调后的LLM生成四到九个回复，再由标注人员根据个人偏好对所有回复进行排序。虽然排序过程很耗时，但工作量还是比第一步的有监督数据集构建要少一些。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在处理排序数据时，使用了一个奖励模型RM，RM来自RLHF第一步的「有监督微调语言模型」（SFT），SFT的输出通过一个回归层（单个输出节点）转换为奖励分数，即可称为<strong>RM模型</strong>。</p>
+<h3 id="23-基于rm模型使用ppo算法微调sft模型">2.3 基于RM模型使用PPO算法微调SFT模型</h3>
+<p>基于RM模型使用proximal policy optimization (PPO)算法微调SFT模型</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>PPO的具体技术细节可以参考InstructGPT或下面的论文列表。</p>
+<ol>
+<li>Asynchronous Methods for Deep Reinforcement Learning (2016) ，https://arxiv.org/abs/1602.01783</li>
+<li>Proximal Policy Optimization Algorithms (2017)，https://arxiv.org/abs/1707.06347</li>
+<li>Fine-Tuning Language Models from Human Preferences (2020)，https://arxiv.org/abs/1909.08593</li>
+<li>Learning to Summarize from Human Feedback (2022) ，https://arxiv.org/abs/2009.01325</li>
+</ol>
+<h2 id="三llama-2的rlhf">三、LLaMA 2的RLHF**</h2>
+<p>Meta AI在创建Llama-2-chat模型时也使用了RLHF技术，不过与ChatGPT相比还是有些细微区别。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>简单来说，Llama-2-chat在第一步RLHF微调上使用相同的指令数据，但在第二步使用了两个奖励模型；通过多个阶段的不断进化，奖励模型也会根据Llama-2-chat模型出现的错误进行更新；并且增加了拒绝采样（rejection sampling）步骤。</p>
+<h3 id="31-margin-loss">3.1 Margin Loss</h3>
+<p>​在标准InstructGPT中使用的RLHF PPO方法，研究人员需要收集同一个提示下的4-9个模型输出并进行排序，比如四个回复的排序结果为A&lt;C&lt; D&lt;B，那么就可以得到六个对比结果：A &lt; C，A &lt; D ，A &lt; B，C &lt; D，C &lt; B，D &lt; B。</p>
+<p>​Llama 2的数据集也采用类似的方式，不过标注人员每次只能看到两个（而非4-9个）回复并进行对比，但新增了一个边际（margin）标签，对比结果可以为「显著更好」（significantly better）和「好的不明显」（negligibly better）。</p>
+<p>在排序训练时中，Llama 2相比InstructGPT增加了边际损失：</p>
+<p>$$\mathcal{L}<em>{\mathrm{ranking}}=-\log\left(\sigma\left(r</em>\theta\left(x,y_c\right)-r_\theta\left(x,y_r\right)-m(r)\right)\right)$$</p>
+<p>其中，$r_θ(x，y)$是提示x和生成的回复y的标量分数输出; θ为模型权重; σ是将层输出转换为范围从0到1的分数的逻辑S形函数; $y_c$是由标注人员选择的更优回复; $y_r$是较差的回复。$m(r)$可以调节两个回复之间的差值，如果对比结果为「显著更好」，则会增加梯度值，加快更新速度。</p>
+<h3 id="32-两个rm模型">3.2 两个RM模型</h3>
+<p>​Llama 2中的两个奖励模型分别侧重「有用性」（helpfulness）和「安全性」（safety），用于模型优化的最终奖励函数会将两个分数进行线性组合。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="33-拒绝采样">3.3 拒绝采样</h3>
+<p>​Llama 2的作者使用了一个训练流水线，<strong>同时使用PPO和拒绝采样算法</strong>，迭代地产生多个RLHF模型（从RLHF-V1到RLHF-V5），模型在拒绝采样时会得到K个输出，并使用最高奖励的输出更新梯度，而PPO每次只基于单样本进行更新。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在监督微调的初始阶段之后，模型只使用拒绝采样进行训练，然后再结合拒绝采样和PPO。</p>
+<p>从实验结果来看，RLHF微调模型在无害性和有用性上都得到了改善，并且在最后阶段RLHF-v5使用PPO算法的性能最好。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h2 id="四rlhf的替代方案">四、RLHF的替代方案</h2>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>RLHF在InstructGPT和Llama 2论文中被证明是有效的，但是RLHF的过程是比较复杂的，下面将介绍一下最近RLHF的替代方案：</p>
+<h3 id="41-constitutional-ai-harmlessness-from-ai-feedback-dec-2022-httpsarxivorgabs221208073">4.1 Constitutional AI: Harmlessness from AI Feedback (Dec 2022, <a href="https://arxiv.org/abs/2212.08073"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2212.08073<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>研究人员提出了一种 <strong><font color=red>基于人类提供的规则列表的自我训练机制</font></strong>。与前面提到的InstructGPT论文类似，也使用了强化学习方法。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>上图中的「红队」（Red Team）指的是测试目标系统的防御能力，即外部或内部专家模拟潜在对手的过程，通过模仿现实世界攻击者的战术、技术和程序来挑战、测试并最终改进系统。</p>
+<h3 id="42-the-wisdom-of-hindsight-makes-language-models-better-instruction-followers-feb-2023-httpsarxivorgabs230205206">4.2 The Wisdom of Hindsight Makes Language Models Better Instruction Followers (Feb 2023, <a href="https://arxiv.org/abs/2302.05206"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2302.05206<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>研究人员提出了一种**<font color=red>基于重新标记的监督微调方法HIR</font>**，该方法在12个BigBench任务上优于RLHF。</p>
+<p>​HIR是如何工作的？简而言之，HIR方法包括两个步骤，即<strong>采样</strong>和<strong>训练</strong>。在采样步骤中，Prompt和指令输入给LLM来获取答案，根据对齐得分，在训练阶段适当的地方重新标注指令；然后，重新标记的指令和原始的Prompt用于微调LLM。使用这种重新标记的方法，研究人员有效地将失败案例（LLM创建的输出与原始指令不匹配的案例）转化为有用的训练数据，用于监督学习。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="43-direct-preference-optimization-your-language-model-is-secretly-a-reward-model-httpsarxivorgabs230518290-may-2023">4.3 Direct Preference Optimization: Your Language Model is Secretly a Reward Model (<a href="https://arxiv.org/abs/2305.18290"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2305.18290<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>, May 2023)</h3>
+<p><strong><font color=red>直接偏好优化（DPO）是具有PPO的RLHF的替代方案</font></strong>，其中研究人员表明，在RLHF中拟合奖励模型的交叉熵损失可以直接用于微调LLM。根据他们的基准，使用DPO更有效，而且在响应质量方面通常也优于RLHF/PPO。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="44-reinforced-self-training-rest-for-language-modeling-aug-2023-httpsarxivorgabs230808998">4.4 Reinforced Self-Training (ReST) for Language Modeling (Aug 2023, <a href="https://arxiv.org/abs/2308.08998"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2308.08998<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>ReST是人类反馈强化学习（RLHF）的一种替代方案，它<strong>使LLM与人类偏好保持一致</strong>。 <strong><font color=red>ReST使用采样方法创建改进的数据集</font></strong>，在质量越来越高的子集上迭代训练，以完善其奖励函数。根据作者的说法，与标准的在线RLHF方法（如具有近端策略优化的RLHF，PPO）相比，ReST通过离线生成训练数据集实现了更高的效率，但缺少与InstructGPT或Llama 2中使用的标准RLHF PPO方法的全面比较。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="45-rlaif-scaling-reinforcement-learning-from-human-feedback-with-ai-feedback-sep-2023-httpsarxivorgabs230900267">4.5 RLAIF: Scaling Reinforcement Learning from Human Feedback with AI Feedback (Sep 2023, <a href="https://arxiv.org/abs/2309.00267"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2309.00267<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>最近的人工智能反馈强化学习（RLAIF）研究表明，RLHF中奖励模型训练的评级不一定必须由人类提供，而是可以由LLM生成（此处：PaLM 2）。标注人员在一半的案例中更喜欢RLAIF模型，也就意味着两个模型的差距并不大，RLHF和RLAIF都大大优于纯通过监督指令微调训练的模型。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>这项研究的结果非常有用和有趣，因为它基本上意味着我们可能能够使基于RLHF的训练更加高效和容易。然而，这些RLAIF模型在专注于信息内容的安全性和真实性的定性研究中的表现还有待观察，而人类偏好研究仅部分捕捉到了这一点。</p>
+<p><strong>参考文献：</strong></p>
+<p>[1] <a href="https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives"target="_blank" rel="external nofollow noopener noreferrer">https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a><br>
+[2] <a href="https://mp.weixin.qq.com/s/3Ff6C5zT7fXggQ1FwxvWAQ"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/3Ff6C5zT7fXggQ1FwxvWAQ<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>一文详解 ChatGPT RLHF 背后的 PPO 强化学习训练</title><link>https://jianye0428.github.io/posts/chatgpt_rlhf/</link><pubDate>Sat, 04 May 2024 17:00:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/chatgpt_rlhf/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
+<p></p>
+<p>最近火出圈的🚀 ChatGPT 中 RLHF 主要采用了就是 PPO 进行强化学习训练</p>
+<blockquote>
+<p>主要运用在微调阶段（微调整个 10B～100B+ 参数的成本其实也非常高 ）使用<strong>策略梯度</strong>强化学习 (Policy Gradient RL) 算法、近端策略优化 (PPO) 微调初始 LM 的部分或全部参数。</p>
+</blockquote>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<blockquote>
+<p>以下主要参考台大李宏毅的推导过程</p>
+</blockquote>
+<h2 id="01-vanilla-policy-gradient">01. Vanilla policy gradient</h2>
+<ul>
+<li>动作/环境/奖励之间的关系：</li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>轨迹可表示为集合</p>
+<p>$$\begin{aligned}p_{\theta}(\tau)&amp;=p(s_1)p_\theta(a_1|s_1)p(s_2|s_1,a_1)p_\theta(a_1|s_1)p(s_3|s_2,a_2)\ldots\&amp;=p(s_1)\prod_{t=1}^Tp_\theta(a_t|s_t)p(s_{t+1}|s_t,a_t)\end{aligned}$$</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>一个轨迹的奖励总和为：</p>
+<p>$$R(\tau)=\sum_{t=1}^Tr_t$$</p>
+<p>则奖励的期望为：</p>
+<p>$$\bar{R}<em>\theta=\sum</em>\tau R(\tau)p_\theta(\tau)=E_{\tau\sim p_\theta(\tau)}[R(\tau)]$$</p>
+<p>将 $R(\tau)$ 看成常量，对其求微分：</p>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>{\theta}&amp; =\sum</em>{\tau}R(\tau)\nabla p_{\theta}(\tau) \
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\frac{\nabla p_{\theta}(\tau)}{p_{\theta}(\tau)} \
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\nabla\log p_{\theta}(\tau)\quad\nabla f(x)=f(x)\nabla\log f(x) \
+&amp;=E_{\tau\sim p_{\theta}(\tau)}[R(\tau)\nabla\log p_{\theta}(\tau)]&amp; \left(2\right) \
+&amp;\approx\frac1N\sum_{n=1}^{N}R(\tau^{n})\nabla\log p_{\theta}(\tau^{n}) \
+&amp;=\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}R(\tau^n)\nabla\log p_\theta(a_t^n|s_t^n)
+\end{aligned}$$</p>
+<p>策略网络梯度更新：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>可以看成一个分类问题（游戏中通过键盘输入来互动，分类类别为所有可操作的键位）：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li>理想情况下， 并不一直为正数，增加一个 baseline:</li>
+</ul>
+<p>$$\nabla\bar{R}<em>{\theta}=\frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{{T_{n}}}(R(\tau^{n})-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n})b\approx E[R(\tau)]$$</p>
+<blockquote>
+<p>在电子游戏中，奖励值常常为正（通常为游戏分数）。这时需要增加一个偏置来保证同时有正样本和负样本</p>
+</blockquote>
+<ul>
+<li>分配合适的学分</li>
+</ul>
+<p>一个高分的游戏轨迹中也可能存在错误的动作，同样的，一个低分的游戏轨迹也可能存在正确的动作，而上文中的计算将最后的奖励值（最后的游戏分数）都一视同仁视为该游戏轨迹每个动作的学分。</p>
+<p>为了更准确地描述每个动作所得到的学分，将一个动作执行后对应的学分为后续的所有奖励值的总和</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(R(\tau^n)-b)\nabla\log p_\theta(a_t^n|s_t^n) \Downarrow\nabla\bar{R}<em>\theta \
+&amp;= \frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n-b)\nabla\log p_\theta(a_t^n|s_t^n)
+\end{aligned}$$</p>
+<p>当某个动作执行以后，其对后续的奖励分数的影响在慢慢减少，再增加一个衰减因子：</p>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n)\nabla\log p_\theta(a_t^n|s_t^n)\Downarrow\nabla\bar{R}<em>\theta \
+&amp; = \frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{T_{n}}(\sum_{t^{\prime}=t}^{T_{n}}\gamma^{t^{\prime}-t}r_{t^{\prime}}^{n}-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n}),\gamma&lt;1
+\end{aligned}$$</p>
+<h2 id="02-从on-policy到off-policy">02. 从on-policy到off-policy</h2>
+<p>两者区别:</p>
+<ul>
+<li>On-policy: 学习到的 agent 和与环境交互的 agent 是相同的，每一次梯度更新都需要重新采样</li>
+<li>Off-policy: 学习到的 agent 和与环境交互的 agent 是不同的，每次梯度更新不需要重新采样</li>
+</ul>
+<p>重新看看 的表达式：
+$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<ul>
+<li>使用策略网络 收集数据。当 更新后，则需要重新收集训练样本</li>
+<li>目标：使用相同的样本（通过 采样）训练 。其中 为固定的，因此我们可以重复使用其样本数据</li>
+</ul>
+<h3 id="21-重要性采样importance-sampling">2.1 重要性采样（Importance Sampling）</h3>
+<p>考虑一个场景，假如正在尝试计算函数 $f(x)$ 的期望值，其中 $x \sim f(x)$ 服从某种分布。则对 $E(f(x))$ 有以下估计：</p>
+<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx\approx\frac{1}{n}\sum_{i}f(x_{i})$$</p>
+<p>蒙特卡洛抽样方法是简单地从分布 $p(x)$ 中抽出 ，然后取所有样本的平均值来得到期望值的估计。那么问题来了，如果  $p(x)$  非常难取样怎么办？是否能够根据一些已知的、容易抽样的分布来估计期望值？</p>
+<p>答案是肯定的。公式的一个简单转换就可以做到</p>
+<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx=\int f(x)\frac{p(x)}{q(x)}q(x)dx=E_{x\sim q}[f(x)\frac{p(x)}{q(x)}]$$</p>
+<p>其中$x$从分布$q(x)$中采样，$q(x)$不应为 0。通过这种方式，估计期望能够从另一个分布$q(x)$中采样，$p(x)/q(x)$是称为采样率或采样权重，它作为校正权重以抵消来自不同分布的概率采样。</p>
+<ul>
+<li>重要性采样的缺陷</li>
+</ul>
+<p>虽然重要性采样保证了期望的一致，但是这里来计算一下方差是否一致</p>
+<p>方差的计算：</p>
+<p>$$Var[X]=E[X^2]-(E[X])^2$$</p>
+<p>分别计算方差：</p>
+<p>$$\begin{aligned}Var_{x\sim p}[f(x)]&amp;=E_{x\sim p}[f(x)^2]-(E_{x\sim p}[f(x)])^2\Var_{x\sim q}[f(x)\frac{p(x)}{q(x)}]&amp;=E_{x\sim q}[(f(x)\frac{p(x)}{q(x)})^2]-(E_{x\sim q}[f(x)\frac{p(x)}{q(x)}])^2\&amp;=E_{x\sim p}[f(x)^2\frac{p(x)}{q(x)}]-(E_{x\sim p}[f(x)])^2\end{aligned}$$</p>
+<p>可以发现两者虽然期望相等但方差并不一致</p>
+<h3 id="22-从-on-policy-到-off-policy">2.2 从 on-policy 到 off-policy</h3>
+<p>我们使用重要性采样将 on-policy 调整为 off-policy</p>
+<p>$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_{\theta^{\prime}}(\tau)}[\frac{p_\theta(\tau)}{p_{\theta^{\prime}}(\tau)}R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<ul>
+<li>从 $\theta&rsquo;$ 采样得到数据集</li>
+<li>使用该 数据集多次训练 $\theta$</li>
+</ul>
+<p>梯度更新过程：</p>
+<p>$$\begin{aligned}
+&amp;=E_{(s_t,a_t)\sim\pi_\theta}[A^\theta(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(s_t,a_t)}{p_{\theta^{\prime}}(s_t,a_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}\frac{p_\theta(s_t)}{p_{\theta^{\prime}}(s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]&amp; \text{(4)} \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]
+\end{aligned}$$</p>
+<ul>
+<li>其中 $A^\theta(s_t,a_t)$ 指的是 advantage 函数,其计算方式为加上衰减机制后的奖励值并减去基线。</li>
+<li>由于 $\frac{p_\theta(s_t)}{p_{\theta&rsquo;}(s_t)}$ 的值难以计算，将其设置为 1，简化计算</li>
+</ul>
+<p>目标函数可以表示为：</p>
+<p>由于 $\nabla f(x)=f(x)\nabla\log f(x)$ 再结合不定积分，目标函数可以表示为:</p>
+<p>$$J^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]$$</p>
+<h2 id="03-ppotrpo">03. PPO/TRPO</h2>
+<p>为了消除重要性采样的缺陷的影响，以下为两种方式</p>
+<ul>
+<li>PPO（Proximal Policy Optimization）
+<ul>
+<li>初始化策 略网络参数</li>
+<li>在每次迭代过程中:</li>
+<li>目标函数:</li>
+<li>使用 与环境互动以收集 ，并计算出 advantage 值</li>
+<li>更新 优化</li>
+<li>算法:</li>
+</ul>
+</li>
+</ul>
+<p>$$\begin{aligned}
+PPO algorithm: \
+J_{PPO}^{\theta^k}(\theta) &amp; = J^{\theta^k}(\theta)-\beta KL(\theta,\theta^k)J^{\theta^k}(\theta) \
+&amp; = E_{(s_{t},a_{t})\sim\pi_{\theta^{k}}}[\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})] \
+&amp; \approx \sum_{(s_{t},a_{t})}\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})
+\end{aligned}$$</p>
+<p>自适应 KL 惩罚：如果 $KL(\theta,\theta^k)&gt;KL_{\max}$ ,增大 $\beta$; 如果 $KL(\theta,\theta^k) &lt;KL_{\min}$,减小 $\beta$。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li>TRPO（Trust Region Policy Optimizatio）</li>
+</ul>
+<p>$$J_{TRPO}^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]KL(\theta,\theta&rsquo;)&lt;\delta $$</p>
+<p>TRPO 和 PPO 在各个测试上性能差不多。但相比 PPO ，TRPO 计算要更复杂</p>
+<p><strong>参考文献</strong>:</p>
+<p>[1] <a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html"target="_blank" rel="external nofollow noopener noreferrer">https://spinningup.openai.com/en/latest/algorithms/ppo.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[2] <a href="https://openai.com/research/openai-baselines-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://openai.com/research/openai-baselines-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[3] <a href="https://huggingface.co/blog/deep-rl-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/deep-rl-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[4] <a href="https://huggingface.co/blog/rlhf"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/rlhf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[5] <a href="https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>Transformer 详解</title><link>https://jianye0428.github.io/posts/transformerdetailedexplanation/</link><pubDate>Mon, 24 Jul 2023 17:37:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerdetailedexplanation/</guid><description><![CDATA[<h2 id="transformer-详解">Transformer 详解</h2>
 <p>Transformer 是谷歌大脑在 2017 年底发表的论文 <a href="https://arxiv.org/pdf/1706.03762.pdf"target="_blank" rel="external nofollow noopener noreferrer">attention is all you need<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中所提出的 seq2seq 模型。现在已经取得了大范围的应用和扩展，而 BERT 就是从 Transformer 中衍生出来的预训练语言模型</p>
 <p>这篇文章分为以下几个部分</p>
 <ul>
@@ -3205,6 +4072,873 @@ gdb有thread相关命令，如infothread(简写infoth)显示线程消息，bxxth
 [2]. <a href="https://zhuanlan.zhihu.com/p/602866792"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/602866792<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [3]. <a href="https://zhuanlan.zhihu.com/p/675399586"target="_blank" rel="external nofollow noopener noreferrer">万字长文超全 C++面经<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <p>ref: <a href="https://blog.csdn.net/m0_46245582/category_11569287.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/m0_46245582/category_11569287.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>一文详解 ChatGPT RLHF 背后的 PPO 强化学习训练</title><link>https://jianye0428.github.io/posts/chatgpt_rlhf/</link><pubDate>Sat, 04 May 2024 17:00:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/chatgpt_rlhf/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
+<p></p>
+<p>最近火出圈的🚀 ChatGPT 中 RLHF 主要采用了就是 PPO 进行强化学习训练</p>
+<blockquote>
+<p>主要运用在微调阶段（微调整个 10B～100B+ 参数的成本其实也非常高 ）使用<strong>策略梯度</strong>强化学习 (Policy Gradient RL) 算法、近端策略优化 (PPO) 微调初始 LM 的部分或全部参数。</p>
+</blockquote>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<blockquote>
+<p>以下主要参考台大李宏毅的推导过程</p>
+</blockquote>
+<h2 id="01-vanilla-policy-gradient">01. Vanilla policy gradient</h2>
+<ul>
+<li>动作/环境/奖励之间的关系：</li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>轨迹可表示为集合</p>
+<p>$$\begin{aligned}p_{\theta}(\tau)&amp;=p(s_1)p_\theta(a_1|s_1)p(s_2|s_1,a_1)p_\theta(a_1|s_1)p(s_3|s_2,a_2)\ldots\&amp;=p(s_1)\prod_{t=1}^Tp_\theta(a_t|s_t)p(s_{t+1}|s_t,a_t)\end{aligned}$$</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>一个轨迹的奖励总和为：</p>
+<p>$$R(\tau)=\sum_{t=1}^Tr_t$$</p>
+<p>则奖励的期望为：</p>
+<p>$$\bar{R}<em>\theta=\sum</em>\tau R(\tau)p_\theta(\tau)=E_{\tau\sim p_\theta(\tau)}[R(\tau)]$$</p>
+<p>将 $R(\tau)$ 看成常量，对其求微分：</p>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>{\theta}&amp; =\sum</em>{\tau}R(\tau)\nabla p_{\theta}(\tau) \
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\frac{\nabla p_{\theta}(\tau)}{p_{\theta}(\tau)} \
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\nabla\log p_{\theta}(\tau)\quad\nabla f(x)=f(x)\nabla\log f(x) \
+&amp;=E_{\tau\sim p_{\theta}(\tau)}[R(\tau)\nabla\log p_{\theta}(\tau)]&amp; \left(2\right) \
+&amp;\approx\frac1N\sum_{n=1}^{N}R(\tau^{n})\nabla\log p_{\theta}(\tau^{n}) \
+&amp;=\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}R(\tau^n)\nabla\log p_\theta(a_t^n|s_t^n)
+\end{aligned}$$</p>
+<p>策略网络梯度更新：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>可以看成一个分类问题（游戏中通过键盘输入来互动，分类类别为所有可操作的键位）：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li>理想情况下， 并不一直为正数，增加一个 baseline:</li>
+</ul>
+<p>$$\nabla\bar{R}<em>{\theta}=\frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{{T_{n}}}(R(\tau^{n})-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n})b\approx E[R(\tau)]$$</p>
+<blockquote>
+<p>在电子游戏中，奖励值常常为正（通常为游戏分数）。这时需要增加一个偏置来保证同时有正样本和负样本</p>
+</blockquote>
+<ul>
+<li>分配合适的学分</li>
+</ul>
+<p>一个高分的游戏轨迹中也可能存在错误的动作，同样的，一个低分的游戏轨迹也可能存在正确的动作，而上文中的计算将最后的奖励值（最后的游戏分数）都一视同仁视为该游戏轨迹每个动作的学分。</p>
+<p>为了更准确地描述每个动作所得到的学分，将一个动作执行后对应的学分为后续的所有奖励值的总和</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(R(\tau^n)-b)\nabla\log p_\theta(a_t^n|s_t^n) \Downarrow\nabla\bar{R}<em>\theta \
+&amp;= \frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n-b)\nabla\log p_\theta(a_t^n|s_t^n)
+\end{aligned}$$</p>
+<p>当某个动作执行以后，其对后续的奖励分数的影响在慢慢减少，再增加一个衰减因子：</p>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n)\nabla\log p_\theta(a_t^n|s_t^n)\Downarrow\nabla\bar{R}<em>\theta \
+&amp; = \frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{T_{n}}(\sum_{t^{\prime}=t}^{T_{n}}\gamma^{t^{\prime}-t}r_{t^{\prime}}^{n}-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n}),\gamma&lt;1
+\end{aligned}$$</p>
+<h2 id="02-从on-policy到off-policy">02. 从on-policy到off-policy</h2>
+<p>两者区别:</p>
+<ul>
+<li>On-policy: 学习到的 agent 和与环境交互的 agent 是相同的，每一次梯度更新都需要重新采样</li>
+<li>Off-policy: 学习到的 agent 和与环境交互的 agent 是不同的，每次梯度更新不需要重新采样</li>
+</ul>
+<p>重新看看 的表达式：
+$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<ul>
+<li>使用策略网络 收集数据。当 更新后，则需要重新收集训练样本</li>
+<li>目标：使用相同的样本（通过 采样）训练 。其中 为固定的，因此我们可以重复使用其样本数据</li>
+</ul>
+<h3 id="21-重要性采样importance-sampling">2.1 重要性采样（Importance Sampling）</h3>
+<p>考虑一个场景，假如正在尝试计算函数 $f(x)$ 的期望值，其中 $x \sim f(x)$ 服从某种分布。则对 $E(f(x))$ 有以下估计：</p>
+<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx\approx\frac{1}{n}\sum_{i}f(x_{i})$$</p>
+<p>蒙特卡洛抽样方法是简单地从分布 $p(x)$ 中抽出 ，然后取所有样本的平均值来得到期望值的估计。那么问题来了，如果  $p(x)$  非常难取样怎么办？是否能够根据一些已知的、容易抽样的分布来估计期望值？</p>
+<p>答案是肯定的。公式的一个简单转换就可以做到</p>
+<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx=\int f(x)\frac{p(x)}{q(x)}q(x)dx=E_{x\sim q}[f(x)\frac{p(x)}{q(x)}]$$</p>
+<p>其中$x$从分布$q(x)$中采样，$q(x)$不应为 0。通过这种方式，估计期望能够从另一个分布$q(x)$中采样，$p(x)/q(x)$是称为采样率或采样权重，它作为校正权重以抵消来自不同分布的概率采样。</p>
+<ul>
+<li>重要性采样的缺陷</li>
+</ul>
+<p>虽然重要性采样保证了期望的一致，但是这里来计算一下方差是否一致</p>
+<p>方差的计算：</p>
+<p>$$Var[X]=E[X^2]-(E[X])^2$$</p>
+<p>分别计算方差：</p>
+<p>$$\begin{aligned}Var_{x\sim p}[f(x)]&amp;=E_{x\sim p}[f(x)^2]-(E_{x\sim p}[f(x)])^2\Var_{x\sim q}[f(x)\frac{p(x)}{q(x)}]&amp;=E_{x\sim q}[(f(x)\frac{p(x)}{q(x)})^2]-(E_{x\sim q}[f(x)\frac{p(x)}{q(x)}])^2\&amp;=E_{x\sim p}[f(x)^2\frac{p(x)}{q(x)}]-(E_{x\sim p}[f(x)])^2\end{aligned}$$</p>
+<p>可以发现两者虽然期望相等但方差并不一致</p>
+<h3 id="22-从-on-policy-到-off-policy">2.2 从 on-policy 到 off-policy</h3>
+<p>我们使用重要性采样将 on-policy 调整为 off-policy</p>
+<p>$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_{\theta^{\prime}}(\tau)}[\frac{p_\theta(\tau)}{p_{\theta^{\prime}}(\tau)}R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<ul>
+<li>从 $\theta&rsquo;$ 采样得到数据集</li>
+<li>使用该 数据集多次训练 $\theta$</li>
+</ul>
+<p>梯度更新过程：</p>
+<p>$$\begin{aligned}
+&amp;=E_{(s_t,a_t)\sim\pi_\theta}[A^\theta(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(s_t,a_t)}{p_{\theta^{\prime}}(s_t,a_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}\frac{p_\theta(s_t)}{p_{\theta^{\prime}}(s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]&amp; \text{(4)} \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]
+\end{aligned}$$</p>
+<ul>
+<li>其中 $A^\theta(s_t,a_t)$ 指的是 advantage 函数,其计算方式为加上衰减机制后的奖励值并减去基线。</li>
+<li>由于 $\frac{p_\theta(s_t)}{p_{\theta&rsquo;}(s_t)}$ 的值难以计算，将其设置为 1，简化计算</li>
+</ul>
+<p>目标函数可以表示为：</p>
+<p>由于 $\nabla f(x)=f(x)\nabla\log f(x)$ 再结合不定积分，目标函数可以表示为:</p>
+<p>$$J^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]$$</p>
+<h2 id="03-ppotrpo">03. PPO/TRPO</h2>
+<p>为了消除重要性采样的缺陷的影响，以下为两种方式</p>
+<ul>
+<li>PPO（Proximal Policy Optimization）
+<ul>
+<li>初始化策 略网络参数</li>
+<li>在每次迭代过程中:</li>
+<li>目标函数:</li>
+<li>使用 与环境互动以收集 ，并计算出 advantage 值</li>
+<li>更新 优化</li>
+<li>算法:</li>
+</ul>
+</li>
+</ul>
+<p>$$\begin{aligned}
+PPO algorithm: \
+J_{PPO}^{\theta^k}(\theta) &amp; = J^{\theta^k}(\theta)-\beta KL(\theta,\theta^k)J^{\theta^k}(\theta) \
+&amp; = E_{(s_{t},a_{t})\sim\pi_{\theta^{k}}}[\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})] \
+&amp; \approx \sum_{(s_{t},a_{t})}\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})
+\end{aligned}$$</p>
+<p>自适应 KL 惩罚：如果 $KL(\theta,\theta^k)&gt;KL_{\max}$ ,增大 $\beta$; 如果 $KL(\theta,\theta^k) &lt;KL_{\min}$,减小 $\beta$。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li>TRPO（Trust Region Policy Optimizatio）</li>
+</ul>
+<p>$$J_{TRPO}^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]KL(\theta,\theta&rsquo;)&lt;\delta $$</p>
+<p>TRPO 和 PPO 在各个测试上性能差不多。但相比 PPO ，TRPO 计算要更复杂</p>
+<p><strong>参考文献</strong>:</p>
+<p>[1] <a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html"target="_blank" rel="external nofollow noopener noreferrer">https://spinningup.openai.com/en/latest/algorithms/ppo.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[2] <a href="https://openai.com/research/openai-baselines-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://openai.com/research/openai-baselines-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[3] <a href="https://huggingface.co/blog/deep-rl-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/deep-rl-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[4] <a href="https://huggingface.co/blog/rlhf"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/rlhf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[5] <a href="https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>LLM预训练之RLHF（一）：RLHF及其变种</title><link>https://jianye0428.github.io/posts/pretrain_rlhf_one/</link><pubDate>Sat, 04 May 2024 14:23:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/pretrain_rlhf_one/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
+<p>在ChatGPT引领的大型语言模型时代，国内外的大模型呈现爆发式发展，尤其是以年初的LLaMA模型为首的开源大模型和最近百川智能的baichuan模型，但无一例外，都使用了「基于人类反馈的强化学习」（RLHF）来提升语言模型的性能，并在模型重注入了人类的偏好，以提高模型的有用性和安全性。不过RLHF也早已更新换代，我们以如下目录进行详细讲述RLHF及其变种：</p>
+<ul>
+<li>LLM的经典预训练Pipeline</li>
+<li>Llama 2中的RLHF</li>
+<li>RLHF替代方案</li>
+</ul>
+<h2 id="一llm的经典预训练pipeline">一、LLM的经典预训练Pipeline</h2>
+<p>​  目前基于Transformer decoder的LLM，比如ChatGPT、LLaMA、baichuan等，通常都会有基于预训练的base模型和在base模型至少使用RLHF微调的Chat模型，Chat模型的训练一般都包括如下三个步骤：预训练，有监督微调和对齐。</p>
+<p>​  在<strong>预训练</strong>阶段，模型会从大量无标注文本数据集中学习通用知识，然后使用「<strong>有监督微调」（SFT）<strong>优化模型以更好地遵守特定指令，最后使用</strong>对齐</strong>技术使LLM可以更有用且更安全地响应用户提示。</p>
+<h3 id="11-预训练pre-training">1.1 预训练（Pre-training）</h3>
+<p>预训练阶段通常需要包含数十亿到数万亿个token的庞大文本语料库，但训练目标是<strong>模型需要根据提供的文本来预测「下一个单词」</strong>。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>1.2 有监督微调（Supervised Finetuning）</strong></p>
+<p>​SFT的训练过程类似Pre-training阶段，也是预测「下一个单词」，但是<strong>需要人工标注的指令数据集</strong>，其中模型的输入是一个指令（根据任务的不同，也可能包含一段输入文本），输出为模型的预期回复内容。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>数据形式类似于：</p>
+<blockquote>
+<p>Instruction: &ldquo;Write a limerick about a pelican.&rdquo;</p>
+<p>指令：“写一首关于鹈鹕的打油诗。“</p>
+<p>Output: &ldquo;There once was a pelican so fine&hellip;&rdquo;</p>
+<p>输出：“从前有一只鹈鹕很好&hellip;“</p>
+</blockquote>
+<p>模型会把“Write a limerick about a pelican”作为输入，逐个token进行预测，输出“There once was a pelican so fine&hellip;”</p>
+<p>虽然两个阶段都采用类似的训练目标，但有监督微调数据集通常比预训练数据小得多，指令数据集需要人类（或其他高质量的LLM）提供标注结果，所以无法大规模应用。</p>
+<p><strong>1.3 对齐（Alignment）</strong></p>
+<p>第三阶段依然是微调，不过其主要目标在于将语言模型与人类的偏好、价值观进行对齐，这也是RLHF机制发挥的地方。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h2 id="二reinforcement-learning-with-human-feedback-rlhf">二、Reinforcement Learning with Human Feedback (RLHF)</h2>
+<p>上节，我们讨论了现代LLM的三个训练过程；本小节，我们重点讨论「上述两个微调阶段」（Supervised Tinetuning和Alignment）中使用的RLHF技术。</p>
+<p>RLHF主要包括三步：</p>
+<ol>
+<li>在预训练好的模型上进行「有监督微调」（SFT）；</li>
+<li>在有监督微调模型基础上创建一个reward model（RM）模型；</li>
+<li>基于RM模型使用PPO算法微调SFT模型；</li>
+</ol>
+<h3 id="21-在预训练好的模型上进行有监督微调">2.1 在预训练好的模型上进行有监督微调**</h3>
+<p>先收集一个Prompts集合，并要求标注人员写出高质量的回复，然后使用该数据集以监督的方式微调预训练的基础模型。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>​该步骤与上小节的Supervised Finetuning类似，但这是RLHF不可或缺的一个步骤。</p>
+<h3 id="22-在有监督微调模型基础上创建一个rm模型">2.2 在有监督微调模型基础上创建一个RM模型</h3>
+<p>对于每个Prompt，要求有监督微调后的LLM生成四到九个回复，再由标注人员根据个人偏好对所有回复进行排序。虽然排序过程很耗时，但工作量还是比第一步的有监督数据集构建要少一些。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在处理排序数据时，使用了一个奖励模型RM，RM来自RLHF第一步的「有监督微调语言模型」（SFT），SFT的输出通过一个回归层（单个输出节点）转换为奖励分数，即可称为<strong>RM模型</strong>。</p>
+<h3 id="23-基于rm模型使用ppo算法微调sft模型">2.3 基于RM模型使用PPO算法微调SFT模型</h3>
+<p>基于RM模型使用proximal policy optimization (PPO)算法微调SFT模型</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>PPO的具体技术细节可以参考InstructGPT或下面的论文列表。</p>
+<ol>
+<li>Asynchronous Methods for Deep Reinforcement Learning (2016) ，https://arxiv.org/abs/1602.01783</li>
+<li>Proximal Policy Optimization Algorithms (2017)，https://arxiv.org/abs/1707.06347</li>
+<li>Fine-Tuning Language Models from Human Preferences (2020)，https://arxiv.org/abs/1909.08593</li>
+<li>Learning to Summarize from Human Feedback (2022) ，https://arxiv.org/abs/2009.01325</li>
+</ol>
+<h2 id="三llama-2的rlhf">三、LLaMA 2的RLHF**</h2>
+<p>Meta AI在创建Llama-2-chat模型时也使用了RLHF技术，不过与ChatGPT相比还是有些细微区别。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>简单来说，Llama-2-chat在第一步RLHF微调上使用相同的指令数据，但在第二步使用了两个奖励模型；通过多个阶段的不断进化，奖励模型也会根据Llama-2-chat模型出现的错误进行更新；并且增加了拒绝采样（rejection sampling）步骤。</p>
+<h3 id="31-margin-loss">3.1 Margin Loss</h3>
+<p>​在标准InstructGPT中使用的RLHF PPO方法，研究人员需要收集同一个提示下的4-9个模型输出并进行排序，比如四个回复的排序结果为A&lt;C&lt; D&lt;B，那么就可以得到六个对比结果：A &lt; C，A &lt; D ，A &lt; B，C &lt; D，C &lt; B，D &lt; B。</p>
+<p>​Llama 2的数据集也采用类似的方式，不过标注人员每次只能看到两个（而非4-9个）回复并进行对比，但新增了一个边际（margin）标签，对比结果可以为「显著更好」（significantly better）和「好的不明显」（negligibly better）。</p>
+<p>在排序训练时中，Llama 2相比InstructGPT增加了边际损失：</p>
+<p>$$\mathcal{L}<em>{\mathrm{ranking}}=-\log\left(\sigma\left(r</em>\theta\left(x,y_c\right)-r_\theta\left(x,y_r\right)-m(r)\right)\right)$$</p>
+<p>其中，$r_θ(x，y)$是提示x和生成的回复y的标量分数输出; θ为模型权重; σ是将层输出转换为范围从0到1的分数的逻辑S形函数; $y_c$是由标注人员选择的更优回复; $y_r$是较差的回复。$m(r)$可以调节两个回复之间的差值，如果对比结果为「显著更好」，则会增加梯度值，加快更新速度。</p>
+<h3 id="32-两个rm模型">3.2 两个RM模型</h3>
+<p>​Llama 2中的两个奖励模型分别侧重「有用性」（helpfulness）和「安全性」（safety），用于模型优化的最终奖励函数会将两个分数进行线性组合。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="33-拒绝采样">3.3 拒绝采样</h3>
+<p>​Llama 2的作者使用了一个训练流水线，<strong>同时使用PPO和拒绝采样算法</strong>，迭代地产生多个RLHF模型（从RLHF-V1到RLHF-V5），模型在拒绝采样时会得到K个输出，并使用最高奖励的输出更新梯度，而PPO每次只基于单样本进行更新。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在监督微调的初始阶段之后，模型只使用拒绝采样进行训练，然后再结合拒绝采样和PPO。</p>
+<p>从实验结果来看，RLHF微调模型在无害性和有用性上都得到了改善，并且在最后阶段RLHF-v5使用PPO算法的性能最好。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h2 id="四rlhf的替代方案">四、RLHF的替代方案</h2>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>RLHF在InstructGPT和Llama 2论文中被证明是有效的，但是RLHF的过程是比较复杂的，下面将介绍一下最近RLHF的替代方案：</p>
+<h3 id="41-constitutional-ai-harmlessness-from-ai-feedback-dec-2022-httpsarxivorgabs221208073">4.1 Constitutional AI: Harmlessness from AI Feedback (Dec 2022, <a href="https://arxiv.org/abs/2212.08073"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2212.08073<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>研究人员提出了一种 <strong><font color=red>基于人类提供的规则列表的自我训练机制</font></strong>。与前面提到的InstructGPT论文类似，也使用了强化学习方法。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>上图中的「红队」（Red Team）指的是测试目标系统的防御能力，即外部或内部专家模拟潜在对手的过程，通过模仿现实世界攻击者的战术、技术和程序来挑战、测试并最终改进系统。</p>
+<h3 id="42-the-wisdom-of-hindsight-makes-language-models-better-instruction-followers-feb-2023-httpsarxivorgabs230205206">4.2 The Wisdom of Hindsight Makes Language Models Better Instruction Followers (Feb 2023, <a href="https://arxiv.org/abs/2302.05206"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2302.05206<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>研究人员提出了一种**<font color=red>基于重新标记的监督微调方法HIR</font>**，该方法在12个BigBench任务上优于RLHF。</p>
+<p>​HIR是如何工作的？简而言之，HIR方法包括两个步骤，即<strong>采样</strong>和<strong>训练</strong>。在采样步骤中，Prompt和指令输入给LLM来获取答案，根据对齐得分，在训练阶段适当的地方重新标注指令；然后，重新标记的指令和原始的Prompt用于微调LLM。使用这种重新标记的方法，研究人员有效地将失败案例（LLM创建的输出与原始指令不匹配的案例）转化为有用的训练数据，用于监督学习。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="43-direct-preference-optimization-your-language-model-is-secretly-a-reward-model-httpsarxivorgabs230518290-may-2023">4.3 Direct Preference Optimization: Your Language Model is Secretly a Reward Model (<a href="https://arxiv.org/abs/2305.18290"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2305.18290<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>, May 2023)</h3>
+<p><strong><font color=red>直接偏好优化（DPO）是具有PPO的RLHF的替代方案</font></strong>，其中研究人员表明，在RLHF中拟合奖励模型的交叉熵损失可以直接用于微调LLM。根据他们的基准，使用DPO更有效，而且在响应质量方面通常也优于RLHF/PPO。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="44-reinforced-self-training-rest-for-language-modeling-aug-2023-httpsarxivorgabs230808998">4.4 Reinforced Self-Training (ReST) for Language Modeling (Aug 2023, <a href="https://arxiv.org/abs/2308.08998"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2308.08998<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>ReST是人类反馈强化学习（RLHF）的一种替代方案，它<strong>使LLM与人类偏好保持一致</strong>。 <strong><font color=red>ReST使用采样方法创建改进的数据集</font></strong>，在质量越来越高的子集上迭代训练，以完善其奖励函数。根据作者的说法，与标准的在线RLHF方法（如具有近端策略优化的RLHF，PPO）相比，ReST通过离线生成训练数据集实现了更高的效率，但缺少与InstructGPT或Llama 2中使用的标准RLHF PPO方法的全面比较。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="45-rlaif-scaling-reinforcement-learning-from-human-feedback-with-ai-feedback-sep-2023-httpsarxivorgabs230900267">4.5 RLAIF: Scaling Reinforcement Learning from Human Feedback with AI Feedback (Sep 2023, <a href="https://arxiv.org/abs/2309.00267"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2309.00267<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>最近的人工智能反馈强化学习（RLAIF）研究表明，RLHF中奖励模型训练的评级不一定必须由人类提供，而是可以由LLM生成（此处：PaLM 2）。标注人员在一半的案例中更喜欢RLAIF模型，也就意味着两个模型的差距并不大，RLHF和RLAIF都大大优于纯通过监督指令微调训练的模型。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>这项研究的结果非常有用和有趣，因为它基本上意味着我们可能能够使基于RLHF的训练更加高效和容易。然而，这些RLAIF模型在专注于信息内容的安全性和真实性的定性研究中的表现还有待观察，而人类偏好研究仅部分捕捉到了这一点。</p>
+<p><strong>参考文献：</strong></p>
+<p>[1] <a href="https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives"target="_blank" rel="external nofollow noopener noreferrer">https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a><br>
+[2] <a href="https://mp.weixin.qq.com/s/3Ff6C5zT7fXggQ1FwxvWAQ"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/3Ff6C5zT7fXggQ1FwxvWAQ<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>大模型学习笔记 | GPT 系列</title><link>https://jianye0428.github.io/posts/survey/</link><pubDate>Fri, 03 May 2024 16:33:37 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/survey/</guid><description><![CDATA[<h1 id="万字长文cver-转-llm-学习笔记之大模型gpt-系列">万字长文，CVer 转 LLM 学习笔记之大模型GPT 系列</h1>
+<h2 id="导读">导读</h2>
+<p>本文是作者对 GPT 系列文章的学习笔记，从个人角度梳理了 GPT 系列的迭代逻辑，从技术的逻辑连续性和关联性都有很好的讲解，篇幅较长，建议大家点赞收藏。</p>
+<p>这个系列的笔记主要面向像我一样已经具备一定的深度学习基础，但是新接触 NLP 和大模型领域的读者，目的是能提纲挈领地快速把握这个领域的一系列关键工作节点。</p>
+<p>这篇笔记涵盖的内容有：</p>
+<ul>
+<li>GPT-1 论文</li>
+<li>GPT-2 论文</li>
+<li>GPT-3 论文</li>
+<li>InstructGPT 论文（GPT-3.5 背后的技术）</li>
+<li>GPT-4 技术报告</li>
+<li>GPT-4 微软评测报告</li>
+<li>GPT-4V 微软评测报告</li>
+</ul>
+<p>作为一个从 CV 转到 LLM 的新人，难免犯一些常见或低级的错误，欢迎任何读者及时指出和斧正，也欢迎任何留言讨论。</p>
+<h2 id="要点-tldl">要点 (TL;DL)</h2>
+<ul>
+<li><strong>注重能力，而非过程</strong>：预训练任务其实形式不重要，可以是 classification，可以是预测 next token，真正重要的是 model 和 data 的 scaling up，以此快速高效地得到一个有优异泛化能力的特征提取器:
+<ul>
+<li>data: 找到/设计一个能把海量的数据用起来的任务，能用的数据越多越好，训练越快越好</li>
+<li>model: <strong>模型性能</strong>可以随着参数量巨量地提升而不会快速饱和，一个优秀的模型架构是 scaling up 的基础保障</li>
+</ul>
+</li>
+<li><strong>三种范式</strong>：
+<ul>
+<li>我们可以将专属任务上微调得到的模型，看成一种用户输入 0 个特殊 token，解决 1 种任务的范式，所以<strong>第一范式</strong>下的每个模型只能用于解决一个专属任务。</li>
+<li><strong>第二范式</strong>的模型是为每一种任务准备 1 个特殊 token，因此通过改变输入 token，就能用一个模型解决不同的任务。</li>
+<li><strong>第三范式</strong>的模型把特殊 token 替换成了特殊 token 序列，而自然语言正好就是一种最符合人类习惯和直觉的特殊 token 序列。</li>
+</ul>
+</li>
+<li><strong>RLHF</strong>：
+<ul>
+<li>SFT 模型(16 epoch)</li>
+<li>RM</li>
+<li>PPO 继续训练出来的最终模型</li>
+<li>SFT 数据(13k 条): 人工设计的问题，人工标注答案</li>
+<li>Feedback 数据(33k 条): 针对上面人工设计的问题，模型输出的几份答案的排序（打分）</li>
+<li>PPO 使用的数据(31k 条): 人工设计的问题(上面的模型没见过的新问题)，用 RM 的评分来继续训练，这份数据不需要人工标注答案</li>
+</ul>
+</li>
+<li><strong>对 GPT-4 的全面探索</strong>：
+<ul>
+<li><strong>心理学角度</strong>：人类思维是快思考与慢思考两个系统的混合体，而 GPT-4 目前更类似于单纯的快思考</li>
+<li>GPT-4 还有哪些<strong>局限性</strong>，以及哪些可以<strong>改进的地方</strong>（见 GPT-4 微软报告）</li>
+</ul>
+</li>
+<li><strong>GPT-4V 的全面探索</strong>：
+<ul>
+<li>支持哪些输入和工作模式</li>
+<li>在不同领域和任务上的能力质量和通用性如何</li>
+<li>有效使用和提示方法</li>
+<li>未来方向</li>
+</ul>
+</li>
+</ul>
+<h2 id="1-improving-language-understanding-by-generative-pre-training-201806">1. Improving Language Understanding by Generative Pre-Training (2018.06)</h2>
+<p>GPT 系列的第一篇论文，定下了纯 <strong><font color=red>Transformer-Decoder</font></strong> 路线。</p>
+<p>深度学习的早期突破很多来自于 CV 领域，其中很重要的一个原因是 CV 有 ImageNet 这个百万量级的有标注数据集，在 ImageNet 上训练分类任务得到的模型 Backbone 天然就是一个优秀的图片特征提取器，基于这个特征提取器在任意的子任务上做 fine-tuning 效果都不会太差（至少能展现出一定的泛化能力）。而 NLP 领域缺少这样大的数据集，因此，一直以来 NLP 模型发力卡在了特征提取器的构筑上，<font color=red>GPT 提出用训练语言模型的方式来得到这个特征提取器，然后用它来做子任务上的微调。</font></p>
+<p>语言模型由于做的是“预测下一个词”这样的一个任务，因此不依赖于人工标注，可以实现海量数据的预训练和泛化。</p>
+<p>GPT 工作是在 BERT 之前的，很多的 setting 都被 BERT 直接沿用了，比如 12 层 Transformer，768 的维度，800M 的 BookCorpus 数据集 等。</p>
+<p>文章剩余部分介绍了如何在 NLP 四大主流任务类型上运用 GPT，即如何把不同形式的任务都表示成一个序列+对应的标签的形式。</p>
+<p>对笔者的启示:</p>
+<ul>
+<li><strong>注重能力，而非过程</strong>：预训练任务其实形式不重要，可以是 classification，可以是预测 next token，真正重要的是 model 和 data 的 scaling up，以此快速高效地得到一个有优异泛化能力的特征提取器:
+<ul>
+<li>data: 找到/设计一个能把海量的数据用起来的任务，能用的数据越多越好，训练越快越好</li>
+<li>model: 模型性能可以随着参数量巨量地提升而不会快速饱和，一个优秀的模型架构是 scaling up 的基础保障</li>
+</ul>
+</li>
+</ul>
+<h2 id="2-language-models-are-unsupervised-multitask-learners-201902">2. Language Models are Unsupervised Multitask Learners (2019.02)</h2>
+<p>GPT 系列的第二篇工作。</p>
+<p>参数量提升到了 1.5B，也用了更大量的数据。GPT-2 最大的贡献是把研究的重点从单个任务上的针对性调参刷榜，转向了 <strong>zero-shot</strong>，即， <font color=red>训练好的模型不再需要微调就能去做不同任务了，尽管性能上距离每个任务的 SOTA 都还有距离，但方案的可行性已经验证了</font>。要实现这一点，原来为特殊任务准备特殊 token 的做法就不合适了，因为预训练阶段模型是没见过这些 token 的，毕竟语言模型预训练阶段只见过自然语言，所以非常自然地就引出了 prompt 的概念，用自然语言来替代原本的任务 token，实现不同任务的 zero-shot。</p>
+<p>可以看到，在这个时候 GPT-2 就已经初具 ChatGPT 的雏形了，只不过用户的输入还不完全是任意自然语言，而是类似于这样的模板输入。：</p>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">翻译任务：
+</span></span><span class="line"><span class="cl">(translate to
+</span></span><span class="line"><span class="cl">french, english text, french text)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">QA 任务：
+</span></span><span class="line"><span class="cl">(answer the question, document,
+</span></span><span class="line"><span class="cl">question, answer)</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="3-language-models-are-few-shot-learners-200514165">3. Language Models are Few-Shot Learners (2005.14165)</h2>
+<p>GPT 系列的第三篇工作。</p>
+<p>GPT-3 的参数量来到了 175B，训练数据从一开始 GPT-1 的几千本书的数据集，开始进入到了网站爬虫数据和清洗的模式。</p>
+<p>其实在 GPT-2 中就已经提到了一个叫 Common Crawl 的公开网络数据，但是因为他们觉得这份数据实在太脏了所以放弃了，而现在为了训练更大的模型也不得不用起来，因此清洗数据是免不了的。</p>
+<p>数据清洗经历了两个过程：</p>
+<ol>
+<li><strong>过滤</strong>：他们将原来 GPT-2 训练用的数据作为正样本，Common Crawl 作为负样本训练了一个二分类器，然后用这个分类器来做数据筛选，过滤掉一些特别显著的脏数据。</li>
+<li><strong>去重</strong>：用经典的 LSH 算法进行去重</li>
+</ol>
+<p>另一方面，GPT-3 也正式提出了“in-context learning”的概念，在模型参数不进行更新的情况下，通过输入的上下文来帮助模型提升表现。</p>
+<p>对于笔者而言，这张图相当形象:</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>这揭示了模型学习的另一个维度，提升模型表现并不只有 SGD 梯度更新这一个优化方向。结合 GPT-2 中 prompt 的由来，prompt 的前身是语言模型做多任务 zero-shot 时，针对不同任务给的特殊 token，因此一个更加富有信息量的“特殊 token 序列”能提升模型表现似乎是一件非常符合直觉的事情。</p>
+<p>相比于过去使用一个特殊 token 来代表某一种特定的任务，GPT-3 的 few-shot prompt，或者说 in-context learning 形式，在笔者看来是一种推广，用户输入的自然语言和 few-shot 样例可以看成是一组特殊 token 的序列，因为自然语言的 token 具有语义和逻辑关联性，一个强大的预训练模型做到了“特殊 token”之间的泛化。</p>
+<p>通过实验我们也可以观察到，随着给出的示例样本数变多，模型的表现也在提升：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>从笔者个人的角度来总结：</p>
+<ul>
+<li>我们可以将专属任务上微调得到的模型，看成一种用户输入 0 个特殊 token，解决 1 种任务的范式，所以<strong>第一范式</strong>下的每个模型只能用于解决一个专属任务。</li>
+<li><strong>第二范式</strong>的模型是为每一种任务准备 1 个特殊 token，因此通过改变输入 token，就能用一个模型解决不同的任务。</li>
+<li><strong>第三范式</strong>的模型把特殊 token 替换成了特殊 token 序列，而自然语言正好就是一种最符合人类习惯和直觉的特殊 token 序列。</li>
+</ul>
+<h2 id="4-training-language-models-to-follow-instructions-with-human-feedback-220302155">4. Training language models to follow instructions with human feedback (2203.02155)</h2>
+<p>InstructGPT 被认为是 ChatGPT（GPT3.5） 背后的技术，核心点是把 RLHF，即<strong>基于人类反馈的强化学习</strong>，用到了语言模型上来<strong>进行人类喜好对齐</strong>。经过 RLHF 的 1.3B GPT 模型能在人类主观评分上超过 175B 的 GPT-3.</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>这篇工作里将模型输出与人类意愿不一致的这个现象称为“misaligned”，并分析原因在于语言模型的训练目标只是预测下一个 token，这跟我们希望模型“follow the user&rsquo;s instructions helpfully and safely”的目标之间显然是存在差距的。</p>
+<p>用 Anthropic 的工作里的话来说，大模型应该遵循 3H 原则，即：</p>
+<ul>
+<li>helpful：帮助用户解决问题</li>
+<li>honest：不能伪造信息或误导用户</li>
+<li>harmless：不能对人或环境造成身体、心理或社会伤害</li>
+</ul>
+<p>语言模型之所以存在这个问题，原因也很简单，因为使用的是无监督学习，本身的学习目标里就没有人为控制，所以很直观地可以想到用**监督微调（SFT）**的方式来把缺失的人类监督信号加进来。</p>
+<p>但是前面 GPT 三篇工作好不容易才把模型做到 175B 这么大，现在又重新开始标数据做监督学习显然是有点不聪明的，而且模型大了以后也更容易过拟合，对于人类偏好这一类的问题标注起来难度又很大，简单地全靠 SFT 肯定是行不通的。所以很自然地，OpenAI 想到了用他们家的拿手好戏强化学习，要知道 OpenAI 本身就是做强化学习起家的，本文使用的强化学习方法 PPO 也全是之前他们已经提出的算法，没有任何新的算法被提出，甚至论文里都没有对已有的算法进行太多的解释和铺垫，需要你感兴趣自己去翻他们的论文。</p>
+<br>
+<center>
+  
+  <br>
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>他们的方法整体可以概括如下：</p>
+<ol>
+<li>人工标一批 SFT 数据（包含问题和回答），对 GPT-3 模型（在强化学习里对应 Policy）进行微调</li>
+<li>用 SFT 得到的模型，针对每个问题生成几份回答，然后人工给这些回答质量打分（排序）</li>
+<li>用这份打分数据训练一个奖励模型（Reward Model, RM），让奖励模型代替人工打分</li>
+<li>采用 PPO 算法，基于奖励模型的评分来继续训练 GPT-3 模型</li>
+</ol>
+<p>换言之，他们一共<strong>造了三份数据</strong>：</p>
+<ul>
+<li>SFT 数据（13k 条）：人工设计的问题，人工标注答案</li>
+<li>Feedback 数据（33k 条）：针对上面人工设计的问题，模型输出的几份答案的排序（打分）</li>
+<li>PPO 使用的数据（31k 条）：人工设计的问题（上面的模型没见过的新问题），用 RM 的评分来继续训练，这份数据不需要人工标注答案</li>
+</ul>
+<p><strong>训练三个模型</strong>：</p>
+<ul>
+<li>SFT 模型（16 epoch）</li>
+<li>RM (Reward Model 奖励模型)</li>
+<li>PPO 继续训练出来的最终模型</li>
+</ul>
+<p>他们甚至对问题类型进行了一些分类：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>模型训练部分，个人觉得值得注意的点有：</p>
+<ol>
+<li>SFT 阶段，在训了 1 epoch 后模型就已经过拟合了，但他们发现继续训练过拟合的模型依然可以提升 RM 性能，所以他们训练了 16 epoch</li>
+<li>RM 的权重是直接用 SFT 模型初始化的，因为评分模型也需要语言能力，直接拷贝一份权重是比较省事的。RM 的输入是问题+几份答案，输出是排序。</li>
+<li>RM 模型只有 6B，因为 175B 的 RM 很难训</li>
+<li>强化学习阶段加了一个逐 token 的 KL 散度，用来让最终模型跟第一版 SFT 模型的要输出分布尽量保持一致，因为 RM 是在训练 SFT 模型的数据上训的，如果分布差异太大，RM 的评分就不准了</li>
+</ol>
+<p>强化学习的目标函数如下：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>简单翻译一下：</p>
+<p>$$损失 = RM 评分 + 新旧模型输出token分布的KL散度 + 旧问题上SFT的损失$$</p>
+<p>其中：</p>
+<ul>
+<li>RM 评分是 RM 对当前正在训练的模型在新问题（第三份数据）上的输出的评分</li>
+<li>KL 散度是当前模型跟旧的 SFT 模型输出之间计算的</li>
+<li>旧问题 SFT 损失是用第一份数据集继续按 SFT 方法训当前模型得到的</li>
+</ul>
+<p>另外，关于训练数据和评测方面的取舍也有所不同，训练中他们更看重 helpful，而评测阶段则更看重 honest 和 harmless。</p>
+<h2 id="5-gpt-4-technical-report-230308774">5. GPT-4 Technical Report (2303.08774)</h2>
+<p><strong>多模</strong></p>
+<p>基于上面笔者三种模型范式的思路，多模态的模型可以看成是让特殊 token 的类型从文本 token 拓宽到了视觉 token，将模型解决的任务从 NLP 任务拓宽到了 CV 任务，而两种模态 token 对齐的技术也早被 OpenAI 研究过了，也就是大名鼎鼎的 CLIP。因此，GPT-4 具备多模能力本身并不是一件意外的事情。</p>
+<p><strong>RLHF</strong></p>
+<p>在笔者看来，RLHF 等技术更多地是在不限制输入 token 序列的情况下，去约束模型输出的技术，当然从某种意义上，也可以看成是在监督 prompts -&gt; task 的映射关系的技术（其实发展到现在，task 这个词已经不太准确了，可以意会一下）。</p>
+<p>GPT-4 的报告中明确指出，RLHF 并不能提升模型解决任务的质量（不会增加知识），甚至很多时候调的不好还会损害各个任务上的指标。RLHF 更多地是在构建一些明确的 prompts -&gt; task 映射关系，因为自然语言是具有歧义性的，尤其是在输入信息较少的情况下，模型根据 prompts “理解”到的那个 task，并不一定是人类真正心里的那个意图，RLHF 实现了一种定制化的映射搭建，或者说，人类喜好对齐。</p>
+<p><strong>Predictable scaling</strong></p>
+<p>由于大模型实验的成本日渐高昂，我们不再能像小模型那样随便起实验调参了。因此 OpenAI 的大部分实验应该是在一个比 GPT-4 小很多倍的模型上进行的，然后通过这个小模型的训练 loss，来预测大模型最终训练出来的 loss</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>同样的， predictable scaling laws 也在很多 HumanEval 集上得到了观察。当然，在一部分的任务上也还无法被拟合的性能曲线，因此 OpenAI 说后续还会进一步优化他们模型性能预测的方法。</p>
+<h2 id="6-sparks-of-artifificial-general-intelligence-early-experiments-with-gpt-4-230312712">6. Sparks of Artifificial General Intelligence: Early experiments with GPT-4 (2303.12712)</h2>
+<p>智能（Intelligence）是一个多方面且难以捉摸的概念，长期以来缺乏一个共识性的定义。1994 年 52 名 心理学家组成的公式小组出版的关于智力科学的社论中，将只能定义为一种非常普遍的心理能力，包括<strong>推理、计划、解决问题、抽象思考、理解复杂想法、快速学习和从经验中学习的能力</strong>。</p>
+<p>这篇是微软关于 GPT-4 的研究报告，长达 55 页，文中的实验都是在 <strong>早期的文本单一模态版的 GPT-4</strong> 上进行的（而不是后面更新的多模态版本）, 其目标是生成一些新颖而困难的任务和问题，来证明 GPT-4 的能力并不是单纯的记忆，并且它对<strong>概念、技能和领域有深刻而灵活的理解</strong>。另外还旨在探索 GPT-4 的响应和行为，以验证其<strong>一致性、连贯性和正确性</strong>，揭示其<strong>局限性和偏差</strong>。</p>
+<p><strong>如何衡量 GPT-4 的智能</strong></p>
+<p>传统机器学习的标准做法是准备一组标准评测数据集，确保它们独立于训练数据之外，覆盖一系列的任务和领域。</p>
+<p>但这种方法并不太适用于 GPT-4，因为 GPT-4 是闭源模型，相关的训练数据集信息不公开，并且可以预见地非常庞大，因此我们不能保证目前公开的基准测试集不在它的训练数据里。也正因为此，本文采用的研究方法更接近于传统心理学，而不是机器学习方法。</p>
+<p><strong>多模态与跨学科整合</strong></p>
+<p>智能的一个重要衡量指标是综合不同领域信息的能力，以及跨学科地应用知识和技能的能力。这一节中作者举了四个例子来说明 GPT-4 具有很强的多模态与跨学科整合能力：</p>
+<ol>
+<li>写 JavaScript 代码来生成画家 Wassily Kandinsky 风格的作品。图一是该画家的原作，后面分别是 GPT-4 和 ChatGPT 写的代码画出的。</li>
+</ol>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ol start="2">
+<li>用莎士比亚的文风来证明素数无穷定理</li>
+</ol>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ol start="3">
+<li>以圣雄甘地的口吻写一封信给他的妻子，内容是支持“电子”成为美国总统候选人</li>
+</ol>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ol start="4">
+<li>写 Python 代码，以年龄、性别、体重、身高和血液测试结果向量作为输入，来预测用户是否有患糖尿病的风险</li>
+</ol>
+<p>这些对比可以体现 GPT-4 能创新性地整合不同领域的概念，并且显著强于 ChatGPT。除此之外作者也测试了 GPT-4 在音乐、绘图、空间理解方面的能力。</p>
+<p><strong>代码</strong></p>
+<p>除了常见的 leetcode 刷题，作者测试了 GPT-4 生成逆向工程代码、解释已有代码、用自然语言模拟代码执行过程、运行伪代码等能力。</p>
+<p><strong>数学</strong></p>
+<p>在一系列的分析实验后，作者从以下三方面总结了GPT-4的数学能力：</p>
+<ol>
+<li><strong>创造性推理</strong>：识别每个阶段可能相关的参数、中间步骤、计算或代数操作的能力。该组件通常基于启发式猜测或直觉，通常被认为是数学解决问题的最实质性和最深刻的方面</li>
+<li><strong>技术熟练程度</strong>：执行遵循指定步骤集的常规计算或操作的能力</li>
+<li><strong>批判性推理</strong>：批判性地检查论点的每个步骤的能力，将其分解为其子组件，解释它需要的内容，它与其余论点相关以及为什么是正确的</li>
+</ol>
+<p>这一节作者发现 GPT-4 的很多缺陷，如：</p>
+<ul>
+<li>在执行一些很常规且机械的计算时经常算错和混淆</li>
+<li>GPT-4 由于是自回归模型，因此是实时线性输出的，而没有办法“打腹稿”</li>
+</ul>
+<p><strong>与世界的交互</strong></p>
+<p>智能的另一重要方面是交互能力，即跟外界环境和智能体进行交互的能力，作者主要通过<strong>工具调用</strong>和<strong>具身交互</strong>两个维度来评估。</p>
+<p>工具调用这里不多赘述了，具身交互方面测试了文字跑团游戏，以及交互式地指导人员找到天花板漏水的地方并进行修补，逐步根据人类的每一步反馈，给出行动建议和指示。</p>
+<p><strong>与人类的交互</strong></p>
+<p>GPT-4 在推理他人心理状态方面表现非常突出，特别是在模拟现实场景中，它的解释能力也很强，能对自己的判断和言论进行自我解释。</p>
+<p><strong>判别能力</strong></p>
+<p>判别能力主要指模型区别不同事物、概念和情景的能力。比如，区分两个食物哪个是可以安全食用，哪个是有毒的。</p>
+<p>这一节的测试里，揭示出当前的评测指标存在的缺陷：对于语句相似度捕捉不够，依然严重依赖单词和短句的相似度，因此在很多时候参考答案很短，而 GPT-4 生成的答案很长，会被 ROUGE 这样的指标判定为答案不匹配，而人工检查后发现 GPT-4 的答案更加高质量和具有说服力。</p>
+<p>另一方面作者也测试了用 GPT-4 作为评分员，对回答进行打分，实验现实尽管距离人类打分还存在一些差距，但在一些强约束的场景下已经很具有竞争力了。</p>
+<p><strong>自回归结构的局限性</strong></p>
+<p>自回归结构的输出是实时进行的，因此不存在“打草稿”的机会，因此无法“step-by-step”地处理问题，而引入思维链则可以显著地提升模型准确度。</p>
+<p>对于一些依赖递归回溯的问题，比如一步一步输出汉诺塔问题的解法，GPT-4 表现非常差，在解决不能以连续方式处理的复杂或创造性问题时，都暴露出了严重的局限性。</p>
+<p>比如要求 GPT-4 修改“9 * 4 + 6 * 6 = 72”这个等式左边的一个数字，来让等式计算结果变成 99，这就是一个无法简单“step-by-step”推理得到答案的问题，GPT-4 最后的准确率也非常低。</p>
+<p>这一节的讨论中，作者指出，理解这些局限性的一个方法是类比诺奖作者卡尼曼提出的“快思考”和“慢思考”的概念。卡尼曼认为人类思维分成快、慢两个系统，快思考是一种自动的、直观的、不需要花费精力的思考方式，速度快但是容易出错和偏见。慢思考是一种受控的、理性的、耗费精力的思考方式，虽然速度慢但是准确可靠。</p>
+<p>当前的 GPT-4 很大程度上可以看成是在执行快思考，但缺少慢思考能力。</p>
+<p><strong>未来方向</strong></p>
+<p>作者在这一节总结了未来 GPT-4 可以研究和改进的方向：</p>
+<ul>
+<li><strong>置信度校验</strong>：模型的输出缺乏置信度，既会编造训练集中没有的内容（open-domain 幻觉），也会生成与 Prompt 不一致的内容（close-domain 幻觉）</li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li><strong>长期记忆</strong>：即长的上下文</li>
+<li><strong>持续学习</strong>：当前微调和自我更新成本过高、缺乏有效且稳定的手段（保持已有能力不丢失和遗忘）</li>
+<li><strong>个性化</strong>：根据应用和需求进行定制、扮演、调整风格等</li>
+<li><strong>提前规划和概念性跳跃</strong>：推理过程过于线性，在需要思维跳跃性的任务上表现不佳</li>
+<li><strong>透明度、可解释性和一致性</strong></li>
+<li><strong>认知谬误和非理性</strong>：数据中存在的偏见、成见或错误引入了认知偏差和非理性</li>
+<li><strong>对输入的敏感性</strong>：对于 Prompt 过于敏感，鲁棒性不够</li>
+</ul>
+<p>这些局限性均指向一个核心问题：<strong>哪些缺陷是自回归架构的先天缺陷，哪些是在已有架构上可以通过处理数据、增加外挂的组件和增大参数量解决的。</strong></p>
+<h3 id="7-the-dawn-of-lmms-preliminary-explorations-with-gpt-4vision-230917421">7. The Dawn of LMMs: Preliminary Explorations with GPT-4V(ision) (2309.17421)</h3>
+<p>微软发布的 166 页的 GPT-4V 报告，主要围绕以下四个点进行展开研究：</p>
+<ol>
+<li>GPT-4V 支持哪些输入和工作模式？</li>
+<li>GPT-4V 在不同领域和任务上的能力质量和通用性如何？</li>
+<li>GPT-4V 有效使用和提示方法有哪些？</li>
+<li>未来有哪些有前途的方向？</li>
+</ol>
+<p><strong>GPT-4V 的输入模式</strong></p>
+<ul>
+<li>纯文本</li>
+<li>单个图像-文本对</li>
+<li>图像文本交替输入</li>
+</ul>
+<p>前两种相对来说比较简单，第三种交替输入的情况，已经非常接近于人的聊天模式了。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>GPT-4V 的工作模式和提示技术</strong></p>
+<p>实验证明，在 LLM 上研究出来上各种提示技术，在 GPT-4V 上也是好使的，比如思维链、few-shot 提示等。</p>
+<p>这一节提到了一个“LLMs don&rsquo;t want to succeed”的理论，貌似是来自于 Andrej Karpathy 的某次演讲，里面展示了一种类似于催眠一样的提示技术，即，<strong>你想要你的 LLM 表现更出色，你就要用直接的提示词说“你是xxx方面的专家”，否则它之后表现出一般普通人水平的能力</strong>。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>完整的 PPT 可以看这里：https://karpathy.ai/stateofgpt.pdf</p>
+<p>在论文中作者是举了一个数苹果的案例，让 GPT-4V 来数一下画面中有几个苹果。一开始 GPT-4V 并不能轻易得到正确答案，但经过一系列我们已知的 LLM Prompt 技巧加强后，GPT-4V 变得可靠，能够正确计数：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在日常的人和人交互中，在图片中画圈、画箭头来指向关键信息是一种很自然且常见的方式， 经实验 GPT-4V 在这方面的理解能力非常强大。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>作者实验了一些很有挑战性的 case，发现基本上难不倒它：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在 In-context few-shot learning 方面，作者也用一个很有代表性的例子说明了提供示例样本的重要性。作者给了一张仪表的图，让 GPT-4V 读出当前仪表指针指向的数值，一开始不论如何改良 prompt 都无法得到正确的结果。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>甚至在给出一个示例的情况下模型仍然表现不佳，但当示例增加到两个后，GPT-4V 就突然能成功读数了，可见<strong>提供上下文示例对于提升大模型性能至关重要</strong>。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>视觉语言能力</strong></p>
+<p>在大部分已有的 CV 子任务上，GPT-4V 都表现出了不错的能力，常见的场景描述等更是表现出色，在相对小众的领域，如医学图像上，同样让人印象深刻，GPT-4V 可以根据 CT 图判断出智齿和骨折等。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>当然，在一些已经被做得非常深入的子任务上，GPT-4V 相较于 SOTA 模型还有不小的差距，但还是那句话，潜力大于绝对精度，目前 GPT-4V 已经展现出了让人鼓舞的性能，优化个别任务上的表现只是时间问题。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>GPT-4V 甚至能看懂梗图，解释其中的笑点：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>借助 GPT-4V 强大的推理能力和具备的常识，我们甚至可以“<strong>假如你是一名侦探，你可以从图中推理出哪些线索？</strong>”</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>时间序列和视频理解</strong></p>
+<p>作者实验了多图像序列，GPT-4V 能够识别出这是一组动态图像序列，并且能结合起来判断画面中的人正在做俯卧撑：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>情商测试</strong></p>
+<p>在这一节，GPT-4V 可以基于予以内容和图像样式解释视觉情感，如满意、愤怒、敬畏和恐惧等：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>甚至可以一张图片让 GPT-4V 用两种不同方式来描述，分别让人感到不安和感到舒适（新闻学让它玩明白了）：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>新兴应用亮点</strong></p>
+<ul>
+<li>行业：
+<ul>
+<li>缺陷检测</li>
+<li>安全检查</li>
+<li>杂货结账</li>
+</ul>
+</li>
+<li>医疗</li>
+<li>汽车保险
+<ul>
+<li>损害评估</li>
+<li>保险报告</li>
+</ul>
+</li>
+<li>定制化
+<ul>
+<li>照片组织</li>
+<li>密集标注与分割</li>
+</ul>
+</li>
+<li>图像生成
+<ul>
+<li>生成图像的评估</li>
+<li>图像编辑的提示生成</li>
+</ul>
+</li>
+<li>具象化智能体
+<ul>
+<li>操作机器</li>
+<li>导航</li>
+</ul>
+</li>
+<li>GUI 导航（软件层面的交互和导航）</li>
+</ul>
+<p>整篇报告篇幅较多，并且举了大量详细的例子，在这里就不一一展开了，感兴趣的同学可以自行翻阅。</p>
+<hr>
+<p>至此，我总结了 GPT 系列工作里一些我关注到的点，从中可以感受到 OpenAI 的工作之间都有着很深的逻辑链条，很多推广都似乎是最符合直觉的。OpenAI 早期公开的论文里各种细节还是很丰富的，不仅细致地告诉你如何清洗和构造数据，甚至还教你如何找到一个合适的标注员给你标数据。</p>
+<p>作为一个从 CV 转到 LLM 的新人，难免犯一些常见或低级的错误，欢迎任何读者及时指出和斧正，也欢迎任何留言讨论。</p>
+<p>本篇笔记的写作参考了沐神的几期 B 站视频，以及知乎@苏打的文章，特此感谢</p>
 ]]></description></item><item><title>强化学习笔记 [19] | AlphaGo Zero强化学习原理</title><link>https://jianye0428.github.io/posts/rl_learning_note_19/</link><pubDate>Sun, 25 Feb 2024 19:53:22 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_19/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在<a href="https://www.cnblogs.com/pinard/p/10470571.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习(十八) 基于模拟的搜索与蒙特卡罗树搜索(MCTS)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了MCTS的原理和在棋类中的基本应用。这里我们在前一节MCTS的基础上，讨论下DeepMind的AlphaGo Zero强化学习原理。</p>
 <p>本篇主要参考了AlphaGo Zero的<a href="https://www.nature.com/articles/nature24270.epdf?author_access_token=VJXbVjaSHxFoctQQ4p2k4tRgN0jAjWel9jnR3ZoTv0PVW4gB86EEpGqTRDtpIz-2rmo8-KG06gqVobU5NSCFeHILHcVFUeMsbvwS-lxjqQGg98faovwjxeTUgZAUMnRQ"target="_blank" rel="external nofollow noopener noreferrer">论文<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>, <a href="https://www.hhyz.me/2018/08/08/2018-08-08-AlphaGO-Zero/"target="_blank" rel="external nofollow noopener noreferrer">AlphaGo Zero综述<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>和AlphaGo Zero Cheat Sheet。</p>
@@ -5695,417 +7429,4 @@ $$\begin{gathered}
 <p>下一篇我们讨论用蒙特卡罗方法来求解强化学习预测和控制问题的方法。</p>
 <p>ref:
 <a href="https://www.cnblogs.com/pinard/p/9463815.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/pinard/p/9463815.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>RL学习笔记 [2] | 马尔科夫决策过程(MDP)</title><link>https://jianye0428.github.io/posts/rl_learning_note_2/</link><pubDate>Wed, 21 Feb 2024 10:38:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_2/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
-<p>在<a href="https://www.cnblogs.com/pinard/p/9385570.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（一）模型基础<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了强化学习模型的8个基本要素。但是仅凭这些要素还是无法使用强化学习来帮助我们解决问题的, 在讲到模型训练前，模型的简化也很重要，这一篇主要就是讲如何利用马尔科夫决策过程(Markov Decision Process，以下简称MDP)来简化强化学习的建模。</p>
-<p>MDP这一篇对应Sutton书的第三章和UCL强化学习课程的第二讲。</p>
-<h1 id="1-强化学习引入mdp的原因">1. 强化学习引入MDP的原因</h1>
-<p>对于马尔科夫性本身，我之前讲过的<a href="http://www.cnblogs.com/pinard/p/6945257.html"target="_blank" rel="external nofollow noopener noreferrer">隐马尔科夫模型HMM（一）HMM模型<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，<a href="http://www.cnblogs.com/pinard/p/7048333.html"target="_blank" rel="external nofollow noopener noreferrer">条件随机场CRF(一)从随机场到线性链条件随机场<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>以及<a href="http://www.cnblogs.com/pinard/p/6632399.html"target="_blank" rel="external nofollow noopener noreferrer">MCMC(二)马尔科夫链<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>都有讲到。它本身是一个比较简单的假设，因此这里就不专门对“马尔可夫性”做专门的讲述了。</p>
-<p>除了对于环境的状态转化模型这个因素做马尔科夫假设外，我们还对强化学习第四个要素个体的策略(policy) $π$ 也做了马尔科夫假设。即在状态 $s$ 时采取动作 $a$ 的概率仅与当前状态 $s$ 有关，与其他的要素无关。用公式表示就是</p>
-<p>$$\pi(a\mid s)=P(A_{t}=a\mid S_{t}=s)$$</p>
-<p>对于第五个要素，价值函数 $v_π(s)$ 也是一样, $v_π(s)$ 现在仅仅依赖于当前状态了，那么现在价值函数 $v_π(s)$ 表示为:</p>
-<p>$$\nu_{\pi}(s)=\mathrm{E}_{\pi}(G_{t}|S_{t}=s)=\mathrm{E}_{\pi}(R_{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s)$$</p>
-<p>其中，$G_t$ 代表收获(return), 是一个MDP中从某一个状态 $S_t$ 开始采样直到终止状态时所有奖励的有衰减的之和。</p>
-<h1 id="2-mdp的价值函数与贝尔曼方程">2. MDP的价值函数与贝尔曼方程</h1>
-<p>对于MDP，我们在第一节里已经讲到了它的价值函数 $v_π(s)$ 的表达式。但是这个表达式没有考虑到所采用的动作$a$带来的价值影响，因此我们除了 $v_π(s)$ 这个状态价值函数外，还有一个动作价值函数 $q_π(s,a)$，即：</p>
-<p>$$q_{\pi}(s,a)=\operatorname{E}_{\pi}(G_{t}|S_{t}=s,A_{t}=a)=\operatorname{E}_{\pi}(R_{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s,A_{t}=a)$$</p>
-<p>根据价值函数的表达式，我们可以推导出价值函数基于状态的递推关系，比如对于状态价值函数 $v_π(s)$，可以发现：</p>
-<p>$$\begin{aligned}
-V_{\pi}(s)&amp; =\mathrm{E}_{\pi}(R_{t+1}+\gamma R_{t+2}+\gamma^{2}R_{t+3}+\ldots\mid S_{t}=s)  \\\\
-&amp;=\mathrm{E}_{\pi}(R_{t+1}+\gamma(R_{t+2}+\gamma R_{t+3}+\ldots)|S_{t}=s) \\\\
-&amp;=\mathrm{E}_{\pi}(R_{t+1}+\gamma G_{t+1}|S_{t}=s) \\\\
-&amp;=\mathrm{E}_{\pi}(R_{t+1}+\gamma\nu_{\pi}(S_{t+1})|S_{t}=s)
-\end{aligned}$$</p>
-<p>也就是说，在 $t$ 时刻的状态 $S_t$ 和 $t+1$ 时刻的状态 $S_{t+1}$ 是满足递推关系的，即：</p>
-<p>$$v_{\pi}(s)=\mathrm{E}_{\pi}(R_{t+1}+\gamma\nu_{\pi}(S_{t+1})\mid S_{t}=s)$$
-　　　　
-这个递推式子我们一般将它叫做<strong>贝尔曼方程</strong>。这个式子告诉我们，一个状态的价值由该状态的奖励以及后续状态价值按一定的衰减比例联合组成。</p>
-<p>同样的方法，我们可以得到动作价值函数 $q_π(s,a)$ 的贝尔曼方程：</p>
-<p>$$q_{\pi}(s,a)=\mathrm{E}_{\pi}(R_{t+1}+\gamma q_{\pi}(S_{t+1},A_{t+1})\mid S_{t}=s,A_{t}=a)$$</p>
-<h1 id="3-状态价值函数与动作价值函数的递推关系">3. 状态价值函数与动作价值函数的递推关系</h1>
-<p>根据动作价值函数 $q_π(s,a)$ 和状态价值函数 $v_π(s)$ 的定义，我们很容易得到他们之间的转化关系公式：</p>
-<p>$$\nu_{\pi}(s)=\sum_{a\in A}\pi(a|s)q_{\pi}(s,a)$$</p>
-<p>也就是说，状态价值函数是所有动作价值函数基于策略 $π$ 的期望。通俗说就是某状态下所有状态动作价值乘以该动作出现的概率，最后求和，就得到了对应的状态价值。</p>
-<p>反过来，利用上贝尔曼方程，我们也很容易从状态价值函数 $v_π(s)$ 表示动作价值函数 $q_π(s,a)$，即：</p>
-<p>$$q_{\pi}(s,a)=R_{s}^{a}+\gamma\sum_{s^{\prime}\in S}P_{ss&rsquo;}^{a}\nu_{\pi}(s^{&rsquo;})$$</p>
-<p>通俗说就是状态动作价值有两部分相加组成，第一部分是即时奖励，第二部分是环境所有可能出现的下一个状态的概率乘以该下一状态的状态价值，最后求和，并加上衰减。</p>
-<p>这两个转化过程也可以从下图中直观的看出：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">状态价值函数</div>
-</center>
-<br>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">动作价值函数</div>
-</center>
-<br>
-<p>把上面两个式子互相结合起来，我们可以得到：</p>
-<p>$$\nu_{\pi}(s)=\sum_{a\in A}\pi(a\mid s)(R_{s}^{a}+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^{a}\nu_{\pi}(s^{&rsquo;}))$$</p>
-<p>$$q_\pi(s,a)=R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^a\sum_{a&rsquo; \in A}\pi(a&rsquo; \mid s&rsquo;)q_\pi(s&rsquo;,a&rsquo;)$$</p>
-<h1 id="4-最优价值函数">4. 最优价值函数</h1>
-<p>解决强化学习问题意味着要寻找一个最优的策略让个体在与环境交互过程中获得始终比其它策略都要多的收获，这个最优策略我们可以用 $π^*$表示。一旦找到这个最优策略$π^∗$，那么我们就解决了这个强化学习问题。一般来说，比较难去找到一个最优策略，但是可以通过比较若干不同策略的优劣来确定一个较好的策略，也就是局部最优解。</p>
-<p>如何比较策略的优劣呢？一般是通过对应的价值函数来比较的，也就是说，寻找较优策略可以通过寻找较优的价值函数来完成。可以定义最优状态价值函数是所有策略下产生的众多状态价值函数中的最大者，即：</p>
-<p>$$\nu_{*}(s)=\max_{\pi}\nu_{\pi}(s)$$</p>
-<p>同理也可以定义最优动作价值函数是所有策略下产生的众多动作状态价值函数中的最大者，即：</p>
-<p>$$q_*(s,a)=\max_\pi q_\pi(s,a)$$</p>
-<p>对于最优的策略，基于动作价值函数我们可以定义为：</p>
-<p>$$\pi_<em>(a|s)=\begin{cases}1&amp;\mathrm{if~}a=\mathrm{arg~}\max_{a\in A}q</em>(s,a)\\\\0&amp;\mathrm{else}&amp;\end{cases}$$</p>
-<p>只要我们找到了最大的状态价值函数或者动作价值函数，那么对应的策略 $π^*$ 就是我们强化学习问题的解。同时，利用状态价值函数和动作价值函数之间的关系，我们也可以得到:</p>
-<p>$$v_<em>(s)=\max_aq_</em>(s,a)$$</p>
-<p>反过来的最优价值函数关系也很容易得到：</p>
-<p>$$q_{<em>}(s,a)=R_{s}^{a}+\gamma\sum_{s&rsquo; \in S}P_{ss}^{a}{}_{</em>}(\mathrm{s&rsquo;})$$</p>
-<p>利用上面的两个式子也可以得到和第三节末尾类似的式子：</p>
-<p>$$\nu_<em>(s)=\max_a(R_s^a+\gamma\sum_{s^{\prime}\in S}P_{ss&rsquo;}^a\nu_</em>(s&rsquo;))$$</p>
-<p>$$q_<em>(s,a)=R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^a\max_{a&rsquo;}q_</em>(s&rsquo;,a&rsquo;)$$</p>
-<h1 id="5-mdp实例">5. MDP实例</h1>
-<p>上面的公式有点多，需要一些时间慢慢消化，这里给出一个UCL讲义上实际的例子，首先看看具体我们如何利用给定策略来计算价值函数。</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">MDP 举例</div>
-</center>
-<br>
-<p>例子是一个学生学习考试的MDP。里面左下那个圆圈位置是起点，方框那个位置是终点。上面的动作有study, pub, facebook, quit, sleep，每个状态动作对应的即时奖励R已经标出来了。我们的目标是找到最优的动作价值函数或者状态价值函数，进而找出最优的策略。</p>
-<p>为了方便，我们假设衰减因子 $γ=1$, $π(a|s)=0.5$。</p>
-<p>对于终点方框位置，由于其没有下一个状态，也没有当前状态的动作，因此其状态价值函数为0。对于其余四个状态，我们依次定义其价值为<em>v</em>1,<em>v</em>2,<em>v</em>3,<em>v</em>4， 分别对应左上，左下，中下，右下位置的圆圈。我们基于$\nu_{\pi}(s)=\sum_{a\in A}\pi(a|s)(R_{s}^{a}+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^{a}\nu_{\pi}(s&rsquo;))$计算所有的状态价值函数。可以列出一个方程组。</p>
-<ul>
-<li>
-<p>对于<em>v</em>1位置，我们有：$v_1=0.5*(-1+v_1)+0.5*(0+v_2)$</p>
-</li>
-<li>
-<p>对于<em>v</em>2位置，我们有：$v_2=0.5*(-1+v_1)+0.5*(-2+v_3)$</p>
-</li>
-<li>
-<p>对于<em>v</em>3位置，我们有：$v_3=0.5*(0+0)+0.5*(-2+v_4)$</p>
-</li>
-<li>
-<p>对于<em>v</em>4位置，我们有：$v_4=0.5*(10+0)+0.5*(1+0.2<em>v_2+0.4</em>v_3+0.4*v_4)$</p>
-</li>
-</ul>
-<p>解出这个方程组可以得到 $v_1=−2.3$, $v_2=−1.3$, $v_3=2.7$, $v_4=7.4$, 即每个状态的价值函数如下图：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">MDP</div>
-</center>
-<br>
-<p>上面我们固定了策略$ π(a|s)$, 虽然求出了每个状态的状态价值函数，但是却并不一定是最优价值函数。那么如何求出最优价值函数呢？这里由于状态机简单，求出最优的状态价值函数 $v*(s)$ 或者动作价值函数 $q*(s,a)$ s比较容易。</p>
-<p>我们这次以动作价值函数 $q*(s,a)$ 来为例求解。首先终点方框处的好求。</p>
-<p>$$q*(s_3,sleep)=0,q*(s_4,study)=10$$</p>
-<p>接着我们就可利用 $q*(s,a)=R_{s}^{a}+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^{a}\max_{a&rsquo;}q*(s&rsquo;,a&rsquo;)$ 列方程组求出所有的 $q∗(s,a)$ 。有了所有的 $q*(s,a)$,利用 $v_{<em>}(s)=\max_{a}q</em>(s,a)$ 就可以求出所有的 $v∗(s)$。最终求出的所有 $v∗(s)$ 和 $q∗(s,a)$ 如下图：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">MDP</div>
-</center>
-<br>
-<p>从而我们的最优决策路径是走6-&gt;6-&gt;8-&gt;10-&gt;结束。　　　　</p>
-<h1 id="6-mdp小结">6. MDP小结</h1>
-<p>MDP是强化学习入门的关键一步，如果这部分研究的比较清楚，后面的学习就会容易很多。因此值得多些时间在这里。虽然MDP可以直接用方程组来直接求解简单的问题，但是更复杂的问题却没有办法求解，因此我们还需要寻找其他有效的求解强化学习的方法。</p>
-<p>下一篇讨论用动态规划的方法来求解强化学习的问题。</p>
-<h1 id="7-ref">7. ref</h1>
-<p><a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/pinard/p/9426283.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>RL学习笔记 [1] | 模型基础</title><link>https://jianye0428.github.io/posts/rl_learning_note_1/</link><pubDate>Wed, 21 Feb 2024 10:38:07 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_1/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
-<p>　从今天开始整理强化学习领域的知识，主要参考的资料是Sutton的强化学习书和UCL强化学习的课程。这个系列大概准备写10到20篇，希望写完后自己的强化学习碎片化知识可以得到融会贯通，也希望可以帮到更多的人，毕竟目前系统的讲解强化学习的中文资料不太多。</p>
-<p>　第一篇会从强化学习的基本概念讲起，对应Sutton书的第一章和UCL课程的第一讲。</p>
-<h1 id="1-强化学习在机器学习中的位置">1. 强化学习在机器学习中的位置</h1>
-<p>强化学习的学习思路和人比较类似，是在实践中学习，比如学习走路，如果摔倒了，那么我们大脑后面会给一个负面的奖励值，说明走的姿势不好。然后我们从摔倒状态中爬起来，如果后面正常走了一步，那么大脑会给一个正面的奖励值，我们会知道这是一个好的走路姿势。那么这个过程和之前讲的机器学习方法有什么区别呢？</p>
-<p>强化学习是和监督学习，非监督学习并列的第三种机器学习方法，从下图我们可以看出来。</p>
-  <br>
-  <center>
-    
-    <br>
-    <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">RL、SL、UL与ML的区别联系</div>
-  </center>
-  <br>
-<p>与监督学习相比，强化学习最大的区别是它没有监督学习已经准备好的训练数据输出值。强化学习只有奖励值，但是这个奖励值和监督学习的输出值不一样，它不是事先给出的，而是延后给出的，比如上面的例子里走路摔倒了才得到大脑的奖励值。同时，强化学习的每一步与时间顺序前后关系紧密。而监督学习的训练数据之间一般都是独立的，没有这种前后的依赖关系。</p>
-<p>再来看看强化学习和非监督学习的区别。也还是在奖励值这个地方。非监督学习是没有输出值也没有奖励值的，它只有数据特征。同时和监督学习一样，数据之间也都是独立的，没有强化学习这样的前后依赖关系。</p>
-<h1 id="2-强化学习的建模">2. 强化学习的建模</h1>
-<p>我们现在来看看强化学习这样的问题我们怎么来建模，简单的来说，是下图这样的：</p>
-  <br>
-  <center>
-    
-    <br>
-    <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">大脑与环境的交互</div>
-  </center>
-  <br>
-<p>上面的大脑代表我们的算法执行个体，我们可以操作个体来做决策，即选择一个合适的动作（Action）$A_t$。下面的地球代表我们要研究的环境,它有自己的状态模型，我们选择了动作 $A_t$ 后，环境的状态(State)会变，我们会发现环境状态已经变为 $S_{t+1}$,同时我们得到了我们采取动作 $A_t$ 的延时奖励(Reward) $R_{t+1}$。然后个体可以继续选择下一个合适的动作，然后环境的状态又会变，又有新的奖励值&hellip;这就是强化学习的思路。</p>
-<p>那么我们可以整理下这个思路里面出现的强化学习要素。</p>
-<ul>
-<li>
-<p>第一个是环境的状态 $S$, $t$ 时刻环境的状态 $S_t$ 是它的环境状态集中某一个状态。</p>
-</li>
-<li>
-<p>第二个是个体的动作 $A$, $t$ 时刻个体采取的动作 $A_t$ 是它的动作集中某一个动作。</p>
-</li>
-<li>
-<p>第三个是环境的奖励 $R$, $t$ 时刻个体在状态 $S_t$ 采取的动作 $A_t$ 对应的奖励 $R_{t+1}$ 会在 $t+1$ 时刻得到。</p>
-</li>
-<li>
-<p>第四个是个体的策略(policy) $π$,它代表个体采取动作的依据，即个体会依据策略 $π$ 来选择动作。最常见的策略表达方式是一个条件概率分布 $π(a|s)$, 即在状态 $s$ 时采取动作 $a$ 的概率。即 $π(a|s)=P(A_t=a|S_t=s)$.此时概率大的动作被个体选择的概率较高。</p>
-</li>
-<li>
-<p>第五个是个体在策略 $π$ 和状态 $s$ 时，采取行动后的价值(value)，一般用 $v_π(s)$ 表示。这个价值一般是一个期望函数。虽然当前动作会给一个延时奖励 $R_{t+1}$,但是光看这个延时奖励是不行的，因为当前的延时奖励高，不代表到了 $t+1$, $t+2$,&hellip;时刻的后续奖励也高。比如下象棋，我们可以某个动作可以吃掉对方的车，这个延时奖励是很高，但是接着后面我们输棋了。此时吃车的动作奖励值高但是价值并不高。因此我们的价值要综合考虑当前的延时奖励和后续的延时奖励。价值函数 $v_{\pi}(s)$ 一般可以表示为下式，不同的算法会有对应的一些价值函数变种，但思路相同。
-$$v_{\pi}(s)=\mathbb{E}_π(R_{t+1}+γR_{t+2}+γ^2R_{t+3}+&hellip;|S_t=s)$$</p>
-</li>
-<li>
-<p>其中 $γ$ 是第六个模型要素，即奖励衰减因子，在[0，1]之间。如果为0，则是贪婪法，即价值只由当前延时奖励决定，如果是1，则所有的后续状态奖励和当前奖励一视同仁。大多数时候，我们会取一个0到1之间的数字，即当前延时奖励的权重比后续奖励的权重大。</p>
-</li>
-<li>
-<p>第七个是环境的状态转化模型，可以理解为一个概率状态机，它可以表示为一个概率模型，即在状态 $s$ 下采取动作 $a$,转到下一个状态 $s&rsquo;$ 的概率，表示为 $P^a_{ss&rsquo;}$。</p>
-</li>
-<li>
-<p>第八个是探索率 $ϵ$，这个比率主要用在强化学习训练迭代过程中，由于我们一般会选择使当前轮迭代价值最大的动作，但是这会导致一些较好的但我们没有执行过的动作被错过。因此我们在训练选择最优动作时，会有一定的概率 $ϵ$ 不选择使当前轮迭代价值最大的动作，而选择其他的动作。</p>
-</li>
-</ul>
-<p>以上8个就是强化学习模型的基本要素了。当然，在不同的强化学习模型中，会考虑一些其他的模型要素，或者不考虑上述要素的某几个，但是这8个是大多数强化学习模型的基本要素。</p>
-<h1 id="3-强化学习的简单实例">3. 强化学习的简单实例</h1>
-<p>这里给出一个简单的强化学习例子Tic-Tac-Toe。这是一个简单的游戏，在一个3x3的九宫格里，两个人轮流下，直到有个人的棋子满足三个一横一竖或者一斜，赢得比赛游戏结束，或者九宫格填满也没有人赢，则和棋。</p>
-<p>这个例子的完整代码在<a href="https://github.com/ljpzzz/machinelearning/blob/master/reinforcement-learning/introduction.py"target="_blank" rel="external nofollow noopener noreferrer">github<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>。例子只有一个文件，很简单，代码首先会用两个电脑选手训练模型，然后可以让人和机器对战。当然，由于这个模型很简单，所以只要你不乱走，最后的结果都是和棋，当然想赢电脑也是不可能的。</p>
-<p>我们重点看看这个例子的模型，理解上面第二节的部分。如何训练强化学习模型可以先不管。代码部分大家可以自己去看，只有300多行。</p>
-<ul>
-<li>
-<p>首先看第一个要素环境的状态 $S$。这是一个九宫格，每个格子有三种状态，即没有棋子(取值0)，有第一个选手的棋子(取值1)，有第二个选手的棋子(取值-1)。那么这个模型的状态一共有$3^9=19683$个。</p>
-</li>
-<li>
-<p>接着我们看个体的动作 $A$，这里只有9个格子，每次也只能下一步，所以最多只有9个动作选项。实际上由于已经有棋子的格子是不能再下的，所以动作选项会更少。实际可以选择动作的就是那些取值为0的格子。</p>
-</li>
-<li>
-<p>第三个是环境的奖励 $R$，这个一般是我们自己设计。由于我们的目的是赢棋，所以如果某个动作导致的改变到的状态可以使我们赢棋，结束游戏，那么奖励最高，反之则奖励最低。其余的双方下棋动作都有奖励，但奖励较少。特别的，对于先下的棋手，不会导致结束的动作奖励要比后下的棋手少。</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># give reward to two players</span>
-</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">giveReward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentState</span><span class="o">.</span><span class="n">winner</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">p1Symbol</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p1</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p2</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentState</span><span class="o">.</span><span class="n">winner</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">p2Symbol</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p1</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p2</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">else</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p1</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">p2</span><span class="o">.</span><span class="n">feedReward</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p>第四个是个体的策略(policy) $π$，这个一般是学习得到的，我们会在每轮以较大的概率选择当前价值最高的动作，同时以较小的概率去探索新动作，在这里AI的策略如下面代码所示。里面的exploreRate就是我们的第八个要素探索率 $ϵ$。即策略是以 $1−ϵ$ 的概率选择当前最大价值的动作，以 $ϵ$ 的概率随机选择新动作。</p>
-<div class="highlight" id="id-2"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># determine next action</span>
-</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">takeAction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">  <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">nextStates</span> <span class="o">=</span> <span class="p">[]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">nextPositions</span> <span class="o">=</span> <span class="p">[]</span>
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">BOARD_ROWS</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">BOARD_COLS</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">        <span class="n">nextPositions</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">])</span>
-</span></span><span class="line"><span class="cl">        <span class="n">nextStates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">nextState</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">)</span><span class="o">.</span><span class="n">getHash</span><span class="p">())</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exploreRate</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">nextPositions</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="c1"># Not sure if truncating is the best way to deal with exploratory step</span>
-</span></span><span class="line"><span class="cl">    <span class="c1"># Maybe it&#39;s better to only skip this step rather than forget all the history</span>
-</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="p">[]</span>
-</span></span><span class="line"><span class="cl">    <span class="n">action</span> <span class="o">=</span> <span class="n">nextPositions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="n">action</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">action</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="nb">hash</span><span class="p">,</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nextStates</span><span class="p">,</span> <span class="n">nextPositions</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">    <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">estimations</span><span class="p">[</span><span class="nb">hash</span><span class="p">],</span> <span class="n">pos</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">  <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">values</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="n">action</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">action</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">action</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p>第五个是价值函数，代码里用value表示。价值函数的更新代码里只考虑了当前动作的现有价值和得到的奖励两部分，可以认为我们的第六个模型要素衰减因子 $γ$ 为0。具体的代码部分如下，价值更新部分的代码加粗。具体为什么会这样更新价值函数我们以后会讲。</p>
-<div class="highlight" id="id-3"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># update estimation according to reward</span>
-</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">feedReward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reward</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span>
-</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="p">[</span><span class="n">state</span><span class="o">.</span><span class="n">getHash</span><span class="p">()</span> <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">  <span class="n">target</span> <span class="o">=</span> <span class="n">reward</span>
-</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="n">latestState</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">):</span>
-</span></span><span class="line"><span class="cl">      <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimations</span><span class="p">[</span><span class="n">latestState</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">stepSize</span> <span class="o">*</span> <span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimations</span><span class="p">[</span><span class="n">latestState</span><span class="p">])</span>
-</span></span><span class="line"><span class="cl">      <span class="bp">self</span><span class="o">.</span><span class="n">estimations</span><span class="p">[</span><span class="n">latestState</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-</span></span><span class="line"><span class="cl">      <span class="n">target</span> <span class="o">=</span> <span class="n">value</span>
-</span></span><span class="line"><span class="cl">  <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="p">[]</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-<li>
-<p>第七个是环境的状态转化模型, 这里由于每一个动作后，环境的下一个模型状态是确定的，也就是九宫格的每个格子是否有某个选手的棋子是确定的，因此转化的概率都是1，不存在某个动作后会以一定的概率到某几个新状态，比较简单。</p>
-</li>
-</ul>
-<p>从这个例子，相信大家对于强化学习的建模会有一个初步的认识了。　　　　　　　　</p>
-<p>以上就是强化学习的模型基础，下一篇会讨论马尔科夫决策过程。</p>
-]]></description></item><item><title>车辆路径规划之Dubins曲线与RS曲线简述</title><link>https://jianye0428.github.io/posts/dubinsandrs/</link><pubDate>Tue, 20 Feb 2024 09:10:15 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/dubinsandrs/</guid><description><![CDATA[<h2 id="0-描述">0. 描述</h2>
-<p>Dubins和RS曲线都是路径规划的经典算法，其中车辆运动学利用RS曲线居多，因此简单介绍Dubins并引出RS曲线。</p>
-<p>花了点时间看了二者的论文，并阅读了一个开源的代码。</p>
-<h2 id="1-dubins曲线">1. Dubins曲线</h2>
-<p>Dubins曲线是在满足曲率约束和规定的始端和末端的切线（进入方向）的条件下，连接两个二维平面的最短路径。它满足给定的运动曲率约束，即转弯半径大于等于给定的半径。</p>
-<p>假设顺时针圆周运动为R，逆时针圆周运动为L，直线运动为S。求出Dubins曲线，用任务来表达就是</p>
-<p>给了车辆起始位置 $(x_{start},y_{start})$ ，车辆的朝向 $\theta_{start}$ ，再给一个车辆的目标位置 $(x_{end},y_{end})$ ，车辆的目标朝向为 $\theta_{end}$ 。车辆最多能实现的曲率为 $K_{max}$ 。车辆不可以做后退运动，只能向前开。</p>
-<p>规划的曲线分三段，第一段是绕固定圆心的L或R，第二段是L/R/S，第三段是L/R。用这三段曲线可以使车辆从初始位姿连续的移动到目标位姿。</p>
-<p>三段曲线可以组成的集合有6种={LSL、RSR、RSL、LSR、RLR、LRL}。这六种可能中最短的路径就是Dubins曲线。</p>
-<p>网上有很多关于Dubins曲线的文章，都很简单。先把初始位姿和目标位姿做一下差值，得到一个更简单的坐标系。再通过画圆和直线，求解一些方程，就可以计算出不同选择路径的长度值。再从中取最小的，就可以得到Dubins曲线了。这里不多介绍。</p>
-<p>有关Dubins的文章有很多，对于6种不同的路径，都有对应的公式去计算每段的长度值。</p>
-<h2 id="2-reeds-shepp曲线">2. Reeds-Shepp曲线</h2>
-<p><strong>1. 原理</strong></p>
-<p><strong>“利用倒挡的RS曲线可以比Dubins曲线更优”</strong></p>
-<p>论文《Optimal paths for a car that goes both forwards and backwards》提出了Reeds-Shepp曲线。这篇论文由Reeds和Shepp在1990年发表。他们提出了一种能够计算出车辆以固定转弯半径，由一个姿态向另一个姿态运动的最短路径的曲线，即Reeds-Shepp曲线，简称为RS曲线。</p>
-<p>对于Dubins曲线，当我们需要车辆位置不变原地掉头时，有如下图的情况：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Dubins曲线</div>
-</center>
-<br>
-<p>图A和图B都可以达到目标。根据Dubins曲线的定义，我们知道图B是最优的路线，同时存在另外一条曲线图C，也能达到相同的效果。但这和我们平时开车显然不同，因为我们的车辆是可以挂倒挡的。我们选择图D代表的路径，可以更快达到目标。</p>
-<p>相较于Dubins曲线，RS曲线有了进一步的约束条件：要求每个点的曲率半径都大于1，同时允许车辆可以后退。当车辆可以倒退时，路径有可能被缩短变得更优，而此时Dubins曲线将不能满足要求。作者对RS曲线的所有可能进行了简化表示，在文中做出了一系列定义，我按照文章的顺序进行讲解。</p>
-<p><strong>2. 定义</strong></p>
-<p>•C代表左转（L）或右转（R），S代表沿直线行驶。C^+和C^-的上标代表前进和后退（在车辆里就是换档）。因此，CC代表的就是LR或者RL。</p>
-<p>• $C^+<em>{\pi/2}$ 代表前进方向弧长走 $\pi/2$，C^-</em>{-\pi/2}代表后退方向弧长走\pi/2。所以再通用一些，C^\pm_t表达式中的C可以代表L、R或者S，上标代表前进方向，下标t是和上标正负号相同的代表弧长的值。</p>
-<p>•C_uC_u这两个需要连在一起出现，代表两段弧长相等。</p>
-<p>在诸如C^+_tC^-_uC^-_vv^+_w这样的路径族（由四段组成的路径，同样的还有C^-_tC^+_uC^+_vv^-_w……等）中，自由参数t,u,v,w一共有4个参数，比条件的数量（目标位置和角度）多了1个，因此对于给定的终点条件通常存在多个解。我们对族中的路径进行优化，能够得到一个额外的方程，结果就是 v = u，或v = π/2。这样看参数仍然是三个。</p>
-<p>作者在后面会证明，确实还有类似于C^+C^-C^+C^-C^+C^-这样的路径存在，这样的路径并不在作者提到的形式之中。但是这种路径往往在我们的形式中有相同的替代路径。对于不在作者集合中的路径，将不会出现在简单的前向场景中。</p>
-<p>作者提出了两种描述方式，一种是用\pm代表的正负方向</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;"></div>
-</center>
-<br>
-<p>另一种是用 | 代表的档位变化</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<p>以车辆为例，如果用真实的左打轮和右打轮，加上档位变化，一共会有48种不同的路径，如下图。由于有一些路径会有多个公式来表达，所以这48种路径最多会有68个公式。</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;"></div>
-</center>
-<br>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<p>Dubins曲线和我们的证明方式不同。Dubins证明了任何终点条件下都会存在路径，即问题的下限被确定了。同时，任何路径长度小于 \pi/8的路径一定是一个CSC类型的路径。然后容易得到，每个路径必须由有限的C和S组成，最终路径简化为了CSC和CCC两种可能。作者没有能够用Dubins的方法来解决本文章提到的车辆反向运动问题。作者在第7节证明了在不增加路径长度的情况下，最多5段就能表示路径，证明方法与Dubins类似。</p>
-<p>作者除了用数学公式来推导证明，还用计算机来做了验证：设置了一个包含很多条子路径的集合W，随机出起始条件和终止条件，如果在集合W中找到了两条路径就能连接起点终点，那么集合W显然就是不充分的，就要对集合W进行一些修剪。最终用这种方式得到了一个最小的有效集合W。一旦猜测出了W，作者再次使用计算机来帮助进行大量情况下的广泛代数运算，以验证上述方法可以给出严格的证明。最后，作者发现证明可以简化为上图，这样普通人可以在没有计算机检查细节的情况下轻松理解。但作者认为，如果没有使用计算机，他们永远不可能找到正确的子路径集。（这实际上表明作者是在计算机辅助下，成功地找到了RS曲线的解，并通过广泛的代数运算验证了他们的方法。最终，他们再反过来简化证明过程，最终让RS曲线更易于理解。）</p>
-<h2 id="3-等效运算">3. 等效运算</h2>
-<p>作者提到，并不是每次都需要计算48种路径，因为存在一些基本变换规则可以简化计算</p>
-<ul>
-<li>第一种等效运算：”timeflip”——时间变换</li>
-</ul>
-<p>路径 $l^+ r^- s^- l^-$ 和路径 l^-r^+s^+l^+ 之间的关系就是时间变换，可以看出其实就是前进和后退动作替换了一下</p>
-<p>当我们想求沿路径 l^-r^+s^+l^+ 从 [0,0,0] 到 [x,y,\phi] 时 ，我们可以求沿路径 l^+r^-s^-l^-从 [0,0,0] 到 [-x,y,-\phi]，求出的路径 l^+r^-s^-l^-中每段走的弧长，就是待求路径 l^-r^+s^+l^+ 的弧长结果</p>
-<ul>
-<li>第二种等效运算：“reflect”——反射变换</li>
-</ul>
-<p>路径 l^+r^-s^-l^- 和路径 r^+l^-s^-r^- 之间的关系就是反射变换，可以看出其实就是向左和向右替换了一下</p>
-<p>当我们想求沿路径 r^+l^-s^-r^- 从 [0,0,0] 到 [x,y,\phi] 时 ，我们可以求沿路径 l^+r^-s^-l^-从 [0,0,0] 到 [x,-y,-\phi]，求出的路径 l^+r^-s^-l^-中每段走的弧长，就是待求路径 r^+l^-s^-r^- 的弧长结果</p>
-<ul>
-<li>第三种等效运算：“backwards”——反向变换</li>
-</ul>
-<p>路径 l^+r^-s^-l^- 和路径 l^-s^-r^-l^+ 之间的关系就是反向变换，可以看出其实两条路径前后顺序颠倒了一下</p>
-<p>当我们想求沿路径 l^-s^-r^-l^+ 从 [0,0,0] 到 [x,y,\phi] 时 ，我们可以求沿路径 l^+r^-s^-l^-从 [0,0,0] 到 [xcos\phi+ysin\phi,xsin\phi-ycos\phi,\phi]，求出的路径 l^+r^-s^-l^-中每段走的弧长，就是待求路径 l^-s^-r^-l^+ 的弧长结果</p>
-<p>上面提到了三种变换关系来简化运算，简单理解一下就是：</p>
-<p>从 [0,0,0] 到 [x,y,\phi] 需要求解的三个路径 l^-r^+s^+l^+、r^+l^-s^-r^- 、l^-s^-r^-l^+，通过分别改变终点的坐标，均可以通过求解路径 l^+r^-s^-l^- 得到每段轨迹的弧长或前进距离</p>
-<h2 id="4-流程与代码">4. 流程与代码</h2>
-<p>与Dubins曲线一致，RS曲线每种路径也有对应的公式可以计算。</p>
-<p>第一步：起始点坐标变换，令起点坐标变为(0,0,0)，终点的坐标转换为起点坐标系下的坐标，从而简化后续计算</p>
-<p>q0 = [sx, sy, syaw]  # 起点:x,y,yaw</p>
-<p>q1 = [gx, gy, gyaw]  # 终点:x,y,yaw</p>
-<p>dx = q1[0] - q0[0]</p>
-<p>dy = q1[1] - q0[1]</p>
-<p>dth = q1[2] - q0[2]</p>
-<p>c = math.cos(q0[2])</p>
-<p>s = math.sin(q0[2])</p>
-<p>x = (c * dx + s * dy) * max_curvature</p>
-<p>y = (-s * dx + c * dy) * max_curvature</p>
-<p># 起点变成了(0,0,0),终点坐标变成了(x, y, dth)</p>
-<p>第二步：计算路径</p>
-<p>利用三种基本定理，计算全部的路径</p>
-<p>第三步：选择路径</p>
-<p>选择最优的路径，并对生成的路径进行差值，得到路径上的每一个路径点</p>
-<h2 id="5-总结">5. 总结</h2>
-<p>原理基本上很清楚，暂时对可选路径计算的优化没有深究，之后再说。</p>
-<p>ref: <a href="https://mp.weixin.qq.com/s/RfAEnFtUW7KkG7cSPqmWUw"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/RfAEnFtUW7KkG7cSPqmWUw<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item></channel></rss>

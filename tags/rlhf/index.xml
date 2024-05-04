@@ -1,0 +1,375 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>RLHF - 标签 - yejian's blog</title><link>https://jianye0428.github.io/tags/rlhf/</link><description>RLHF - 标签 - yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 04 May 2024 17:00:35 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/tags/rlhf/" rel="self" type="application/rss+xml"/><item><title>一文详解 ChatGPT RLHF 背后的 PPO 强化学习训练</title><link>https://jianye0428.github.io/posts/chatgpt_rlhf/</link><pubDate>Sat, 04 May 2024 17:00:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/chatgpt_rlhf/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
+<p></p>
+<p>最近火出圈的🚀 ChatGPT 中 RLHF 主要采用了就是 PPO 进行强化学习训练</p>
+<blockquote>
+<p>主要运用在微调阶段（微调整个 10B～100B+ 参数的成本其实也非常高 ）使用<strong>策略梯度</strong>强化学习 (Policy Gradient RL) 算法、近端策略优化 (PPO) 微调初始 LM 的部分或全部参数。</p>
+</blockquote>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<blockquote>
+<p>以下主要参考台大李宏毅的推导过程</p>
+</blockquote>
+<h2 id="01-vanilla-policy-gradient">01. Vanilla policy gradient</h2>
+<ul>
+<li>动作/环境/奖励之间的关系：</li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>轨迹可表示为集合</p>
+<p>$$\begin{aligned}p_{\theta}(\tau)&amp;=p(s_1)p_\theta(a_1|s_1)p(s_2|s_1,a_1)p_\theta(a_1|s_1)p(s_3|s_2,a_2)\ldots\&amp;=p(s_1)\prod_{t=1}^Tp_\theta(a_t|s_t)p(s_{t+1}|s_t,a_t)\end{aligned}$$</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>一个轨迹的奖励总和为：</p>
+<p>$$R(\tau)=\sum_{t=1}^Tr_t$$</p>
+<p>则奖励的期望为：</p>
+<p>$$\bar{R}<em>\theta=\sum</em>\tau R(\tau)p_\theta(\tau)=E_{\tau\sim p_\theta(\tau)}[R(\tau)]$$</p>
+<p>将 $R(\tau)$ 看成常量，对其求微分：</p>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>{\theta}&amp; =\sum</em>{\tau}R(\tau)\nabla p_{\theta}(\tau) \
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\frac{\nabla p_{\theta}(\tau)}{p_{\theta}(\tau)} \
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\nabla\log p_{\theta}(\tau)\quad\nabla f(x)=f(x)\nabla\log f(x) \
+&amp;=E_{\tau\sim p_{\theta}(\tau)}[R(\tau)\nabla\log p_{\theta}(\tau)]&amp; \left(2\right) \
+&amp;\approx\frac1N\sum_{n=1}^{N}R(\tau^{n})\nabla\log p_{\theta}(\tau^{n}) \
+&amp;=\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}R(\tau^n)\nabla\log p_\theta(a_t^n|s_t^n)
+\end{aligned}$$</p>
+<p>策略网络梯度更新：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>可以看成一个分类问题（游戏中通过键盘输入来互动，分类类别为所有可操作的键位）：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li>理想情况下， 并不一直为正数，增加一个 baseline:</li>
+</ul>
+<p>$$\nabla\bar{R}<em>{\theta}=\frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{{T_{n}}}(R(\tau^{n})-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n})b\approx E[R(\tau)]$$</p>
+<blockquote>
+<p>在电子游戏中，奖励值常常为正（通常为游戏分数）。这时需要增加一个偏置来保证同时有正样本和负样本</p>
+</blockquote>
+<ul>
+<li>分配合适的学分</li>
+</ul>
+<p>一个高分的游戏轨迹中也可能存在错误的动作，同样的，一个低分的游戏轨迹也可能存在正确的动作，而上文中的计算将最后的奖励值（最后的游戏分数）都一视同仁视为该游戏轨迹每个动作的学分。</p>
+<p>为了更准确地描述每个动作所得到的学分，将一个动作执行后对应的学分为后续的所有奖励值的总和</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(R(\tau^n)-b)\nabla\log p_\theta(a_t^n|s_t^n) \Downarrow\nabla\bar{R}<em>\theta \
+&amp;= \frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n-b)\nabla\log p_\theta(a_t^n|s_t^n)
+\end{aligned}$$</p>
+<p>当某个动作执行以后，其对后续的奖励分数的影响在慢慢减少，再增加一个衰减因子：</p>
+<p>$$\begin{aligned}
+\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n)\nabla\log p_\theta(a_t^n|s_t^n)\Downarrow\nabla\bar{R}<em>\theta \
+&amp; = \frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{T_{n}}(\sum_{t^{\prime}=t}^{T_{n}}\gamma^{t^{\prime}-t}r_{t^{\prime}}^{n}-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n}),\gamma&lt;1
+\end{aligned}$$</p>
+<h2 id="02-从on-policy到off-policy">02. 从on-policy到off-policy</h2>
+<p>两者区别:</p>
+<ul>
+<li>On-policy: 学习到的 agent 和与环境交互的 agent 是相同的，每一次梯度更新都需要重新采样</li>
+<li>Off-policy: 学习到的 agent 和与环境交互的 agent 是不同的，每次梯度更新不需要重新采样</li>
+</ul>
+<p>重新看看 的表达式：
+$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<ul>
+<li>使用策略网络 收集数据。当 更新后，则需要重新收集训练样本</li>
+<li>目标：使用相同的样本（通过 采样）训练 。其中 为固定的，因此我们可以重复使用其样本数据</li>
+</ul>
+<h3 id="21-重要性采样importance-sampling">2.1 重要性采样（Importance Sampling）</h3>
+<p>考虑一个场景，假如正在尝试计算函数 $f(x)$ 的期望值，其中 $x \sim f(x)$ 服从某种分布。则对 $E(f(x))$ 有以下估计：</p>
+<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx\approx\frac{1}{n}\sum_{i}f(x_{i})$$</p>
+<p>蒙特卡洛抽样方法是简单地从分布 $p(x)$ 中抽出 ，然后取所有样本的平均值来得到期望值的估计。那么问题来了，如果  $p(x)$  非常难取样怎么办？是否能够根据一些已知的、容易抽样的分布来估计期望值？</p>
+<p>答案是肯定的。公式的一个简单转换就可以做到</p>
+<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx=\int f(x)\frac{p(x)}{q(x)}q(x)dx=E_{x\sim q}[f(x)\frac{p(x)}{q(x)}]$$</p>
+<p>其中$x$从分布$q(x)$中采样，$q(x)$不应为 0。通过这种方式，估计期望能够从另一个分布$q(x)$中采样，$p(x)/q(x)$是称为采样率或采样权重，它作为校正权重以抵消来自不同分布的概率采样。</p>
+<ul>
+<li>重要性采样的缺陷</li>
+</ul>
+<p>虽然重要性采样保证了期望的一致，但是这里来计算一下方差是否一致</p>
+<p>方差的计算：</p>
+<p>$$Var[X]=E[X^2]-(E[X])^2$$</p>
+<p>分别计算方差：</p>
+<p>$$\begin{aligned}Var_{x\sim p}[f(x)]&amp;=E_{x\sim p}[f(x)^2]-(E_{x\sim p}[f(x)])^2\Var_{x\sim q}[f(x)\frac{p(x)}{q(x)}]&amp;=E_{x\sim q}[(f(x)\frac{p(x)}{q(x)})^2]-(E_{x\sim q}[f(x)\frac{p(x)}{q(x)}])^2\&amp;=E_{x\sim p}[f(x)^2\frac{p(x)}{q(x)}]-(E_{x\sim p}[f(x)])^2\end{aligned}$$</p>
+<p>可以发现两者虽然期望相等但方差并不一致</p>
+<h3 id="22-从-on-policy-到-off-policy">2.2 从 on-policy 到 off-policy</h3>
+<p>我们使用重要性采样将 on-policy 调整为 off-policy</p>
+<p>$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_{\theta^{\prime}}(\tau)}[\frac{p_\theta(\tau)}{p_{\theta^{\prime}}(\tau)}R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<ul>
+<li>从 $\theta&rsquo;$ 采样得到数据集</li>
+<li>使用该 数据集多次训练 $\theta$</li>
+</ul>
+<p>梯度更新过程：</p>
+<p>$$\begin{aligned}
+&amp;=E_{(s_t,a_t)\sim\pi_\theta}[A^\theta(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(s_t,a_t)}{p_{\theta^{\prime}}(s_t,a_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}\frac{p_\theta(s_t)}{p_{\theta^{\prime}}(s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]&amp; \text{(4)} \
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]
+\end{aligned}$$</p>
+<ul>
+<li>其中 $A^\theta(s_t,a_t)$ 指的是 advantage 函数,其计算方式为加上衰减机制后的奖励值并减去基线。</li>
+<li>由于 $\frac{p_\theta(s_t)}{p_{\theta&rsquo;}(s_t)}$ 的值难以计算，将其设置为 1，简化计算</li>
+</ul>
+<p>目标函数可以表示为：</p>
+<p>由于 $\nabla f(x)=f(x)\nabla\log f(x)$ 再结合不定积分，目标函数可以表示为:</p>
+<p>$$J^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]$$</p>
+<h2 id="03-ppotrpo">03. PPO/TRPO</h2>
+<p>为了消除重要性采样的缺陷的影响，以下为两种方式</p>
+<ul>
+<li>PPO（Proximal Policy Optimization）
+<ul>
+<li>初始化策 略网络参数</li>
+<li>在每次迭代过程中:</li>
+<li>目标函数:</li>
+<li>使用 与环境互动以收集 ，并计算出 advantage 值</li>
+<li>更新 优化</li>
+<li>算法:</li>
+</ul>
+</li>
+</ul>
+<p>$$\begin{aligned}
+PPO algorithm: \
+J_{PPO}^{\theta^k}(\theta) &amp; = J^{\theta^k}(\theta)-\beta KL(\theta,\theta^k)J^{\theta^k}(\theta) \
+&amp; = E_{(s_{t},a_{t})\sim\pi_{\theta^{k}}}[\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})] \
+&amp; \approx \sum_{(s_{t},a_{t})}\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})
+\end{aligned}$$</p>
+<p>自适应 KL 惩罚：如果 $KL(\theta,\theta^k)&gt;KL_{\max}$ ,增大 $\beta$; 如果 $KL(\theta,\theta^k) &lt;KL_{\min}$,减小 $\beta$。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li>TRPO（Trust Region Policy Optimizatio）</li>
+</ul>
+<p>$$J_{TRPO}^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]KL(\theta,\theta&rsquo;)&lt;\delta $$</p>
+<p>TRPO 和 PPO 在各个测试上性能差不多。但相比 PPO ，TRPO 计算要更复杂</p>
+<p><strong>参考文献</strong>:</p>
+<p>[1] <a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html"target="_blank" rel="external nofollow noopener noreferrer">https://spinningup.openai.com/en/latest/algorithms/ppo.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[2] <a href="https://openai.com/research/openai-baselines-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://openai.com/research/openai-baselines-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[3] <a href="https://huggingface.co/blog/deep-rl-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/deep-rl-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[4] <a href="https://huggingface.co/blog/rlhf"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/rlhf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[5] <a href="https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>LLM预训练之RLHF（一）：RLHF及其变种</title><link>https://jianye0428.github.io/posts/pretrain_rlhf_one/</link><pubDate>Sat, 04 May 2024 14:23:08 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/pretrain_rlhf_one/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
+<p>在ChatGPT引领的大型语言模型时代，国内外的大模型呈现爆发式发展，尤其是以年初的LLaMA模型为首的开源大模型和最近百川智能的baichuan模型，但无一例外，都使用了「基于人类反馈的强化学习」（RLHF）来提升语言模型的性能，并在模型重注入了人类的偏好，以提高模型的有用性和安全性。不过RLHF也早已更新换代，我们以如下目录进行详细讲述RLHF及其变种：</p>
+<ul>
+<li>LLM的经典预训练Pipeline</li>
+<li>Llama 2中的RLHF</li>
+<li>RLHF替代方案</li>
+</ul>
+<h2 id="一llm的经典预训练pipeline">一、LLM的经典预训练Pipeline</h2>
+<p>​  目前基于Transformer decoder的LLM，比如ChatGPT、LLaMA、baichuan等，通常都会有基于预训练的base模型和在base模型至少使用RLHF微调的Chat模型，Chat模型的训练一般都包括如下三个步骤：预训练，有监督微调和对齐。</p>
+<p>​  在<strong>预训练</strong>阶段，模型会从大量无标注文本数据集中学习通用知识，然后使用「<strong>有监督微调」（SFT）<strong>优化模型以更好地遵守特定指令，最后使用</strong>对齐</strong>技术使LLM可以更有用且更安全地响应用户提示。</p>
+<h3 id="11-预训练pre-training">1.1 预训练（Pre-training）</h3>
+<p>预训练阶段通常需要包含数十亿到数万亿个token的庞大文本语料库，但训练目标是<strong>模型需要根据提供的文本来预测「下一个单词」</strong>。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><strong>1.2 有监督微调（Supervised Finetuning）</strong></p>
+<p>​SFT的训练过程类似Pre-training阶段，也是预测「下一个单词」，但是<strong>需要人工标注的指令数据集</strong>，其中模型的输入是一个指令（根据任务的不同，也可能包含一段输入文本），输出为模型的预期回复内容。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>数据形式类似于：</p>
+<blockquote>
+<p>Instruction: &ldquo;Write a limerick about a pelican.&rdquo;</p>
+<p>指令：“写一首关于鹈鹕的打油诗。“</p>
+<p>Output: &ldquo;There once was a pelican so fine&hellip;&rdquo;</p>
+<p>输出：“从前有一只鹈鹕很好&hellip;“</p>
+</blockquote>
+<p>模型会把“Write a limerick about a pelican”作为输入，逐个token进行预测，输出“There once was a pelican so fine&hellip;”</p>
+<p>虽然两个阶段都采用类似的训练目标，但有监督微调数据集通常比预训练数据小得多，指令数据集需要人类（或其他高质量的LLM）提供标注结果，所以无法大规模应用。</p>
+<p><strong>1.3 对齐（Alignment）</strong></p>
+<p>第三阶段依然是微调，不过其主要目标在于将语言模型与人类的偏好、价值观进行对齐，这也是RLHF机制发挥的地方。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h2 id="二reinforcement-learning-with-human-feedback-rlhf">二、Reinforcement Learning with Human Feedback (RLHF)</h2>
+<p>上节，我们讨论了现代LLM的三个训练过程；本小节，我们重点讨论「上述两个微调阶段」（Supervised Tinetuning和Alignment）中使用的RLHF技术。</p>
+<p>RLHF主要包括三步：</p>
+<ol>
+<li>在预训练好的模型上进行「有监督微调」（SFT）；</li>
+<li>在有监督微调模型基础上创建一个reward model（RM）模型；</li>
+<li>基于RM模型使用PPO算法微调SFT模型；</li>
+</ol>
+<h3 id="21-在预训练好的模型上进行有监督微调">2.1 在预训练好的模型上进行有监督微调**</h3>
+<p>先收集一个Prompts集合，并要求标注人员写出高质量的回复，然后使用该数据集以监督的方式微调预训练的基础模型。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>​该步骤与上小节的Supervised Finetuning类似，但这是RLHF不可或缺的一个步骤。</p>
+<h3 id="22-在有监督微调模型基础上创建一个rm模型">2.2 在有监督微调模型基础上创建一个RM模型</h3>
+<p>对于每个Prompt，要求有监督微调后的LLM生成四到九个回复，再由标注人员根据个人偏好对所有回复进行排序。虽然排序过程很耗时，但工作量还是比第一步的有监督数据集构建要少一些。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在处理排序数据时，使用了一个奖励模型RM，RM来自RLHF第一步的「有监督微调语言模型」（SFT），SFT的输出通过一个回归层（单个输出节点）转换为奖励分数，即可称为<strong>RM模型</strong>。</p>
+<h3 id="23-基于rm模型使用ppo算法微调sft模型">2.3 基于RM模型使用PPO算法微调SFT模型</h3>
+<p>基于RM模型使用proximal policy optimization (PPO)算法微调SFT模型</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>PPO的具体技术细节可以参考InstructGPT或下面的论文列表。</p>
+<ol>
+<li>Asynchronous Methods for Deep Reinforcement Learning (2016) ，https://arxiv.org/abs/1602.01783</li>
+<li>Proximal Policy Optimization Algorithms (2017)，https://arxiv.org/abs/1707.06347</li>
+<li>Fine-Tuning Language Models from Human Preferences (2020)，https://arxiv.org/abs/1909.08593</li>
+<li>Learning to Summarize from Human Feedback (2022) ，https://arxiv.org/abs/2009.01325</li>
+</ol>
+<h2 id="三llama-2的rlhf">三、LLaMA 2的RLHF**</h2>
+<p>Meta AI在创建Llama-2-chat模型时也使用了RLHF技术，不过与ChatGPT相比还是有些细微区别。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>简单来说，Llama-2-chat在第一步RLHF微调上使用相同的指令数据，但在第二步使用了两个奖励模型；通过多个阶段的不断进化，奖励模型也会根据Llama-2-chat模型出现的错误进行更新；并且增加了拒绝采样（rejection sampling）步骤。</p>
+<h3 id="31-margin-loss">3.1 Margin Loss</h3>
+<p>​在标准InstructGPT中使用的RLHF PPO方法，研究人员需要收集同一个提示下的4-9个模型输出并进行排序，比如四个回复的排序结果为A&lt;C&lt; D&lt;B，那么就可以得到六个对比结果：A &lt; C，A &lt; D ，A &lt; B，C &lt; D，C &lt; B，D &lt; B。</p>
+<p>​Llama 2的数据集也采用类似的方式，不过标注人员每次只能看到两个（而非4-9个）回复并进行对比，但新增了一个边际（margin）标签，对比结果可以为「显著更好」（significantly better）和「好的不明显」（negligibly better）。</p>
+<p>在排序训练时中，Llama 2相比InstructGPT增加了边际损失：</p>
+<p>$$\mathcal{L}<em>{\mathrm{ranking}}=-\log\left(\sigma\left(r</em>\theta\left(x,y_c\right)-r_\theta\left(x,y_r\right)-m(r)\right)\right)$$</p>
+<p>其中，$r_θ(x，y)$是提示x和生成的回复y的标量分数输出; θ为模型权重; σ是将层输出转换为范围从0到1的分数的逻辑S形函数; $y_c$是由标注人员选择的更优回复; $y_r$是较差的回复。$m(r)$可以调节两个回复之间的差值，如果对比结果为「显著更好」，则会增加梯度值，加快更新速度。</p>
+<h3 id="32-两个rm模型">3.2 两个RM模型</h3>
+<p>​Llama 2中的两个奖励模型分别侧重「有用性」（helpfulness）和「安全性」（safety），用于模型优化的最终奖励函数会将两个分数进行线性组合。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="33-拒绝采样">3.3 拒绝采样</h3>
+<p>​Llama 2的作者使用了一个训练流水线，<strong>同时使用PPO和拒绝采样算法</strong>，迭代地产生多个RLHF模型（从RLHF-V1到RLHF-V5），模型在拒绝采样时会得到K个输出，并使用最高奖励的输出更新梯度，而PPO每次只基于单样本进行更新。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在监督微调的初始阶段之后，模型只使用拒绝采样进行训练，然后再结合拒绝采样和PPO。</p>
+<p>从实验结果来看，RLHF微调模型在无害性和有用性上都得到了改善，并且在最后阶段RLHF-v5使用PPO算法的性能最好。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h2 id="四rlhf的替代方案">四、RLHF的替代方案</h2>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>RLHF在InstructGPT和Llama 2论文中被证明是有效的，但是RLHF的过程是比较复杂的，下面将介绍一下最近RLHF的替代方案：</p>
+<h3 id="41-constitutional-ai-harmlessness-from-ai-feedback-dec-2022-httpsarxivorgabs221208073">4.1 Constitutional AI: Harmlessness from AI Feedback (Dec 2022, <a href="https://arxiv.org/abs/2212.08073"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2212.08073<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>研究人员提出了一种 <strong><font color=red>基于人类提供的规则列表的自我训练机制</font></strong>。与前面提到的InstructGPT论文类似，也使用了强化学习方法。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>上图中的「红队」（Red Team）指的是测试目标系统的防御能力，即外部或内部专家模拟潜在对手的过程，通过模仿现实世界攻击者的战术、技术和程序来挑战、测试并最终改进系统。</p>
+<h3 id="42-the-wisdom-of-hindsight-makes-language-models-better-instruction-followers-feb-2023-httpsarxivorgabs230205206">4.2 The Wisdom of Hindsight Makes Language Models Better Instruction Followers (Feb 2023, <a href="https://arxiv.org/abs/2302.05206"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2302.05206<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>研究人员提出了一种**<font color=red>基于重新标记的监督微调方法HIR</font>**，该方法在12个BigBench任务上优于RLHF。</p>
+<p>​HIR是如何工作的？简而言之，HIR方法包括两个步骤，即<strong>采样</strong>和<strong>训练</strong>。在采样步骤中，Prompt和指令输入给LLM来获取答案，根据对齐得分，在训练阶段适当的地方重新标注指令；然后，重新标记的指令和原始的Prompt用于微调LLM。使用这种重新标记的方法，研究人员有效地将失败案例（LLM创建的输出与原始指令不匹配的案例）转化为有用的训练数据，用于监督学习。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="43-direct-preference-optimization-your-language-model-is-secretly-a-reward-model-httpsarxivorgabs230518290-may-2023">4.3 Direct Preference Optimization: Your Language Model is Secretly a Reward Model (<a href="https://arxiv.org/abs/2305.18290"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2305.18290<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>, May 2023)</h3>
+<p><strong><font color=red>直接偏好优化（DPO）是具有PPO的RLHF的替代方案</font></strong>，其中研究人员表明，在RLHF中拟合奖励模型的交叉熵损失可以直接用于微调LLM。根据他们的基准，使用DPO更有效，而且在响应质量方面通常也优于RLHF/PPO。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="44-reinforced-self-training-rest-for-language-modeling-aug-2023-httpsarxivorgabs230808998">4.4 Reinforced Self-Training (ReST) for Language Modeling (Aug 2023, <a href="https://arxiv.org/abs/2308.08998"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2308.08998<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>ReST是人类反馈强化学习（RLHF）的一种替代方案，它<strong>使LLM与人类偏好保持一致</strong>。 <strong><font color=red>ReST使用采样方法创建改进的数据集</font></strong>，在质量越来越高的子集上迭代训练，以完善其奖励函数。根据作者的说法，与标准的在线RLHF方法（如具有近端策略优化的RLHF，PPO）相比，ReST通过离线生成训练数据集实现了更高的效率，但缺少与InstructGPT或Llama 2中使用的标准RLHF PPO方法的全面比较。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<h3 id="45-rlaif-scaling-reinforcement-learning-from-human-feedback-with-ai-feedback-sep-2023-httpsarxivorgabs230900267">4.5 RLAIF: Scaling Reinforcement Learning from Human Feedback with AI Feedback (Sep 2023, <a href="https://arxiv.org/abs/2309.00267"target="_blank" rel="external nofollow noopener noreferrer">https://arxiv.org/abs/2309.00267<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</h3>
+<p>最近的人工智能反馈强化学习（RLAIF）研究表明，RLHF中奖励模型训练的评级不一定必须由人类提供，而是可以由LLM生成（此处：PaLM 2）。标注人员在一半的案例中更喜欢RLAIF模型，也就意味着两个模型的差距并不大，RLHF和RLAIF都大大优于纯通过监督指令微调训练的模型。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>这项研究的结果非常有用和有趣，因为它基本上意味着我们可能能够使基于RLHF的训练更加高效和容易。然而，这些RLAIF模型在专注于信息内容的安全性和真实性的定性研究中的表现还有待观察，而人类偏好研究仅部分捕捉到了这一点。</p>
+<p><strong>参考文献：</strong></p>
+<p>[1] <a href="https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives"target="_blank" rel="external nofollow noopener noreferrer">https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a><br>
+[2] <a href="https://mp.weixin.qq.com/s/3Ff6C5zT7fXggQ1FwxvWAQ"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/3Ff6C5zT7fXggQ1FwxvWAQ<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item></channel></rss>
