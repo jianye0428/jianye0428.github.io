@@ -1,4 +1,327 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 04 May 2024 17:42:03 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>大模型学习笔记 | GPT 系列</title><link>https://jianye0428.github.io/posts/survey/</link><pubDate>Fri, 03 May 2024 16:33:37 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/survey/</guid><description><![CDATA[<h1 id="万字长文cver-转-llm-学习笔记之大模型gpt-系列">万字长文，CVer 转 LLM 学习笔记之大模型GPT 系列</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Sat, 04 May 2024 17:42:03 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>强化学习 | 深度解读Soft Actor-Critic 算法</title><link>https://jianye0428.github.io/posts/sac/</link><pubDate>Sat, 04 May 2024 17:42:03 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/sac/</guid><description><![CDATA[<h1 id="深度解读soft-actor-critic-算法">深度解读Soft Actor-Critic 算法</h1>
+<h2 id="1-前言">1 前言</h2>
+<p>机器人学习Robot Learning正在快速的发展，其中深度强化学习deep reinforcement learning（DRL），特别是面向连续控制continous control的DRL算法起着重要的作用。在这一领域中，目前可以说有三类行之有效的model free DRL算法：</p>
+<ul>
+<li>TRPO,PPO</li>
+<li>DDPG及其拓展（<a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1804.08617"target="_blank" rel="external nofollow noopener noreferrer">D4PG<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>,TD3等）</li>
+<li>Soft Q-Learning, Soft Actor-Critic</li>
+</ul>
+<p><strong><font color=red>PPO</font></strong> 算法是目前最主流的DRL算法，同时面向离散控制和连续控制，在<a href="https://en.wikipedia.org/wiki/OpenAI_Five"target="_blank" rel="external nofollow noopener noreferrer">OpenAI Five<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>上取得了巨大成功。但是PPO是一种on-policy的算法，也就是PPO面临着严重的sample inefficiency，需要巨量的采样才能学习，这对于真实的机器人训练来说，是无法接受的。</p>
+<p><strong><font color=red>DDPG</font></strong> 及其拓展则是DeepMind开发的面向连续控制的off policy算法，相对PPO 更sample efficient。<strong>DDPG训练的是一种确定性策略deterministic policy，即每一个state下都只考虑最优的一个动作</strong>。DDPG的拓展版D4PG从paper中的结果看取得了非常好的效果，但是并没有开源，目前github上也没有人能够完全复现Deepmind的效果。</p>
+<p><strong><font color=red>Soft Actor-Critic (SAC)</font></strong> 是面向Maximum Entropy Reinforcement learning 开发的一种off policy算法，和DDPG相比，Soft Actor-Critic使用的是随机策略stochastic policy，相比确定性策略具有一定的优势（具体后面分析）。Soft Actor-Critic在公开的benchmark中取得了非常好的效果，并且能直接应用到真实机器人上。最关键的是，Soft Actor-Critic是完全开源的，因此，深入理解Soft Actor-Critic 算法具有非常重要的意义，也是本篇blog的目的。</p>
+<p>Soft Actor-Critic算法相关链接：</p>
+<p>Paper：</p>
+<ul>
+<li><a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1801.01290"target="_blank" rel="external nofollow noopener noreferrer">Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1812.05905"target="_blank" rel="external nofollow noopener noreferrer">Soft Actor-Critic Algorithms and Applications<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1702.08165"target="_blank" rel="external nofollow noopener noreferrer">Reinforcement Learning with Deep Energy-Based Policies<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> (Soft Q-Learning)</li>
+</ul>
+<p>Codes:</p>
+<ul>
+<li><a href="https://link.zhihu.com/?target=https%3A//github.com/rail-berkeley/softlearning"target="_blank" rel="external nofollow noopener noreferrer">rail-berkeley/softlearning<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> (原作者实现）</li>
+<li><a href="https://link.zhihu.com/?target=https%3A//github.com/vitchyr/rlkit"target="_blank" rel="external nofollow noopener noreferrer">vitchyr/rlkit<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://link.zhihu.com/?target=https%3A//github.com/openai/spinningup"target="_blank" rel="external nofollow noopener noreferrer">openai/spinningup<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://link.zhihu.com/?target=https%3A//github.com/hill-a/stable-baselines"target="_blank" rel="external nofollow noopener noreferrer">hill-a/stable-baselines<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+</ul>
+<p>下面我们来详细解读一下SAC的算法及其具体实现。本文的阅读需要有基本的DRL算法基础知识。</p>
+<h2 id="2-为什么研究-maximum-entropy-reinforcement-learning">2 为什么研究 Maximum Entropy Reinforcement Learning？</h2>
+<p>对于一般的DRL，学习目标很直接，就是学习一个policy使得累加的reward期望值最大：</p>
+<p>$$\pi^*=\arg\max_\pi\mathbb{E}_{(s_t,a_t)\sim\rho_\pi}[\sum_tR(s_t,a_t)]\tag{1}$$</p>
+<p>而最大熵RL，除了上面的基本目标，还要求policy的每一次输出的action 熵entropy最大：</p>
+<p>$$\pi^*=\arg\max_\pi\mathbb{E}_{(s_t,a_t)\sim\rho_\pi}[\sum_t\underbrace{R(s_t,a_t)}_{reward}+\alpha\underbrace{H(\pi(\cdot|s_t))}_{entropy}]\tag{2}$$</p>
+<p>这样做的基本目的是什么呢？让策略随机化，即输出的每一个action的概率尽可能分散，而不是集中在一个action上。不了解entropy的同学可以看这里：<a href="https://link.zhihu.com/?target=https%3A//zh.wikipedia.org/wiki/%E7%86%B5_%28%E4%BF%A1%E6%81%AF%E8%AE%BA%29"target="_blank" rel="external nofollow noopener noreferrer">wiki-信息熵<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>我们知道DDPG训练得到的是一个deterministic policy确定性策略，也就是说这个策略对于一种状态state只考虑一个最优的动作。所以，stochastic policy相对deterministic policy有什么优势呢？</p>
+<p>Stochastic policy随机策略在实际机器人控制上往往是更好的做法。比如我们让机器人抓取一个水杯，机器人是有无数条路径去实现这个过程的，而并不是只有唯一的一种做法。因此，我们就需要drl算法能够给出一个随机策略，在每一个state上都能输出每一种action的概率，比如有3个action都是最优的，概率一样都最大，那么我们就可以从这些action中随机选择一个做出action输出。<strong>最大熵maximum entropy的核心思想就是不遗落到任意一个有用的action，有用的trajectory</strong>。对比DDPG的deterministic policy的做法，看到一个好的就捡起来，差一点的就不要了，而最大熵是都要捡起来，都要考虑。</p>
+<p><strong>基于最大熵的RL算法有什么优势？</strong></p>
+<p>以前用deterministic policy的算法，我们找到了一条最优路径，学习过程也就结束了。现在，我们还要求熵最大，就意味着神经网络需要去explore探索所有可能的最优路径，这可以产生以下多种优势：</p>
+<ul>
+<li>
+<p>1）学到policy可以作为更复杂具体任务的初始化。因为通过最大熵，policy不仅仅学到一种解决任务的方法，而是所有all。因此这样的policy就更有利于去学习新的任务。比如我们一开始是学走，然后之后要学朝某一个特定方向走。</p>
+</li>
+<li>
+<p>2）更强的exploration能力，这是显而易见的，能够更容易的在多模态reward （multimodal reward）下找到更好的模式。比如既要求机器人走的好，又要求机器人节约能源</p>
+</li>
+<li>
+<p>3）更robust鲁棒，更强的generalization。因为要从不同的方式来探索各种最优的可能性，也因此面对干扰的时候能够更容易做出调整。（干扰会是神经网络学习过程中看到的一种state，既然已经探索到了，学到了就可以更好的做出反应，继续获取高reward）</p>
+</li>
+</ul>
+<p>既然最大熵RL算法这么好，我们当然应该研究它了。而实际上，在之前的DRL算法<a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1602.01783"target="_blank" rel="external nofollow noopener noreferrer">A3C<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们其实已经用了一下最大熵：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在训练policy的时候，A3C加了entropy项，作为一个regularizer，让policy更随机。不过A3C这么做主要是为了更好做exploration，整体的训练目标依然只考虑reward。这和Soft Actor-Critic的设定还是不一样的，Soft Actor-Critic是真正最大熵DRL算法。</p>
+<h2 id="3-maximum-entropy-reinforcement-learning的bellman方程">3 Maximum Entropy Reinforcement Learning的Bellman方程</h2>
+<p>我们先回顾一下dynamic programming中Bellman backup equation，参考<a href="https://link.zhihu.com/?target=http%3A//www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/MDP.pdf"target="_blank" rel="external nofollow noopener noreferrer">http://www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/MDP.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>$$q_\pi(s,a)=r(s,a)+\gamma\sum_{s^{\prime}\in\mathcal{S}}\mathcal{P}_{ss^{\prime}}^a\sum_{a^{\prime}\in\mathcal{A}}\pi(a^{\prime}|s^{\prime})q_\pi(s^{\prime},a^{\prime})\tag{3}$$</p>
+<p>那么对于最大熵（MaxEnt)的目标，其实可以把熵也作为reward的一部分，我们在计算q值时（记住q是累加reward的期望，传统rl的目标等价于让q最大），就需要计算每一个state的熵entropy (entropy的公式如下图所示）：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>因此我们就可以得到Soft Bellman Backup equation (Entropy项)额外乘上 $\alpha$ 系数：</p>
+<p>$$q_\pi(s,a)=r(s,a)+\gamma\sum_{s^{\prime}\in\mathcal{S}}\mathcal{P}_{ss^{\prime}}^a\sum_{a^{\prime}\in\mathcal{A}}\pi(a^{\prime}|s^{\prime})(q_\pi(s^{\prime},a^{\prime})-\alpha\log(\pi(a^{\prime}|s^{\prime}))\quad(4)$$</p>
+<p>Recall一下<a href="https://link.zhihu.com/?target=http%3A//www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/MC-TD.pdf"target="_blank" rel="external nofollow noopener noreferrer">Dynamic Programming Backup<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+对应Q值的公式是
+<p>$$Q(s_t,a_t)=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1},a_{t+1}}[Q(s_{t+1},a_{t+1})]\tag{5}$$</p>
+<p>根据公式（4），我们可以得到Soft Bellman Backup的 更新公式：</p>
+<p>$$Q_{soft}(s_t,a_t)=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1},a_{t+1}}[Q_{soft}(s_{t+1},a_{t+1})-\alpha\log(\pi(a_{t+1}|s_{t+1}))]\tag{6}$$</p>
+<p>上面公式（6）是直接使用dynamic programming，将entropy嵌入计算得到的结果。我们可以反过来先直接把entropy作为reward的一部分：</p>
+<p>$$r_{soft}(s_t,a_t)=r(s_t,a_t)+\gamma\alpha\mathbb{E}_{s_{t+1}\sim\rho}H(\pi(\cdot|s_{t+1}))\tag{7}$$</p>
+<p>我们将（7）带入到公式（5）：</p>
+<p>$$\begin{aligned}
+{Q_{soft}(s_{t},a_{t})} &amp;=r(s_t,a_t)+\gamma\alpha\mathbb{E}_{s_{t+1}\sim\rho}H(\pi(\cdot|s_{t+1}))+\gamma\mathbb{E}_{s_{t+1},a_{t+1}}[Q_{soft}(s_{t+1},a_{t+1})]\\
+&amp;=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1}\sim\rho,a_{t+1}\sim\pi}[Q_{soft}(s_{t+1},a_{t+1})]+\gamma\alpha\mathbb{E}_{s_{t+1}\sim\rho}H(\pi(\cdot|s_{t+1}))\\
+&amp;=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1}\sim\rho,a_{t+1}\sim\pi}[Q_{soft}(s_{t+1},a_{t+1})]+\gamma\mathbb{E}_{s_{t+1}\sim\rho}\mathbb{E}_{a_{t+1}\sim\pi}[-\alpha\log\pi(a_{t+1}|s_{t+1})]\\
+&amp;=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1}\sim\rho}[\mathbb{E}_{a_{t+1}\sim\pi}[Q_{soft}(s_{t+1},a_{t+1})-\alpha\log(\pi(a_{t+1}|s_{t+1}))]]\\&amp;=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1},a_{t+1}}[Q_{soft}(s_{t+1},a_{t+1})-\alpha\log(\pi(a_{t+1}|s_{t+1}))]\end{aligned}$$</p>
+<p>可以得到一样的结果。</p>
+<p>与此同时，我们知道:</p>
+<p>$$Q(s_t,a_t)=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1}\sim\rho}[V(s_{t+1})]\tag{9}$$</p>
+<p>因此，我们有：</p>
+<p>$$V_{soft}(s_t)=\mathbb{E}_{a_t\sim\pi}[Q_{soft}(s_t,a_t)-\alpha\log\pi(a_t|s_t)]\tag{10}$$</p>
+<p>至此我们理清楚了SAC paper原文中的公式(2)和(3)：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>并且（7）的做法直接证明了Lemma 1 Soft Policy Evaluation (<strong>这个lemma为下一部分的soft policy iteration提供支撑</strong>）:</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>但是，我们注意到上面的整个推导过程都是围绕maximum entropy，和soft 好像没有什么直接关系。所以，</p>
+<p><strong>为什么称为soft？哪里soft了？以及为什么soft Q function能够实现maximum entropy？</strong></p>
+<p>理解清楚这个问题是理解明白soft q-learning及sac的关键！</p>
+<p>SAC这篇paper直接跳过了soft Q-function的定义问题，因此，要搞清楚上面的问题，我们从Soft Q-Learning的paper来寻找答案。</p>
+<p>参考<a href="https://link.zhihu.com/?target=https%3A//bair.berkeley.edu/blog/2017/10/06/soft-q-learning/"target="_blank" rel="external nofollow noopener noreferrer">Learning Diverse Skills via Maximum Entropy Deep Reinforcement Learning<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>上面的曲线很明显的说明了stochastic policy的重要性，面对多模的（multimodal）的Q function，传统的RL只能收敛到一个选择（左图），而更优的办法是右图，让policy也直接符合Q的分布。这里，最直接的一种办法就是定义这样的energy-based policy：</p>
+<p>\pi(a_t|s_t)\propto exp(-\mathcal{E}(s_t,a_t)) （11）</p>
+<p>其中 \mathcal{E} 是能量函数，上面的形式就是Boltzmann Distribution <a href="https://link.zhihu.com/?target=https%3A//zh.wikipedia.org/wiki/%E7%8E%BB%E5%B0%94%E5%85%B9%E6%9B%BC%E5%88%86%E5%B8%83"target="_blank" rel="external nofollow noopener noreferrer">玻尔兹曼分布<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 。下图的 -f(x)=\mathcal{E}</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><a href="https://deepgenerativemodels.github.io/assets/slides/cs236_lecture13.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://deepgenerativemodels.github.io/assets/slides/cs236_lecture13.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>为了连接soft Q function，我们可以设定</p>
+<p>$$\mathcal{E}(s_t,a_t)=-\frac{1}{\alpha}Q_{soft}(s_t,a_t)\tag{12}$$</p>
+<p>因此，我们有</p>
+<p>$$\pi(a_t|s_t)\propto exp(Q_{soft}(s_t,a_t))\tag{13}$$</p>
+<p>这样的policy能够为每一个action赋值一个特定的概率符合Q值的分布，也就满足了stochastic policy的需求。</p>
+<p>下面我们要<strong>发现(13)的形式正好就是最大熵RL的optimal policy最优策略的形式，而这实现了soft q function和maximum entropy的连接。</strong></p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>实际上我们理解Soft Q-Learning及Soft Actor Critic，要清楚上图三者的关系。在Soft Q-Learning那篇paper中，他是从Soft Value Function的定义出发去连接Energy-Based Policy 和Maximum Entropy Objective的关系。而在本blog中，我们从Maximum Entropy Objective出发，来连接其他两部分。</p>
+<p>前面我们已经推导得到了公式（10），那么根据公式（10），我们可以直接推导得到policy的形式：</p>
+<p>$$\begin{aligned}\pi(s_{t},a_{t})&amp;=\exp(\frac1\alpha(Q_{soft}(s_t,a_t)-V_{soft}(s_t)))\\&amp;&amp;\text{(14)}\\&amp;=\frac{\exp(\frac1\alpha Q_{soft}(s_t,a_t))}{\exp(\frac1\alpha V_{soft}(s_t))}\end{aligned}$$</p>
+<p>（14）符合了（13）， $\frac{1}{\alpha}V_{soft}(s_t)$ 可以看做是对应的log partition function. 由此，就连接了Maximum Entropy Objective和Energy Based Policy的关系。</p>
+<p>下面我们要连接Soft Value Function。从（14）的 $\frac{1}{\alpha}V_{soft}(s_t)$ 已经很明显了：</p>
+<p>$$\exp(\frac1\alpha V_{soft}(s_t))=\int\exp(\frac1\alpha Q_{soft}(s_t,a))d\mathbf{a} (15)$$</p>
+<p>因此，我们可以定义 $V_{soft}(s_t)$ :</p>
+<p>$$V_{soft}(s_t)\triangleq\alpha\log\int\exp(\frac1\alpha Q_{soft}(s_t,a))d\mathbf{a}\tag{16}$$</p>
+<p>这和soft 有什么关系呢？(16）其实是LogSumExp的积分形式，就是smooth maximum/soft maximum (软的最大）。参考<a href="https://link.zhihu.com/?target=https%3A//en.wikipedia.org/wiki/LogSumExp"target="_blank" rel="external nofollow noopener noreferrer">https://en.wikipedia.org/wiki/LogSumExp<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>所以就可以定义</p>
+<p>$$\mathrm{soft}\max_af(a):=\log\int\exp f(a)da\tag{17}$$</p>
+<p>因此我们也就可以根据公式（9）定义soft的Q-function：</p>
+<p>$$Q_{soft}(s_t,a_t)=\mathbb{E}\left[r_t+\gamma\text{ soft}\max_aQ(s_{t+1},a)\right]\text{(18)}$$</p>
+<p>所以，为什么称为soft是从这里来的。</p>
+<p>这里有一个常见的疑问就是这里的soft max和我们常见的softmax好像不一样啊。是的，我们在神经网络中常用的activation function softmax 实际上是soft argmax，根据一堆logits找到对应的软的最大值对应的index。具体参看：<a href="https://link.zhihu.com/?target=https%3A//en.wikipedia.org/wiki/Softmax_function"target="_blank" rel="external nofollow noopener noreferrer">https://en.wikipedia.org/wiki/Softmax_function<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>上面的推导还只是面向policy的value和Q，我们下面要说明optimal policy也必然是energy-based policy的形式。</p>
+<p>这一部分的证明依靠 Policy improvement theorem：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>具体证明过程见soft q-learning原文的A.1。</p>
+<p>有了Theorem 4，</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>我们就可以看到optimal policy必然是energy based policy，也因此，我们有了soft q learning paper中最开始的定义：</p>
+<p>$$\pi_{MaxEnt}^<em>(a_t|s_t)=\exp(\frac{1}{\alpha}(Q_{soft}^</em>(s_t,a_t)-V_{soft}^*(s_t)))\text{(19)}$$</p>
+<h2 id="4-policy-iteration">4 Policy Iteration</h2>
+<p>理清楚了上面的基本定义和联系，我们就可以研究怎么更新policy了，也就是policy iteration。</p>
+<p>回顾一下一般的<a href="https://link.zhihu.com/?target=http%3A//www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/DP.pdf"target="_blank" rel="external nofollow noopener noreferrer">Policy Iteration<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在两步中进行循环迭代（我们直接使用Q值来说明）：</p>
+<ol>
+<li>Policy evaluation：固定policy，使用Bellman方程更新Q值直到收敛：</li>
+</ol>
+<p>$$Q_\pi(s,a)=r(s,a)+\lambda\mathbb{E}_{s^{\prime},a^{\prime}}Q_\pi(s^{\prime},a^{\prime})\tag{20}$$</p>
+<ol start="2">
+<li>Policy improvement: 更新policy：</li>
+</ol>
+<p>$$\pi^{\prime}(s)=\arg\max_aQ_\pi(s,a)\tag{21}$$</p>
+<p>基于同样的方法，我们有Soft Policy Iteration：</p>
+<ol>
+<li>Soft policy evaluation:固定policy，使用Bellman方程更新Q值直到收敛:</li>
+</ol>
+<p>$$\begin{aligned}&amp;Q_{soft}^\pi(s_t,a_t)=r(s_t,a_t)+\lambda\mathbb{E}_{s_{t+1},a_{t+1}}\left[Q_{soft}^\pi(s_{t+1},a_{t+1})-\alpha\log(\pi(a_{t+1}|s_{t+1}))\right]\tag{22}\end{aligned}$$</p>
+<ol start="2">
+<li>Soft policy improvement: 更新policy：</li>
+</ol>
+<p>$$\pi^{\prime}=\arg\min_{\pi_k\in\Pi}D_{KL}(\pi_k(\cdot|s_t)||\frac{\exp(\frac{1}{\alpha}Q_{soft}^{\pi}(s_t,\cdot))}{Z_{soft}^{\pi}(s_t)}) \tag{23}$$</p>
+<p>(22)基于上一部分说的Lemma 1 Soft Policy Evaluation, 可收敛。</p>
+<p>(23)则基于上一部分的Theorem 4 Policy Improvement Theorem。只是这里的做法不是直接赋值，而是通过KL divergence来趋近 $\exp(Q^{\pi}_{soft}(s_t,\cdot))$ 。在SAC的paper原文中，我们可以看到这么做的原因是为了限制policy在一定范围的policies $\Pi$ 中从而tractable，policy的分布可以是高斯分布。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>同样的，作者也专门证明了采用KL divergence的方法一样能够保证policy improvement，也就是Lemma 2：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>最后，就是证明上面的Soft Policy Iteration过程能保证policy收敛到最优，即Theorem 1：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>由此，基本的理论建设也就结束了，下面进入Soft Actor-Critic的算法设计。</p>
+<h2 id="5-soft-actor-critic">5 Soft Actor-Critic</h2>
+<p>SAC算法的构建首先是神经网络化，我们用神经网络来表示Q和Policy： $Q_{\theta}(s_t,a_t)$ 和 $\pi_{\phi}(a_t|s_t)$ 。Q网络比较简单，几层的MLP最后输出一个单值表示Q就可以了，Policy网络需要输出一个分布，一般是输出一个Gaussian 包含mean和covariance。下面就是构建神经网络的更新公式。</p>
+<p>对于Q网络的更新，我们根据（10）可以得到：</p>
+<p>$$\begin{aligned}
+J_{Q}(\theta)&amp; =\mathbb{E}_{(s_t,a_t,s_{t+1})\sim\mathcal{D}}[\frac{1}{2}(Q_\theta(s_t,a_t)-(r(s_t,a_t)+\gamma V_{\bar{\theta}}(s_{t+1})))^2] \\
+&amp;=\mathbb{E}_{(s_t,a_t,s_{t+1})\sim\mathcal{D},a_{t+1}\sim\pi_\phi}[\frac12(Q_\theta(s_t,a_t)-(r(s_t,a_t)+\gamma(Q_{\bar{\theta}}(s_{t+1},a_{t+1})-\alpha\log(\pi_\phi(a_{t+1}|s_{t+1})))))^2] \tag{24}
+\end{aligned}$$</p>
+<p>这里和DDPG一样，构造了一个target soft Q 网络带参数 $\overline{\theta}$ ，这个参数通过exponentially moving average Q网络的参数 $\theta$ 得到。(ps:在第一个版本的SAC中，他们单独定义了V网络进行更新，说是更稳定，到新版的SAC中，由于自动更新temperature $\alpha$ 就直接使用Q网络更新）</p>
+<p>对于Policy 网络参数的更新，就是最小化KL divergence：</p>
+<p>$$\begin{aligned}
+J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\alpha Q_\theta(s_t,.)-\log Z(s_t))\right) \\
+&amp;=\mathbb{E}_{s_t\sim\mathcal{D},a_t\sim\pi_\phi}\Big[\log\big(\frac{\pi_\phi(a_t|s_t)}{\exp(\frac{1}{\alpha}Q_\theta(s_t,a_t)-\log Z(s_t))}\big)\Big] \\
+&amp;=\mathbb{E}_{s_t\sim\mathcal{D},a_t\sim\pi_\phi}[\log\pi_\phi(a_t|s_t)-\frac1\alpha Q_\theta(s_t,a_t)+\log Z(s_t)] \tag{25}
+\end{aligned}$$</p>
+<p>这里的action我们采用reparameterization trick来得到，即</p>
+<p>$$a_t=f_\phi(\varepsilon_t;s_t)=f_\phi^\mu(s_t)+\varepsilon_t\odot f_\phi^\sigma(s_t)\tag{26}$$</p>
+<p>f函数输出平均值和方差，然后 $\varepsilon$ 是noise，从标准正态分布采样。使用这个trick，整个过程就是完全可微的(loss 乘以 $\alpha$ 并去掉不影响梯度的常量log partition function Z(s_t)) ：</p>
+<p>$$J_\pi(\phi)=\mathbb{E}_{s_t\sim\mathcal{D},\varepsilon\sim\mathcal{N}}[\alpha\log\pi_\phi(f_\phi(\varepsilon_t;s_t)|s_t)-Q_\theta(s_t,f_\phi(\varepsilon_t;s_t))] \tag{27}$$</p>
+<p>这样基本的Soft Actor-Critic的更新方法也就得到了。</p>
+<h2 id="6-temperature-hyperparameter-auto-adjustment">6 Temperature Hyperparameter Auto-Adjustment</h2>
+<p>前面的SAC中，我们只是人为给定一个固定的temperature $\alpha$ 作为entropy的权重，但实际上由于reward的不断变化，采用固定的temperature并不合理，会让整个训练不稳定，因此，有必要能够自动调节这个temperature。当policy探索到新的区域时，最优的action还不清楚，应该调整temperature $\alpha$ 去探索更多的空间。当某一个区域已经探索得差不多，最优的action基本确定了，那么这个temperature就可以减小。</p>
+<p>这里，SAC的作者构造了一个带约束的优化问题，让平均的entropy权重是有限制的，但是在不同的state下entropy的权重是可变的，即</p>
+<p>$$\max_{\pi_0,\ldots,\pi_T}\mathbb{E}\bigg[\sum_{t=0}^Tr(s_t,a_t)\bigg]\mathrm{s.t.~}\forall t, \mathcal{H}(\pi_t)\geq\mathcal{H}_0\tag{28}$$</p>
+<p>对于这部分内容，<a href="https://link.zhihu.com/?target=https%3A//lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html%23sac"target="_blank" rel="external nofollow noopener noreferrer">Policy Gradient Algorithms<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 这个openai小姐姐的blog介绍得极其清楚，大家可以参考，最后得到temperature的loss：</p>
+<p>$$J(\alpha)=\mathbb{E}_{a_t\sim\pi_t}[-\alpha\log\pi_t(a_t\mid\pi_t)-\alpha\mathcal{H}_0]\tag{29}$$</p>
+<p>由此，我们可以得到完整的Soft Actor-Critic算法：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>为了更快速稳定的训练，作者引入了两个Q网络，然后每次选择Q值小的一个作为target Q值。更新Q，Policy及 \alpha 使用上文的（24）（27）（29）三个公式。</p>
+<h2 id="7-神经网络结构">7 神经网络结构</h2>
+<p>虽然上面把算法流程确定了，但是如何构造policy的神经网络还是比较复杂的。下图是带V网络的神经网络结构图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><a href="https://nervanasystems.github.io/coach/components/agents/policy_optimization/sac.html"target="_blank" rel="external nofollow noopener noreferrer">https://nervanasystems.github.io/coach/components/agents/policy_optimization/sac.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>我们主要来探究一下Policy网络的设计。</p>
+<p>见上图右上角的Policy网络，前面的input embedder和Middleware不用说，就是几层的MLP。然后，接下来神经网络分成两个分支，分别输出平均值mean $\mu$ 和log 标准差 log std 。然后使用exp得到std。</p>
+<p>$$\pi_\phi(s_t) = \mu_t,\log \sigma_t \tag{30}$$</p>
+<p>$$\sigma_t = \exp(\log \sigma_t)$$</p>
+<p>正常输出这样的高斯分布作为action 的分布distribution是OK的，但是在实际中，这个action需要限定在一定范围内。因此，这里作者使用了squashing function tanh，将action限制在（-1,1）之间，即</p>
+<p>$$\mathbf{u}_t =\mu_t + \varepsilon_t \odot \sigma_t $$</p>
+<p>$$a_t = \tanh (\mathbf{u}) \tag{31}$$</p>
+<p>这里和上文的公式（26）对应，多了一个tanh。</p>
+<p>那么这会导致分布的变化，从而影响log likelihood的计算，而这是我们计算SAC的loss必须的。作者在paper中给出了计算方法如下：</p>
+<p>$$\log \pi(a|s)=\log \mu(\mathbf{u}|s)-\sum_{i=1}^{D}{\log(1-\tanh^2(u_i))} \tag{32}$$</p>
+<p>其中 u_i 是 $\mathbf{u}$ 的第i个元素。这里的 $\mu(\mathbf{u}|s)$ 是没有加限制时的likelihood function也就是高斯分布的likelihood function似然函数。高斯分布的log likelihood直接使用pytorch的<a href="https://link.zhihu.com/?target=https%3A//pytorch.org/docs/stable/_modules/torch/distributions/normal.html"target="_blank" rel="external nofollow noopener noreferrer">Normal<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> class就可以获得。</p>
+<h2 id="8-其他细节">8 其他细节</h2>
+<p>1）SAC里的target entropy 设计为</p>
+<p>$$\mathcal{H}_0 = -\dim (\mathcal{A}) \tag{33}$$</p>
+<p>即-动作数量。</p>
+<p>2）SAC paper里完全没有说明的训练时的episode设置。SAC设置为每一个episode采样1000次然后训练1000次。</p>
+<p>3）在代码中SAC使用 log alpha作为更新的参数，而不是直接使用alpha如公式（25），这和输出log std是一样的，使用log有很大的正负范围，更方便网络输出。否则alpha或者std都是正值。</p>
+<p>4）SAC有一个很大的问题，它的policy的目的是趋近于玻尔兹曼分布，但是实际实现的时候，为了能够tractable，选择了输出一个高斯，也就是让高斯趋近于玻尔兹曼分布。这意味着SAC本质上还是unimodal的算法，而不是soft q-learning的multi-modal。这使得SAC的创新性打了很大的折扣。但是算法效果确实还是不错的。</p>
+<h2 id="9-小结">9 小结</h2>
+<p>本文从理论到具体实现层面剖析了Soft Actor-Critic这一目前极强的DRL算法，基本上理解了本文的分析，对于代码的实现也就可以了然一胸了。</p>
+<p>由于本人水平有限，前面的理论分析恐有错误，望批评指正！</p>
+<p>ref:
+[1]. <a href="https://zhuanlan.zhihu.com/p/70360272"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/70360272<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>大模型学习笔记 | GPT 系列</title><link>https://jianye0428.github.io/posts/survey/</link><pubDate>Fri, 03 May 2024 16:33:37 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/survey/</guid><description><![CDATA[<h1 id="万字长文cver-转-llm-学习笔记之大模型gpt-系列">万字长文，CVer 转 LLM 学习笔记之大模型GPT 系列</h1>
 <h2 id="导读">导读</h2>
 <p>本文是作者对 GPT 系列文章的学习笔记，从个人角度梳理了 GPT 系列的迭代逻辑，从技术的逻辑连续性和关联性都有很好的讲解，篇幅较长，建议大家点赞收藏。</p>
 <p>这个系列的笔记主要面向像我一样已经具备一定的深度学习基础，但是新接触 NLP 和大模型领域的读者，目的是能提纲挈领地快速把握这个领域的一系列关键工作节点。</p>
@@ -4072,6 +4395,329 @@ gdb有thread相关命令，如infothread(简写infoth)显示线程消息，bxxth
 [2]. <a href="https://zhuanlan.zhihu.com/p/602866792"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/602866792<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></br>
 [3]. <a href="https://zhuanlan.zhihu.com/p/675399586"target="_blank" rel="external nofollow noopener noreferrer">万字长文超全 C++面经<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 <p>ref: <a href="https://blog.csdn.net/m0_46245582/category_11569287.html"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/m0_46245582/category_11569287.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>强化学习 | 深度解读Soft Actor-Critic 算法</title><link>https://jianye0428.github.io/posts/sac/</link><pubDate>Sat, 04 May 2024 17:42:03 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/sac/</guid><description><![CDATA[<h1 id="深度解读soft-actor-critic-算法">深度解读Soft Actor-Critic 算法</h1>
+<h2 id="1-前言">1 前言</h2>
+<p>机器人学习Robot Learning正在快速的发展，其中深度强化学习deep reinforcement learning（DRL），特别是面向连续控制continous control的DRL算法起着重要的作用。在这一领域中，目前可以说有三类行之有效的model free DRL算法：</p>
+<ul>
+<li>TRPO,PPO</li>
+<li>DDPG及其拓展（<a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1804.08617"target="_blank" rel="external nofollow noopener noreferrer">D4PG<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>,TD3等）</li>
+<li>Soft Q-Learning, Soft Actor-Critic</li>
+</ul>
+<p><strong><font color=red>PPO</font></strong> 算法是目前最主流的DRL算法，同时面向离散控制和连续控制，在<a href="https://en.wikipedia.org/wiki/OpenAI_Five"target="_blank" rel="external nofollow noopener noreferrer">OpenAI Five<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>上取得了巨大成功。但是PPO是一种on-policy的算法，也就是PPO面临着严重的sample inefficiency，需要巨量的采样才能学习，这对于真实的机器人训练来说，是无法接受的。</p>
+<p><strong><font color=red>DDPG</font></strong> 及其拓展则是DeepMind开发的面向连续控制的off policy算法，相对PPO 更sample efficient。<strong>DDPG训练的是一种确定性策略deterministic policy，即每一个state下都只考虑最优的一个动作</strong>。DDPG的拓展版D4PG从paper中的结果看取得了非常好的效果，但是并没有开源，目前github上也没有人能够完全复现Deepmind的效果。</p>
+<p><strong><font color=red>Soft Actor-Critic (SAC)</font></strong> 是面向Maximum Entropy Reinforcement learning 开发的一种off policy算法，和DDPG相比，Soft Actor-Critic使用的是随机策略stochastic policy，相比确定性策略具有一定的优势（具体后面分析）。Soft Actor-Critic在公开的benchmark中取得了非常好的效果，并且能直接应用到真实机器人上。最关键的是，Soft Actor-Critic是完全开源的，因此，深入理解Soft Actor-Critic 算法具有非常重要的意义，也是本篇blog的目的。</p>
+<p>Soft Actor-Critic算法相关链接：</p>
+<p>Paper：</p>
+<ul>
+<li><a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1801.01290"target="_blank" rel="external nofollow noopener noreferrer">Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1812.05905"target="_blank" rel="external nofollow noopener noreferrer">Soft Actor-Critic Algorithms and Applications<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1702.08165"target="_blank" rel="external nofollow noopener noreferrer">Reinforcement Learning with Deep Energy-Based Policies<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> (Soft Q-Learning)</li>
+</ul>
+<p>Codes:</p>
+<ul>
+<li><a href="https://link.zhihu.com/?target=https%3A//github.com/rail-berkeley/softlearning"target="_blank" rel="external nofollow noopener noreferrer">rail-berkeley/softlearning<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> (原作者实现）</li>
+<li><a href="https://link.zhihu.com/?target=https%3A//github.com/vitchyr/rlkit"target="_blank" rel="external nofollow noopener noreferrer">vitchyr/rlkit<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://link.zhihu.com/?target=https%3A//github.com/openai/spinningup"target="_blank" rel="external nofollow noopener noreferrer">openai/spinningup<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="https://link.zhihu.com/?target=https%3A//github.com/hill-a/stable-baselines"target="_blank" rel="external nofollow noopener noreferrer">hill-a/stable-baselines<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+</ul>
+<p>下面我们来详细解读一下SAC的算法及其具体实现。本文的阅读需要有基本的DRL算法基础知识。</p>
+<h2 id="2-为什么研究-maximum-entropy-reinforcement-learning">2 为什么研究 Maximum Entropy Reinforcement Learning？</h2>
+<p>对于一般的DRL，学习目标很直接，就是学习一个policy使得累加的reward期望值最大：</p>
+<p>$$\pi^*=\arg\max_\pi\mathbb{E}_{(s_t,a_t)\sim\rho_\pi}[\sum_tR(s_t,a_t)]\tag{1}$$</p>
+<p>而最大熵RL，除了上面的基本目标，还要求policy的每一次输出的action 熵entropy最大：</p>
+<p>$$\pi^*=\arg\max_\pi\mathbb{E}_{(s_t,a_t)\sim\rho_\pi}[\sum_t\underbrace{R(s_t,a_t)}_{reward}+\alpha\underbrace{H(\pi(\cdot|s_t))}_{entropy}]\tag{2}$$</p>
+<p>这样做的基本目的是什么呢？让策略随机化，即输出的每一个action的概率尽可能分散，而不是集中在一个action上。不了解entropy的同学可以看这里：<a href="https://link.zhihu.com/?target=https%3A//zh.wikipedia.org/wiki/%E7%86%B5_%28%E4%BF%A1%E6%81%AF%E8%AE%BA%29"target="_blank" rel="external nofollow noopener noreferrer">wiki-信息熵<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>我们知道DDPG训练得到的是一个deterministic policy确定性策略，也就是说这个策略对于一种状态state只考虑一个最优的动作。所以，stochastic policy相对deterministic policy有什么优势呢？</p>
+<p>Stochastic policy随机策略在实际机器人控制上往往是更好的做法。比如我们让机器人抓取一个水杯，机器人是有无数条路径去实现这个过程的，而并不是只有唯一的一种做法。因此，我们就需要drl算法能够给出一个随机策略，在每一个state上都能输出每一种action的概率，比如有3个action都是最优的，概率一样都最大，那么我们就可以从这些action中随机选择一个做出action输出。<strong>最大熵maximum entropy的核心思想就是不遗落到任意一个有用的action，有用的trajectory</strong>。对比DDPG的deterministic policy的做法，看到一个好的就捡起来，差一点的就不要了，而最大熵是都要捡起来，都要考虑。</p>
+<p><strong>基于最大熵的RL算法有什么优势？</strong></p>
+<p>以前用deterministic policy的算法，我们找到了一条最优路径，学习过程也就结束了。现在，我们还要求熵最大，就意味着神经网络需要去explore探索所有可能的最优路径，这可以产生以下多种优势：</p>
+<ul>
+<li>
+<p>1）学到policy可以作为更复杂具体任务的初始化。因为通过最大熵，policy不仅仅学到一种解决任务的方法，而是所有all。因此这样的policy就更有利于去学习新的任务。比如我们一开始是学走，然后之后要学朝某一个特定方向走。</p>
+</li>
+<li>
+<p>2）更强的exploration能力，这是显而易见的，能够更容易的在多模态reward （multimodal reward）下找到更好的模式。比如既要求机器人走的好，又要求机器人节约能源</p>
+</li>
+<li>
+<p>3）更robust鲁棒，更强的generalization。因为要从不同的方式来探索各种最优的可能性，也因此面对干扰的时候能够更容易做出调整。（干扰会是神经网络学习过程中看到的一种state，既然已经探索到了，学到了就可以更好的做出反应，继续获取高reward）</p>
+</li>
+</ul>
+<p>既然最大熵RL算法这么好，我们当然应该研究它了。而实际上，在之前的DRL算法<a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1602.01783"target="_blank" rel="external nofollow noopener noreferrer">A3C<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们其实已经用了一下最大熵：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在训练policy的时候，A3C加了entropy项，作为一个regularizer，让policy更随机。不过A3C这么做主要是为了更好做exploration，整体的训练目标依然只考虑reward。这和Soft Actor-Critic的设定还是不一样的，Soft Actor-Critic是真正最大熵DRL算法。</p>
+<h2 id="3-maximum-entropy-reinforcement-learning的bellman方程">3 Maximum Entropy Reinforcement Learning的Bellman方程</h2>
+<p>我们先回顾一下dynamic programming中Bellman backup equation，参考<a href="https://link.zhihu.com/?target=http%3A//www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/MDP.pdf"target="_blank" rel="external nofollow noopener noreferrer">http://www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/MDP.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>$$q_\pi(s,a)=r(s,a)+\gamma\sum_{s^{\prime}\in\mathcal{S}}\mathcal{P}_{ss^{\prime}}^a\sum_{a^{\prime}\in\mathcal{A}}\pi(a^{\prime}|s^{\prime})q_\pi(s^{\prime},a^{\prime})\tag{3}$$</p>
+<p>那么对于最大熵（MaxEnt)的目标，其实可以把熵也作为reward的一部分，我们在计算q值时（记住q是累加reward的期望，传统rl的目标等价于让q最大），就需要计算每一个state的熵entropy (entropy的公式如下图所示）：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>因此我们就可以得到Soft Bellman Backup equation (Entropy项)额外乘上 $\alpha$ 系数：</p>
+<p>$$q_\pi(s,a)=r(s,a)+\gamma\sum_{s^{\prime}\in\mathcal{S}}\mathcal{P}_{ss^{\prime}}^a\sum_{a^{\prime}\in\mathcal{A}}\pi(a^{\prime}|s^{\prime})(q_\pi(s^{\prime},a^{\prime})-\alpha\log(\pi(a^{\prime}|s^{\prime}))\quad(4)$$</p>
+<p>Recall一下<a href="https://link.zhihu.com/?target=http%3A//www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/MC-TD.pdf"target="_blank" rel="external nofollow noopener noreferrer">Dynamic Programming Backup<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+对应Q值的公式是
+<p>$$Q(s_t,a_t)=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1},a_{t+1}}[Q(s_{t+1},a_{t+1})]\tag{5}$$</p>
+<p>根据公式（4），我们可以得到Soft Bellman Backup的 更新公式：</p>
+<p>$$Q_{soft}(s_t,a_t)=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1},a_{t+1}}[Q_{soft}(s_{t+1},a_{t+1})-\alpha\log(\pi(a_{t+1}|s_{t+1}))]\tag{6}$$</p>
+<p>上面公式（6）是直接使用dynamic programming，将entropy嵌入计算得到的结果。我们可以反过来先直接把entropy作为reward的一部分：</p>
+<p>$$r_{soft}(s_t,a_t)=r(s_t,a_t)+\gamma\alpha\mathbb{E}_{s_{t+1}\sim\rho}H(\pi(\cdot|s_{t+1}))\tag{7}$$</p>
+<p>我们将（7）带入到公式（5）：</p>
+<p>$$\begin{aligned}
+{Q_{soft}(s_{t},a_{t})} &amp;=r(s_t,a_t)+\gamma\alpha\mathbb{E}_{s_{t+1}\sim\rho}H(\pi(\cdot|s_{t+1}))+\gamma\mathbb{E}_{s_{t+1},a_{t+1}}[Q_{soft}(s_{t+1},a_{t+1})]\\
+&amp;=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1}\sim\rho,a_{t+1}\sim\pi}[Q_{soft}(s_{t+1},a_{t+1})]+\gamma\alpha\mathbb{E}_{s_{t+1}\sim\rho}H(\pi(\cdot|s_{t+1}))\\
+&amp;=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1}\sim\rho,a_{t+1}\sim\pi}[Q_{soft}(s_{t+1},a_{t+1})]+\gamma\mathbb{E}_{s_{t+1}\sim\rho}\mathbb{E}_{a_{t+1}\sim\pi}[-\alpha\log\pi(a_{t+1}|s_{t+1})]\\
+&amp;=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1}\sim\rho}[\mathbb{E}_{a_{t+1}\sim\pi}[Q_{soft}(s_{t+1},a_{t+1})-\alpha\log(\pi(a_{t+1}|s_{t+1}))]]\\&amp;=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1},a_{t+1}}[Q_{soft}(s_{t+1},a_{t+1})-\alpha\log(\pi(a_{t+1}|s_{t+1}))]\end{aligned}$$</p>
+<p>可以得到一样的结果。</p>
+<p>与此同时，我们知道:</p>
+<p>$$Q(s_t,a_t)=r(s_t,a_t)+\gamma\mathbb{E}_{s_{t+1}\sim\rho}[V(s_{t+1})]\tag{9}$$</p>
+<p>因此，我们有：</p>
+<p>$$V_{soft}(s_t)=\mathbb{E}_{a_t\sim\pi}[Q_{soft}(s_t,a_t)-\alpha\log\pi(a_t|s_t)]\tag{10}$$</p>
+<p>至此我们理清楚了SAC paper原文中的公式(2)和(3)：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>并且（7）的做法直接证明了Lemma 1 Soft Policy Evaluation (<strong>这个lemma为下一部分的soft policy iteration提供支撑</strong>）:</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>但是，我们注意到上面的整个推导过程都是围绕maximum entropy，和soft 好像没有什么直接关系。所以，</p>
+<p><strong>为什么称为soft？哪里soft了？以及为什么soft Q function能够实现maximum entropy？</strong></p>
+<p>理解清楚这个问题是理解明白soft q-learning及sac的关键！</p>
+<p>SAC这篇paper直接跳过了soft Q-function的定义问题，因此，要搞清楚上面的问题，我们从Soft Q-Learning的paper来寻找答案。</p>
+<p>参考<a href="https://link.zhihu.com/?target=https%3A//bair.berkeley.edu/blog/2017/10/06/soft-q-learning/"target="_blank" rel="external nofollow noopener noreferrer">Learning Diverse Skills via Maximum Entropy Deep Reinforcement Learning<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>上面的曲线很明显的说明了stochastic policy的重要性，面对多模的（multimodal）的Q function，传统的RL只能收敛到一个选择（左图），而更优的办法是右图，让policy也直接符合Q的分布。这里，最直接的一种办法就是定义这样的energy-based policy：</p>
+<p>\pi(a_t|s_t)\propto exp(-\mathcal{E}(s_t,a_t)) （11）</p>
+<p>其中 \mathcal{E} 是能量函数，上面的形式就是Boltzmann Distribution <a href="https://link.zhihu.com/?target=https%3A//zh.wikipedia.org/wiki/%E7%8E%BB%E5%B0%94%E5%85%B9%E6%9B%BC%E5%88%86%E5%B8%83"target="_blank" rel="external nofollow noopener noreferrer">玻尔兹曼分布<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 。下图的 -f(x)=\mathcal{E}</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><a href="https://deepgenerativemodels.github.io/assets/slides/cs236_lecture13.pdf"target="_blank" rel="external nofollow noopener noreferrer">https://deepgenerativemodels.github.io/assets/slides/cs236_lecture13.pdf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>为了连接soft Q function，我们可以设定</p>
+<p>$$\mathcal{E}(s_t,a_t)=-\frac{1}{\alpha}Q_{soft}(s_t,a_t)\tag{12}$$</p>
+<p>因此，我们有</p>
+<p>$$\pi(a_t|s_t)\propto exp(Q_{soft}(s_t,a_t))\tag{13}$$</p>
+<p>这样的policy能够为每一个action赋值一个特定的概率符合Q值的分布，也就满足了stochastic policy的需求。</p>
+<p>下面我们要<strong>发现(13)的形式正好就是最大熵RL的optimal policy最优策略的形式，而这实现了soft q function和maximum entropy的连接。</strong></p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>实际上我们理解Soft Q-Learning及Soft Actor Critic，要清楚上图三者的关系。在Soft Q-Learning那篇paper中，他是从Soft Value Function的定义出发去连接Energy-Based Policy 和Maximum Entropy Objective的关系。而在本blog中，我们从Maximum Entropy Objective出发，来连接其他两部分。</p>
+<p>前面我们已经推导得到了公式（10），那么根据公式（10），我们可以直接推导得到policy的形式：</p>
+<p>$$\begin{aligned}\pi(s_{t},a_{t})&amp;=\exp(\frac1\alpha(Q_{soft}(s_t,a_t)-V_{soft}(s_t)))\\&amp;&amp;\text{(14)}\\&amp;=\frac{\exp(\frac1\alpha Q_{soft}(s_t,a_t))}{\exp(\frac1\alpha V_{soft}(s_t))}\end{aligned}$$</p>
+<p>（14）符合了（13）， $\frac{1}{\alpha}V_{soft}(s_t)$ 可以看做是对应的log partition function. 由此，就连接了Maximum Entropy Objective和Energy Based Policy的关系。</p>
+<p>下面我们要连接Soft Value Function。从（14）的 $\frac{1}{\alpha}V_{soft}(s_t)$ 已经很明显了：</p>
+<p>$$\exp(\frac1\alpha V_{soft}(s_t))=\int\exp(\frac1\alpha Q_{soft}(s_t,a))d\mathbf{a} (15)$$</p>
+<p>因此，我们可以定义 $V_{soft}(s_t)$ :</p>
+<p>$$V_{soft}(s_t)\triangleq\alpha\log\int\exp(\frac1\alpha Q_{soft}(s_t,a))d\mathbf{a}\tag{16}$$</p>
+<p>这和soft 有什么关系呢？(16）其实是LogSumExp的积分形式，就是smooth maximum/soft maximum (软的最大）。参考<a href="https://link.zhihu.com/?target=https%3A//en.wikipedia.org/wiki/LogSumExp"target="_blank" rel="external nofollow noopener noreferrer">https://en.wikipedia.org/wiki/LogSumExp<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>所以就可以定义</p>
+<p>$$\mathrm{soft}\max_af(a):=\log\int\exp f(a)da\tag{17}$$</p>
+<p>因此我们也就可以根据公式（9）定义soft的Q-function：</p>
+<p>$$Q_{soft}(s_t,a_t)=\mathbb{E}\left[r_t+\gamma\text{ soft}\max_aQ(s_{t+1},a)\right]\text{(18)}$$</p>
+<p>所以，为什么称为soft是从这里来的。</p>
+<p>这里有一个常见的疑问就是这里的soft max和我们常见的softmax好像不一样啊。是的，我们在神经网络中常用的activation function softmax 实际上是soft argmax，根据一堆logits找到对应的软的最大值对应的index。具体参看：<a href="https://link.zhihu.com/?target=https%3A//en.wikipedia.org/wiki/Softmax_function"target="_blank" rel="external nofollow noopener noreferrer">https://en.wikipedia.org/wiki/Softmax_function<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>上面的推导还只是面向policy的value和Q，我们下面要说明optimal policy也必然是energy-based policy的形式。</p>
+<p>这一部分的证明依靠 Policy improvement theorem：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>具体证明过程见soft q-learning原文的A.1。</p>
+<p>有了Theorem 4，</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>我们就可以看到optimal policy必然是energy based policy，也因此，我们有了soft q learning paper中最开始的定义：</p>
+<p>$$\pi_{MaxEnt}^<em>(a_t|s_t)=\exp(\frac{1}{\alpha}(Q_{soft}^</em>(s_t,a_t)-V_{soft}^*(s_t)))\text{(19)}$$</p>
+<h2 id="4-policy-iteration">4 Policy Iteration</h2>
+<p>理清楚了上面的基本定义和联系，我们就可以研究怎么更新policy了，也就是policy iteration。</p>
+<p>回顾一下一般的<a href="https://link.zhihu.com/?target=http%3A//www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/DP.pdf"target="_blank" rel="external nofollow noopener noreferrer">Policy Iteration<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>在两步中进行循环迭代（我们直接使用Q值来说明）：</p>
+<ol>
+<li>Policy evaluation：固定policy，使用Bellman方程更新Q值直到收敛：</li>
+</ol>
+<p>$$Q_\pi(s,a)=r(s,a)+\lambda\mathbb{E}_{s^{\prime},a^{\prime}}Q_\pi(s^{\prime},a^{\prime})\tag{20}$$</p>
+<ol start="2">
+<li>Policy improvement: 更新policy：</li>
+</ol>
+<p>$$\pi^{\prime}(s)=\arg\max_aQ_\pi(s,a)\tag{21}$$</p>
+<p>基于同样的方法，我们有Soft Policy Iteration：</p>
+<ol>
+<li>Soft policy evaluation:固定policy，使用Bellman方程更新Q值直到收敛:</li>
+</ol>
+<p>$$\begin{aligned}&amp;Q_{soft}^\pi(s_t,a_t)=r(s_t,a_t)+\lambda\mathbb{E}_{s_{t+1},a_{t+1}}\left[Q_{soft}^\pi(s_{t+1},a_{t+1})-\alpha\log(\pi(a_{t+1}|s_{t+1}))\right]\tag{22}\end{aligned}$$</p>
+<ol start="2">
+<li>Soft policy improvement: 更新policy：</li>
+</ol>
+<p>$$\pi^{\prime}=\arg\min_{\pi_k\in\Pi}D_{KL}(\pi_k(\cdot|s_t)||\frac{\exp(\frac{1}{\alpha}Q_{soft}^{\pi}(s_t,\cdot))}{Z_{soft}^{\pi}(s_t)}) \tag{23}$$</p>
+<p>(22)基于上一部分说的Lemma 1 Soft Policy Evaluation, 可收敛。</p>
+<p>(23)则基于上一部分的Theorem 4 Policy Improvement Theorem。只是这里的做法不是直接赋值，而是通过KL divergence来趋近 $\exp(Q^{\pi}_{soft}(s_t,\cdot))$ 。在SAC的paper原文中，我们可以看到这么做的原因是为了限制policy在一定范围的policies $\Pi$ 中从而tractable，policy的分布可以是高斯分布。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>同样的，作者也专门证明了采用KL divergence的方法一样能够保证policy improvement，也就是Lemma 2：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>最后，就是证明上面的Soft Policy Iteration过程能保证policy收敛到最优，即Theorem 1：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>由此，基本的理论建设也就结束了，下面进入Soft Actor-Critic的算法设计。</p>
+<h2 id="5-soft-actor-critic">5 Soft Actor-Critic</h2>
+<p>SAC算法的构建首先是神经网络化，我们用神经网络来表示Q和Policy： $Q_{\theta}(s_t,a_t)$ 和 $\pi_{\phi}(a_t|s_t)$ 。Q网络比较简单，几层的MLP最后输出一个单值表示Q就可以了，Policy网络需要输出一个分布，一般是输出一个Gaussian 包含mean和covariance。下面就是构建神经网络的更新公式。</p>
+<p>对于Q网络的更新，我们根据（10）可以得到：</p>
+<p>$$\begin{aligned}
+J_{Q}(\theta)&amp; =\mathbb{E}_{(s_t,a_t,s_{t+1})\sim\mathcal{D}}[\frac{1}{2}(Q_\theta(s_t,a_t)-(r(s_t,a_t)+\gamma V_{\bar{\theta}}(s_{t+1})))^2] \\
+&amp;=\mathbb{E}_{(s_t,a_t,s_{t+1})\sim\mathcal{D},a_{t+1}\sim\pi_\phi}[\frac12(Q_\theta(s_t,a_t)-(r(s_t,a_t)+\gamma(Q_{\bar{\theta}}(s_{t+1},a_{t+1})-\alpha\log(\pi_\phi(a_{t+1}|s_{t+1})))))^2] \tag{24}
+\end{aligned}$$</p>
+<p>这里和DDPG一样，构造了一个target soft Q 网络带参数 $\overline{\theta}$ ，这个参数通过exponentially moving average Q网络的参数 $\theta$ 得到。(ps:在第一个版本的SAC中，他们单独定义了V网络进行更新，说是更稳定，到新版的SAC中，由于自动更新temperature $\alpha$ 就直接使用Q网络更新）</p>
+<p>对于Policy 网络参数的更新，就是最小化KL divergence：</p>
+<p>$$\begin{aligned}
+J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\alpha Q_\theta(s_t,.)-\log Z(s_t))\right) \\
+&amp;=\mathbb{E}_{s_t\sim\mathcal{D},a_t\sim\pi_\phi}\Big[\log\big(\frac{\pi_\phi(a_t|s_t)}{\exp(\frac{1}{\alpha}Q_\theta(s_t,a_t)-\log Z(s_t))}\big)\Big] \\
+&amp;=\mathbb{E}_{s_t\sim\mathcal{D},a_t\sim\pi_\phi}[\log\pi_\phi(a_t|s_t)-\frac1\alpha Q_\theta(s_t,a_t)+\log Z(s_t)] \tag{25}
+\end{aligned}$$</p>
+<p>这里的action我们采用reparameterization trick来得到，即</p>
+<p>$$a_t=f_\phi(\varepsilon_t;s_t)=f_\phi^\mu(s_t)+\varepsilon_t\odot f_\phi^\sigma(s_t)\tag{26}$$</p>
+<p>f函数输出平均值和方差，然后 $\varepsilon$ 是noise，从标准正态分布采样。使用这个trick，整个过程就是完全可微的(loss 乘以 $\alpha$ 并去掉不影响梯度的常量log partition function Z(s_t)) ：</p>
+<p>$$J_\pi(\phi)=\mathbb{E}_{s_t\sim\mathcal{D},\varepsilon\sim\mathcal{N}}[\alpha\log\pi_\phi(f_\phi(\varepsilon_t;s_t)|s_t)-Q_\theta(s_t,f_\phi(\varepsilon_t;s_t))] \tag{27}$$</p>
+<p>这样基本的Soft Actor-Critic的更新方法也就得到了。</p>
+<h2 id="6-temperature-hyperparameter-auto-adjustment">6 Temperature Hyperparameter Auto-Adjustment</h2>
+<p>前面的SAC中，我们只是人为给定一个固定的temperature $\alpha$ 作为entropy的权重，但实际上由于reward的不断变化，采用固定的temperature并不合理，会让整个训练不稳定，因此，有必要能够自动调节这个temperature。当policy探索到新的区域时，最优的action还不清楚，应该调整temperature $\alpha$ 去探索更多的空间。当某一个区域已经探索得差不多，最优的action基本确定了，那么这个temperature就可以减小。</p>
+<p>这里，SAC的作者构造了一个带约束的优化问题，让平均的entropy权重是有限制的，但是在不同的state下entropy的权重是可变的，即</p>
+<p>$$\max_{\pi_0,\ldots,\pi_T}\mathbb{E}\bigg[\sum_{t=0}^Tr(s_t,a_t)\bigg]\mathrm{s.t.~}\forall t, \mathcal{H}(\pi_t)\geq\mathcal{H}_0\tag{28}$$</p>
+<p>对于这部分内容，<a href="https://link.zhihu.com/?target=https%3A//lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html%23sac"target="_blank" rel="external nofollow noopener noreferrer">Policy Gradient Algorithms<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 这个openai小姐姐的blog介绍得极其清楚，大家可以参考，最后得到temperature的loss：</p>
+<p>$$J(\alpha)=\mathbb{E}_{a_t\sim\pi_t}[-\alpha\log\pi_t(a_t\mid\pi_t)-\alpha\mathcal{H}_0]\tag{29}$$</p>
+<p>由此，我们可以得到完整的Soft Actor-Critic算法：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>为了更快速稳定的训练，作者引入了两个Q网络，然后每次选择Q值小的一个作为target Q值。更新Q，Policy及 \alpha 使用上文的（24）（27）（29）三个公式。</p>
+<h2 id="7-神经网络结构">7 神经网络结构</h2>
+<p>虽然上面把算法流程确定了，但是如何构造policy的神经网络还是比较复杂的。下图是带V网络的神经网络结构图：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p><a href="https://nervanasystems.github.io/coach/components/agents/policy_optimization/sac.html"target="_blank" rel="external nofollow noopener noreferrer">https://nervanasystems.github.io/coach/components/agents/policy_optimization/sac.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>我们主要来探究一下Policy网络的设计。</p>
+<p>见上图右上角的Policy网络，前面的input embedder和Middleware不用说，就是几层的MLP。然后，接下来神经网络分成两个分支，分别输出平均值mean $\mu$ 和log 标准差 log std 。然后使用exp得到std。</p>
+<p>$$\pi_\phi(s_t) = \mu_t,\log \sigma_t \tag{30}$$</p>
+<p>$$\sigma_t = \exp(\log \sigma_t)$$</p>
+<p>正常输出这样的高斯分布作为action 的分布distribution是OK的，但是在实际中，这个action需要限定在一定范围内。因此，这里作者使用了squashing function tanh，将action限制在（-1,1）之间，即</p>
+<p>$$\mathbf{u}_t =\mu_t + \varepsilon_t \odot \sigma_t $$</p>
+<p>$$a_t = \tanh (\mathbf{u}) \tag{31}$$</p>
+<p>这里和上文的公式（26）对应，多了一个tanh。</p>
+<p>那么这会导致分布的变化，从而影响log likelihood的计算，而这是我们计算SAC的loss必须的。作者在paper中给出了计算方法如下：</p>
+<p>$$\log \pi(a|s)=\log \mu(\mathbf{u}|s)-\sum_{i=1}^{D}{\log(1-\tanh^2(u_i))} \tag{32}$$</p>
+<p>其中 u_i 是 $\mathbf{u}$ 的第i个元素。这里的 $\mu(\mathbf{u}|s)$ 是没有加限制时的likelihood function也就是高斯分布的likelihood function似然函数。高斯分布的log likelihood直接使用pytorch的<a href="https://link.zhihu.com/?target=https%3A//pytorch.org/docs/stable/_modules/torch/distributions/normal.html"target="_blank" rel="external nofollow noopener noreferrer">Normal<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> class就可以获得。</p>
+<h2 id="8-其他细节">8 其他细节</h2>
+<p>1）SAC里的target entropy 设计为</p>
+<p>$$\mathcal{H}_0 = -\dim (\mathcal{A}) \tag{33}$$</p>
+<p>即-动作数量。</p>
+<p>2）SAC paper里完全没有说明的训练时的episode设置。SAC设置为每一个episode采样1000次然后训练1000次。</p>
+<p>3）在代码中SAC使用 log alpha作为更新的参数，而不是直接使用alpha如公式（25），这和输出log std是一样的，使用log有很大的正负范围，更方便网络输出。否则alpha或者std都是正值。</p>
+<p>4）SAC有一个很大的问题，它的policy的目的是趋近于玻尔兹曼分布，但是实际实现的时候，为了能够tractable，选择了输出一个高斯，也就是让高斯趋近于玻尔兹曼分布。这意味着SAC本质上还是unimodal的算法，而不是soft q-learning的multi-modal。这使得SAC的创新性打了很大的折扣。但是算法效果确实还是不错的。</p>
+<h2 id="9-小结">9 小结</h2>
+<p>本文从理论到具体实现层面剖析了Soft Actor-Critic这一目前极强的DRL算法，基本上理解了本文的分析，对于代码的实现也就可以了然一胸了。</p>
+<p>由于本人水平有限，前面的理论分析恐有错误，望批评指正！</p>
+<p>ref:
+[1]. <a href="https://zhuanlan.zhihu.com/p/70360272"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/70360272<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>一文详解 ChatGPT RLHF 背后的 PPO 强化学习训练</title><link>https://jianye0428.github.io/posts/chatgpt_rlhf/</link><pubDate>Sat, 04 May 2024 17:00:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/chatgpt_rlhf/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
 <p></p>
 <p>最近火出圈的🚀 ChatGPT 中 RLHF 主要采用了就是 PPO 进行强化学习训练</p>
@@ -7356,77 +8002,4 @@ $$\begin{gathered}
 <p>下一篇我们讨论用时序差分方法来求解强化学习预测和控制问题的方法。</p>
 <h1 id="7-ref">7. ref</h1>
 <p><a href="https://www.cnblogs.com/pinard/p/9492980.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/pinard/p/9492980.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>RL学习笔记 [3] | 用动态规划(DP)求解</title><link>https://jianye0428.github.io/posts/rl_learning_note_3/</link><pubDate>Thu, 22 Feb 2024 08:59:02 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_3/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
-<p>在<a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（二）马尔科夫决策过程(MDP)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讨论了用马尔科夫假设来简化强化学习模型的复杂度，这一篇我们在马尔科夫假设和贝尔曼方程的基础上讨论使用动态规划(Dynamic Programming, DP)来求解强化学习的问题。</p>
-<p>动态规划这一篇对应Sutton书的第四章和UCL强化学习课程的第三讲。</p>
-<h1 id="1-动态规划和强化学习问题的联系">1. 动态规划和强化学习问题的联系</h1>
-<p>对于动态规划，相信大家都很熟悉，很多使用算法的地方都会用到。就算是机器学习相关的算法，使用动态规划的也很多，比如之前讲到的<a href="https://www.cnblogs.com/pinard/p/6955871.html"target="_blank" rel="external nofollow noopener noreferrer">隐马尔科夫模型HMM（二）前向后向算法评估观察序列概率<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>，<a href="https://www.cnblogs.com/pinard/p/6991852.html"target="_blank" rel="external nofollow noopener noreferrer">隐马尔科夫模型HMM（四）维特比算法解码隐藏状态序列<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>， 都是动态规划的典型例子。</p>
-<p>动态规划的关键点有两个：一是问题的最优解可以由若干小问题的最优解构成，即通过寻找子问题的最优解来得到问题的最优解。第二是可以找到子问题状态之间的递推关系，通过较小的子问题状态递推出较大的子问题的状态。而强化学习的问题恰好是满足这两个条件的。</p>
-<p>我们先看看强化学习的两个基本问题。</p>
-<p>第一个问题是预测，即给定强化学习的6个要素：状态集 $S$, 动作集$A$, 模型状态转化概率矩阵$P$, 即时奖励$R$，衰减因子$γ$, 给定策略$π$， 求解该策略的状态价值函数$v(π)$</p>
-<p>第二个问题是控制，也就是求解最优的价值函数和策略。给定强化学习的5个要素：状态集$S$, 动作集$A$, 模型状态转化概率矩阵$P$, 即时奖励$R$，衰减因子$γ$, 求解最优的状态价值函数 $v∗$ 和最优策略 $π∗$　</p>
-<p>那么如何找到动态规划和强化学习这两个问题的关系呢？</p>
-<p>回忆一下上一篇<a href="https://www.cnblogs.com/pinard/p/9426283.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（二）马尔科夫决策过程(MDP)<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中状态价值函数的贝尔曼方程：</p>
-<p>$$v_\pi(s)=\sum_{a\in A}\pi(a|s)(R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^av_\pi(s&rsquo;))$$</p>
-<p>从这个式子我们可以看出，我们可以定义出子问题求解每个状态的状态价值函数，同时这个式子又是一个递推的式子, 意味着利用它，我们可以使用上一个迭代周期内的状态价值来计算更新当前迭代周期某状态 $s$ 的状态价值。可见，使用动态规划来求解强化学习问题是比较自然的。</p>
-<h1 id="2-策略评估求解预测问题">2. 策略评估求解预测问题</h1>
-<p>首先，我们来看如何使用动态规划来求解强化学习的预测问题，即求解给定策略的状态价值函数的问题。这个问题的求解过程我们通常叫做策略评估(Policy Evaluation)。</p>
-<p>策略评估的基本思路是从任意一个状态价值函数开始，依据给定的策略，结合贝尔曼期望方程、状态转移概率和奖励同步迭代更新状态价值函数，直至其收敛，得到该策略下最终的状态价值函数。</p>
-<p>假设我们在第k轮迭代已经计算出了所有的状态的状态价值，那么在第 $k+1$ 轮我们可以利用第k轮计算出的状态价值计算出第k+1+1轮的状态价值。这是通过贝尔曼方程来完成的，即：</p>
-<p>$$v_{k+1}(s)=\sum_{a\in A}\pi(a|s)(R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^av_k(s&rsquo;))$$</p>
-<p>和上一节的式子唯一的区别是由于我们的策略 $π$ 已经给定，我们不再写出，对应加上了迭代轮数的下标。我们每一轮可以对计算得到的新的状态价值函数再次进行迭代，直至状态价值的值改变很小(收敛)，那么我们就得出了预测问题的解，即给定策略的状态价值函数 $v(π)$。</p>
-<p>下面我们用一个具体的例子来说明策略评估的过程。</p>
-<h1 id="3-策略评估求解实例">3. 策略评估求解实例</h1>
-<p>这是一个经典的Grid World的例子。我们有一个4x4的16宫格。只有左上和右下的格子是终止格子。该位置的价值固定为0，个体如果到达了该2个格子，则停止移动，此后每轮奖励都是0。个体在16宫格其他格的每次移动，得到的即时奖励R都是-1。注意个体每次只能移动一个格子，且只能上下左右4种移动选择，不能斜着走, 如果在边界格往外走，则会直接移动回到之前的边界格。衰减因子我们定义为γ=1=1。由于这里每次移动，下一格都是固定的，因此所有可行的的状态转化概率P=1=1。这里给定的策略是随机策略，即每个格子里有25%的概率向周围的4个格子移动。</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Grid World</div>
-</center>
-<br>
-<p>首先我们初始化所有格子的状态价值为0，如上图 $k=0$ 的时候。现在我们开始策略迭代了。由于终止格子的价值固定为0，我们可以不将其加入迭代过程。在 $k=1$ 的时候，我们利用上面的贝尔曼方程先计算第二行第一个格子的价值：</p>
-<p>$$v_1^{(21)}=\frac14[(-1+0)+(-1+0)+(-1+0)+(-1+0)]=-1$$</p>
-<p>第二行第二个格子的价值是：</p>
-<p>$$v_1^{(22)}=\frac14[(-1+0)+(-1+0)+(-1+0)+(-1+0)]=-1$$</p>
-<p>其他的格子都是类似的，第一轮的状态价值迭代的结果如上图 $k=1$ 的时候。现在我们第一轮迭代完了。开始动态规划迭代第二轮了。还是看第二行第一个格子的价值：</p>
-<p>$$v_2^{(21)}=\frac14[(-1+0)+(-1-1)+(-1-1)+(-1-1)]=-1.75$$</p>
-<p>第二行第二个格子的价值是：</p>
-<p>$$v_2^{(22)}=\frac14[(-1-1)+(-1-1)+(-1-1)+(-1-1)]=-2$$</p>
-<p>最终得到的结果是上图 $k=2$ 的时候。第三轮的迭代如下：</p>
-<p>$$v_3^{(21)}=\frac14[(-1-1.7)+(-1-2)+(-1-2)+(-1+0)]=-2.425$$</p>
-<p>$$v_3^{(22)}=\frac14[(-1-1.7)+(-1-1.7)+(-1-2)+(-1-2)]=-2.85$$</p>
-<p>最终得到的结果是上图 $k=3$ 的时候。就这样一直迭代下去，直到每个格子的策略价值改变很小为止。这时我们就得到了所有格子的基于随机策略的状态价值。</p>
-<p>可以看到，动态规划的策略评估计算过程并不复杂，但是如果我们的问题是一个非常复杂的模型的话，这个计算量还是非常大的。</p>
-<h1 id="4-策略迭代求解控制问题">4. 策略迭代求解控制问题</h1>
-<p>上面我们讲了使用策略评估求解预测问题，现在我们再来看如何使用动态规划求解强化学习的第二个问题控制问题。一种可行的方法就是根据我们之前基于任意一个给定策略评估得到的状态价值来及时调整我们的动作策略，这个方法我们叫做策略迭代(Policy Iteration)。</p>
-<p>如何调整呢？最简单的方法就是贪婪法。考虑一种如下的贪婪策略：个体在某个状态下选择的行为是其能够到达后续所有可能的状态中状态价值最大的那个状态。还是以第三节的例子为例，如上面的图右边。当我们计算出最终的状态价值后，我们发现，第二行第一个格子周围的价值分别是0,-18,-20，此时我们用贪婪法，则我们调整行动策略为向状态价值为0的方向移动，而不是随机移动。也就是图中箭头向上。而此时第二行第二个格子周围的价值分别是-14,-14,-20,-20。那么我们整行动策略为向状态价值为-14的方向移动，也就是图中的向左向上。</p>
-<p>如果用一副图来表示策略迭代的过程的话，如下图：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">Policy Iteration</div>
-</center>
-<br>
-<p>在策略迭代过程中，我们循环进行两部分工作，第一步是使用当前策略 $π∗$ 评估计算当前策略的最终状态价值 $v∗$，第二步是根据状态价值 $v∗$ 根据一定的方法（比如贪婪法）更新策略 $π∗$，接着回到第一步，一直迭代下去，最终得到收敛的策略 $π∗$ 和状态价值 $v∗$。</p>
-<h1 id="5-价值迭代求解控制问题">5. 价值迭代求解控制问题</h1>
-<p>观察第三节的图发现，我们如果用贪婪法调整动作策略，那么当k=3=3的时候，我们就已经得到了最优的动作策略。而不用一直迭代到状态价值收敛才去调整策略。那么此时我们的策略迭代优化为价值迭代。</p>
-<p>还是以第三节的例子为例，如上面的图右边。比如当k=2=2时，第二行第一个格子周围的价值分别是0,-2,-2，此时我们用贪婪法，则我们调整行动策略为向状态价值为0的方向移动，而不是随机移动。也就是图中箭头向上。而此时第二行第二个格子周围的价值分别是-1.7,-1.7,-2, -2。那么我们整行动策略为向状态价值为-1.7的方向移动，也就是图中的向左向上。</p>
-<p>和上一节相比，我们没有等到状态价值收敛才调整策略，而是随着状态价值的迭代及时调整策略, 这样可以大大减少迭代次数。此时我们的状态价值的更新方法也和策略迭代不同。现在的贝尔曼方程迭代式子如下：</p>
-<p>$$v_{k+1}(s)=\max_{a\in A}(R_s^a+\gamma\sum_{s&rsquo; \in S}P_{ss&rsquo;}^av_k(s&rsquo;))$$</p>
-<p>可见由于策略调整，我们现在价值每次更新倾向于贪婪法选择的最优策略对应的后续状态价值，这样收敛更快。</p>
-<h1 id="6-异步动态规划算法">6. 异步动态规划算法</h1>
-<p>在前几节我们讲的都是同步动态规划算法，即每轮迭代我会计算出所有的状态价值并保存起来，在下一轮中，我们使用这些保存起来的状态价值来计算新一轮的状态价值。</p>
-<p>另一种动态规划求解是异步动态规划算法，在这些算法里，每一次迭代并不对所有状态的价值进行更新，而是依据一定的原则有选择性的更新部分状态的价值，这类算法有自己的一些独特优势，当然有额会有一些额外的代价。</p>
-<p>常见的异步动态规划算法有三种：</p>
-<p>第一种是原位动态规划 (in-place dynamic programming)， 此时我们不会另外保存一份上一轮计算出的状态价值。而是即时计算即时更新。这样可以减少保存的状态价值的数量，节约内存。代价是收敛速度可能稍慢。</p>
-<p>第二种是优先级动态规划 (prioritised sweeping)：该算法对每一个状态进行优先级分级，优先级越高的状态其状态价值优先得到更新。通常使用贝尔曼误差来评估状态的优先级，贝尔曼误差即新状态价值与前次计算得到的状态价值差的绝对值。这样可以加快收敛速度，代价是需要维护一个优先级队列。</p>
-<p>第三种是实时动态规划 (real-time dynamic programming)：实时动态规划直接使用个体与环境交互产生的实际经历来更新状态价值，对于那些个体实际经历过的状态进行价值更新。这样个体经常访问过的状态将得到较高频次的价值更新，而与个体关系不密切、个体较少访问到的状态其价值得到更新的机会就较少。收敛速度可能稍慢。</p>
-<h1 id="7-动态规划求解强化学习问题小结">7. 动态规划求解强化学习问题小结</h1>
-<p>动态规划是我们讲到的第一个系统求解强化学习预测和控制问题的方法。它的算法思路比较简单，主要就是利用贝尔曼方程来迭代更新状态价值，用贪婪法之类的方法迭代更新最优策略。</p>
-<p>动态规划算法使用全宽度（full-width）的回溯机制来进行状态价值的更新，也就是说，无论是同步还是异步动态规划，在每一次回溯更新某一个状态的价值时，都要回溯到该状态的所有可能的后续状态，并利用贝尔曼方程更新该状态的价值。这种全宽度的价值更新方式对于状态数较少的强化学习问题还是比较有效的，但是当问题规模很大的时候，动态规划算法将会因贝尔曼维度灾难而无法使用。因此我们还需要寻找其他的针对复杂问题的强化学习问题求解方法。</p>
-<p>下一篇我们讨论用蒙特卡罗方法来求解强化学习预测和控制问题的方法。</p>
-<p>ref:
-<a href="https://www.cnblogs.com/pinard/p/9463815.html"target="_blank" rel="external nofollow noopener noreferrer">https://www.cnblogs.com/pinard/p/9463815.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item></channel></rss>
