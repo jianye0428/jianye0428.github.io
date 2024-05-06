@@ -5208,7 +5208,7 @@ constexpr const char* GetString(bool constInit) {
 constinit const char* a = GetString(true); // ✔
 constinit const char* b = GetString(false); // ❌
 ```
-## 用 `using` 引用 `enum` 类型
+### [C++20] 用 `using` 引用 `enum` 类型
 
 ```c++
 enum class CardTypeSuit {
