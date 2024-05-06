@@ -10,8 +10,8 @@ note abstract info tip success question warning failure danger bug example quote
 
 ref: https://zhuanlan.zhihu.com/p/650986900
 
-# C++ 11 新特性总结
-## C++ 11是什么，C++ 11标准的由来
+## C++ 11 新特性总结
+### C++ 11是什么，C++ 11标准的由来
 
 C++ 这门编程语言的历史可以追溯至 1979 年，当时的 Bjarne Stroustrup（C++ 之父，后续简称 Stroustrup）还在使用 Simula 语言进行开发工作。
 
@@ -41,7 +41,7 @@ Simula 语言被认为是第一个面向对象的编程语言。Stroustrup 也�
 
 那么，C++ 11 标准到底包含哪些新特性呢？别急，接下来会分篇给大家做详细地讲解。
 
-## C++ auto类型推导完全攻略
+### [C++11] auto类型推导完全攻略
 
 在 C++11 之前的版本（C++98 和 C++ 03）中，定义变量或者声明变量之前都必须指明它的类型，比如 int、char 等；但是在一些比较灵活的语言中，比如 C#、JavaScript、PHP、Python 等，程序员在定义变量时可以不指明具体的类型，而是让编译器（或者解释器）自己去推导，这就让代码的编写更加方便。
 
@@ -256,7 +256,7 @@ int main(void){
 }
 ```
 
-## C++ decltype类型推导完全攻略
+## C++11 decltype类型推导完全攻略
 
 `decltype` 是 C++11 新增的一个关键字，它和 auto 的功能一样，都用来在编译时期进行自动类型推导。不了解 auto 用法的读者请转到(《C++ auto》)[http://c.biancheng.net/view/6984.html]。
 
@@ -532,7 +532,7 @@ auto it = nums.begin();
 ```
 在实际开发中人们仍然喜欢使用 auto 关键字（我也这么干），因为它用起来简单直观，更符合人们的审美。如果你的表达式类型不复杂，我还是推荐使用 auto 关键字，优雅的代码总是叫人赏心悦目，沉浸其中。
 
-## C++返回值类型后置（跟踪返回值类型）
+## C++11 返回值类型后置（跟踪返回值类型）
 
 在泛型编程中，可能需要通过参数的运算来得到返回值的类型。考虑下面这个场景：
 
@@ -3649,9 +3649,9 @@ int main()
 
 > 有关表 1 中其它成员函数的用法，感兴趣的读者可直接查看 [weak_ptr 官网](http://www.cplusplus.com/reference/memory/weak_ptr/)。
 
-# C++ 14 新特性总结
+## C++ 14 新特性总结
 
-## 函数返回值类型推导
+### [C++14] 函数返回值类型推导
 
 C++14对函数返回类型推导规则做了优化，先看一段代码：
 
@@ -3743,7 +3743,7 @@ auto sum(int i) {
 }
 ```
 
-## lambda参数auto
+### [C++14] lambda参数auto
 
 在C++11中，lambda表达式参数需要使用具体的类型声明：
 
@@ -3995,7 +3995,7 @@ hello world
 "hello world"
 ```
 
-# C++ 17 新特性总结
+## C++ 17 新特性总结
 主要新特性如下：
   - 构造函数模板推导
   - 结构化绑定
@@ -4018,7 +4018,7 @@ hello world
   - file_system
   - std::shared_mutex
 
-## 构造函数模板推导
+### [C++17] 构造函数模板推导
 
 在C++17前构造一个模板类对象需要指明类型：
 ```c++
@@ -4031,7 +4031,7 @@ pair p(1, 2.2); // c++17 自动推导
 vector v = {1, 2, 3}; // c++17
 ```
 
-## 结构化绑定
+### [C++17] 结构化绑定
 
 通过结构化绑定，对于tuple、map等类型，获取相应值会方便很多，看代码：
 
@@ -4143,7 +4143,7 @@ int main() {
 }
 ```
 
-## if-switch语句初始化
+### [C++17] if-switch语句初始化
 
 C++17前if语句需要这样写代码：
 
@@ -4171,7 +4171,7 @@ if (auto [pos, size] = pair(str.find("Hi"), str.size()); pos != string::npos) {
 
 使用这种方式可以尽可能约束作用域，让代码更简洁，可读性可能略有下降，但是还好
 
-## 内联变量
+### [C++17] 内联变量
 
 C++17前只有内联函数，现在有了内联变量，我们印象中C++类的静态成员变量在头文件中是不能初始化的，但是有了内联变量，就可以达到此目的：
 
@@ -4188,7 +4188,7 @@ struct A {
 }
 ```
 
-## 折叠表达式
+### [C++17] 折叠表达式
 
 C++17引入了折叠表达式使可变参数模板编程更方便：
 
@@ -4203,7 +4203,7 @@ std::string b{"world"};
 cout << sum(a, b) << endl; // hello world
 ```
 
-## constexpr lambda表达式
+### [C++17] constexpr lambda表达式
 
 C++17前lambda表达式只能在运行时使用，C++17引入了constexpr lambda表达式，可以用于在编译期进行计算。
 ```c++
@@ -4217,7 +4217,7 @@ int main() { // c++17可编译
 
 函数体不能包含汇编语句、goto语句、label、try块、静态变量、线程局部存储、没有初始化的普通变量，不能动态分配内存，不能有new delete等，不能虚函数。
 
-## namespace嵌套
+### [C++17] namespace嵌套
 
 ```c++
 namespace A {
@@ -4234,7 +4234,7 @@ namespace A::B::C {
 }
 ```
 
-## __has_include预处理表达式
+### [C++17] __has_include预处理表达式
 
 可以判断是否有某个头文件，代码可能会在不同编译器下工作，不同编译器的可用头文件有可能不同，所以可以使用此来判断：
 
@@ -4260,7 +4260,7 @@ std::optional<int> ConvertToInt(const std::string& str) {
 }
 ```
 
-## 在lambda表达式用*this捕获对象副本
+### [C++17] 在lambda表达式用*this捕获对象副本
 
 正常情况下，lambda表达式中访问类的对象成员变量需要捕获this，但是这里捕获的是this指针，指向的是对象的引用，正常情况下可能没问题，但是如果多线程情况下，函数的作用域超过了对象的作用域，对象已经被析构了，还访问了成员变量，就会有问题。
 
@@ -4281,7 +4281,7 @@ int main() {
 }
 ```
 
-## 所以C++17增加了新特性，捕获*this，不持有this指针，而是持有对象的拷贝，这样生命周期就与对象的生命周期不相关啦。
+### [C++17] 所以C++17增加了新特性，捕获*this，不持有this指针，而是持有对象的拷贝，这样生命周期就与对象的生命周期不相关啦。
 
 ```c++
 struct A {
@@ -4300,7 +4300,7 @@ int main() {
 }
 ```
 
-## 新增Attribute
+### [C++17] 新增Attribute
 
 我们可能平时在项目中见过__declspec, attribute , #pragma指示符，使用它们来给编译器提供一些额外的信息，来产生一些优化或特定的代码，也可以给其它开发者一些提示信息。
 
@@ -4360,7 +4360,7 @@ void func3() {
 }
 ```
 
-## 字符串转换
+### [C++17] 字符串转换
 
 新增from_chars函数和to_chars函数，直接看代码：
 
@@ -4388,7 +4388,7 @@ int main() {
     // 1234xxxx, filled 4 characters
 }
 ```
-## std::variant
+### [C++17] std::variant
 
 C++17增加std::variant实现类似union的功能，但却比union更高级，举个例子union里面不能有string这种类型，但std::variant却可以，还可以支持更多复杂类型，如map等，看代码：
 
@@ -4430,7 +4430,7 @@ int main() {
 std::variant<std::monostate, A> var; // 可以编译成功
 ```
 
-## std::optional
+### [C++17] std::optional
 
 我们有时候可能会有需求，让函数返回一个对象，如下：
 
@@ -4466,7 +4466,7 @@ void func() {
 }
 ```
 
-## std::any
+### [C++17] std::any
 
 C++17引入了any可以存储任何类型的单个值，见代码：
 
@@ -4489,7 +4489,7 @@ int main() { // c++17可编译
 }
 ```
 
-## std::apply
+### [C++17] std::apply
 
 使用std::apply可以将tuple展开作为函数的参数传入，见代码：
 
@@ -4504,7 +4504,7 @@ int main() {
     std::cout << std::apply(add_lambda, std::tuple(2.0f, 3.0f)) << '\n';
 }
 ```
-## std::make_from_tuple
+### [C++17] std::make_from_tuple
 
 使用make_from_tuple可以将tuple展开作为构造函数参数
 
@@ -4520,7 +4520,7 @@ int main() {
 }
 ```
 
-## std::string_view
+### [C++17] std::string_view
 
 通常我们传递一个string时会触发对象的拷贝操作，大字符串的拷贝赋值操作会触发堆内存分配，很影响运行效率，有了string_view就可以避免拷贝操作，平时传递过程中传递string_view即可。
 
@@ -4538,7 +4538,7 @@ int main(void) {
 }
 ```
 
-## as_const
+### [C++17] as_const
 
 C++17使用as_const可以将左值转成const类型
 
@@ -4547,7 +4547,7 @@ std::string str = "str";
 const std::string& constStr = std::as_const(str);
 ```
 
-## file_system
+### [C++17] file_system
 
 C++17正式将file_system纳入标准中，提供了关于文件的大多数功能，基本上应有尽有，这里简单举几个例子：
 ```c++
@@ -4558,13 +4558,13 @@ fs::exists(filename);
 fs::current_path(err_code);
 ```
 
-## std::shared_mutex
+### [C++17] std::shared_mutex
 
 C++17引入了shared_mutex，可以实现读写锁
 
-# C++ 20 新特性总结
+## C++ 20 新特性总结
 
-## 新增关键字(keywords)
+### [C++20] 新增关键字(keywords)
 
   - concept
   - requires
