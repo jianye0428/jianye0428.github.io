@@ -11,7 +11,7 @@ note abstract info tip success question warning failure danger bug example quote
 ref: https://zhuanlan.zhihu.com/p/650986900
 
 ## C++ 11 新特性总结
-### C++ 11是什么，C++ 11标准的由来
+### [C++11] C++ 11 是什么，C++ 11标准的由来
 
 C++ 这门编程语言的历史可以追溯至 1979 年，当时的 Bjarne Stroustrup（C++ 之父，后续简称 Stroustrup）还在使用 Simula 语言进行开发工作。
 
@@ -256,7 +256,7 @@ int main(void){
 }
 ```
 
-## C++11 decltype类型推导完全攻略
+### [C++11] decltype类型推导完全攻略
 
 `decltype` 是 C++11 新增的一个关键字，它和 auto 的功能一样，都用来在编译时期进行自动类型推导。不了解 auto 用法的读者请转到(《C++ auto》)[http://c.biancheng.net/view/6984.html]。
 
@@ -418,7 +418,7 @@ private:
 
 注意，有些低版本的编译器不支持T().begin()这种写法，以上代码我在 VS2019 下测试通过，在 VS2015 下测试失败。
 
-## 汇总auto和decltype的区别
+### [C++11] 汇总auto和decltype的区别
 
 通过(《C++ auto》)[http://c.biancheng.net/view/6984.html]和(《C++ decltype》)[http://c.biancheng.net/view/7151.html]两节的学习，相信大家已经掌握了 auto 和 decltype 的语法规则以及使用场景，这节我们将 auto 和 decltype 放在一起，综合对比一下它们的区别，并告诉大家该如何选择。
 
@@ -532,7 +532,7 @@ auto it = nums.begin();
 ```
 在实际开发中人们仍然喜欢使用 auto 关键字（我也这么干），因为它用起来简单直观，更符合人们的审美。如果你的表达式类型不复杂，我还是推荐使用 auto 关键字，优雅的代码总是叫人赏心悦目，沉浸其中。
 
-## C++11 返回值类型后置（跟踪返回值类型）
+### [C++11] 返回值类型后置（跟踪返回值类型）
 
 在泛型编程中，可能需要通过参数的运算来得到返回值的类型。考虑下面这个场景：
 
@@ -611,7 +611,7 @@ auto func(T& val) -> decltype(foo(val))
 
 返回值类型后置语法，是为了解决函数返回值类型依赖于参数而导致难以确定返回值类型的问题。有了这种语法以后，对返回值类型的推导就可以用清晰的方式（直接通过参数做运算）描述出来，而不需要像 C++98/03 那样使用晦涩难懂的写法。
 
-## C++11对模板实例化中连续右尖括号>>的改进
+### [C++11] 对模板实例化中连续右尖括号>>的改进
 
 在 C++98/03 的泛型编程中，模板实例化有一个很烦琐的地方，那就是连续两个右尖括号（>>）会被编译器解释成右移操作符，而不是模板参数表的结束。
 
@@ -677,7 +677,7 @@ Foo<(100 >> 2)> xx; // 注意括号
 
 所以有一部分 C++11 的新特征，在一些 C++98/03 的老编译器下也是可以支持的，只是由于没有标准化，无法保证各种平台/编译器下的兼容性。比如像 Microsoft Visual C++2005 这种不支持 C++11 的编译器，在对模板右尖括号的处理上和现在的 C++11 是一致的。
 
-## C++11使用using定义别名（替代typedef）
+### [C++11] 使用using定义别名（替代typedef）
 
 大家都知道，在 C++ 中可以通过 typedef 重定义一个类型：
 ```c++
@@ -788,7 +788,7 @@ type_t i;
 
 type_t 实例化后的类型和它的模板参数类型等价。这里，type_t 将等价于 int。
 
-## C++11支持函数模板的默认模板参数
+### [C++11] 支持函数模板的默认模板参数
 
 在 C++98/03 标准中，类模板可以有默认的模板参数，如下：
 
@@ -861,7 +861,7 @@ int main()
 
 总的来说，C++11 支持为函数模板中的参数设置默认值，在实际使用过程中，我们可以选择使用默认值，也可以尝试由编译器自行推导得到，还可以亲自指定各个模板参数的类型。
 
-## C++11在函数模板和类模板中使用可变参数
+### [C++11] 在函数模板和类模板中使用可变参数
 
 所谓可变参数，指的是参数的个数和类型都可以是任意的。提到参数，大家会第一时间想到函数参数，除此之外 C++ 的模板(包括函数模板和类模板)也会用到参数。
 
@@ -1073,7 +1073,7 @@ http://www.biancheng.net
 
 可变参数模板类还有其它的解包方法，这里不再一一赘述，感兴趣的读者可以自行做深入的研究。
 
-## C++11 tuple元组详解
+### [C++11] tuple元组详解
 
 C++11 标准新引入了一种类模板，命名为 tuple（中文可直译为元组）。tuple 最大的特点是：实例化的对象可以存储任意数量、任意类型的数据。
 
@@ -1206,7 +1206,7 @@ int main()
 5
 ```
 
-## C++11列表初始化（统一了初始化方式）
+### [C++11] 列表初始化（统一了初始化方式）
 
 我们知道，在 C++98/03 中的对象初始化方法有很多种，请看下面的代码：
 ```c++
@@ -1331,7 +1331,7 @@ Foo func(void)
 由上面的这些例子可以看到，在 C++11 中使用初始化列表是非常便利的。它不仅统一了各种对象的初始化方式，而且还使代码的书写更加简单清晰。
 
 
-## C++11 lambda匿名函数用法详解
+### [C++11] lambda匿名函数用法详解
 
 lambda 源自希腊字母表中第 11 位的 λ，在计算机科学领域，它则是被用来表示一种匿名函数。所谓匿名函数，简单地理解就是没有名称的函数，又常被称为 lambda 函数或者 lambda 表达式。
 
@@ -1583,7 +1583,7 @@ int main()
 > 如果不使用 noexcept 或者 throw()，则 lambda 匿名函数的函数体中允许发生任何类型的异常。</br>
 
 
-## C++11非受限联合体（union）
+### [C++11] 非受限联合体（union）
 
 在 C/C++ 中，联合体（Union）是一种构造数据类型。在一个联合体内，我们可以定义多个不同类型的成员，这些成员将会共享同一块内存空间。老版本的 C++ 为了和C语言保持兼容，对联合体的数据成员的类型进行了很大程度的限制，这些限制在今天看来并没有必要，因此 C++11 取消了这些限制。
 
@@ -1761,7 +1761,7 @@ int main() {
 
 上面的代码中使用了一个匿名非受限联合体，它作为类 Singer 的“变长成员”来使用，这样的变长成员给类的编写带来了更大的灵活性，这是 C++98 标准中无法达到的（编译器会报member 'Student Singer::<anonymous union>::s' with constructor not allowed in union错误）。
 
-## C++11 for循环（基于范围的循环）详解
+### [C++11] for循环（基于范围的循环）详解
 C++ 11标准之前（C++ 98/03 标准），如果要用 for 循环语句遍历一个数组或者容器，只能套用如下结构：
 ```c++
 for (表达式 1; 表达式 2; 表达式 3) {
@@ -1900,7 +1900,7 @@ bcdef
 有读者可能会问，declaration 参数既可以定义普通形式的变量，也可以定义引用形式的变量，应该如何选择呢？其实很简单，如果需要在遍历序列的过程中修改器内部元素的值，就必须定义引用形式的变量；反之，建议定义const &（常引用）形式的变量（避免了底层复制变量的过程，效率更高），也可以定义普通变量。
 
 
-## C++11 for循环使用注意事项
+### [C++11] for循环使用注意事项
 
 [《C++11 for循环》](http://c.biancheng.net/view/7759.html)一节已经详细介绍了 C++11 标准中 for 循环的基本用法。在此基础上，本节将介绍一些 for 循环的使用注意事项，帮助读者更准确高效地使用基于范围的 for 循环。
 
@@ -2105,7 +2105,7 @@ int main(void)
 
 因此，在使用基于范围的 for 循环遍历容器时，应避免在循环体中修改容器存储元素的个数。
 
-## C++11 constexpr：验证是否为常量表达式（长篇神文）
+### [C++11] constexpr：验证是否为常量表达式（长篇神文）
 
 constexpr 是 C++ 11 标准新引入的关键字，不过在讲解其具体用法和功能之前，读者需要先搞清楚 C++ 常量表达式的含义。
 
@@ -2409,7 +2409,7 @@ zhangsan 10
   - 第 23 行代码处，模板函数的类型 T 为 int 类型，实例化后的函数符合常量表达式函数的要求，所以该函数的返回值就是一个常量表达式。
 
 
-## C++11 constexpr和const的区别
+### [C++11] constexpr和const的区别
 
 [《C++11 constexpr》](http://c.biancheng.net/view/7781.html)一节中，详细讲解了 constexpr 关键字的功能和用法。一些读者在学习过程中，经常会把 const 和 constexpr 搞混，不知道什么时候用 const，什么时候用 constexpr。本节就带领大家对 const 和 constexpr 做系统地区分。
 
@@ -2497,7 +2497,7 @@ int main()
 
 总的来说在 C++ 11 标准中，const 用于为修饰的变量添加“只读”属性；而 constexpr 关键字则用于指明其后是一个常量（或者常量表达式），编译器在编译程序时可以顺带将其结果计算出来，而无需等到程序运行阶段，这样的优化极大地提高了程序的执行效率。
 
-## C++11 long long超长整形详解
+### [C++11] long long超长整形详解
 
 C++ 11 标准中，基于整数大小的考虑，共提供了如表 1 所示的这些数据类型。与此同时，标准中还明确限定了各个数据类型最少占用的位数。
 
@@ -2573,7 +2573,7 @@ unsigned long long最大值：18446744073709551615 ffffffffffffffff
 
 此程序中，输出了各最大值和最小值对应的十六进制，显然在当前平台（Windows10 64位操作系统）上，long long 超长整型占用 64 位（也就是 16 个字节）的存储空间。读者可自行在自己的机器上运行此段代码，即可轻松得知 long long 类型在自己机器上所占用的字节数。
 
-## C++11右值引用（一看即懂）
+### [C++11] C++11右值引用（一看即懂）
 
 (《C++11是什么》)[http://c.biancheng.net/view/7751.html]一节中提到，在 C++98/03 标准的基础上，C++11 标准对 C++ 语言增添了约 140 个新特性。本节要讲的右值引用就是众多新特性中的一个，同时也是最重要的特性之一。
 
@@ -2673,7 +2673,7 @@ cout << a << endl;
 
 > 其实，C++11 标准中对右值做了更细致的划分，分别称为纯右值（Pure value，简称 pvalue）和将亡值（eXpiring value，简称 xvalue ）。其中纯右值就是 C++98/03 标准中的右值（本节中已经做了大篇幅的讲解），而将亡值则指的是和右值引用相关的表达式（比如某函数返回的 T && 类型的表达式）。对于纯右值和将亡值，都属于右值，读者知道即可，不必深究。
 
-## C++11移动构造函数的功能和用法
+### [C++11] 移动构造函数的功能和用法
 
 [《C++11右值引用》](http://c.biancheng.net/view/7829.html)一节中，给读者详细介绍了 C++ 右值引用的含义和用法，同时还提到“右值引用主要用于实现移动（move）语义和完美转发”。有关完美转发，后续章节会做详细介绍，本节主要讲解移动语义的含义以及实现它的方式。
 
@@ -2813,7 +2813,7 @@ class destruct!
 > 有关 std::move() 函数的用法，后续章节会做详细讲解。
 
 
-## C++11 move()函数：将左值强制转换为右值
+### [C++11] move()函数：将左值强制转换为右值
 
 通过学习 [《C++11移动构造函数》](http://c.biancheng.net/view/7847.html)一节我们知道，C++11 标准中借助右值引用可以为指定类添加移动构造函数，这样当使用该类的右值对象（可以理解为临时对象）初始化同类对象时，编译器会优先选择移动构造函数。
 
@@ -2925,7 +2925,7 @@ second move construct
   - 程序第 22 行：oth 对象内部还包含一个 first 类对象，对于 oth.fir 来说，其也是一个左值，所以在初始化 oth.fir 时，还需要再调用一次 move() 函数。
 
 
-## C++11引用限定符的用法
+### [C++11] 引用限定符的用法
 
 在[《C++右值引用》](http://c.biancheng.net/view/7829.html)一节中，我们给您介绍了左值和右值。值得一提的是，左值和右值的区分也同样适用于类对象，本节中将左值的类对象称为左值对象，将右值的类对象称为右值对象。
 
@@ -3047,7 +3047,7 @@ int main() {
 }
 ```
 
-## C++11完美转发及其实现
+### [C++11] 完美转发及其实现
 
 C++11 标准为 C++ 引入右值引用语法的同时，还解决了一个 C++ 98/03 标准长期存在的短板，即使用简单的方式即可在函数模板中实现参数的完美转发。那么，什么是完美转发？它为什么是 C++98/03 标准存在的一个短板？C++11 标准又是如何为 C++ 弥补这一短板的？别急，本节将就这些问题给读者做一一讲解。
 
@@ -3181,7 +3181,7 @@ lvalue
 
 总的来说，在定义模板函数时，我们采用右值引用的语法格式定义参数类型，由此该函数既可以接收外界传入的左值，也可以接收右值；其次，还需要使用 C++11 标准库提供的 forword() 模板函数修饰被调用函数中需要维持左、右值属性的参数。由此即可轻松实现函数模板中参数的完美转发。
 
-## C++11 nullptr：初始化空指针
+### [C++11] nullptr：初始化空指针
 
 实际开发中，避免产生“野指针”最有效的方法，就是在定义指针的同时完成初始化操作，即便该指针的指向尚未明确，也要将其初始化为空指针。
 
@@ -3277,7 +3277,7 @@ void*c
 
 > 总之在 C++11 标准下，相比 NULL 和 0，使用 nullptr 初始化空指针可以令我们编写的程序更加健壮。
 
-## C++11 shared_ptr智能指针（超级详细）
+### [C++11] shared_ptr智能指针（超级详细）
 
 在实际的 C++ 开发中，我们经常会遇到诸如程序运行中突然崩溃、程序运行所用内存越来越多最终不得不重启等问题，这些问题往往都是内存资源管理不当造成的。比如：
 
@@ -3297,7 +3297,7 @@ void*c
 
 接下来，我们将分别对 shared_ptr、unique_ptr 以及 weak_ptr 这 3 个智能指针的特性和用法做详细的讲解，本节先介绍 shared_ptr 智能指针。
 
-## C++11 shared_ptr智能指针
+### [C++11] shared_ptr智能指针
 
 实际上，每种智能指针都是以类模板的方式实现的，shared_ptr 也不例外。shared_ptr（其中 T 表示指针指向的具体数据类型）的定义位于<memory>头文件，并位于 std 命名空间中，因此在使用该类型指针时，程序中应包含如下 2 行代码：
 
@@ -3441,7 +3441,7 @@ p1 为空
 1
 ```
 
-## C++11 unique_ptr智能指针
+### [C++11] unique_ptr智能指针
 
 在[《C++11 shared_ptr智能指针》](http://c.biancheng.net/view/7898.html)的基础上，本节继续讲解 C++11 标准提供的另一种智能指针，即 unique_ptr 智能指针。
 
@@ -3554,7 +3554,7 @@ p5 is nullptr
 10
 ```
 
-## C++11 weak_ptr智能指针
+### [C++11] weak_ptr智能指针
 
 在 C++98/03 的基础上，C++11 标准新引入了 shared_ptr、unique_ptr 以及 weak_ptr 这 3 个智能指针。其中，shared_ptr 和 unique_ptr 已经在前面章节做了详细地介绍，本节重点讲解 weak_ptr 智能指针的特性和用法。
 
@@ -3759,7 +3759,7 @@ cout << f(1) << endl;
 cout << f(2.3f) << endl;
 ```
 
-## 变量模板
+### [C++14] 变量模板
 
 C++14支持变量模板：
 
@@ -3774,7 +3774,7 @@ int main() {
 }
 ```
 
-## 别名模板
+### [C++14] 别名模板
 
 C++14也支持别名模板：
 ```c++
@@ -3797,7 +3797,7 @@ int main() {
 }
 ```
 
-## constexpr的限制
+### [C++14] constexpr的限制
 
 C++14相较于C++11对constexpr减少了一些限制：
 
@@ -3836,7 +3836,7 @@ constexpr int func(bool flag) { // C++11中不可，C++14中可以
 }
 ```
 
-## [[deprecated]]标记
+### [C++14] [[deprecated]]标记
 
 C++14中增加了deprecated标记，修饰类、变、函数等，当程序中使用到了被其修饰的代码时，编译时被产生警告，用户提示开发者该标记修饰的内容将来可能会被丢弃，尽量不要使用。
 
@@ -3860,7 +3860,7 @@ test.cc:6:23: note: declared here
 
 ```
 
-## 二进制字面量与整形字面量分隔符
+### [C++14] 二进制字面量与整形字面量分隔符
 
 C++14引入了二进制字面量，也引入了分隔符，防止看起来眼花哈~
 
@@ -3869,7 +3869,7 @@ int a = 0b0001'0011'1010;
 double b = 3.14'1234'1234'1234;
 ```
 
-## std::make_unique
+### [C++14] std::make_unique
 我们都知道C++11中有std::make_shared，却没有std::make_unique，在C++14已经改善。
 
 ```c++
@@ -3877,7 +3877,7 @@ struct A {};
 std::unique_ptr<A> ptr = std::make_unique<A>();
 ```
 
-## std::shared_timed_mutex与std::shared_lock
+### [C++14] std::shared_timed_mutex与std::shared_lock
 
 C++14通过std::shared_timed_mutex和std::shared_lock来实现读写锁，保证多个线程可以同时读，但是写线程必须独立运行，写操作不可以同时和读操作一起进行。
 
@@ -3905,7 +3905,7 @@ struct ThreadSafe {
 
 为什么是timed的锁呢，因为可以带超时时间，具体可以自行查询相关资料哈，网上有很多。
 
-## std::integer_sequence
+### [C++14] std::integer_sequence
 
 ```c++
 template<typename T, T... ints>
@@ -3943,7 +3943,7 @@ auto map_filter_tuple(F&& f, T& t) {
 }
 ```
 
-## std::exchange
+### [C++14] std::exchange
 
 直接看代码吧：
 
@@ -3974,7 +3974,7 @@ constexpr T exchange(T& obj, U&& new_value) {
 
 可以看见new_value的值给了obj，而没有对new_value赋值，这里相信您已经知道了它和swap的区别了吧！
 
-## std::quoted
+### [C++14] std::quoted
 
 C++14引入std::quoted用于给字符串添加双引号，直接看代码：
 ```c++
@@ -4388,6 +4388,7 @@ int main() {
     // 1234xxxx, filled 4 characters
 }
 ```
+
 ### [C++17] std::variant
 
 C++17增加std::variant实现类似union的功能，但却比union更高级，举个例子union里面不能有string这种类型，但std::variant却可以，还可以支持更多复杂类型，如map等，看代码：
@@ -4575,12 +4576,12 @@ C++17引入了shared_mutex，可以实现读写锁
   - co_yield
   - char8_t
 
-## 新增标识符(Identifies)
+### [C++20] 新增标识符(Identifies)
 
   - import
   - module
 
-## 模块(Modules)
+### [C++20] 模块(Modules)
 
 **优点**
 
@@ -4593,7 +4594,7 @@ C++17引入了shared_mutex，可以实现读写锁
   - 预处理宏只在模块内有效
   - 模块引入顺序无关紧要
 
-## 创建模块
+### [C++20] 创建模块
 
 ```c++
 // cppcon.cpp
@@ -4604,7 +4605,7 @@ namespace CppCon {
 }
 ```
 
-## 引用模块
+### [C++20] 引用模块
 
 ```c++
 // main.cpp
@@ -4614,13 +4615,13 @@ int main(){
 }
 ```
 
-## import 头文件
+### [C++20] import 头文件
   - import
   - 隐式地将 iostream 转换为模块
   - 加速构建, 因为 iostream 只会处理一次
   - 和预编译头 (PCH) 具有相似的效果
 
-## Ranges
+### [C++20] Ranges
 
 Ranges 是什么 ?
   - Range 代表一串元素, 或者一串元素中的一段，类似 begin/end 对
@@ -4673,7 +4674,7 @@ Ranges 是什么 ?
     - 取前10个元素, 然后累加(accumulate)
     - 所有的计算延迟到accumulate累加遍历的时候发生
 
-## 协程(Coroutines)
+### [C++20] 协程(Coroutines)
 **什么是协程**
   - 它是一个函数
   - 具备如下关键字之一:
@@ -4711,7 +4712,7 @@ Ranges 是什么 ?
     }
   ```
 
-## Concepts
+### [C++20] Concepts
 
   - 对模板类和函数的模板形参的约束
   - 编译期断言
@@ -4758,7 +4759,7 @@ void Foo(Incrementable auto t);
   void Foo(T t);
   ```
 
-## Lambda 表达式的更新
+### [C++20] Lambda 表达式的更新
 
 [=, this] 需要显式捕获`this`变量
   - C++20 之前 [=] 隐式捕获this
@@ -4843,7 +4844,7 @@ void Foo(Incrementable auto t);
     }
     ```
 
-## 常量表达式(constexpr) 的更新
+### [C++20] 常量表达式(constexpr) 的更新
 
   - constexpr 虚函数
     - constexpr 的虚函数可以重写非 constexpr 的虚函数
@@ -4862,7 +4863,7 @@ void Foo(Incrementable auto t);
     - std::string 和 std::vector 类型现在可以作为 constexpr
     - 未来需要支持 constexpr 反射
 
-## 原子(Atomic)智能指针
+### [C++20] 原子(Atomic)智能指针
 
   - 智能指针(shared_ptr)线程安全吗?
     - 是: 引用计数控制单元线程安全, 保证对象只被释放一次
@@ -4916,7 +4917,7 @@ public:
 };
 ```
 
-## 自动合流(Joining), 可中断(Cancellable) 的线程
+### [C++20] 自动合流(Joining), 可中断(Cancellable) 的线程
 
   - std::jthread
     - 头文件
@@ -4969,7 +4970,7 @@ void DoWorkPreCpp20() {
         // auto token = job.get_stop_token()
     ```
 
-## C++20 同步(Synchronization)库
+### [C++20] C++20 同步(Synchronization)库
 
   - 信号量(Semaphore), 维基百科请走[这里](https://link.zhihu.com/?target=https%3A//zh.wikipedia.org/wiki/%E4%BF%A1%E5%8F%B7%E9%87%8F)
   -
@@ -5001,13 +5002,13 @@ void DoWorkPreCpp20() {
     - 开启下一阶段
     - 线程得以继续执行
 
-## std::atomic_ref
+### [C++20] std::atomic_ref
 
   - 头文件
   - Atomic 引用
   - 通过引用访问变为原子操作, 被引用对象可以为非原子类型
 
-## 指定初始化(Designated Initializers)
+### [C++20] 指定初始化(Designated Initializers)
 
 ```c++
 struct Data {
@@ -5017,7 +5018,7 @@ struct Data {
 Data d{ .aString = "Hello" };
 ```
 
-## 航天飞机操作符 <=>
+### [C++20] 航天飞机操作符 <=>
 
   - 正规名称: 三路比较运算符
 
@@ -5070,7 +5071,7 @@ Data d{ .aString = "Hello" };
   - 标准库类型支持 <=>
     - vector, string, map, set, sub_match, …
 
-## 范围 for 循环语句支持初始化语句
+### [C++20] 范围 for 循环语句支持初始化语句
 
   - switch 语句初始化 (C++17):
     ```C++
@@ -5155,7 +5156,7 @@ Data d{ .aString = "Hello" };
     auto t = zoned_time{ current_zone(), system_clock::now() };
     ```
 
-## std::span
+### [C++20] std::span
 
   - 头文件
   - 某段连续数据的”视图”
@@ -5171,7 +5172,7 @@ Data d{ .aString = "Hello" };
     span<int> d{ ptr, len }; // dynamic-size: len ints
     ```
 
-## 特性测试宏
+### [C++20] 特性测试宏
 
 通过它可以判断编译器是否支持某个功能, 例如
 
@@ -5187,11 +5188,11 @@ Data d{ .aString = "Hello" };
 
 包含 C++ 标准库版本, 发布日期, 版权证书, 特性宏等
 
-## `consteval`函数
+### [C++20] `consteval`函数
 
 `constexpr` 函数可能编译期执行, 也可以在运行期执行, `consteval` 只能在编译器执行, 如果不满足要求编译不通过。
 
-## `constinit`
+### [C++20] `constinit`
 
 强制指定以常量方式初始化
 
@@ -5238,7 +5239,8 @@ std::string_view GetString(const CardTypeSuit cardTypeSuit) {
     }
 }
 ```
-## 格式化库(std::format)
+
+### [C++20] 格式化库(std::format)
 
 不展开, 类似Python 的格式化,
 
@@ -5246,7 +5248,7 @@ std::string_view GetString(const CardTypeSuit cardTypeSuit) {
 std::string s = std::format("Hello CppCon {}!", 2019);
 ```
 
-## 增加数学常量
+### [C++20] 增加数学常量
 
 再也不用为 M_PI 发愁啦
 
@@ -5254,11 +5256,11 @@ std::string s = std::format("Hello CppCon {}!", 2019);
   - 包含 e, log2e, log10e pi, inv_pi, inv_sqrt pi ln2, ln10 sqrt2, sqrt3, inv_sqrt3 egamma
 
 
-## std::source_location
+### [C++20] std::source_location
 
 用于获取代码位置, 对于日志和错误信息尤其有用
 
-## [[nodiscard(reason)]]
+### [C++20] [[nodiscard(reason)]]
 
 表明返回值不可抛弃, 加入理由的支持
 
@@ -5267,11 +5269,11 @@ std::string s = std::format("Hello CppCon {}!", 2019);
 void* GetData() { /* ... */ }
 ```
 
-## 位运算
+### [C++20] 位运算
 
 加入循环移位, 计数0和1位等功能
 
-## 一些小更新
+### [C++20] 一些小更新
 
 - 字符串支持 starts_with, ends_with
 - map 支持 contains 查询是否存在某个键
