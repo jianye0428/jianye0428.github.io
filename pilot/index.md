@@ -21,17 +21,17 @@
   - Effective STL<br>
 {{< /admonition >}}
 
-{{<admonition quote "软件安装" false>}}
-- 软件安装<br>
-  - [各种程序安装教程](https://jianye0428.github.io/posts/softwareinstallation/)<br>
-  - [Vim安装教程](https://jianye0428.github.io/posts/vim_installation/)<br>
-  - [Zsh安装教程](https://jianye0428.github.io/posts/zsh_installation/)<br>
+- {{<admonition quote "软件安装" false>}}
+  - 软件安装<br>
+    - [各种程序安装教程](https://jianye0428.github.io/posts/softwareinstallation/)<br>
+    - [Vim安装教程](https://jianye0428.github.io/posts/vim_installation/)<br>
+    - [Zsh安装教程](https://jianye0428.github.io/posts/zsh_installation/)<br>
 {{</admonition>}}
 
-{{<admonition quote "GIT" false>}}
-- Git<br>
-  - [Git常用命令查询](https://jianye0428.github.io/posts/commandsheet/)<br>
-  - [Git核心知识点总结](https://jianye0428.github.io/posts/gitnotes2/)<br>
+- {{<admonition quote "GIT" false>}}
+  - Git<br>
+    - [Git常用命令查询](https://jianye0428.github.io/posts/commandsheet/)<br>
+    - [Git核心知识点总结](https://jianye0428.github.io/posts/gitnotes2/)<br>
 {{</admonition>}}
 
 
