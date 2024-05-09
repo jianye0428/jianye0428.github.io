@@ -199,13 +199,6 @@ RRT^* VS RRT。图片来源：https://www.cc.gatech.edu/~dellaert/11S-AI/Topics/
 
 RRT^* VS RRT With Obstacles。图片来源：https://www.cc.gatech.edu/~dellaert/11S-AI/Topics/Entries/2011/2/21_PRM,_RRT,_and_RRT__files/06-RRT.pdf
 
-![动图封面](https://pic4.zhimg.com/v2-99575ac2ca9f8026b1a3158de81a3eff_b.jpg)
-
-{% video ./images/4_10.mp4 %}
-
-<video id="video" controls="" preload="none" poster="封面">
-  <source id="mp4" src="images/4_10.mp4" type="video/mp4">
-</videos>
 
 RRT^*算法+赛车动力学实现车辆180度转弯。图片来源：https://www.youtube.com/watch?v=KSB_9KE6fWI
 
