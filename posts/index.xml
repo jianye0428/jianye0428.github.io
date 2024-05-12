@@ -1,4 +1,600 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 09 May 2024 16:18:48 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>RRT (Rapidly-Exploring Random Tree) 算法详解</title><link>https://jianye0428.github.io/posts/rrt/</link><pubDate>Thu, 09 May 2024 16:18:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rrt/</guid><description><![CDATA[<h1 id="0-基于采样的运动规划算法-rrtrapidly-exploring-random-trees">0. 基于采样的运动规划算法-RRT(Rapidly-exploring Random Trees)</h1>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>所有文章 - yejian's blog</title><link>https://jianye0428.github.io/posts/</link><description>所有文章 | yejian's blog</description><generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>18817571704@163.com (Jian YE)</managingEditor><webMaster>18817571704@163.com (Jian YE)</webMaster><lastBuildDate>Thu, 09 May 2024 16:18:48 +0800</lastBuildDate><atom:link href="https://jianye0428.github.io/posts/" rel="self" type="application/rss+xml"/><item><title>曲线拟合</title><link>https://jianye0428.github.io/posts/linefitting/</link><pubDate>Sun, 16 Jul 2023 15:41:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/linefitting/</guid><description><![CDATA[<h2 id="一-最小二乘法拟合直线">一、 最小二乘法拟合直线</h2>
+<p><strong>最小二乘拟合</strong> 是一种数学上的近似和优化，利用已知的数据得出一条直线或者曲线，使之在坐标系上与已知数据之间的距离的平方和最小。</p>
+<ul>
+<li><strong>TLS(Total Least Squares)</strong> vs <strong>OLS(Ordinary Least Squares)</strong></li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>如上图，TLS 和 OLS 都是最小二乘拟合，只是在偏差评估上采取了不同的方式。
+最小二乘法是一种较为简单的回归分析方法。</p>
+<ul>
+<li>最常用的是 OLS（Ordinary Least Square，普通最小二乘法）：所选择的回归模型应该使所有观察值的残差平方和达到最小（如上图左）。</li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<div class="highlight" id="id-1"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="c1">// Gary: O-Least-Square最小二乘拟合
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">Segment</span><span class="o">::</span><span class="n">LocalLine</span> <span class="n">Segment</span><span class="o">::</span><span class="n">fitLocalLine</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">list</span><span class="o">&lt;</span><span class="n">Bin</span><span class="o">::</span><span class="n">MinZPoint</span><span class="o">&gt;</span> <span class="o">&amp;</span><span class="n">points</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">n_points</span> <span class="o">=</span> <span class="n">points</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 构造 X/Y 矩阵
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">Eigen</span><span class="o">::</span><span class="n">MatrixXd</span> <span class="n">X</span><span class="p">(</span><span class="n">n_points</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">Eigen</span><span class="o">::</span><span class="n">VectorXd</span> <span class="n">Y</span><span class="p">(</span><span class="n">n_points</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">for</span> <span class="p">(</span><span class="k">auto</span> <span class="n">iter</span> <span class="o">=</span> <span class="n">points</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span> <span class="n">iter</span> <span class="o">!=</span> <span class="n">points</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">iter</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">X</span><span class="p">(</span><span class="n">counter</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">=</span> <span class="n">iter</span><span class="o">-&gt;</span><span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">X</span><span class="p">(</span><span class="n">counter</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Y</span><span class="p">(</span><span class="n">counter</span><span class="p">)</span> <span class="o">=</span> <span class="n">iter</span><span class="o">-&gt;</span><span class="n">z</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="o">++</span><span class="n">counter</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 计算 B
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="k">const</span> <span class="n">Eigen</span><span class="o">::</span><span class="n">MatrixXd</span> <span class="n">X_t</span> <span class="o">=</span> <span class="n">X</span><span class="p">.</span><span class="n">transpose</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="k">const</span> <span class="n">Eigen</span><span class="o">::</span><span class="n">VectorXd</span> <span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">X_t</span> <span class="o">*</span> <span class="n">X</span><span class="p">).</span><span class="n">inverse</span><span class="p">()</span> <span class="o">*</span> <span class="n">X_t</span> <span class="o">*</span> <span class="n">Y</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">LocalLine</span> <span class="n">line_result</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">line_result</span><span class="p">.</span><span class="n">first</span> <span class="o">=</span> <span class="n">result</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">line_result</span><span class="p">.</span><span class="n">second</span> <span class="o">=</span> <span class="n">result</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">line_result</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>Eigen 是C++中可以用来调用并进行矩阵计算的一个库，里面封装了一些类。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>通过解 $XB=Y$ 我们就能解出 $B=[m b]$：</p>
+<p>$$\begin{gathered}
+m = \frac{\sum x_{i}^{2}\sum y_{i}-\sum x_{i}(\sum x_{i}y_{i})}{n\sum x_{i}^{2}-(\sum x_{i})^{2}} \
+b = \frac{n\sum x_{i}\sum y_{i}-\sum x_{i}(\sum x_{i}y_{i})}{n\sum x_{i}^{2}-(\sum x_{i})^{2}}
+\end{gathered}$$</p>
+<div class="highlight" id="id-2"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="n">OrdinaryLeastSquare</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">double</span> <span class="n">t1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">t2</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">t3</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">t4</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">x</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">t1</span> <span class="o">+=</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="n">t2</span> <span class="o">+=</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="n">t3</span> <span class="o">+=</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="n">t4</span> <span class="o">+=</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">m</span> <span class="o">=</span> <span class="p">(</span><span class="n">t3</span><span class="o">*</span><span class="n">x</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="n">t2</span><span class="o">*</span><span class="n">t4</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">t1</span><span class="o">*</span><span class="n">x</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="n">t2</span><span class="o">*</span><span class="n">t2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="n">t1</span><span class="o">*</span><span class="n">t4</span> <span class="o">-</span> <span class="n">t2</span><span class="o">*</span><span class="n">t3</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">t1</span><span class="o">*</span><span class="n">x</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="n">t2</span><span class="o">*</span><span class="n">t2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>OLS 这种 least square 存在问题，比如针对垂直线段就不行，于是引入第二种 Total Least Square。</li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>其中，$U=\begin{bmatrix}x_1-\overline{x}&amp;y_1-\overline{y}\\vdots&amp;\vdots\x_n-\overline{x}&amp;y_n-\overline{y}\end{bmatrix}$;</p>
+<p>$\frac{dE}{dN}=\frac{d(N^TU^TUN)}{dN}=U^TUN+N^TU^TU$ ,因为 $U^TU $ 是一个对称矩阵 $(U^TU=(U^TU)^T)$, $U^TUN=N^TU^TU$, 所以 $\frac{dE}{dN}=2(U^TU)N$;
+此外，$U^TU=\begin{bmatrix}\sum(x_i-\overline x)^2&amp;\sum(x_i-\overline x)(y_i-\overline y)\\sum(x_i-\overline x)(y_i-\overline y)&amp;\sum(y_i-\overline y)^2\end{bmatrix}$ 是关于 X、Y 的一个二阶矩(随机变量平方的期望)矩阵(second-moment matrix);</p>
+<p>二阶矩矩阵 $U^{T}U$ 的最小特征值对应的特征向量即为求解的 $N=[a b]$</p>
+<ul>
+<li>特征值 &amp; 特征向量
+<blockquote>
+<p>设 A为 n 阶矩阵 $(n × n)$，若存在常数 λ 及 n 维非零向量 x(n × 1)，使得 $Ax = λx$，则称 λ是矩阵 A 的 特征值，x 是 A 属于特征值 λ 的 特征向量。</p>
+</blockquote>
+</li>
+<li>$eig(U^T U) = [V, D]$, $V$ 是特征向量阵（每列为一个特征向量），D特征值对角阵 ⟹ 寻找 D 中特征值最小的对角元素对应的特征向量即为 $U^TU$ 最小特征值对应的特征向量
+<blockquote>
+<p>特征值分解： $U^T U = V D V^{-1}$</p>
+</blockquote>
+</li>
+<li>通过 SVD（奇异值）求解:
+<ul>
+<li>$SVD(A)=[U,S,V]$,即 $A=USV^T$</li>
+</ul>
+<blockquote>
+<p>其中 $U$ 是一个<code>m*m</code>的正交阵（Orthogonal matrix：满足 $UU^T=I$ 或者 $U^TU=I$ 的 n 阶方阵，其中 I 为 n 阶单位阵），$S$ 是一个<code>m*n</code>的对角阵（Diagonal matrix：主对角线之外的元素皆为 0 的矩阵，对角线上的元素可以为 0 或其他值），对角线上的元素为 $A$ 的<strong>奇异值（Singular value）</strong>，$V$ 是一个<code>n*n</code>的正交阵。$U$ 的 m 个列向量为 $A$ 的<strong>左奇异向量（Left singular vector）</strong>，$V$ 的 n 个列向量为 $A$ 的<strong>右奇异向量（Right singular vector）</strong>。$S$ 完全由 $A$ 决定和 $U$、$V$ 无关；
+$A$ 的左奇异向量（$U$）是 $AA^T$ 的特征向量；$A$ 的右奇异向量是 $A^TA$ 的特征向量。
+$A$ 的非零奇异值是 $A^TA$ 特征值的平方根，同时也是 $AA^T$ 特征值的平方根。</p>
+</blockquote>
+</li>
+<li>寻找 $S$ 中最小奇异值对应的 $V$ 的右奇异向量即为 $A^TA$ 最小特征值对应的特征向量。</li>
+</ul>
+<div class="highlight" id="id-3"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;Eigen/Dense&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;Eigen/Eigenvalues&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="k">using</span> <span class="k">namespace</span> <span class="n">Eigen</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">using</span> <span class="k">namespace</span> <span class="n">std</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// Eigenvalue
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// typedef Matrix&lt;int, 3, 3&gt; Matrix3d
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Matrix3d</span> <span class="n">A</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">A</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;Here is a 3x3 matrix, A:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">A</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">EigenSolver</span><span class="o">&lt;</span><span class="n">Matrix3d</span><span class="o">&gt;</span> <span class="n">es</span><span class="p">(</span><span class="n">A</span><span class="p">.</span><span class="n">transpose</span><span class="p">()</span> <span class="o">*</span> <span class="n">A</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 对角矩阵，每一个对角线元素就是一个特征值，里面的特征值是由大到小排列的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Matrix3d</span> <span class="n">D</span> <span class="o">=</span> <span class="n">es</span><span class="p">.</span><span class="n">pseudoEigenvalueMatrix</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 特征向量（每一列）组成的矩阵
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Matrix3d</span> <span class="n">V</span> <span class="o">=</span> <span class="n">es</span><span class="p">.</span><span class="n">pseudoEigenvectors</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;The eigenvalue matrix D is:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">D</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;The eigenvector matrix V is:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">V</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 特征值分解
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// cout &lt;&lt; &#34;Finally, V * D * V^(-1) = &#34; &lt;&lt; endl &lt;&lt; V * D * V.inverse() &lt;&lt; endl;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 特征值&amp;特征向量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;min-eigenvector &amp; min-eigenvalue&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; &lt;1&gt; The min-eigenvalue for A^T*A:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">D</span><span class="p">(</span><span class="n">D</span><span class="p">.</span><span class="n">rows</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">D</span><span class="p">.</span><span class="n">rows</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; &lt;2&gt; The min-eigenvector for A^T*A:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">V</span><span class="p">.</span><span class="n">col</span><span class="p">(</span><span class="n">V</span><span class="p">.</span><span class="n">cols</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; &lt;3&gt; (A^T*A)*min-eigenvector =&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">A</span><span class="p">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">*</span><span class="n">A</span><span class="p">)</span> <span class="o">*</span> <span class="n">V</span><span class="p">.</span><span class="n">col</span><span class="p">(</span><span class="n">V</span><span class="p">.</span><span class="n">cols</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34; &lt;4&gt; min-eigenvalue*min-eigenvector =&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">D</span><span class="p">(</span><span class="n">D</span><span class="p">.</span><span class="n">rows</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">D</span><span class="p">.</span><span class="n">rows</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">V</span><span class="p">.</span><span class="n">col</span><span class="p">(</span><span class="n">V</span><span class="p">.</span><span class="n">cols</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// SVD
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// Eigen::ComputeThinV | Eigen::ComputeThinU
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Eigen</span><span class="o">::</span><span class="n">JacobiSVD</span><span class="o">&lt;</span><span class="n">Eigen</span><span class="o">::</span><span class="n">Matrix3d</span><span class="o">&gt;</span> <span class="n">svd</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">Eigen</span><span class="o">::</span><span class="n">ComputeFullV</span> <span class="o">|</span> <span class="n">Eigen</span><span class="o">::</span><span class="n">ComputeFullU</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Eigen</span><span class="o">::</span><span class="n">Matrix3d</span> <span class="n">S</span> <span class="o">=</span> <span class="n">svd</span><span class="p">.</span><span class="n">singularValues</span><span class="p">().</span><span class="n">asDiagonal</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">//得到最小奇异值的位置
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">Matrix3d</span><span class="o">::</span><span class="n">Index</span> <span class="n">minColIdx</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">svd</span><span class="p">.</span><span class="n">singularValues</span><span class="p">().</span><span class="n">rowwise</span><span class="p">().</span><span class="n">sum</span><span class="p">().</span><span class="n">minCoeff</span><span class="p">(</span><span class="o">&amp;</span><span class="n">minColIdx</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;The left singular vectors U is:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">svd</span><span class="p">.</span><span class="n">matrixU</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;The singular-value matrix S is:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">S</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;The right singular vectors V is:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">svd</span><span class="p">.</span><span class="n">matrixV</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;The SVD: USV^T =&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">svd</span><span class="p">.</span><span class="n">matrixU</span><span class="p">()</span><span class="o">*</span><span class="n">S</span><span class="o">*</span><span class="n">svd</span><span class="p">.</span><span class="n">matrixV</span><span class="p">().</span><span class="n">transpose</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 奇异值与特征值的关系
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;The S^2 is:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">S</span><span class="o">*</span><span class="n">S</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&#34;The min-eigenvector for A^T*A:&#34;</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span> <span class="o">&lt;&lt;</span> <span class="n">svd</span><span class="p">.</span><span class="n">matrixV</span><span class="p">().</span><span class="n">col</span><span class="p">(</span><span class="n">minColIdx</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>$d = ax + by$</li>
+<li>最终得到的拟合曲线:  $y = - \frac{a}{b}x + \frac{d}{b}$</li>
+</ul>
+<p><strong>其他直线拟合方法:</strong></p>
+<blockquote>
+<p><a href="http://www.cnblogs.com/xrwang/archive/2011/03/09/ransac-1.html"target="_blank" rel="external nofollow noopener noreferrer">王先荣：随机抽样一致性算法（RANSAC）<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+</blockquote>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>(1). 从一组观测数据中找出合适的2维拟合直线，观测数据中包含局内点和局外点，其中局内点近似的被直线所通过，而局外点远离于直线（如上图）；
+(２). 简单的 最小二乘法 不能找到适应于局内点的直线，原因是最小二乘法尽量去适应包括局外点在内的所有点；RANSAC 能得出一个仅仅用局内点计算出模型，并且概率还足够高。</p>
+<p>RANSAC通过反复选择数据中的一组随机子集来达成目标（被选取的子集被假设为局内点），并用下述方法进行验证：</p>
+<ul>
+<li>①：有一个模型适应于假设的局内点，即所有的未知参数都能从假设的局内点计算得出。</li>
+<li>②：用①中得到的模型去测试所有的其它数据，如果某个点适用于估计的模型，认为它也是局内点。</li>
+<li>③：如果有足够多的点被归类为假设的局内点，那么估计的模型就足够合理；用所有假设的局内点去重新估计模型，因为它仅仅被初始的假设局内点估计过，通过估计局内点与模型的错误率来评估模型。</li>
+<li>④：①-③这个过程被重复执行固定的次数，每次产生的模型要么因为局内点太少而被舍弃，要么因为比现有的模型更好而被选用。</li>
+</ul>
+<p>References:</p>
+<ul>
+<li><a href="http://www.statisticalconsultants.co.nz/blog/total-least-squares.html"target="_blank" rel="external nofollow noopener noreferrer">Total Least Squares<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="http://blog.csdn.net/abcd1992719g/article/details/28118095"target="_blank" rel="external nofollow noopener noreferrer">abcd1992719g: OpenCV2马拉松第25圈——直线拟合与RANSAC算法<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+<li><a href="http://www.cnblogs.com/xrwang/archive/2011/03/09/ransac-1.html"target="_blank" rel="external nofollow noopener noreferrer">王先荣：随机抽样一致性算法（RANSAC）<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></li>
+</ul>
+<h3 id="二-三次样条曲线">二、 三次样条曲线</h3>
+<ul>
+<li>
+<ol>
+<li>根据起始点和终点求三次样条曲线的系数</li>
+</ol>
+<p>已知三次样条曲线的方程为 $y = a_0 + a_1 \cdot x + a_2 \cdot x ^ 2 + a_3 \cdot x ^ 3$ ， 并且已知起始点坐标 $(x_0, y_0)$, 起始点导数k_1, 终点坐标(x_1, y_1), 终点导数k_2, 求三次样条曲线的系数</p>
+<p>解: 通过平移变换可知， 将起始点置于零点，则终点为$(x_1 - x_0, y_1 - y_0)$，那么根据点和相关点之间的导数可以求相应的系数。方程如下:</p>
+<p>$a_0 = y_0$
+$a_1 = k_0$
+$(y_1 - y_1) = a_1 * (x_1 - x_0) + a_2 * (x_1 - x_0) ^ 2 + a_3 * (x_1 - x_0) ^ 3$
+$k_1 = a_1 + 2 * a_2 * (x_1 - x_0) + 3 * a_3 * (x_1 - x_0) ^ 2$</p>
+<p>或者也可以设三次样条曲线方程为:$y = a_0 + a_1 * (x - x_0) + a_2 * (x - x_1) ^ 2 + a_3 * (x - x_2) ^ 3$</p>
+<p>代码参考:</p>
+<div class="highlight" id="id-4"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">PredictorManager</span><span class="o">::</span><span class="n">GetCubicPolynomialCofficients</span><span class="p">(</span><span class="kt">double</span> <span class="n">start_s</span><span class="p">,</span> <span class="kt">double</span> <span class="n">start_ds</span><span class="p">,</span> <span class="kt">double</span> <span class="n">end_s</span><span class="p">,</span> <span class="kt">double</span> <span class="n">end_ds</span><span class="p">,</span> <span class="kt">double</span> <span class="n">start_t</span><span class="p">,</span> <span class="kt">double</span> <span class="n">end_t</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;*</span> <span class="n">coeffs</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">coeffs</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">[](</span><span class="mi">0</span><span class="p">)</span> <span class="o">=</span> <span class="n">start_s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">coeffs</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">[](</span><span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="n">start_ds</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">p</span> <span class="o">=</span> <span class="n">end_t</span> <span class="o">-</span> <span class="n">start_t</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">p</span> <span class="o">*</span> <span class="n">p</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">p3</span> <span class="o">=</span> <span class="n">p2</span> <span class="o">*</span> <span class="n">p</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">tmp_var1</span> <span class="o">=</span> <span class="p">(</span><span class="n">end_ds</span> <span class="o">-</span> <span class="n">start_ds</span><span class="p">)</span> <span class="o">*</span> <span class="n">p</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">tmp_var2</span> <span class="o">=</span> <span class="n">end_s</span> <span class="o">-</span> <span class="n">start_s</span> <span class="o">-</span>  <span class="n">start_ds</span> <span class="o">*</span> <span class="n">p</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">coeffs</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">[](</span><span class="mi">2</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">tmp_var2</span> <span class="o">-</span> <span class="n">tmp_var1</span><span class="p">)</span> <span class="o">/</span> <span class="n">p2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">coeffs</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">[](</span><span class="mi">3</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">tmp_var1</span> <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">tmp_var2</span><span class="p">)</span> <span class="o">/</span> <span class="n">p3</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">double</span> <span class="nf">EvaluateQuarticPolynomial</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span> <span class="mi">5</span><span class="o">&gt;&amp;</span> <span class="n">coeffs</span><span class="p">,</span> <span class="k">const</span> <span class="kt">double</span> <span class="n">t</span><span class="p">,</span> <span class="k">const</span> <span class="kt">uint32_t</span> <span class="n">order</span><span class="p">,</span> <span class="k">const</span> <span class="kt">double</span> <span class="n">end_t</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                             <span class="k">const</span> <span class="kt">double</span> <span class="n">end_v</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">t</span> <span class="o">&gt;=</span> <span class="n">end_t</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">switch</span> <span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="mi">0</span><span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">double</span> <span class="n">end_value</span> <span class="o">=</span> <span class="p">(((</span><span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">end_t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">end_t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">end_t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">end_t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">end_value</span> <span class="o">+</span> <span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">end_t</span><span class="p">)</span> <span class="o">*</span> <span class="n">end_v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="mi">1</span><span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">end_v</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">default</span><span class="o">:</span> <span class="p">{</span> <span class="k">return</span> <span class="mf">0.0</span><span class="p">;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="k">switch</span> <span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">0</span><span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="p">(((</span><span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">1</span><span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="p">((</span><span class="mf">4.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">2</span><span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="p">(</span><span class="mf">12.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">6.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">3</span><span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mf">24.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">6.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">4</span><span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mf">24.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">default</span><span class="o">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mf">0.0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
+</div>
+</div></li>
+</ul>
+<h3 id="三bezier曲线">三、Bezier曲线</h3>
+<pre><code>参考文献:
+[1]. [三次样条曲线求系数1](https://huaweicloud.csdn.net/63a571ddb878a5454594788c.html?spm=1001.2101.3001.6650.2&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7Eactivity-2-90477388-blog-118017126.pc_relevant_vip_default&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7Eactivity-2-90477388-blog-118017126.pc_relevant_vip_default&amp;utm_relevant_index=3#devmenu7)
+
+[2]. [三次样条曲线求系数2](https://blog.csdn.net/ymj7150697/article/details/105713587)
+
+[3]. [三次样条曲线求系数3](https://blog.csdn.net/weixin_37722026/article/details/103778202)
+</code></pre>
+<h2 id="references">References:</h2>
+<p>[1].<a href="https://durant35.github.io/2017/07/21/Algorithms_LeastSquaresLineFitting/"target="_blank" rel="external nofollow noopener noreferrer">最小二乘法拟合直线<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>一文详解 ChatGPT RLHF 背后的 PPO 强化学习训练</title><link>https://jianye0428.github.io/posts/chatgpt_rlhf/</link><pubDate>Sat, 04 May 2024 17:00:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/chatgpt_rlhf/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>最近火出圈的🚀 ChatGPT 中 RLHF 主要采用了就是 PPO 进行强化学习训练</p>
+<blockquote>
+<p>主要运用在微调阶段（微调整个 10B～100B+ 参数的成本其实也非常高 ）使用<strong>策略梯度</strong>强化学习 (Policy Gradient RL) 算法、近端策略优化 (PPO) 微调初始 LM 的部分或全部参数。</p>
+</blockquote>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<blockquote>
+<p>以下主要参考台大李宏毅的推导过程</p>
+</blockquote>
+<h2 id="01-vanilla-policy-gradient">01. Vanilla policy gradient</h2>
+<ul>
+<li>动作/环境/奖励之间的关系：</li>
+</ul>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>轨迹可表示为集合</p>
+<p>$$\begin{aligned}p_{\theta}(\tau)&amp;=p(s_1)p_\theta(a_1|s_1)p(s_2|s_1,a_1)p_\theta(a_1|s_1)p(s_3|s_2,a_2)\ldots\\&amp;=p(s_1)\prod_{t=1}^Tp_\theta(a_t|s_t)p(s_{t+1}|s_t,a_t)\end{aligned}$$</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>一个轨迹的奖励总和为：</p>
+<p>$$R(\tau)=\sum_{t=1}^Tr_t$$</p>
+<p>则奖励的期望为：</p>
+<p>$$\bar{R}_\theta=\sum_\tau R(\tau)p_\theta(\tau)=E_{\tau\sim p_\theta(\tau)}[R(\tau)]$$</p>
+<p>将 $R(\tau)$ 看成常量，对其求微分：</p>
+<p>$$\begin{aligned}
+\nabla\bar{R}_{\theta}&amp; =\sum_{\tau}R(\tau)\nabla p_{\theta}(\tau) \\
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\frac{\nabla p_{\theta}(\tau)}{p_{\theta}(\tau)} \\
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\nabla\log p_{\theta}(\tau)\quad\nabla f(x)=f(x)\nabla\log f(x) \\
+&amp;=E_{\tau\sim p_{\theta}(\tau)}[R(\tau)\nabla\log p_{\theta}(\tau)]&amp; \left(2\right) \\
+&amp;\approx\frac1N\sum_{n=1}^{N}R(\tau^{n})\nabla\log p_{\theta}(\tau^{n}) \\
+&amp;=\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}R(\tau^n)\nabla\log p_\theta(a_t^n|s_t^n)
+\end{aligned}$$</p>
+<p>策略网络梯度更新：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>可以看成一个分类问题（游戏中通过键盘输入来互动，分类类别为所有可操作的键位）：</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li>理想情况下， 并不一直为正数，增加一个 baseline:</li>
+</ul>
+<p>$$\nabla\bar{R}_{\theta}=\frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{{T_{n}}}(R(\tau^{n})-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n})b\approx E[R(\tau)]$$</p>
+<blockquote>
+<p>在电子游戏中，奖励值常常为正（通常为游戏分数）。这时需要增加一个偏置来保证同时有正样本和负样本</p>
+</blockquote>
+<ul>
+<li>分配合适的学分</li>
+</ul>
+<p>一个高分的游戏轨迹中也可能存在错误的动作，同样的，一个低分的游戏轨迹也可能存在正确的动作，而上文中的计算将最后的奖励值（最后的游戏分数）都一视同仁视为该游戏轨迹每个动作的学分。</p>
+<p>为了更准确地描述每个动作所得到的学分，将一个动作执行后对应的学分为后续的所有奖励值的总和</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<p>$$\begin{aligned}
+\nabla\bar{R}_\theta&amp; =\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}(R(\tau^n)-b)\nabla\log p_\theta(a_t^n|s_t^n) \Downarrow\nabla\bar{R}_\theta \\
+&amp;= \frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n-b)\nabla\log p_\theta(a_t^n|s_t^n)
+\end{aligned}$$</p>
+<p>当某个动作执行以后，其对后续的奖励分数的影响在慢慢减少，再增加一个衰减因子：</p>
+<p>$$\begin{aligned}
+\nabla\bar{R}_\theta&amp; =\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n)\nabla\log p_\theta(a_t^n|s_t^n)\Downarrow\nabla\bar{R}_\theta \\
+&amp; = \frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{T_{n}}(\sum_{t^{\prime}=t}^{T_{n}}\gamma^{t^{\prime}-t}r_{t^{\prime}}^{n}-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n}),\gamma&lt;1
+\end{aligned}$$</p>
+<h2 id="02-从on-policy到off-policy">02. 从on-policy到off-policy</h2>
+<p>两者区别:</p>
+<ul>
+<li>On-policy: 学习到的 agent 和与环境交互的 agent 是相同的，每一次梯度更新都需要重新采样</li>
+<li>Off-policy: 学习到的 agent 和与环境交互的 agent 是不同的，每次梯度更新不需要重新采样</li>
+</ul>
+<p>重新看看 的表达式：
+$$\nabla\bar{R}_\theta=E_{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<ul>
+<li>使用策略网络 收集数据。当 更新后，则需要重新收集训练样本</li>
+<li>目标：使用相同的样本（通过 采样）训练 。其中 为固定的，因此我们可以重复使用其样本数据</li>
+</ul>
+<h3 id="21-重要性采样importance-sampling">2.1 重要性采样（Importance Sampling）</h3>
+<p>考虑一个场景，假如正在尝试计算函数 $f(x)$ 的期望值，其中 $x \sim f(x)$ 服从某种分布。则对 $E(f(x))$ 有以下估计：</p>
+<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx\approx\frac{1}{n}\sum_{i}f(x_{i})$$</p>
+<p>蒙特卡洛抽样方法是简单地从分布 $p(x)$ 中抽出 ，然后取所有样本的平均值来得到期望值的估计。那么问题来了，如果  $p(x)$  非常难取样怎么办？是否能够根据一些已知的、容易抽样的分布来估计期望值？</p>
+<p>答案是肯定的。公式的一个简单转换就可以做到</p>
+<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx=\int f(x)\frac{p(x)}{q(x)}q(x)dx=E_{x\sim q}[f(x)\frac{p(x)}{q(x)}]$$</p>
+<p>其中$x$从分布$q(x)$中采样，$q(x)$不应为 0。通过这种方式，估计期望能够从另一个分布$q(x)$中采样，$p(x)/q(x)$是称为采样率或采样权重，它作为校正权重以抵消来自不同分布的概率采样。</p>
+<ul>
+<li>重要性采样的缺陷</li>
+</ul>
+<p>虽然重要性采样保证了期望的一致，但是这里来计算一下方差是否一致</p>
+<p>方差的计算：</p>
+<p>$$Var[X]=E[X^2]-(E[X])^2$$</p>
+<p>分别计算方差：</p>
+<p>$$\begin{aligned}Var_{x\sim p}[f(x)]&amp;=E_{x\sim p}[f(x)^2]-(E_{x\sim p}[f(x)])^2\\Var_{x\sim q}[f(x)\frac{p(x)}{q(x)}]&amp;=E_{x\sim q}[(f(x)\frac{p(x)}{q(x)})^2]-(E_{x\sim q}[f(x)\frac{p(x)}{q(x)}])^2\\&amp;=E_{x\sim p}[f(x)^2\frac{p(x)}{q(x)}]-(E_{x\sim p}[f(x)])^2\end{aligned}$$</p>
+<p>可以发现两者虽然期望相等但方差并不一致</p>
+<h3 id="22-从-on-policy-到-off-policy">2.2 从 on-policy 到 off-policy</h3>
+<p>我们使用重要性采样将 on-policy 调整为 off-policy</p>
+<p>$$\nabla\bar{R}_\theta=E_{\tau\sim p_{\theta^{\prime}}(\tau)}[\frac{p_\theta(\tau)}{p_{\theta^{\prime}}(\tau)}R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<ul>
+<li>从 $\theta&rsquo;$ 采样得到数据集</li>
+<li>使用该 数据集多次训练 $\theta$</li>
+</ul>
+<p>梯度更新过程：</p>
+<p>$$\begin{aligned}
+&amp;=E_{(s_t,a_t)\sim\pi_\theta}[A^\theta(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \\
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(s_t,a_t)}{p_{\theta^{\prime}}(s_t,a_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \\
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}\frac{p_\theta(s_t)}{p_{\theta^{\prime}}(s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]&amp; \text{(4)} \\
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]
+\end{aligned}$$</p>
+<ul>
+<li>其中 $A^\theta(s_t,a_t)$ 指的是 advantage 函数,其计算方式为加上衰减机制后的奖励值并减去基线。</li>
+<li>由于 $\frac{p_\theta(s_t)}{p_{\theta&rsquo;}(s_t)}$ 的值难以计算，将其设置为 1，简化计算</li>
+</ul>
+<p>目标函数可以表示为：</p>
+<p>由于 $\nabla f(x)=f(x)\nabla\log f(x)$ 再结合不定积分，目标函数可以表示为:</p>
+<p>$$J^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]$$</p>
+<h2 id="03-ppotrpo">03. PPO/TRPO</h2>
+<p>为了消除重要性采样的缺陷的影响，以下为两种方式</p>
+<ul>
+<li>PPO（Proximal Policy Optimization）
+<ul>
+<li>初始化策 略网络参数</li>
+<li>在每次迭代过程中:</li>
+<li>目标函数:</li>
+<li>使用 与环境互动以收集 ，并计算出 advantage 值</li>
+<li>更新 优化</li>
+<li>算法:</li>
+</ul>
+</li>
+</ul>
+<p>$$\begin{aligned}
+PPO algorithm: \\
+J_{PPO}^{\theta^k}(\theta) &amp; = J^{\theta^k}(\theta)-\beta KL(\theta,\theta^k)J^{\theta^k}(\theta) \\
+&amp; = E_{(s_{t},a_{t})\sim\pi_{\theta^{k}}}[\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})] \\
+&amp; \approx \sum_{(s_{t},a_{t})}\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})
+\end{aligned}$$</p>
+<p>自适应 KL 惩罚：如果 $KL(\theta,\theta^k)&gt;KL_{\max}$ ,增大 $\beta$; 如果 $KL(\theta,\theta^k) &lt;KL_{\min}$,减小 $\beta$。</p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+<ul>
+<li>TRPO（Trust Region Policy Optimizatio）</li>
+</ul>
+<p>$$J_{TRPO}^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]KL(\theta,\theta&rsquo;)&lt;\delta $$</p>
+<p>TRPO 和 PPO 在各个测试上性能差不多。但相比 PPO ，TRPO 计算要更复杂</p>
+<p><strong>参考文献</strong>:</p>
+<p>[1] <a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html"target="_blank" rel="external nofollow noopener noreferrer">https://spinningup.openai.com/en/latest/algorithms/ppo.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[2] <a href="https://openai.com/research/openai-baselines-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://openai.com/research/openai-baselines-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[3] <a href="https://huggingface.co/blog/deep-rl-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/deep-rl-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[4] <a href="https://huggingface.co/blog/rlhf"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/rlhf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+<p>[5] <a href="https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+]]></description></item><item><title>RRT (Rapidly-Exploring Random Tree) 算法详解</title><link>https://jianye0428.github.io/posts/rrt/</link><pubDate>Thu, 09 May 2024 16:18:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rrt/</guid><description><![CDATA[<h1 id="0-基于采样的运动规划算法-rrtrapidly-exploring-random-trees">0. 基于采样的运动规划算法-RRT(Rapidly-exploring Random Trees)</h1>
 <p>RRT是Steven M. LaValle和James J. Kuffner Jr.提出的一种通过随机构建Space Filling Tree实现对非凸高维空间快速搜索的算法。该算法可以很容易的处理包含障碍物和差分运动约束的场景，因而广泛的被应用在各种机器人的运动规划场景中。</p>
 <br>
 <center>
@@ -27,7 +623,7 @@
 <br>
 <p>图片来源:https://www.researchgate.net/profile/Burak_Boyacioglu/publication/306404973/figure/fig1/AS:398553223581697@1472033901892/Basic-RRT-algorithm.png</p>
 <h2 id="2基于概率的rrt算法">2、基于概率的RRT算法</h2>
-<p>为了加快随机树收敛到目标位置的速度，基于概率的RRT算法在随机树的扩展的步骤中引入一个概率概率p，根据概率p的值来选择树的生长方向是随机生长($x_{rand}$)还是朝向目标位置 $x_{goal}$ 生长。引入向目标生长的机制可以加速路径搜索的收敛速度。</p>
+<p>为了加快随机树收敛到目标位置的速度，基于概率的RRT算法在随机树的扩展的步骤中引入一个概率 $p$，根据概率 $p$ 的值来选择树的生长方向是随机生长($x_{rand}$) 还是朝向目标位置 $x_{goal}$ 生长。引入向目标生长的机制可以加速路径搜索的收敛速度。</p>
 <br>
 <center>
   
@@ -152,7 +748,9 @@
 <p>6、全局路径规划：图搜索算法介绍4(RRT/RRT*)(<a href="https://link.zhihu.com/?target=https%3A//blog.csdn.net/gophae/article/details/103231053"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/gophae/article/details/103231053<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</p>
 <p>ref:
 [1]. <a href="https://zhuanlan.zhihu.com/p/133224593"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/133224593<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2]. <a href="https://blog.csdn.net/gophae/article/details/103231053"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/gophae/article/details/103231053<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+[2]. <a href="https://blog.csdn.net/gophae/article/details/103231053"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/gophae/article/details/103231053<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[3]. <a href="https://xwlu.github.io/wiki/path-planning/rrt/"target="_blank" rel="external nofollow noopener noreferrer">https://xwlu.github.io/wiki/path-planning/rrt/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[4]. ※ <a href="https://dlonng.com/posts/rrt"target="_blank" rel="external nofollow noopener noreferrer">https://dlonng.com/posts/rrt<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>强化学习 | PPO 论文解读</title><link>https://jianye0428.github.io/posts/ppo/</link><pubDate>Fri, 14 Jul 2023 08:43:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/ppo/</guid><description><![CDATA[<h2 id="1-引言">1. 引言</h2>
 <p>​ 首先在论文的引言部分给出了经典的强化学习算法的不足之处:许多的经典强化学习算法在大型的模型、数据采样效率、鲁棒性(无需手动超参调整)上都有很大的提升空间。Q-Learning算法(包括函数逼近类算法)在许多简单问题上应用存在局限性,例如要满足状态空间与动作空间的离散型要求，并且其理解起来也是一件很困难的事情、而vanilla policy gradient算法的数据效率与鲁棒性较差、置信域优化算法(TRPO)相对来说比较复杂，而且对于包含噪声或参数共享(在策略函数与价值函数之间有其他的辅助任务需求)的网络结构不兼容(比如dropout)。
 ​
@@ -8784,129 +9382,6 @@ unsigned long long最大值：18446744073709551615 ffffffffffffffff</p>
 <p>Smart Moves: Intelligent Path Finding ： Bryan Stout 的这篇需要去 Gamasutra.com 注册才能阅读。 Bryan 用 Delphi 写的程序帮助我学习了A* ，同时给了我一些我的程序中的一些灵感。他也阐述了 A* 的其他选择。</p>
 <p>Terrain Analysis ： Dave Pottinger 一篇非常高阶的，有吸引力的文章。他是 Ensemble Studios 的一名专家。这个家伙调整了游戏帝国时代和王者时代。不要期望能够读懂这里的每一样东西，但是这是一篇能给你一些不错的主意的很有吸引力的文章。它讨论了包 mip-mapping ，</p>
 <p>influence mapping ，和其他高阶 AI 寻路主题。他的 flood filling 给了我在处理死路径 ”dead ends” 和孤岛 ”island” 时的灵感。这包含在我的 Blitz版本的程序里。</p>
-]]></description></item><item><title>Line Fitting</title><link>https://jianye0428.github.io/posts/linefitting/</link><pubDate>Sun, 16 Jul 2023 15:41:48 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/linefitting/</guid><description><![CDATA[<h2 id="曲线拟合合集">曲线拟合合集</h2>
-<p><a href="https://durant35.github.io/2017/07/21/Algorithms_LeastSquaresLineFitting/"target="_blank" rel="external nofollow noopener noreferrer">https://durant35.github.io/2017/07/21/Algorithms_LeastSquaresLineFitting/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<h3 id="一-最小二乘法拟合直线">一、 最小二乘法拟合直线</h3>
-<h3 id="二-三次样条曲线">二、 三次样条曲线</h3>
-<ul>
-<li>
-<ol>
-<li>根据起始点和终点求三次样条曲线的系数</li>
-</ol>
-<p>已知三次样条曲线的方程为 $y = a_0 + a_1 \cdot x + a_2 \cdot x ^ 2 + a_3 \cdot x ^ 3$ ， 并且已知起始点坐标 $(x_0, y_0)$, 起始点导数k_1, 终点坐标(x_1, y_1), 终点导数k_2, 求三次样条曲线的系数</p>
-<p>解: 通过平移变换可知， 将起始点置于零点，则终点为$(x_1 - x_0, y_1 - y_0)$，那么根据点和相关点之间的导数可以求相应的系数。方程如下:</p>
-<p>$a_0 = y_0$
-$a_1 = k_0$
-$(y_1 - y_1) = a_1 * (x_1 - x_0) + a_2 * (x_1 - x_0) ^ 2 + a_3 * (x_1 - x_0) ^ 3$
-$k_1 = a_1 + 2 * a_2 * (x_1 - x_0) + 3 * a_3 * (x_1 - x_0) ^ 2$</p>
-<p>或者也可以设三次样条曲线方程为:$y = a_0 + a_1 * (x - x_0) + a_2 * (x - x_1) ^ 2 + a_3 * (x - x_2) ^ 3$</p>
-<p>代码参考:</p>
-<div class="highlight" id="id-1"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-c++" data-lang="c++"><span class="line"><span class="cl"><span class="kt">void</span> <span class="n">PredictorManager</span><span class="o">::</span><span class="n">GetCubicPolynomialCofficients</span><span class="p">(</span><span class="kt">double</span> <span class="n">start_s</span><span class="p">,</span> <span class="kt">double</span> <span class="n">start_ds</span><span class="p">,</span> <span class="kt">double</span> <span class="n">end_s</span><span class="p">,</span> <span class="kt">double</span> <span class="n">end_ds</span><span class="p">,</span> <span class="kt">double</span> <span class="n">start_t</span><span class="p">,</span> <span class="kt">double</span> <span class="n">end_t</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;*</span> <span class="n">coeffs</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="n">coeffs</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">[](</span><span class="mi">0</span><span class="p">)</span> <span class="o">=</span> <span class="n">start_s</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">coeffs</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">[](</span><span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="n">start_ds</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">p</span> <span class="o">=</span> <span class="n">end_t</span> <span class="o">-</span> <span class="n">start_t</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">p</span> <span class="o">*</span> <span class="n">p</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">p3</span> <span class="o">=</span> <span class="n">p2</span> <span class="o">*</span> <span class="n">p</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">tmp_var1</span> <span class="o">=</span> <span class="p">(</span><span class="n">end_ds</span> <span class="o">-</span> <span class="n">start_ds</span><span class="p">)</span> <span class="o">*</span> <span class="n">p</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="kt">double</span> <span class="n">tmp_var2</span> <span class="o">=</span> <span class="n">end_s</span> <span class="o">-</span> <span class="n">start_s</span> <span class="o">-</span>  <span class="n">start_ds</span> <span class="o">*</span> <span class="n">p</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">coeffs</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">[](</span><span class="mi">2</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">tmp_var2</span> <span class="o">-</span> <span class="n">tmp_var1</span><span class="p">)</span> <span class="o">/</span> <span class="n">p2</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="n">coeffs</span><span class="o">-&gt;</span><span class="k">operator</span><span class="p">[](</span><span class="mi">3</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">tmp_var1</span> <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">tmp_var2</span><span class="p">)</span> <span class="o">/</span> <span class="n">p3</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kt">double</span> <span class="nf">EvaluateQuarticPolynomial</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">double</span><span class="p">,</span> <span class="mi">5</span><span class="o">&gt;&amp;</span> <span class="n">coeffs</span><span class="p">,</span> <span class="k">const</span> <span class="kt">double</span> <span class="n">t</span><span class="p">,</span> <span class="k">const</span> <span class="kt">uint32_t</span> <span class="n">order</span><span class="p">,</span> <span class="k">const</span> <span class="kt">double</span> <span class="n">end_t</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">                             <span class="k">const</span> <span class="kt">double</span> <span class="n">end_v</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">t</span> <span class="o">&gt;=</span> <span class="n">end_t</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">switch</span> <span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="mi">0</span><span class="o">:</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="kt">double</span> <span class="n">end_value</span> <span class="o">=</span> <span class="p">(((</span><span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">end_t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">end_t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">end_t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">end_t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">end_value</span> <span class="o">+</span> <span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">end_t</span><span class="p">)</span> <span class="o">*</span> <span class="n">end_v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="mi">1</span><span class="o">:</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">end_v</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">      <span class="p">}</span>
-</span></span><span class="line"><span class="cl">      <span class="k">default</span><span class="o">:</span> <span class="p">{</span> <span class="k">return</span> <span class="mf">0.0</span><span class="p">;</span> <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">  <span class="k">switch</span> <span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">0</span><span class="o">:</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="p">(((</span><span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">1</span><span class="o">:</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="p">((</span><span class="mf">4.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">2</span><span class="o">:</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="p">(</span><span class="mf">12.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">6.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">3</span><span class="o">:</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mf">24.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">6.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="mi">4</span><span class="o">:</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mf">24.0</span> <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">default</span><span class="o">:</span>
-</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mf">0.0</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span></span></span></code></pre></td></tr></table>
-</div>
-</div></li>
-</ul>
-<h3 id="三bezier曲线">三、Bezier曲线</h3>
-<pre><code>参考文献:
-[1]. [三次样条曲线求系数1](https://huaweicloud.csdn.net/63a571ddb878a5454594788c.html?spm=1001.2101.3001.6650.2&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7Eactivity-2-90477388-blog-118017126.pc_relevant_vip_default&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7Eactivity-2-90477388-blog-118017126.pc_relevant_vip_default&amp;utm_relevant_index=3#devmenu7)
-
-[2]. [三次样条曲线求系数2](https://blog.csdn.net/ymj7150697/article/details/105713587)
-
-[3]. [三次样条曲线求系数3](https://blog.csdn.net/weixin_37722026/article/details/103778202)</code></pre>
 ]]></description></item><item><title>RL学习笔记 [2] | 马尔科夫决策过程(MDP)</title><link>https://jianye0428.github.io/posts/rl_learning_note_2/</link><pubDate>Wed, 21 Feb 2024 10:38:11 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/rl_learning_note_2/</guid><description><![CDATA[<h1 id="0-引言">0. 引言</h1>
 <p>在<a href="https://www.cnblogs.com/pinard/p/9385570.html"target="_blank" rel="external nofollow noopener noreferrer">强化学习（一）模型基础<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>中，我们讲到了强化学习模型的8个基本要素。但是仅凭这些要素还是无法使用强化学习来帮助我们解决问题的, 在讲到模型训练前，模型的简化也很重要，这一篇主要就是讲如何利用马尔科夫决策过程(Markov Decision Process，以下简称MDP)来简化强化学习的建模。</p>
 <p>MDP这一篇对应Sutton书的第三章和UCL强化学习课程的第二讲。</p>
@@ -10603,187 +11078,6 @@ J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\
 <p><strong>参考文献：</strong></p>
 <p>[1] <a href="https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives"target="_blank" rel="external nofollow noopener noreferrer">https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a><br>
 [2] <a href="https://mp.weixin.qq.com/s/3Ff6C5zT7fXggQ1FwxvWAQ"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/3Ff6C5zT7fXggQ1FwxvWAQ<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-]]></description></item><item><title>一文详解 ChatGPT RLHF 背后的 PPO 强化学习训练</title><link>https://jianye0428.github.io/posts/chatgpt_rlhf/</link><pubDate>Sat, 04 May 2024 17:00:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/chatgpt_rlhf/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
-<p></p>
-<p>最近火出圈的🚀 ChatGPT 中 RLHF 主要采用了就是 PPO 进行强化学习训练</p>
-<blockquote>
-<p>主要运用在微调阶段（微调整个 10B～100B+ 参数的成本其实也非常高 ）使用<strong>策略梯度</strong>强化学习 (Policy Gradient RL) 算法、近端策略优化 (PPO) 微调初始 LM 的部分或全部参数。</p>
-</blockquote>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<blockquote>
-<p>以下主要参考台大李宏毅的推导过程</p>
-</blockquote>
-<h2 id="01-vanilla-policy-gradient">01. Vanilla policy gradient</h2>
-<ul>
-<li>动作/环境/奖励之间的关系：</li>
-</ul>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<p>轨迹可表示为集合</p>
-<p>$$\begin{aligned}p_{\theta}(\tau)&amp;=p(s_1)p_\theta(a_1|s_1)p(s_2|s_1,a_1)p_\theta(a_1|s_1)p(s_3|s_2,a_2)\ldots\&amp;=p(s_1)\prod_{t=1}^Tp_\theta(a_t|s_t)p(s_{t+1}|s_t,a_t)\end{aligned}$$</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<p>一个轨迹的奖励总和为：</p>
-<p>$$R(\tau)=\sum_{t=1}^Tr_t$$</p>
-<p>则奖励的期望为：</p>
-<p>$$\bar{R}<em>\theta=\sum</em>\tau R(\tau)p_\theta(\tau)=E_{\tau\sim p_\theta(\tau)}[R(\tau)]$$</p>
-<p>将 $R(\tau)$ 看成常量，对其求微分：</p>
-<p>$$\begin{aligned}
-\nabla\bar{R}<em>{\theta}&amp; =\sum</em>{\tau}R(\tau)\nabla p_{\theta}(\tau) \
-&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\frac{\nabla p_{\theta}(\tau)}{p_{\theta}(\tau)} \
-&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\nabla\log p_{\theta}(\tau)\quad\nabla f(x)=f(x)\nabla\log f(x) \
-&amp;=E_{\tau\sim p_{\theta}(\tau)}[R(\tau)\nabla\log p_{\theta}(\tau)]&amp; \left(2\right) \
-&amp;\approx\frac1N\sum_{n=1}^{N}R(\tau^{n})\nabla\log p_{\theta}(\tau^{n}) \
-&amp;=\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}R(\tau^n)\nabla\log p_\theta(a_t^n|s_t^n)
-\end{aligned}$$</p>
-<p>策略网络梯度更新：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<p>可以看成一个分类问题（游戏中通过键盘输入来互动，分类类别为所有可操作的键位）：</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<ul>
-<li>理想情况下， 并不一直为正数，增加一个 baseline:</li>
-</ul>
-<p>$$\nabla\bar{R}<em>{\theta}=\frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{{T_{n}}}(R(\tau^{n})-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n})b\approx E[R(\tau)]$$</p>
-<blockquote>
-<p>在电子游戏中，奖励值常常为正（通常为游戏分数）。这时需要增加一个偏置来保证同时有正样本和负样本</p>
-</blockquote>
-<ul>
-<li>分配合适的学分</li>
-</ul>
-<p>一个高分的游戏轨迹中也可能存在错误的动作，同样的，一个低分的游戏轨迹也可能存在正确的动作，而上文中的计算将最后的奖励值（最后的游戏分数）都一视同仁视为该游戏轨迹每个动作的学分。</p>
-<p>为了更准确地描述每个动作所得到的学分，将一个动作执行后对应的学分为后续的所有奖励值的总和</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<p>$$\begin{aligned}
-\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(R(\tau^n)-b)\nabla\log p_\theta(a_t^n|s_t^n) \Downarrow\nabla\bar{R}<em>\theta \
-&amp;= \frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n-b)\nabla\log p_\theta(a_t^n|s_t^n)
-\end{aligned}$$</p>
-<p>当某个动作执行以后，其对后续的奖励分数的影响在慢慢减少，再增加一个衰减因子：</p>
-<p>$$\begin{aligned}
-\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n)\nabla\log p_\theta(a_t^n|s_t^n)\Downarrow\nabla\bar{R}<em>\theta \
-&amp; = \frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{T_{n}}(\sum_{t^{\prime}=t}^{T_{n}}\gamma^{t^{\prime}-t}r_{t^{\prime}}^{n}-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n}),\gamma&lt;1
-\end{aligned}$$</p>
-<h2 id="02-从on-policy到off-policy">02. 从on-policy到off-policy</h2>
-<p>两者区别:</p>
-<ul>
-<li>On-policy: 学习到的 agent 和与环境交互的 agent 是相同的，每一次梯度更新都需要重新采样</li>
-<li>Off-policy: 学习到的 agent 和与环境交互的 agent 是不同的，每次梯度更新不需要重新采样</li>
-</ul>
-<p>重新看看 的表达式：
-$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\theta(\tau)]$$</p>
-<ul>
-<li>使用策略网络 收集数据。当 更新后，则需要重新收集训练样本</li>
-<li>目标：使用相同的样本（通过 采样）训练 。其中 为固定的，因此我们可以重复使用其样本数据</li>
-</ul>
-<h3 id="21-重要性采样importance-sampling">2.1 重要性采样（Importance Sampling）</h3>
-<p>考虑一个场景，假如正在尝试计算函数 $f(x)$ 的期望值，其中 $x \sim f(x)$ 服从某种分布。则对 $E(f(x))$ 有以下估计：</p>
-<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx\approx\frac{1}{n}\sum_{i}f(x_{i})$$</p>
-<p>蒙特卡洛抽样方法是简单地从分布 $p(x)$ 中抽出 ，然后取所有样本的平均值来得到期望值的估计。那么问题来了，如果  $p(x)$  非常难取样怎么办？是否能够根据一些已知的、容易抽样的分布来估计期望值？</p>
-<p>答案是肯定的。公式的一个简单转换就可以做到</p>
-<p>$$E_{x\sim p}[f(x)]=\int f(x)p(x)dx=\int f(x)\frac{p(x)}{q(x)}q(x)dx=E_{x\sim q}[f(x)\frac{p(x)}{q(x)}]$$</p>
-<p>其中$x$从分布$q(x)$中采样，$q(x)$不应为 0。通过这种方式，估计期望能够从另一个分布$q(x)$中采样，$p(x)/q(x)$是称为采样率或采样权重，它作为校正权重以抵消来自不同分布的概率采样。</p>
-<ul>
-<li>重要性采样的缺陷</li>
-</ul>
-<p>虽然重要性采样保证了期望的一致，但是这里来计算一下方差是否一致</p>
-<p>方差的计算：</p>
-<p>$$Var[X]=E[X^2]-(E[X])^2$$</p>
-<p>分别计算方差：</p>
-<p>$$\begin{aligned}Var_{x\sim p}[f(x)]&amp;=E_{x\sim p}[f(x)^2]-(E_{x\sim p}[f(x)])^2\Var_{x\sim q}[f(x)\frac{p(x)}{q(x)}]&amp;=E_{x\sim q}[(f(x)\frac{p(x)}{q(x)})^2]-(E_{x\sim q}[f(x)\frac{p(x)}{q(x)}])^2\&amp;=E_{x\sim p}[f(x)^2\frac{p(x)}{q(x)}]-(E_{x\sim p}[f(x)])^2\end{aligned}$$</p>
-<p>可以发现两者虽然期望相等但方差并不一致</p>
-<h3 id="22-从-on-policy-到-off-policy">2.2 从 on-policy 到 off-policy</h3>
-<p>我们使用重要性采样将 on-policy 调整为 off-policy</p>
-<p>$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_{\theta^{\prime}}(\tau)}[\frac{p_\theta(\tau)}{p_{\theta^{\prime}}(\tau)}R(\tau)\nabla\log p_\theta(\tau)]$$</p>
-<ul>
-<li>从 $\theta&rsquo;$ 采样得到数据集</li>
-<li>使用该 数据集多次训练 $\theta$</li>
-</ul>
-<p>梯度更新过程：</p>
-<p>$$\begin{aligned}
-&amp;=E_{(s_t,a_t)\sim\pi_\theta}[A^\theta(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
-&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(s_t,a_t)}{p_{\theta^{\prime}}(s_t,a_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
-&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}\frac{p_\theta(s_t)}{p_{\theta^{\prime}}(s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]&amp; \text{(4)} \
-&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]
-\end{aligned}$$</p>
-<ul>
-<li>其中 $A^\theta(s_t,a_t)$ 指的是 advantage 函数,其计算方式为加上衰减机制后的奖励值并减去基线。</li>
-<li>由于 $\frac{p_\theta(s_t)}{p_{\theta&rsquo;}(s_t)}$ 的值难以计算，将其设置为 1，简化计算</li>
-</ul>
-<p>目标函数可以表示为：</p>
-<p>由于 $\nabla f(x)=f(x)\nabla\log f(x)$ 再结合不定积分，目标函数可以表示为:</p>
-<p>$$J^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]$$</p>
-<h2 id="03-ppotrpo">03. PPO/TRPO</h2>
-<p>为了消除重要性采样的缺陷的影响，以下为两种方式</p>
-<ul>
-<li>PPO（Proximal Policy Optimization）
-<ul>
-<li>初始化策 略网络参数</li>
-<li>在每次迭代过程中:</li>
-<li>目标函数:</li>
-<li>使用 与环境互动以收集 ，并计算出 advantage 值</li>
-<li>更新 优化</li>
-<li>算法:</li>
-</ul>
-</li>
-</ul>
-<p>$$\begin{aligned}
-PPO algorithm: \
-J_{PPO}^{\theta^k}(\theta) &amp; = J^{\theta^k}(\theta)-\beta KL(\theta,\theta^k)J^{\theta^k}(\theta) \
-&amp; = E_{(s_{t},a_{t})\sim\pi_{\theta^{k}}}[\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})] \
-&amp; \approx \sum_{(s_{t},a_{t})}\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})
-\end{aligned}$$</p>
-<p>自适应 KL 惩罚：如果 $KL(\theta,\theta^k)&gt;KL_{\max}$ ,增大 $\beta$; 如果 $KL(\theta,\theta^k) &lt;KL_{\min}$,减小 $\beta$。</p>
-<br>
-<center>
-  
-  <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
-</center>
-<br>
-<ul>
-<li>TRPO（Trust Region Policy Optimizatio）</li>
-</ul>
-<p>$$J_{TRPO}^{\theta&rsquo;}(\theta)=E_{(s_t,a_t)\sim\pi_{\theta&rsquo;}}[\frac{p_\theta(a_t|s_t)}{p_{\theta&rsquo;}(a_t|s_t)}A^{\theta&rsquo;}(s_t,a_t)]KL(\theta,\theta&rsquo;)&lt;\delta $$</p>
-<p>TRPO 和 PPO 在各个测试上性能差不多。但相比 PPO ，TRPO 计算要更复杂</p>
-<p><strong>参考文献</strong>:</p>
-<p>[1] <a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html"target="_blank" rel="external nofollow noopener noreferrer">https://spinningup.openai.com/en/latest/algorithms/ppo.html<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>[2] <a href="https://openai.com/research/openai-baselines-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://openai.com/research/openai-baselines-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>[3] <a href="https://huggingface.co/blog/deep-rl-ppo"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/deep-rl-ppo<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>[4] <a href="https://huggingface.co/blog/rlhf"target="_blank" rel="external nofollow noopener noreferrer">https://huggingface.co/blog/rlhf<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
-<p>[5] <a href="https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA"target="_blank" rel="external nofollow noopener noreferrer">https://mp.weixin.qq.com/s/zhkNDNDEJV3BEdcgeuHkOA<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>Transformer 详解</title><link>https://jianye0428.github.io/posts/transformerdetailedexplanation/</link><pubDate>Mon, 24 Jul 2023 17:37:50 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/transformerdetailedexplanation/</guid><description><![CDATA[<h2 id="transformer-详解">Transformer 详解</h2>
 <p>Transformer 是谷歌大脑在 2017 年底发表的论文 <a href="https://arxiv.org/pdf/1706.03762.pdf"target="_blank" rel="external nofollow noopener noreferrer">attention is all you need<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a> 中所提出的 seq2seq 模型。现在已经取得了大范围的应用和扩展，而 BERT 就是从 Transformer 中衍生出来的预训练语言模型</p>
 <p>这篇文章分为以下几个部分</p>
@@ -14020,7 +14314,7 @@ gdb有thread相关命令，如infothread(简写infoth)显示线程消息，bxxth
 <br>
 <p>图片来源:https://www.researchgate.net/profile/Burak_Boyacioglu/publication/306404973/figure/fig1/AS:398553223581697@1472033901892/Basic-RRT-algorithm.png</p>
 <h2 id="2基于概率的rrt算法">2、基于概率的RRT算法</h2>
-<p>为了加快随机树收敛到目标位置的速度，基于概率的RRT算法在随机树的扩展的步骤中引入一个概率概率p，根据概率p的值来选择树的生长方向是随机生长($x_{rand}$)还是朝向目标位置 $x_{goal}$ 生长。引入向目标生长的机制可以加速路径搜索的收敛速度。</p>
+<p>为了加快随机树收敛到目标位置的速度，基于概率的RRT算法在随机树的扩展的步骤中引入一个概率 $p$，根据概率 $p$ 的值来选择树的生长方向是随机生长($x_{rand}$) 还是朝向目标位置 $x_{goal}$ 生长。引入向目标生长的机制可以加速路径搜索的收敛速度。</p>
 <br>
 <center>
   
@@ -14145,7 +14439,9 @@ gdb有thread相关命令，如infothread(简写infoth)显示线程消息，bxxth
 <p>6、全局路径规划：图搜索算法介绍4(RRT/RRT*)(<a href="https://link.zhihu.com/?target=https%3A//blog.csdn.net/gophae/article/details/103231053"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/gophae/article/details/103231053<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>)</p>
 <p>ref:
 [1]. <a href="https://zhuanlan.zhihu.com/p/133224593"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/133224593<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
-[2]. <a href="https://blog.csdn.net/gophae/article/details/103231053"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/gophae/article/details/103231053<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
+[2]. <a href="https://blog.csdn.net/gophae/article/details/103231053"target="_blank" rel="external nofollow noopener noreferrer">https://blog.csdn.net/gophae/article/details/103231053<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[3]. <a href="https://xwlu.github.io/wiki/path-planning/rrt/"target="_blank" rel="external nofollow noopener noreferrer">https://xwlu.github.io/wiki/path-planning/rrt/<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a>
+[4]. ※ <a href="https://dlonng.com/posts/rrt"target="_blank" rel="external nofollow noopener noreferrer">https://dlonng.com/posts/rrt<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>强化学习 | 深度解读Soft Actor-Critic 算法</title><link>https://jianye0428.github.io/posts/sac/</link><pubDate>Sat, 04 May 2024 17:42:03 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/sac/</guid><description><![CDATA[<h1 id="深度解读soft-actor-critic-算法">深度解读Soft Actor-Critic 算法</h1>
 <h2 id="1-前言">1 前言</h2>
 <p>机器人学习Robot Learning正在快速的发展，其中深度强化学习deep reinforcement learning（DRL），特别是面向连续控制continous control的DRL算法起着重要的作用。在这一领域中，目前可以说有三类行之有效的model free DRL算法：</p>
@@ -14470,7 +14766,13 @@ J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\
 <p>ref:
 [1]. <a href="https://zhuanlan.zhihu.com/p/70360272"target="_blank" rel="external nofollow noopener noreferrer">https://zhuanlan.zhihu.com/p/70360272<i class="fa-solid fa-external-link-alt fa-fw fa-xs ms-1 text-secondary" aria-hidden="true"></i></a></p>
 ]]></description></item><item><title>一文详解 ChatGPT RLHF 背后的 PPO 强化学习训练</title><link>https://jianye0428.github.io/posts/chatgpt_rlhf/</link><pubDate>Sat, 04 May 2024 17:00:35 +0800</pubDate><author>Jian YE</author><guid>https://jianye0428.github.io/posts/chatgpt_rlhf/</guid><description><![CDATA[<h2 id="0-引言">0. 引言</h2>
-<p></p>
+<br>
+<center>
+  
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
 <p>最近火出圈的🚀 ChatGPT 中 RLHF 主要采用了就是 PPO 进行强化学习训练</p>
 <blockquote>
 <p>主要运用在微调阶段（微调整个 10B～100B+ 参数的成本其实也非常高 ）使用<strong>策略梯度</strong>强化学习 (Policy Gradient RL) 算法、近端策略优化 (PPO) 微调初始 LM 的部分或全部参数。</p>
@@ -14497,7 +14799,7 @@ J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\
 </center>
 <br>
 <p>轨迹可表示为集合</p>
-<p>$$\begin{aligned}p_{\theta}(\tau)&amp;=p(s_1)p_\theta(a_1|s_1)p(s_2|s_1,a_1)p_\theta(a_1|s_1)p(s_3|s_2,a_2)\ldots\&amp;=p(s_1)\prod_{t=1}^Tp_\theta(a_t|s_t)p(s_{t+1}|s_t,a_t)\end{aligned}$$</p>
+<p>$$\begin{aligned}p_{\theta}(\tau)&amp;=p(s_1)p_\theta(a_1|s_1)p(s_2|s_1,a_1)p_\theta(a_1|s_1)p(s_3|s_2,a_2)\ldots\\&amp;=p(s_1)\prod_{t=1}^Tp_\theta(a_t|s_t)p(s_{t+1}|s_t,a_t)\end{aligned}$$</p>
 <br>
 <center>
   
@@ -14508,14 +14810,14 @@ J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\
 <p>一个轨迹的奖励总和为：</p>
 <p>$$R(\tau)=\sum_{t=1}^Tr_t$$</p>
 <p>则奖励的期望为：</p>
-<p>$$\bar{R}<em>\theta=\sum</em>\tau R(\tau)p_\theta(\tau)=E_{\tau\sim p_\theta(\tau)}[R(\tau)]$$</p>
+<p>$$\bar{R}_\theta=\sum_\tau R(\tau)p_\theta(\tau)=E_{\tau\sim p_\theta(\tau)}[R(\tau)]$$</p>
 <p>将 $R(\tau)$ 看成常量，对其求微分：</p>
 <p>$$\begin{aligned}
-\nabla\bar{R}<em>{\theta}&amp; =\sum</em>{\tau}R(\tau)\nabla p_{\theta}(\tau) \
-&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\frac{\nabla p_{\theta}(\tau)}{p_{\theta}(\tau)} \
-&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\nabla\log p_{\theta}(\tau)\quad\nabla f(x)=f(x)\nabla\log f(x) \
-&amp;=E_{\tau\sim p_{\theta}(\tau)}[R(\tau)\nabla\log p_{\theta}(\tau)]&amp; \left(2\right) \
-&amp;\approx\frac1N\sum_{n=1}^{N}R(\tau^{n})\nabla\log p_{\theta}(\tau^{n}) \
+\nabla\bar{R}_{\theta}&amp; =\sum_{\tau}R(\tau)\nabla p_{\theta}(\tau) \\
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\frac{\nabla p_{\theta}(\tau)}{p_{\theta}(\tau)} \\
+&amp;=\sum_{\tau}R(\tau)p_{\theta}(\tau)\nabla\log p_{\theta}(\tau)\quad\nabla f(x)=f(x)\nabla\log f(x) \\
+&amp;=E_{\tau\sim p_{\theta}(\tau)}[R(\tau)\nabla\log p_{\theta}(\tau)]&amp; \left(2\right) \\
+&amp;\approx\frac1N\sum_{n=1}^{N}R(\tau^{n})\nabla\log p_{\theta}(\tau^{n}) \\
 &amp;=\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}R(\tau^n)\nabla\log p_\theta(a_t^n|s_t^n)
 \end{aligned}$$</p>
 <p>策略网络梯度更新：</p>
@@ -14537,7 +14839,7 @@ J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\
 <ul>
 <li>理想情况下， 并不一直为正数，增加一个 baseline:</li>
 </ul>
-<p>$$\nabla\bar{R}<em>{\theta}=\frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{{T_{n}}}(R(\tau^{n})-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n})b\approx E[R(\tau)]$$</p>
+<p>$$\nabla\bar{R}_{\theta}=\frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{{T_{n}}}(R(\tau^{n})-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n})b\approx E[R(\tau)]$$</p>
 <blockquote>
 <p>在电子游戏中，奖励值常常为正（通常为游戏分数）。这时需要增加一个偏置来保证同时有正样本和负样本</p>
 </blockquote>
@@ -14554,13 +14856,13 @@ J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\
 </center>
 <br>
 <p>$$\begin{aligned}
-\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(R(\tau^n)-b)\nabla\log p_\theta(a_t^n|s_t^n) \Downarrow\nabla\bar{R}<em>\theta \
-&amp;= \frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n-b)\nabla\log p_\theta(a_t^n|s_t^n)
+\nabla\bar{R}_\theta&amp; =\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}(R(\tau^n)-b)\nabla\log p_\theta(a_t^n|s_t^n) \Downarrow\nabla\bar{R}_\theta \\
+&amp;= \frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n-b)\nabla\log p_\theta(a_t^n|s_t^n)
 \end{aligned}$$</p>
 <p>当某个动作执行以后，其对后续的奖励分数的影响在慢慢减少，再增加一个衰减因子：</p>
 <p>$$\begin{aligned}
-\nabla\bar{R}<em>\theta&amp; =\frac1N\sum</em>{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n)\nabla\log p_\theta(a_t^n|s_t^n)\Downarrow\nabla\bar{R}<em>\theta \
-&amp; = \frac{1}{N}\sum</em>{n=1}^{N}\sum_{t=1}^{T_{n}}(\sum_{t^{\prime}=t}^{T_{n}}\gamma^{t^{\prime}-t}r_{t^{\prime}}^{n}-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n}),\gamma&lt;1
+\nabla\bar{R}_\theta&amp; =\frac1N\sum_{n=1}^N\sum_{t=1}^{T_n}(\sum_{t^{\prime}=t}^{T_n}r_{t^{\prime}}^n)\nabla\log p_\theta(a_t^n|s_t^n)\Downarrow\nabla\bar{R}_\theta \\
+&amp; = \frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{T_{n}}(\sum_{t^{\prime}=t}^{T_{n}}\gamma^{t^{\prime}-t}r_{t^{\prime}}^{n}-b)\nabla\log p_{\theta}(a_{t}^{n}|s_{t}^{n}),\gamma&lt;1
 \end{aligned}$$</p>
 <h2 id="02-从on-policy到off-policy">02. 从on-policy到off-policy</h2>
 <p>两者区别:</p>
@@ -14569,7 +14871,7 @@ J_{\pi}(\phi)&amp; =D_{\mathrm{KL}}\left(\pi_\phi(.\left|s_t\right)|\exp(\frac1\
 <li>Off-policy: 学习到的 agent 和与环境交互的 agent 是不同的，每次梯度更新不需要重新采样</li>
 </ul>
 <p>重新看看 的表达式：
-$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+$$\nabla\bar{R}_\theta=E_{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\theta(\tau)]$$</p>
 <ul>
 <li>使用策略网络 收集数据。当 更新后，则需要重新收集训练样本</li>
 <li>目标：使用相同的样本（通过 采样）训练 。其中 为固定的，因此我们可以重复使用其样本数据</li>
@@ -14588,20 +14890,20 @@ $$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\t
 <p>方差的计算：</p>
 <p>$$Var[X]=E[X^2]-(E[X])^2$$</p>
 <p>分别计算方差：</p>
-<p>$$\begin{aligned}Var_{x\sim p}[f(x)]&amp;=E_{x\sim p}[f(x)^2]-(E_{x\sim p}[f(x)])^2\Var_{x\sim q}[f(x)\frac{p(x)}{q(x)}]&amp;=E_{x\sim q}[(f(x)\frac{p(x)}{q(x)})^2]-(E_{x\sim q}[f(x)\frac{p(x)}{q(x)}])^2\&amp;=E_{x\sim p}[f(x)^2\frac{p(x)}{q(x)}]-(E_{x\sim p}[f(x)])^2\end{aligned}$$</p>
+<p>$$\begin{aligned}Var_{x\sim p}[f(x)]&amp;=E_{x\sim p}[f(x)^2]-(E_{x\sim p}[f(x)])^2\\Var_{x\sim q}[f(x)\frac{p(x)}{q(x)}]&amp;=E_{x\sim q}[(f(x)\frac{p(x)}{q(x)})^2]-(E_{x\sim q}[f(x)\frac{p(x)}{q(x)}])^2\\&amp;=E_{x\sim p}[f(x)^2\frac{p(x)}{q(x)}]-(E_{x\sim p}[f(x)])^2\end{aligned}$$</p>
 <p>可以发现两者虽然期望相等但方差并不一致</p>
 <h3 id="22-从-on-policy-到-off-policy">2.2 从 on-policy 到 off-policy</h3>
 <p>我们使用重要性采样将 on-policy 调整为 off-policy</p>
-<p>$$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_{\theta^{\prime}}(\tau)}[\frac{p_\theta(\tau)}{p_{\theta^{\prime}}(\tau)}R(\tau)\nabla\log p_\theta(\tau)]$$</p>
+<p>$$\nabla\bar{R}_\theta=E_{\tau\sim p_{\theta^{\prime}}(\tau)}[\frac{p_\theta(\tau)}{p_{\theta^{\prime}}(\tau)}R(\tau)\nabla\log p_\theta(\tau)]$$</p>
 <ul>
 <li>从 $\theta&rsquo;$ 采样得到数据集</li>
 <li>使用该 数据集多次训练 $\theta$</li>
 </ul>
 <p>梯度更新过程：</p>
 <p>$$\begin{aligned}
-&amp;=E_{(s_t,a_t)\sim\pi_\theta}[A^\theta(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
-&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(s_t,a_t)}{p_{\theta^{\prime}}(s_t,a_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \
-&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}\frac{p_\theta(s_t)}{p_{\theta^{\prime}}(s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]&amp; \text{(4)} \
+&amp;=E_{(s_t,a_t)\sim\pi_\theta}[A^\theta(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \\
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(s_t,a_t)}{p_{\theta^{\prime}}(s_t,a_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)] \\
+&amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}\frac{p_\theta(s_t)}{p_{\theta^{\prime}}(s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]&amp; \text{(4)} \\
 &amp;=E_{(s_t,a_t)\sim\pi_{\theta^{\prime}}}[\frac{p_\theta(a_t|s_t)}{p_{\theta^{\prime}}(a_t|s_t)}A^{\theta^{\prime}}(s_t,a_t)\nabla\log p_\theta(a_t^n|s_t^n)]
 \end{aligned}$$</p>
 <ul>
@@ -14626,9 +14928,9 @@ $$\nabla\bar{R}<em>\theta=E</em>{\tau\sim p_\theta(\tau)}[R(\tau)\nabla\log p_\t
 </li>
 </ul>
 <p>$$\begin{aligned}
-PPO algorithm: \
-J_{PPO}^{\theta^k}(\theta) &amp; = J^{\theta^k}(\theta)-\beta KL(\theta,\theta^k)J^{\theta^k}(\theta) \
-&amp; = E_{(s_{t},a_{t})\sim\pi_{\theta^{k}}}[\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})] \
+PPO algorithm: \\
+J_{PPO}^{\theta^k}(\theta) &amp; = J^{\theta^k}(\theta)-\beta KL(\theta,\theta^k)J^{\theta^k}(\theta) \\
+&amp; = E_{(s_{t},a_{t})\sim\pi_{\theta^{k}}}[\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})] \\
 &amp; \approx \sum_{(s_{t},a_{t})}\frac{p_{\theta}(a_{t}|s_{t})}{p_{\theta^{k}}(a_{t}|s_{t})}A^{\theta^{k}}(s_{t},a_{t})
 \end{aligned}$$</p>
 <p>自适应 KL 惩罚：如果 $KL(\theta,\theta^k)&gt;KL_{\max}$ ,增大 $\beta$; 如果 $KL(\theta,\theta^k) &lt;KL_{\min}$,减小 $\beta$。</p>

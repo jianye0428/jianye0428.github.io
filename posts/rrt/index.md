@@ -41,7 +41,7 @@ RRT是Steven M. LaValle和James J. Kuffner Jr.提出的一种通过随机构建S
 
 ## 2、基于概率的RRT算法
 
-为了加快随机树收敛到目标位置的速度，基于概率的RRT算法在随机树的扩展的步骤中引入一个概率概率p，根据概率p的值来选择树的生长方向是随机生长($x_{rand}$)还是朝向目标位置 $x_{goal}$ 生长。引入向目标生长的机制可以加速路径搜索的收敛速度。
+为了加快随机树收敛到目标位置的速度，基于概率的RRT算法在随机树的扩展的步骤中引入一个概率 $p$，根据概率 $p$ 的值来选择树的生长方向是随机生长($x_{rand}$) 还是朝向目标位置 $x_{goal}$ 生长。引入向目标生长的机制可以加速路径搜索的收敛速度。
 
 <br>
 <center>
@@ -219,6 +219,8 @@ RRT^*算法+赛车动力学实现车辆180度转弯。图片来源：https://www
 ref:
 [1]. https://zhuanlan.zhihu.com/p/133224593
 [2]. https://blog.csdn.net/gophae/article/details/103231053
+[3]. https://xwlu.github.io/wiki/path-planning/rrt/
+[4]. ※ https://dlonng.com/posts/rrt
 
 ---
 
