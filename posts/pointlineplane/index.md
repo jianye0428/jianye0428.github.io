@@ -1,0 +1,152 @@
+# 点、线、面之间的关系
+
+
+## 1. 点到直线的距离
+<mark>**<font color=red>第一种:</font>**</mark>
+本文默认情况下，直线的方程为 $l:Ax+By+C=0$，$A$, $B$ 均不为0，斜率为 $k_l$，点的坐标为P(x0, y0)，点 $P$ 到 $l$ 的距离为 $d$ 。
+
+则距离为:
+
+$$d=\frac{|Ax_0+By_0+C|}{\sqrt{A^2+B^2}}$$
+
+推导过程如下: https://zhuanlan.zhihu.com/p/26307123
+
+<mark>**<font color=red>第二种:</font>**</mark>
+直线的方程为 $l: y = ax + b$，$a$, $b$ 均不为0，斜率为 $a$，点的坐标为P(x0, y0)，点 $P$ 到直线 $l$ 的距离为 $d$ 。
+
+$$d=\frac{|ax_{0} - y_{0} + b|}{\sqrt{a^2+b^2}}$$
+
+## 2. 如何判断两点在直线的两侧
+
+<mark>**<font color=red>判断点在直线的一侧:</font>**</mark>
+
+**方法一:**
+
+已知 $P(0,0)$, $Q(3,2)$ 两点，试判断 $P$ , $Q$是否在直线 $2x+3y=4$ 的同一侧。
+
+解：直线2x+3y=4, 即直线2x+3y-4=0, 把P、Q代入2x+3y-4得到:
+
+$$2 \times 0 + 3 \times 0-4=-4<0$$
+
+$$2 {\times} 3+3 {\times} 2 - 4 = 8 > 0$$
+
+所以，在**两侧**。
+
+**方法2:**
+
+> 怎么判断坐标为(xp,yp)的点P是在直线的哪一侧呢?
+
+设直线是由其上两点 $(x_1,y_1)$，$(x_2,y_2)$ 确定的，直线方向是由 $(x_1,y_1)$ 到 $(x_2,y_2)$ 的方向。
+
+假设直线方程为：$Ax+By+C=0$，则有:
+
+$A=y2-y1$; $B=x1-x2$; $C=x2*y1-x1*y2$;
+
+$$\left\{\begin{aligned}
+A&=y_2-y_1\\
+B&=x_1-x_2\\
+C&=x_2*y_1-x_1*y_2
+\end{aligned}\right.$$
+
+这时可以通过计算D,来判断点P是在直线的哪一侧:
+
+$$D=A*x_p+B*y_p+C$$
+
+若D<0, 则点P在直线的左侧;
+若D>0, 则点P在直线的右侧;
+若D=0, 则点P在直线上。
+
+> 注：这里的直线是有方向性的！
+
+**方法3：**
+
+> 利用矢量计算快速判定一点在直线的哪一侧!
+
+例如矢量A×矢量B=矢量C
+
+设想矢量A沿小于180度的角度转向矢量B
+
+将右手的四指指向矢量A的方向，右手的四指弯曲代表上述旋转方向，则伸直的拇指指向它们的叉乘得到的矢量C
+
+如果矢量C的方向相同，则在同侧；否则在两侧。
+
+> 注：叉乘计算公式！
+
+若将向量用坐标表示（三维向量），向量 $a=(x_1,y_1,z_1)$，向量 $b=(x_2,y_2,z_2)$，则：
+
+**点乘**，也叫向量的内积、数量积。
+
+$$向量a·向量b = |a||b|cos\theta$$
+$$向量a·向量b = x_1 * x_2 + y_1 * y_2 + z_1 * z_2$$
+
+**叉乘**，也叫向量的外积、向量积。
+
+$$|向量c| = |向量a×向量b| = |a||b|sin \theta$$
+
+向量c的方向与a,b所在的平面垂直，且方向要用“右手法则”判断（用右手的四指先表示向量a的方向，然后手指朝着手心的方向<180摆动到向量b的方向，大拇指所指的方向就是向量c的方向）；
+
+$$a\times b=\begin{vmatrix}\mathrm{i}&\mathrm{j}&\mathrm{k}\\x_{1}&y_{1}&z_{1}\\x_{2}&y_{2}&z_{2}\end{vmatrix}=(y_{1}z_{2}-y_{2}z_{1})i-(x_{1}z_{2}-x_{2}z_{1})j+(x_{1}y_{2}-x_{2}y_{1})k$$
+
+（i、j、k分别为空间中相互垂直的三条坐标轴的单位向量）
+
+[Cross Product叉乘速查手册](https://aipiano.github.io/2019/01/25/%E5%8F%89%E4%B9%98%E9%80%9F%E6%9F%A5%E6%89%8B%E5%86%8C/)
+[叉乘几何意义](https://zhuanlan.zhihu.com/p/359975221)
+https://blog.csdn.net/wzyaiwl/article/details/106310705
+
+## 3. 判断点是否在矩形、多边形中
+
+**方法一:**
+
+> 只要判断该点的横坐标和纵坐标是否夹在矩形的左右边和上下边之间。
+
+例如: 判断一个点是否在两条线段之间夹着就转化成，判断一个点是否在某条线段的一边上，就可以利用叉乘的方向性，来判断夹角是否超过了180度
+
+如下图:
+<br>
+<center>
+  <img src="images/3_0.png" width="440" height="240" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+
+只要判断(AB X AE ) * (CDX CE)  >= 0 就说明E在AD和BC中间夹着，同理(DA X DE ) * (BC X BE) >= 0计算另两边AB,CD就可以了。([备注可进一步学习：向量点乘，叉乘的意义和几何意义](https://www.cnblogs.com/fangsmile/p/14690062.html))
+
+最后就是只需要判断
+
+$$(AB \times AE ) * (CD \times CE)  >= 0 \text{且} (DA \times DE ) * (BC \times BE) >= 0$$ 。
+
+参考代码:
+```c++
+// 计算 |p1 p2| X |p1 p|
+function GetCross(p1: Point, p2: Point, p: Point) {
+    return (p2.x - p1.x) * (p.y - p1.y) - (p.x - p1.x) * (p2.y - p1.y);
+}
+//判断点p是否在p1p2p3p4的正方形内
+function IsPointInMatrix(p1: Point, p2: Point, p3: Point, p4: Point, p: Point) {
+    let isPointIn = GetCross(p1, p2, p) * GetCross(p3, p4, p) >= 0 && GetCross(p2, p3, p) * GetCross(p4, p1, p) >= 0;
+    return isPointIn;
+}
+```
+
+
+举例: https://www.cnblogs.com/fangsmile/p/9306510.html
+
+
+**方法2：**
+> 采用点是否包含在多边形中判断
+
+以该点为顶点，做一条射线，使得矩形四个顶点中任意一点都不在射线上。
+
+若该射线与矩形有且仅有一个交点，则在矩形内；若有零个或两个焦点，则在矩形外。
+
+至于射线，可以通过选择肯定在矩形外的一点和已知点练成线段来构成。
+
+References:
+[1] [二维计算几何基础](https://oi-wiki.org/geometry/2d/)
+
+---
+
+> 作者: [Jian YE](https://github.com/jianye0428)  
+> URL: https://jianye0428.github.io/posts/pointlineplane/  
+

@@ -3,7 +3,7 @@
 
 # Here Is Articles Pilot
 
-- {{< admonition Note "C++" false >}}
+- {{<admonition Note "C++" false>}}
   - C++基础<br>
   💡 [C++基础(一)](https://jianye0428.github.io/posts/basics_one/)</br>
   💡 [C++基础(二)](https://jianye0428.github.io/posts/basics_two/)</br>
@@ -19,20 +19,29 @@
     - [part one](https://jianye0428.github.io/posts/effective_cpp_part_one/)<br>
     - [part two](https://jianye0428.github.io/posts/effective_cpp_part_two/)<br>
   - Effective STL<br>
-{{< /admonition >}}
-
-- {{<admonition quote "软件安装" false>}}
-  - 软件安装<br>
-    - [各种程序安装教程](https://jianye0428.github.io/posts/softwareinstallation/)<br>
-    - [Vim安装教程](https://jianye0428.github.io/posts/vim_installation/)<br>
-    - [Zsh安装教程](https://jianye0428.github.io/posts/zsh_installation/)<br>
 {{</admonition>}}
 
-- {{<admonition quote "GIT" false>}}
-  - Git<br>
-    - [Git常用命令查询](https://jianye0428.github.io/posts/commandsheet/)<br>
-    - [Git核心知识点总结](https://jianye0428.github.io/posts/gitnotes2/)<br>
+- {{<admonition Note "软件安装" false>}}
+  - [各种程序安装教程](https://jianye0428.github.io/posts/softwareinstallation/)<br>
+  - [Vim安装教程](https://jianye0428.github.io/posts/vim_installation/)<br>
+  - [Zsh安装教程](https://jianye0428.github.io/posts/zsh_installation/)<br>
 {{</admonition>}}
+
+{{<admonition Note "Math" false>}}
+  - [曲线拟合](https://jianye0428.github.io/posts/linefitting/)<br>
+{{</admonition>}}
+
+{{<admonition Note "GIT" false>}}
+  - [Git常用命令查询](https://jianye0428.github.io/posts/commandsheet/)<br>
+  - [Git核心知识点总结](https://jianye0428.github.io/posts/gitnotes2/)<br>
+{{</admonition>}}
+
+{{<admonition Note "数据结构与算法" false>}}
+  - [排序算法](https://jianye0428.github.io/posts/sortingalgo/)<br>
+  - [二叉树](https://jianye0428.github.io/posts/treenode/)<br>
+  - [背包问题](https://jianye0428.github.io/posts/treenode/)<br>
+{{</admonition>}}
+
 
 
 ---

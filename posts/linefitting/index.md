@@ -11,20 +11,20 @@
 <center>
   <img src="images/1_1.png" width="640" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
   <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">TSL vs OLS</div>
 </center>
 <br>
 
 如上图，TLS 和 OLS 都是最小二乘拟合，只是在偏差评估上采取了不同的方式。
 最小二乘法是一种较为简单的回归分析方法。
 
-- 最常用的是 OLS（Ordinary Least Square，普通最小二乘法）：所选择的回归模型应该使所有观察值的残差平方和达到最小（如上图左）。
+- 最常用的是 OLS(Ordinary Least Square，普通最小二乘法): 所选择的回归模型应该使所有观察值的残差平方和达到最小（如上图左）。
 
 <br>
 <center>
   <img src="images/1_2.png" width="440" height="280" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
   <br>
-  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">OLS</div>
 </center>
 <br>
 
@@ -65,8 +65,8 @@ Eigen 是C++中可以用来调用并进行矩阵计算的一个库，里面封�
 通过解 $XB=Y$ 我们就能解出 $B=[m b]$：
 
 $$\begin{gathered}
-m = \frac{\sum x_{i}^{2}\sum y_{i}-\sum x_{i}(\sum x_{i}y_{i})}{n\sum x_{i}^{2}-(\sum x_{i})^{2}} \\
-b = \frac{n\sum x_{i}\sum y_{i}-\sum x_{i}(\sum x_{i}y_{i})}{n\sum x_{i}^{2}-(\sum x_{i})^{2}}
+m = \frac{\sum x\_{i}^{2}\sum y\_{i}-\sum x\_{i}(\sum x\_{i}y\_{i})}{n\sum x\_{i}^{2}-(\sum x\_{i})^{2}} \\\\
+b = \frac{n\sum x\_{i}\sum y\_{i}-\sum x\_{i}(\sum x\_{i}y\_{i})}{n\sum x\_{i}^{2}-(\sum x\_{i})^{2}}
 \end{gathered}$$
 
 ```c++
@@ -101,10 +101,10 @@ OrdinaryLeastSquare(const vector<double>& x, const vector<double>& y) {
 </center>
 <br>
 
-其中，$U=\begin{bmatrix}x_1-\overline{x}&y_1-\overline{y}\\\vdots&\vdots\\x_n-\overline{x}&y_n-\overline{y}\end{bmatrix}$;
+其中，$U=\begin{bmatrix}x\_1-\overline{x}&y\_1-\overline{y}\\\\\vdots&\vdots\\\\x\_n-\overline{x}&y\_n-\overline{y}\end{bmatrix}$;
 
 $\frac{dE}{dN}=\frac{d(N^TU^TUN)}{dN}=U^TUN+N^TU^TU$ ,因为 $U^TU $ 是一个对称矩阵 $(U^TU=(U^TU)^T)$, $U^TUN=N^TU^TU$, 所以 $\frac{dE}{dN}=2(U^TU)N$;
-此外，$U^TU=\begin{bmatrix}\sum(x_i-\overline x)^2&\sum(x_i-\overline x)(y_i-\overline y)\\\sum(x_i-\overline x)(y_i-\overline y)&\sum(y_i-\overline y)^2\end{bmatrix}$ 是关于 X、Y 的一个二阶矩(随机变量平方的期望)矩阵(second-moment matrix);
+此外，$U^TU=\begin{bmatrix}\sum(x\_i-\overline x)^2&\sum(x\_i-\overline x)(y\_i-\overline y)\\\\\sum(x\_i-\overline x)(y\_i-\overline y)&\sum(y\_i-\overline y)^2\end{bmatrix}$ 是关于 X、Y 的一个二阶矩(随机变量平方的期望)矩阵(second-moment matrix);
 
 二阶矩矩阵 $U^{T}U$ 的最小特征值对应的特征向量即为求解的 $N=[a b]$
   - 特征值 & 特征向量
@@ -199,16 +199,16 @@ References:
 
 - 1. 根据起始点和终点求三次样条曲线的系数
 
-    已知三次样条曲线的方程为 $y = a_0 + a_1 \cdot x + a_2 \cdot x ^ 2 + a_3 \cdot x ^ 3$ ， 并且已知起始点坐标 $(x_0, y_0)$, 起始点导数k_1, 终点坐标(x_1, y_1), 终点导数k_2, 求三次样条曲线的系数
+    已知三次样条曲线的方程为 $y = a\_0 + a\_1 \cdot x + a\_2 \cdot x ^ 2 + a\_3 \cdot x ^ 3$ ， 并且已知起始点坐标 $(x\_0, y\_0)$, 起始点导数k_1, 终点坐标(x_1, y_1), 终点导数k_2, 求三次样条曲线的系数
 
-    解: 通过平移变换可知， 将起始点置于零点，则终点为$(x_1 - x_0, y_1 - y_0)$，那么根据点和相关点之间的导数可以求相应的系数。方程如下:
+    解: 通过平移变换可知， 将起始点置于零点，则终点为$(x\_1 - x\_0, y\_1 - y\_0)$，那么根据点和相关点之间的导数可以求相应的系数。方程如下:
 
-    $a_0 = y_0$
-    $a_1 = k_0$
-    $(y_1 - y_1) = a_1 * (x_1 - x_0) + a_2 * (x_1 - x_0) ^ 2 + a_3 * (x_1 - x_0) ^ 3$
-    $k_1 = a_1 + 2 * a_2 * (x_1 - x_0) + 3 * a_3 * (x_1 - x_0) ^ 2$
+    $a\_0 = y\_0$
+    $a\_1 = k\_0$
+    $(y\_1 - y\_1) = a\_1 * (x\_1 - x\_0) + a\_2 * (x\_1 - x\_0) ^ 2 + a\_3 * (x\_1 - x\_0) ^ 3$
+    $k\_1 = a\_1 + 2 * a\_2 * (x\_1 - x\_0) + 3 * a\_3 * (x\_1 - x\_0) ^ 2$
 
-    或者也可以设三次样条曲线方程为:$y = a_0 + a_1 * (x - x_0) + a_2 * (x - x_1) ^ 2 + a_3 * (x - x_2) ^ 3$
+    或者也可以设三次样条曲线方程为:$y = a\_0 + a\_1 * (x - x\_0) + a\_2 * (x - x\_1) ^ 2 + a\_3 * (x - x\_2) ^ 3$
 
     代码参考:
     ```c++
