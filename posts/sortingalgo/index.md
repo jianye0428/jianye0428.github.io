@@ -84,13 +84,9 @@
 
 
 #### 1.4 代码实现
-
-
-
-
 ```c++
 void quick_sort(vector<int>& nums, int l, int r) {
-  if (l + 1 >= r) {
+  if (l >= r) {
     return;
   }
 
@@ -112,8 +108,6 @@ void quick_sort(vector<int>& nums, int l, int r) {
 ```
 
 ```python
-
-Python
 def quick_sort(arr, low, high):
   if low < high:
     # 分区操作
@@ -138,39 +132,152 @@ def partition(arr, low, high):
 arr = [10, 7, 8, 9, 1, 5]
 quick_sort(arr, 0, len(arr) - 1)
 print("Sorted array is:", arr)
-
-
 ```
 
 ### 2. Merge Sort 归并排序
 
+归并排序（Merge Sort）是一种分治算法，由约翰·冯·诺伊曼在1945年发明。它通过递归地将数组分成两半，然后对每一半进行排序，最后将排序好的两半合并在一起，从而完成整个数组的排序。
+
+#### 2.1 算法步骤
+
+•分割：将待排序的数组分成两半，直到每个子数组只包含一个元素。
+
+•递归排序：递归地对每个子数组进行归并排序。
+
+•合并：将排序好的两个子数组合并成一个有序数组。
+
+
+#### 2.2 算法图解
+
+归并排序通过递归地将数组分成更小的部分，然后合并这些部分，直到整个数组被排序。
+
+<br>
+<center>
+  <img src="images/2_1.webp" width="360" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+
+<br>
+<center>
+  <img src="images/2_2.gif" width="480" height="320" align=center style="border-radius: 0.3125em; box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);">
+  <br>
+  <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">BP Network</div>
+</center>
+<br>
+
+#### 2.3 算法特点
+
+•稳定性：归并排序是一种稳定的排序算法，因为它不会改变相同元素的相对顺序。
+
+•时间复杂度：无论最好、最坏还是平均情况下，时间复杂度都是O(n log n)。
+
+•空间复杂度：O(n)，归并排序需要使用到额外的空间来存储临时的合并结果。
+
+
+#### 2.4 代码实现
+
 ```c++
-void merge_sort(vector<int>& nums, int l, int r, vector<int>& temp) {
-    if (l + 1 >= r) {
-        return;
-    }
+void print_arr(vector<int>& nums) {
+  for (auto num:nums) {
+    std::cout << num << " ";
+  }
+  std::cout << std::endl;
+}
 
-    // divide
-    int m = l + (r - l) / 2;
-    merge_sort(nums, l, m, temp);
-    merge_sort(nums, m, r, temp);
+void merge(vector<int>& nums, int low, int mid, int high) {
+  vector<int> tmp (high - low + 1);
+  int i = low;
+  int j = mid + 1;
+  int k = 0;
+  while (i <= mid && j <= high) {
+    if (nums[i] < nums[j]) {
+      tmp[k++] = nums[i++];
+    } else {
+      tmp[k++] = nums[j++];
+    }
+  }
+  while (i <= mid) {
+    tmp[k++] = nums[i++];
+  }
+  while (j <= high) {
+    tmp[k++] = nums[j++];
+  }
+  for (int i = 0; i < tmp.size(); ++i) {
+    nums[low+i] = tmp[i];
+  }
+}
 
-    // conquer
-    int p = l, q = m, i = l;
-    while (q < m || q < r>) {
-        if (q >= r || q < r) {
-            if (q >= r || (p < m && nums[p] <= nums[q])) {
-                temp[i++] = nums[p++];
-            } else {
-                temp[i++] = nums[q++];
-            }
-        }
-    }
-    for (int i = l; i < r; ++i) {
-        nums[i] = temp[i];
-    }
+void merge_sort(vector<int>& nums, int l, int r) {
+  if (l == r) return;
+
+  int mid = l + (r - l) / 2;
+  merge_sort(nums, l, mid);
+  merge_sort(nums, mid + 1, r);
+
+  merge(nums, l, mid, r);
+}
+
+int main() {
+  vector<int> arr = {64, 34, 25, 12, 22, 11, 90};
+  print_arr(arr);
+  merge_sort(arr, 0, arr.size() - 1);
+  print_arr(arr);
+  return 0;
 }
 ```
+
+```python
+Python
+def merge_sort(arr):
+  if len(arr) > 1:
+    mid = len(arr) // 2  # 找到中间位置
+    L = arr[:mid]  # 左侧序列
+    R = arr[mid:]  # 右侧序列
+
+    merge_sort(L)  # 递归对左侧序列进行排序
+    merge_sort(R)  # 递归对右侧序列进行排序
+
+    # 合并两个排序好的序列
+    i = j = k = 0
+
+    # 按顺序合并元素直到一个子数组为空
+    while i < len(L) and j < len(R):
+      if L[i] < R[j]:
+        arr[k] = L[i]
+        i += 1
+      else:
+        arr[k] = R[j]
+        j += 1
+      k += 1
+
+    # 将剩余的元素移到数组的末尾
+    while i < len(L):
+      arr[k] = L[i]
+      i += 1
+      k += 1
+
+    while j < len(R):
+      arr[k] = R[j]
+      j += 1
+      k += 1
+
+  return arr
+
+# 示例
+arr = [38, 27, 43, 3, 9, 82, 10]
+sorted_arr = merge_sort(arr)
+print("Sorted array is:", sorted_arr)
+
+```
+#### 2.5 适用场景
+
+归并排序由于其稳定性和时间复杂度，适用于以下情况：
+  •大数据集：归并排序适合处理大型数据集，因为它的性能不会受到数据规模的影响。
+  •稳定性需求：当排序过程中保持元素的相对顺序很重要时，归并排序是一个合适的选择。
+  •外存排序：归并排序适合于磁盘等外存上的排序，因为它可以有效地减少读取和写入的次数。
+  •内存限制：尽管归并排序需要额外的内存空间，但通过优化可以实现为原地排序，从而减少内存使用。
 
 ### 3. Insertion Sort 插入排序
 
