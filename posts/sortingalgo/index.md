@@ -90,20 +90,19 @@ void quick_sort(vector<int>& nums, int l, int r) {
     return;
   }
 
-  int first = l, last = r - 1, key = nums[first];
-  while (first < last) {
-    while (first < last && nums[last] >= key) {
-      --last;
+  int first = l, last = r;
+  while (l < r) {
+    while (l < r && nums[l] < nums[first]) {
+      l++;
     }
-    nums[first] = nums[last];
-    while (first < last && nums[first] <= key) {
-      ++first;
+    while (l < r && nums[r] > nums[first]) {
+      r--;
     }
-    nums[last] = nums[first];
+    swap(nums[l], nums[r]);
   }
-  nums[first] = key;
-  quick_sort(nums, l, first);
-  quick_sort(nums, first + 1, r);
+  swap(nums[first], nums[r]);
+  quick_sort(nums, first, r - 1);
+  quick_sort(nums, r + 1, last);
 }
 ```
 
