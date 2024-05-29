@@ -88,10 +88,10 @@ $$|向量c| = |向量a×向量b| = |a||b|sin \theta$$
 $$a\times b=\begin{vmatrix}\mathrm{i}&\mathrm{j}&\mathrm{k}\\\\x\_{1}&y\_{1}&z\_{1}\\\\x\_{2}&y\_{2}&z\_{2}\end{vmatrix}=(y\_{1}z\_{2}-y\_{2}z\_{1})i-(x\_{1}z\_{2}-x\_{2}z\_{1})j+(x\_{1}y\_{2}-x\_{2}y\_{1})k$$
 
 （i、j、k分别为空间中相互垂直的三条坐标轴的单位向量）
-
-[Cross Product叉乘速查手册](https://aipiano.github.io/2019/01/25/%E5%8F%89%E4%B9%98%E9%80%9F%E6%9F%A5%E6%89%8B%E5%86%8C/)
-[叉乘几何意义](https://zhuanlan.zhihu.com/p/359975221)
-https://blog.csdn.net/wzyaiwl/article/details/106310705
+ref: <br>
+[1]. [Cross Product叉乘速查手册](https://aipiano.github.io/2019/01/25/%E5%8F%89%E4%B9%98%E9%80%9F%E6%9F%A5%E6%89%8B%E5%86%8C/)<br>
+[2].[叉乘几何意义](https://zhuanlan.zhihu.com/p/359975221)<br>
+[3].https://blog.csdn.net/wzyaiwl/article/details/106310705
 
 ## 3. 判断点是否在矩形、多边形中
 
@@ -110,7 +110,7 @@ https://blog.csdn.net/wzyaiwl/article/details/106310705
 </center>
 <br>
 
-只要判断 $(AB X AE ) * (CD X CE)  >= 0$ 就说明E在AD和BC中间夹着，同理 $ (DA X DE ) * (BC X BE) >= 0 $ 计算另两边AB,CD就可以了。([备注可进一步学习：向量点乘，叉乘的意义和几何意义](https://www.cnblogs.com/fangsmile/p/14690062.html))
+只要判断 $(AB \times AE ) * (CD \times CE)  >= 0$ 就说明E在AD和BC中间夹着，同理 $ (DA \times DE ) * (BC \times BE) >= 0 $ 计算另两边AB,CD就可以了。([备注可进一步学习：向量点乘，叉乘的意义和几何意义](https://www.cnblogs.com/fangsmile/p/14690062.html))
 
 最后就是只需要判断
 
@@ -225,7 +225,7 @@ int main() {
 
 (理解最好，理解不了也不要纠结，把叉乘公式记一下就ok)
 
-向量 $\vec{a}$ 是 $(m,n)$ , $\vec{b}$ 是 $(p,q)$
+向量 $\overrightarrow{a}$ 是 $(m,n)$ , $\vec{b}$ 是 $(p,q)$
 
 $$\vec{a}  \times  \vec{b} = m*q-n*p$$
 
